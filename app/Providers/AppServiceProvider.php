@@ -21,6 +21,9 @@ use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
+use App\Modules\Turno\Domain\Repositories\TurnoRepositoryInterface;
+use App\Modules\Turno\Infrastructure\Persistence\EloquentTurnoRepository;
+use App\Modules\Turno\UI\Livewire\TurnoManager;
 
 use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
 use App\Modules\Student\UI\Livewire\Auth\LogoutButton as StudentLogout;
@@ -34,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(TurnoRepositoryInterface::class, EloquentTurnoRepository::class);
     }
 
     /**
@@ -64,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('acl.role-permission-manager', RolePermissionManager::class);
         Livewire::component('corporate.user-manager', UserManager::class);
         Livewire::component('corporate.user-extra-permission-manager', UserExtraPermissionManager::class);
+        Livewire::component('turno.turno-manager', TurnoManager::class);
 
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
@@ -74,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.auth.logout-button', StudentLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
         Livewire::component('student.library', StudentLibrary::class);
+        
 
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
