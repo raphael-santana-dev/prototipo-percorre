@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(TurnoRepositoryInterface::class, EloquentTurnoRepository::class);
+        $this->app->bind(\App\Modules\Unidade\Domain\Repositories\UnidadeRepositoryInterface::class, \App\Modules\Unidade\Infrastructure\Persistence\EloquentUnidadeRepository::class);
     }
 
     /**
@@ -73,6 +74,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
         });
+
+        Livewire::component('unidade.unidade-manager', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class);
+        Livewire::component('unidade.unidade-detalhes', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class);
 
         Livewire::component('student.auth.login', StudentLogin::class);
         Livewire::component('student.auth.logout-button', StudentLogout::class);

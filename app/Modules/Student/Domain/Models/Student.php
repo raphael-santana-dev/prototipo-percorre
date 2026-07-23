@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+
 class Student extends Authenticatable
 {
     use HasFactory, Notifiable;
+    use \App\Traits\Tenantable;
 
     protected $fillable = [
         'name',
