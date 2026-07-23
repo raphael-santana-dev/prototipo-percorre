@@ -14,11 +14,11 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::firstOrCreate(
+        $user = User::updateOrCreate(
             ['email' => 'dev@percorre.com'], // Mude para o seu e-mail se quiser
             [
                 'name' => 'Desenvolvedor',
-                'password' => Hash::make('123'), // Senha padrão
+                'password' => Hash::make('password'), // Senha padrão
             ]
         );
 
