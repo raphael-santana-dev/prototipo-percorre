@@ -22,7 +22,11 @@
                     <!-- Menu de Navegação -->
                     <div class="hidden md:flex md:gap-4">
                         <a href="{{ route('dashboard') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Dashboard</a>
-                        
+                        @feature('turno')
+                            @can('turno.listar')
+                                <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Turnos</a>
+                            @endcan
+                        @endfeature
                         <!-- Protegendo o link do menu também, aparece apenas se for role dev -->
                         @role('dev')
                             <a href="{{ route('users.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Usuários</a>

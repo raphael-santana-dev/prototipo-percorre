@@ -12,6 +12,7 @@ use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
+use App\Modules\Turno\UI\Livewire\TurnoManager;
 
 Route::get('/', function () {
     return view('welcome');
@@ -27,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions');
     Route::get('/users', UserManager::class)->name('users.index');
     Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions');
+    Route::get('/turnos', TurnoManager::class)->name('turnos.index')->middleware('feature:turno');
 });
 
 // ==========================================
