@@ -52,6 +52,17 @@
                     @error('roleName') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                 </div>
 
+                <div>
+                    <label class="block text-sm font-semibold text-gray-800">Unidade Vinculada</label>
+                    <select wire:model="unidade_id" class="w-full mt-1">
+                        <option value="">Acesso Global (Sem Unidade)</option>
+                        @foreach($unidades as $unidade)
+                            <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                        @endforeach
+                    </select>
+                    @error('unidade_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                </div>
+
             </div>
 
             <div class="flex gap-2 pt-2 border-t border-gray-100">
@@ -92,6 +103,9 @@
                             @endforeach
                             @if($user->roles->isEmpty())
                                 <span class="text-sm text-gray-400">Sem role</span>
+                            @endif
+                            @if($user->unidade)
+                                <div class="text-xs font-semibold text-purpura-600 mt-1"><i class="ph ph-map-pin"></i> {{ $user->unidade->nome }}</div>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
