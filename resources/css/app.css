@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+@layer base {
+    /* Define o padding (px-3 py-2), borda e arredondamento padrão para todos os inputs de texto */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="time"],
+    input[type="date"],
+    input[type="number"],
+    textarea,
+    select {
+        @apply px-3 py-2 rounded-lg border border-gray-300 shadow-sm transition-shadow duration-200 outline-none;
+    }
+
+    /* Efeito de foco (anel azul brilhante) */
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="time"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+        @apply outline-none border-blue-500 ring-2 ring-blue-500/40;
+    }
+
+    /* Checkboxes */
+    input[type="checkbox"]:focus {
+        @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    }
+}
