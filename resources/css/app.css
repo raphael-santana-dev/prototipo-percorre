@@ -1,31 +1,42 @@
 @import "tailwindcss";
 
+@theme {
+  /* Cores Primitivas e Semânticas do Design System Percorre */
+  --color-purpura-100: #F4E8FF;
+  --color-purpura-500: #9B26B6;
+  --color-purpura-600: #7E1FA2; /* Hover aproximado */
+  --color-purpura-700: #6A1B9A;
+  
+  --color-ponkan-100: #FFF3E0;
+  --color-ponkan-500: #FF9800;
+  --color-ponkan-600: #F57C00; /* Hover aproximado */
+  --color-ponkan-700: #E65100;
+  
+  --color-pitaya-100: #FCE4EC;
+  --color-pitaya-500: #E91E63;
+  
+  --color-pistache-100: #E8F5E9;
+  --color-pistache-500: #4CAF50;
+  
+  --color-petunia-100: #EDE7F6;
+  --color-petunia-500: #673AB7;
+
+  /* Neutros */
+  --color-gray-100: #F5F5F5;
+  --color-gray-200: #EEEEEE;
+  --color-gray-500: #9E9E9E;
+  --color-gray-800: #424242;
+  --color-gray-1000: #121212;
+}
+
 @layer base {
-    /* Define o padding (px-3 py-2), borda e arredondamento padrão para todos os inputs de texto */
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="time"],
-    input[type="date"],
-    input[type="number"],
-    textarea,
-    select {
+    /* Inputs padronizados da etapa anterior... */
+    input[type="text"], input[type="email"], input[type="password"], input[type="time"], input[type="date"], input[type="number"], textarea, select {
         @apply px-3 py-2 rounded-lg border border-gray-300 shadow-sm transition-shadow duration-200 outline-none;
     }
-
-    /* Efeito de foco (anel azul brilhante) */
-    input[type="text"]:focus,
-    input[type="email"]:focus,
-    input[type="password"]:focus,
-    input[type="time"]:focus,
-    input[type="date"]:focus,
-    input[type="number"]:focus,
-    textarea:focus,
-    select:focus {
-        @apply outline-none border-blue-500 ring-2 ring-blue-500/40;
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+        @apply outline-none border-purpura-500 ring-2 ring-purpura-500/40;
     }
-
-    /* Checkboxes */
     input[type="checkbox"]:focus {
         @apply outline-none ring-2 ring-blue-500 ring-offset-2;
     }

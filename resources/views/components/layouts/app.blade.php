@@ -8,6 +8,9 @@
     
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="h-full text-gray-900 antialiased">
     
