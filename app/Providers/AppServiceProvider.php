@@ -12,6 +12,7 @@ use App\Modules\Dashboard\UI\Livewire\Dashboard;
 use App\Modules\Auth\UI\Livewire\LogoutButton;
 use App\Modules\FeatureToggle\Application\Services\FeatureService;
 use App\Modules\FeatureToggle\UI\Livewire\FeatureManager;
+use App\Modules\ACL\UI\Livewire\RoleManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Livewire::component('feature-toggle.manager', FeatureManager::class);
+        Livewire::component('acl.role-manager', RoleManager::class);
 
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
