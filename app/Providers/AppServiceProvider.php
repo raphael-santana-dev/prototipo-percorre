@@ -2,11 +2,16 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use App\Modules\Auth\UI\Livewire\Login;
+use App\Modules\Dashboard\UI\Livewire\Dashboard;
+use App\Modules\Auth\UI\Livewire\LogoutButton;
+use App\Modules\FeatureToggle\Application\Services\FeatureService;
+use App\Modules\FeatureToggle\UI\Livewire\FeatureManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,10 +34,18 @@ class AppServiceProvider extends ServiceProvider
             return $user->hasRole('dev') ? true : null;
         });
 
-        // 1. Registra o componente explicitamente para o Livewire não se perder no DDD
+        // Registra o componente explicitamente para o Livewire não se perder no DDD
         Livewire::component('auth.login', Login::class);
+        Livewire::component('auth.logout-button', LogoutButton::class);
+        Livewire::component('dashboard.dashboard', Dashboard::class);
 
-        // 2. Força a rota de atualização do Livewire a usar o middleware web de sessões
+        Blade::if('feature', function (string $name) {
+            return app(FeatureService::class)->isActive($name);
+        });
+
+        Livewire::component('feature-toggle.manager', FeatureManager::class);
+
+        // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
         });
