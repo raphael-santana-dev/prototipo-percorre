@@ -48,6 +48,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
+                            <a href="{{ route('roles.permissions', $role->id) }}" class="text-green-600 hover:text-green-900 mr-4">Permissões</a>
                             <button wire:click="edit({{ $role->id }})" class="text-indigo-600 hover:text-indigo-900">Editar</button>
                             
                             @if(!in_array($role->name, ['dev', 'admin']))
