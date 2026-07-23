@@ -5,6 +5,7 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\Unidade\Application\Services\UnidadeService;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Unidades - Percorre')]
@@ -33,7 +34,7 @@ class UnidadeManager extends Component
             'email' => 'nullable|email',
         ]);
 
-        $dados = ['nome' => $this->nome, 'endereco' => $this->endereco, 'email' => $this->email, 'contatos' => $this->contatos, 'status' => $this->status];
+        $dados = ['nome' => $this->nome, 'slug' => Str::slug($this->nome), 'endereco' => $this->endereco, 'email' => $this->email, 'contatos' => $this->contatos, 'status' => $this->status];
 
         if ($this->isEditMode) {
             $service->atualizarUnidade($this->unidadeId, $dados);

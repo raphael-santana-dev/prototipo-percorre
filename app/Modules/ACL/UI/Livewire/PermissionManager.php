@@ -12,48 +12,47 @@ use App\Modules\ACL\Domain\Models\Permission;
 class PermissionManager extends Component
 {
     public string $module = '';
-    public string $name = '';
+    public string $action = ''; // Substituímos o $name por $action
     public string $description = '';
 
-    public function mount()
-    {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito.');
-    }
+    public function mount() { abort_if(!auth()->user()->hasRole('dev'), 403); }
 
     public function save()
     {
-        $this->name = strtolower(trim($this->name));
         $this->module = strtolower(trim($this->module));
+        $this->action = strtolower(trim($this->action));
+        
+        // Concatenação mágica!
+        $fullName = $this->module . '.' . $this->action;
 
         $this->validate([
             'module' => 'required|string|min:2',
-            'name' => 'required|string|min:3|unique:permissions,name',
+            'action' => 'required|string|min:2',
             'description' => 'required|string|max:255',
         ]);
 
+        // Validação manual de unicidade usando o nome concatenado
+        if (Permission::where('name', $fullName)->exists()) {
+            $this->addError('action', 'Esta ação já está cadastrada neste módulo.');
+            return;
+        }
+
         Permission::create([
             'module' => $this->module,
-            'name' => $this->name,
+            'name' => $fullName,
             'description' => $this->description,
             'guard_name' => 'web'
         ]);
 
-        $this->reset(['name', 'description']); 
-        // Mantemos o módulo preenchido para agilizar cadastros seguidos
+        $this->reset(['action', 'description']); 
     }
 
-    public function delete(int $id)
-    {
-        $permission = Permission::findOrFail($id);
-        $permission->delete();
-    }
+    public function delete(int $id) { Permission::findOrFail($id)->delete(); }
 
     public function render()
     {
-        $permissionsByModule = Permission::orderBy('module')->orderBy('name')->get()->groupBy('module');
-
         return view('livewire.acl.permission-manager', [
-            'permissionsByModule' => $permissionsByModule
+            'permissionsByModule' => Permission::orderBy('module')->orderBy('name')->get()->groupBy('module')
         ]);
     }
 }

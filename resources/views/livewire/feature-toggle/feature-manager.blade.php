@@ -12,9 +12,9 @@
                 @error('module') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
             </div>
             <div class="w-full md:w-1/4">
-                <label for="name" class="block text-sm font-medium text-gray-700">Chave (ex: curso.listar)</label>
-                <input type="text" id="name" wire:model="name" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                @error('name') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                <label class="block text-sm font-semibold text-gray-800">Ação/Recurso (ex: criar)</label>
+                <input type="text" id="name" wire:model="action" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                @error('action') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
             </div>
             <div class="flex-1 w-full">
                 <label for="description" class="block text-sm font-medium text-gray-700">Descrição</label>

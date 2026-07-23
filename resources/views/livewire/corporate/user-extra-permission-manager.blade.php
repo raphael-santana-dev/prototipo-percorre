@@ -27,20 +27,45 @@
                         <h3 class="mb-3 font-bold text-gray-800 uppercase border-b border-gray-300 pb-2">{{ $module }}</h3>
                         <div class="space-y-4">
                             @foreach($permissions as $permission)
-                                <div class="flex flex-col gap-1 p-2 bg-white border border-gray-100 rounded shadow-sm">
-                                    <label class="flex items-start gap-2 cursor-pointer">
-                                        <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->id }}" class="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                @php
+                                    // Verifica se esta permissão atual está no array de permissões da Role
+                                    $isInherited = in_array($permission->id, $rolePermissions);
+                                @endphp
+                                
+                                <div class="flex flex-col gap-1 p-2 bg-white border border-gray-100 rounded shadow-sm {{ $isInherited ? 'opacity-70 bg-gray-50' : '' }}">
+                                    <label class="flex items-start gap-2 {{ $isInherited ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+                                        
+                                        <!-- Checkbox Inteligente -->
+                                        @if($isInherited)
+                                            <!-- Se for herdada: Mostra marcado, desabilitado e não faz bind com o Livewire -->
+                                            <input type="checkbox" checked disabled class="w-4 h-4 mt-1 text-purpura-500 border-gray-300 rounded bg-gray-200">
+                                        @else
+                                            <!-- Se for livre: Faz o bind normal com as classes do Tailwind atualizadas -->
+                                            <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->id }}" class="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        @endif
+
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-semibold text-gray-900">{{ $permission->name }}</span>
+                                            <span class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                                {{ $permission->name }}
+                                                
+                                                <!-- Tag visual do Design System (Púrpura) para permissões herdadas -->
+                                                @if($isInherited)
+                                                    <span class="px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase tracking-wider">
+                                                        Da Role
+                                                    </span>
+                                                @endif
+                                            </span>
                                             <span class="text-xs text-gray-500">{{ $permission->description }}</span>
                                         </div>
                                     </label>
                                     
-                                    <!-- Input de Validade condicionado ao checkbox usando AlpineJS nativo do Livewire -->
-                                    <div x-data="{ isChecked: @entangle('selectedPermissions') }" x-show="isChecked.includes('{{ $permission->id }}')" class="pt-2 mt-1 border-t border-gray-100">
-                                        <label class="block text-xs text-gray-600">Válido até (Opcional):</label>
-                                        <input type="date" wire:model="expirations.{{ $permission->id }}" class="w-full mt-1 text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    </div>
+                                    <!-- Input de Validade condicionado -->
+                                    @if(!$isInherited)
+                                        <div x-data="{ isChecked: @entangle('selectedPermissions') }" x-show="isChecked.includes('{{ $permission->id }}')" class="pt-2 mt-1 border-t border-gray-100">
+                                            <label class="block text-xs text-gray-600">Válido até (Opcional):</label>
+                                            <input type="date" wire:model="expirations.{{ $permission->id }}" class="w-full mt-1 text-xs border-gray-300 rounded shadow-sm">
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
