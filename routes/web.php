@@ -8,6 +8,7 @@ use App\Modules\ACL\UI\Livewire\RoleManager;
 use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
+use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 
 Route::get('/', function () {
     return view('welcome');
@@ -22,4 +23,5 @@ Route::middleware('auth')->group(function () {
     Route::get('/permissions', PermissionManager::class)->name('permissions.index');
     Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions');
     Route::get('/users', UserManager::class)->name('users.index');
+    Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions');
 });

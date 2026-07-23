@@ -16,6 +16,11 @@ use App\Modules\ACL\UI\Livewire\RoleManager;
 use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
+use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -53,10 +58,32 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('acl.permission-manager', PermissionManager::class);
         Livewire::component('acl.role-permission-manager', RolePermissionManager::class);
         Livewire::component('corporate.user-manager', UserManager::class);
+        Livewire::component('corporate.user-extra-permission-manager', UserExtraPermissionManager::class);
 
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
+        });
+
+        // Revogação Automática de Permissões Vencidas
+        Event::listen(Authenticated::class, function (Authenticated $event) {
+            $user = $event->user;
+
+            // Busca IDs de permissões diretas que passaram da data de validade
+            $expiredPermissionIds = DB::table('model_has_permissions')
+                ->where('model_id', $user->id)
+                ->where('model_type', get_class($user))
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', now()->toDateString())
+                ->pluck('permission_id');
+
+            if ($expiredPermissionIds->isNotEmpty()) {
+                // Remove as permissões vencidas da tabela pivô
+                $user->permissions()->detach($expiredPermissionIds);
+                
+                // Limpa o cache do Spatie para forçar a leitura correta
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
+            }
         });
     }
 }

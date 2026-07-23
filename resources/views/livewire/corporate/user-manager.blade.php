@@ -95,6 +95,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
+                            <a href="{{ route('users.extra-permissions', $user->id) }}" class="mr-4 font-semibold text-orange-600 hover:text-orange-900">Permissões Extras</a>
                             <button wire:click="edit({{ $user->id }})" class="text-indigo-600 hover:text-indigo-900">Editar</button>
                             
                             @if($user->id !== auth()->id() && !$user->hasRole('dev'))
