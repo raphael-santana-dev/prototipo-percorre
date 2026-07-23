@@ -18,6 +18,9 @@ class UserExtraPermissionManager extends Component
     public array $selectedPermissions = [];
     public array $expirations = [];
 
+    // Array para guardar os IDs das permissões que vêm da Role
+    public array $rolePermissions = [];
+
     public function mount(int $userId)
     {
         $user = User::findOrFail($userId);
@@ -29,6 +32,8 @@ class UserExtraPermissionManager extends Component
 
         $this->userId = $user->id;
         $this->userName = $user->name;
+
+        $this->rolePermissions = $user->getPermissionsViaRoles()->pluck('id')->toArray();
 
         // Carrega as permissões diretas do usuário lendo também a coluna pivô
         $directPermissions = $user->permissions()->withPivot('expires_at')->get();
@@ -50,26 +55,25 @@ class UserExtraPermissionManager extends Component
         $isDev = $currentUser->hasRole('dev');
 
         foreach ($this->selectedPermissions as $permissionId) {
-            // Ignora valores false/null do array manipulado pelo Livewire
             if (!$permissionId) continue;
+            
+            // Proteção extra de backend: ignorar se a permissão enviada já for da Role
+            if (in_array($permissionId, $this->rolePermissions)) {
+                continue;
+            }
 
             $permission = Permission::findById($permissionId);
 
-            // Regra de Delegação: Se não for DEV, só pode conceder o que ele próprio tem
             if (!$isDev && !$currentUser->hasPermissionTo($permission->name)) {
-                session()->flash('error', "Você não pode conceder a permissão '{$permission->name}' pois você não a possui.");
+                session()->flash('error', "Você não pode conceder a permissão '{$permission->name}'.");
                 return;
             }
 
-            // Pega a data informada no array de expirations ou deixa null (permanente)
             $expiresAt = !empty($this->expirations[$permissionId]) ? $this->expirations[$permissionId] : null;
-
             $syncData[$permissionId] = ['expires_at' => $expiresAt];
         }
 
-        // Atualiza a tabela pivô com as permissões marcadas e suas respectivas datas
         $user->permissions()->sync($syncData);
-
         session()->flash('success', 'Permissões extras atualizadas com sucesso!');
     }
 

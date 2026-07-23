@@ -7,7 +7,7 @@ use App\Models\User;
 
 class Unidade extends Model
 {
-    protected $fillable = ['nome', 'endereco', 'email', 'contatos', 'status'];
+    protected $fillable = ['nome', 'slug', 'endereco', 'email', 'contatos', 'status'];
     protected $casts = ['status' => 'boolean'];
 
     public function usuarios()

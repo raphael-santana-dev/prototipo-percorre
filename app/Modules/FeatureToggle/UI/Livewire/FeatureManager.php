@@ -13,39 +13,39 @@ use App\Modules\FeatureToggle\Application\Services\FeatureService;
 class FeatureManager extends Component
 {
     public string $module = '';
-    public string $name = '';
+    public string $action = ''; // Substituído $name por $action
     public string $description = '';
 
-    public function mount()
-    {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
-    }
+    public function mount() { abort_if(!auth()->user()->hasRole('dev'), 403); }
 
     public function addFeature(FeatureService $service)
     {
+        $this->module = strtolower(trim($this->module));
+        $this->action = strtolower(trim($this->action));
+        $fullName = $this->module . '.' . $this->action;
+
         $this->validate([
             'module' => 'required|string|min:2',
-            'name' => 'required|string|min:3|unique:features,name',
+            'action' => 'required|string|min:2',
             'description' => 'required|string|max:255',
         ]);
 
-        $service->create($this->module, $this->name, $this->description);
-        $this->reset(['name', 'description']); 
-        // Mantemos o $module sem resetar para facilitar o cadastro em lote no mesmo módulo
+        if (Feature::where('name', $fullName)->exists()) {
+            $this->addError('action', 'Esta feature já está cadastrada neste módulo.');
+            return;
+        }
+
+        $service->create($this->module, $fullName, $this->description);
+        $this->reset(['action', 'description']); 
     }
 
-    public function toggle(FeatureService $service, string $name, bool $currentStatus)
-    {
+    public function toggle(FeatureService $service, string $name, bool $currentStatus) {
         $service->toggle($name, !$currentStatus);
     }
 
-    public function render()
-    {
-        // Retornamos as features agrupadas pelo módulo para a View
-        $featuresByModule = Feature::orderBy('module')->orderBy('name')->get()->groupBy('module');
-
+    public function render() {
         return view('livewire.feature-toggle.feature-manager', [
-            'featuresByModule' => $featuresByModule
+            'featuresByModule' => Feature::orderBy('module')->orderBy('name')->get()->groupBy('module')
         ]);
     }
 }
