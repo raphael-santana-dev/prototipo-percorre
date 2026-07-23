@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Ensina o Tailwind v4 a ativar as classes dark: apenas quando a tag html tiver a classe .dark */
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   /* Cores Primitivas e Semânticas do Design System Percorre */
   --color-purpura-100: #F4E8FF;
