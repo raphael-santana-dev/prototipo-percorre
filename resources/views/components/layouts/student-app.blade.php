@@ -12,8 +12,20 @@
     <nav class="bg-indigo-600 border-b border-indigo-700">
         <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-8">
                     <span class="font-bold text-white text-lg">🎓 Portal do Aluno</span>
+                    
+                    <!-- Menu Principal -->
+                    <div class="hidden md:flex gap-4">
+                        <a href="{{ route('student.dashboard') }}" class="px-3 py-2 text-sm font-medium text-white bg-indigo-700 rounded-md">Meus Cursos</a>
+                        
+                        <!-- Link protegido pela feature -->
+                        @feature('alunos.biblioteca')
+                            <a href="{{ route('student.library') }}" class="px-3 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-500 rounded-md transition-colors">
+                                Biblioteca
+                            </a>
+                        @endfeature
+                    </div>
                 </div>
                 <div class="flex items-center gap-4 text-white">
                     <span class="text-sm text-indigo-100">Olá, <strong>{{ auth('student')->user()->name }}</strong></span>

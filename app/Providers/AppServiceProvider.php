@@ -25,6 +25,7 @@ use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
 use App\Modules\Student\UI\Livewire\Auth\LogoutButton as StudentLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
+use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -72,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.auth.login', StudentLogin::class);
         Livewire::component('student.auth.logout-button', StudentLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
+        Livewire::component('student.library', StudentLibrary::class);
 
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {

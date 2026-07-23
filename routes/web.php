@@ -11,6 +11,7 @@ use App\Modules\Corporate\UI\Livewire\UserManager;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
+use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
 Route::get('/', function () {
     return view('welcome');
@@ -41,5 +42,8 @@ Route::prefix('alunos')->name('student.')->group(function () {
     // Alunos logados
     Route::middleware('auth:student')->group(function () {
         Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
+        Route::get('/biblioteca', StudentLibrary::class)
+            ->name('library')
+            ->middleware('feature:alunos.biblioteca');
     });
 });
