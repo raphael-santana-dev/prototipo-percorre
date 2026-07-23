@@ -14,9 +14,7 @@ use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 
