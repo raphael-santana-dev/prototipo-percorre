@@ -9,6 +9,8 @@ use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
+use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
+use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,4 +26,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions');
     Route::get('/users', UserManager::class)->name('users.index');
     Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions');
+});
+
+// ==========================================
+// ÁREA DOS ALUNOS
+// ==========================================
+Route::prefix('alunos')->name('student.')->group(function () {
+    
+    // Visitantes (não logados como alunos)
+    Route::middleware('guest:student')->group(function () {
+        Route::get('/login', StudentLogin::class)->name('login');
+    });
+
+    // Alunos logados
+    Route::middleware('auth:student')->group(function () {
+        Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
+    });
 });

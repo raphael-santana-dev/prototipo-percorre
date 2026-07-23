@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 
+use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
+use App\Modules\Student\UI\Livewire\Auth\LogoutButton as StudentLogout;
+use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -64,6 +68,10 @@ class AppServiceProvider extends ServiceProvider
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
         });
+
+        Livewire::component('student.auth.login', StudentLogin::class);
+        Livewire::component('student.auth.logout-button', StudentLogout::class);
+        Livewire::component('student.dashboard', StudentDashboard::class);
 
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
