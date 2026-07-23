@@ -21,6 +21,8 @@ class UserManager extends Component
     public ?int $userId = null;
     public bool $isEditMode = false;
 
+    public ?int $unidade_id = null;
+
     public function mount()
     {
         // Trava de segurança provisória (apenas DEV acessa).
@@ -34,6 +36,7 @@ class UserManager extends Component
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),
             'roleName' => 'required|string|exists:roles,name',
+            'unidade_id' => 'nullable|exists:unidades,id',
         ];
 
         // A senha só é obrigatória na criação. Na edição, só validamos se for preenchida.
@@ -48,6 +51,7 @@ class UserManager extends Component
         $data = [
             'name' => $this->name,
             'email' => strtolower($this->email),
+            'unidade_id' => $this->unidade_id ?: null,
         ];
 
         if (!empty($this->password)) {
@@ -82,6 +86,7 @@ class UserManager extends Component
         $this->name = $user->name;
         $this->email = $user->email;
         $this->password = ''; // Nunca enviamos a senha para o front-end
+        $this->unidade_id = $user->unidade_id;
         
         // Pega o nome da primeira role do usuário (se existir)
         $this->roleName = $user->roles->first()?->name ?? '';
@@ -123,15 +128,16 @@ class UserManager extends Component
         $this->roleName = '';
         $this->userId = null;
         $this->isEditMode = false;
+        $this->unidade_id = null;
         $this->resetErrorBag();
     }
 
     public function render()
     {
         return view('livewire.corporate.user-manager', [
-            // Carrega os usuários já com suas roles para evitar problemas de performance (N+1 query)
-            'users' => User::with('roles')->orderBy('name')->get(),
-            'roles' => Role::orderBy('name')->get()
+            'users' => User::with(['roles', 'unidade'])->orderBy('name')->get(),
+            'roles' => Role::orderBy('name')->get(),
+            'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::orderBy('nome')->get(), // Busca as unidades
         ]);
     }
 }
