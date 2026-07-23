@@ -12,36 +12,40 @@ use App\Modules\FeatureToggle\Application\Services\FeatureService;
 #[Title('Gerenciar Features - Administrativo')]
 class FeatureManager extends Component
 {
+    public string $module = '';
     public string $name = '';
     public string $description = '';
 
     public function mount()
     {
-        // Trava de segurança absoluta: Apenas a role 'dev' (minúsculo) acessa esta tela
         abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
     }
 
     public function addFeature(FeatureService $service)
     {
         $this->validate([
+            'module' => 'required|string|min:2',
             'name' => 'required|string|min:3|unique:features,name',
             'description' => 'required|string|max:255',
         ]);
 
-        $service->create($this->name, $this->description);
-        $this->reset(['name', 'description']);
+        $service->create($this->module, $this->name, $this->description);
+        $this->reset(['name', 'description']); 
+        // Mantemos o $module sem resetar para facilitar o cadastro em lote no mesmo módulo
     }
 
     public function toggle(FeatureService $service, string $name, bool $currentStatus)
     {
-        // Inverte o status atual e salva
         $service->toggle($name, !$currentStatus);
     }
 
     public function render()
     {
+        // Retornamos as features agrupadas pelo módulo para a View
+        $featuresByModule = Feature::orderBy('module')->orderBy('name')->get()->groupBy('module');
+
         return view('livewire.feature-toggle.feature-manager', [
-            'features' => Feature::orderBy('name')->get()
+            'featuresByModule' => $featuresByModule
         ]);
     }
 }

@@ -34,11 +34,11 @@ class FeatureService
     /**
      * Cria uma nova feature (se não existir)
      */
-    public function create(string $name, string $description): Feature
+    public function create(string $module, string $name, string $description): Feature
     {
         $feature = Feature::firstOrCreate(
             ['name' => strtolower($name)],
-            ['description' => $description, 'is_active' => false]
+            ['module' => strtolower($module), 'description' => $description, 'is_active' => false]
         );
 
         Cache::forget("feature_status_{$feature->name}");

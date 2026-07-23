@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Feature extends Model
 {
     protected $fillable = [
+        'module',
         'name',
         'description',
         'is_active',
