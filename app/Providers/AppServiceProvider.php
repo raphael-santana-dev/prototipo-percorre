@@ -15,6 +15,7 @@ use App\Modules\FeatureToggle\UI\Livewire\FeatureManager;
 use App\Modules\ACL\UI\Livewire\RoleManager;
 use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
+use App\Modules\Corporate\UI\Livewire\UserManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('acl.permission-manager', PermissionManager::class);
         Livewire::component('acl.role-permission-manager', RolePermissionManager::class);
+        Livewire::component('corporate.user-manager', UserManager::class);
 
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {

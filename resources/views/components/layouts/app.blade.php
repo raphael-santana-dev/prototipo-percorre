@@ -25,11 +25,10 @@
                         
                         <!-- Protegendo o link do menu também, aparece apenas se for role dev -->
                         @role('dev')
-                            @role('dev')
-                                <a href="{{ route('roles.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Roles</a>
-                                <a href="{{ route('permissions.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Permissões</a>
-                                <a href="{{ route('features.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Features</a>
-                            @endrole
+                            <a href="{{ route('users.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Usuários</a>
+                            <a href="{{ route('roles.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Roles</a>
+                            <a href="{{ route('permissions.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Permissões</a>
+                            <a href="{{ route('features.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100">Features</a>
                         @endrole
                     </div>
                 </div>
