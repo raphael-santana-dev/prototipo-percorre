@@ -11,43 +11,124 @@ use App\Modules\ACL\Domain\Models\Permission;
 #[Title('Gerenciar Permissões - Administrativo')]
 class PermissionManager extends Component
 {
-    public string $module = '';
-    public string $action = ''; // Substituímos o $name por $action
-    public string $description = '';
+    public bool $showModal = false;
+    public bool $isEditMode = false;
+    public ?int $permissionId = null;
 
-    public function mount() { abort_if(!auth()->user()->hasRole('dev'), 403); }
+    // O Array mágico que permite inserir 1 ou 50 registros de uma vez
+    public array $items = [];
+
+    public function mount()
+    {
+        abort_if(!auth()->user()->hasRole('dev'), 403);
+    }
+
+    public function openModal()
+    {
+        $this->resetInputFields();
+        // Inicia com pelo menos uma linha vazia
+        $this->items = [['module' => '', 'action' => '', 'description' => '']];
+        $this->showModal = true;
+    }
+
+    // Adiciona uma nova linha no frontend instantaneamente
+    public function addItem()
+    {
+        $this->items[] = ['module' => '', 'action' => '', 'description' => ''];
+    }
+
+    // Remove uma linha específica
+    public function removeItem(int $index)
+    {
+        unset($this->items[$index]);
+        $this->items = array_values($this->items); // Reordena os índices numéricos
+    }
+
+    public function edit(int $id)
+    {
+        $this->resetInputFields();
+        $permission = Permission::findOrFail($id);
+        
+        $this->permissionId = $permission->id;
+        $this->isEditMode = true;
+        
+        // Na edição, separamos o nome (ex: "curso.listar") para preencher o formulário
+        $nameParts = explode('.', $permission->name, 2);
+        
+        $this->items[0] = [
+            'module' => $permission->module,
+            'action' => $nameParts[1] ?? $permission->name,
+            'description' => $permission->description
+        ];
+        
+        $this->showModal = true;
+    }
 
     public function save()
     {
-        $this->module = strtolower(trim($this->module));
-        $this->action = strtolower(trim($this->action));
-        
-        // Concatenação mágica!
-        $fullName = $this->module . '.' . $this->action;
-
+        // Valida todo o array de uma vez
         $this->validate([
-            'module' => 'required|string|min:2',
-            'action' => 'required|string|min:2',
-            'description' => 'required|string|max:255',
+            'items.*.module' => 'required|string|min:2',
+            'items.*.action' => 'required|string|min:2',
+            'items.*.description' => 'required|string|max:255',
+        ], [
+            'items.*.module.required' => 'O módulo é obrigatório.',
+            'items.*.action.required' => 'A ação é obrigatória.',
         ]);
 
-        // Validação manual de unicidade usando o nome concatenado
-        if (Permission::where('name', $fullName)->exists()) {
-            $this->addError('action', 'Esta ação já está cadastrada neste módulo.');
-            return;
+        foreach ($this->items as $index => $item) {
+            $module = strtolower(trim($item['module']));
+            $action = strtolower(trim($item['action']));
+            $fullName = $module . '.' . $action;
+
+            // Se for edição
+            if ($this->isEditMode && $this->permissionId) {
+                // Verifica se a nova chave já existe em OUTRA permissão
+                if (Permission::where('name', $fullName)->where('id', '!=', $this->permissionId)->exists()) {
+                    $this->addError("items.{$index}.action", 'Esta chave já existe.');
+                    return;
+                }
+                
+                Permission::where('id', $this->permissionId)->update([
+                    'module' => $module,
+                    'name' => $fullName,
+                    'description' => $item['description']
+                ]);
+            } 
+            // Se for criação em lote
+            else {
+                if (Permission::where('name', $fullName)->exists()) {
+                    $this->addError("items.{$index}.action", 'A permissão '.$fullName.' já existe.');
+                    continue; // Pula essa, mas salva as outras (ou pode dar return para barrar tudo)
+                }
+
+                Permission::create([
+                    'module' => $module,
+                    'name' => $fullName,
+                    'description' => $item['description'],
+                    'guard_name' => 'web'
+                ]);
+            }
         }
 
-        Permission::create([
-            'module' => $this->module,
-            'name' => $fullName,
-            'description' => $this->description,
-            'guard_name' => 'web'
-        ]);
-
-        $this->reset(['action', 'description']); 
+        $this->showModal = false;
+        $this->resetInputFields();
+        session()->flash('success', $this->isEditMode ? 'Permissão atualizada!' : 'Permissões cadastradas com sucesso!');
     }
 
-    public function delete(int $id) { Permission::findOrFail($id)->delete(); }
+    public function delete(int $id)
+    {
+        Permission::findOrFail($id)->delete();
+        session()->flash('success', 'Permissão excluída.');
+    }
+
+    private function resetInputFields()
+    {
+        $this->items = [];
+        $this->isEditMode = false;
+        $this->permissionId = null;
+        $this->resetErrorBag();
+    }
 
     public function render()
     {
