@@ -31,12 +31,14 @@
                         <td class="px-6 py-4 text-gray-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($turno->horario_fim)->format('H:i') }}</td>
                         <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
                             @can('turno.editar')
-                                <button wire:click="edit({{ $turno->id }})" class="text-indigo-600 hover:text-indigo-900">Editar</button>
+                                <button wire:click="edit({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50">
+                                    <i class="text-xl ph ph-pencil-simple"></i>
+                                </button>
                             @endcan
                             
                             @can('turno.excluir')
-                                <button wire:click="delete({{ $turno->id }})" class="ml-4 text-red-600 hover:text-red-900" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()">
-                                    Excluir
+                                <button wire:click="delete({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()">
+                                    <i class="text-xl ph ph-trash"></i>
                                 </button>
                             @endcan
                         </td>

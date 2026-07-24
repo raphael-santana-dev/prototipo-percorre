@@ -1,82 +1,19 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Gerenciamento de Usuários (Corporativo)</h1>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <i class="ph ph-users text-purpura-500"></i> Usuários
+        </h1>
+        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg bg-purpura-500 hover:bg-purpura-600">
+            <i class="ph ph-plus"></i> Novo Usuário
+        </button>
     </div>
 
-    <!-- Mensagens de Feedback -->
     @if (session()->has('success'))
-        <div class="p-4 text-green-700 bg-green-100 border-l-4 border-green-500 rounded-md">
-            {{ session('success') }}
-        </div>
+        <div class="p-4 rounded-md text-pistache-100 bg-pistache-500"><i class="ph ph-check-circle"></i> {{ session('success') }}</div>
     @endif
     @if (session()->has('error'))
-        <div class="p-4 text-red-700 bg-red-100 border-l-4 border-red-500 rounded-md">
-            {{ session('error') }}
-        </div>
+        <div class="p-4 rounded-md text-red-100 bg-red-500"><i class="ph ph-warning"></i> {{ session('error') }}</div>
     @endif
-
-    <!-- Formulário -->
-    <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ $isEditMode ? 'Editar Usuário' : 'Cadastrar Novo Usuário' }}
-        </h2>
-        <form wire:submit="save" class="mt-4 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
-                    <input type="text" wire:model="name" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    @error('name') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">E-mail</label>
-                    <input type="email" wire:model="email" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    @error('email') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Senha {{ $isEditMode ? '(Opcional)' : '' }}</label>
-                    <input type="password" wire:model="password" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    @error('password') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Grupo (Role)</label>
-                    <select wire:model="roleName" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Selecione uma Role...</option>
-                        @foreach($roles as $role)
-                            <option value="{{ $role->name }}">{{ strtoupper($role->name) }}</option>
-                        @endforeach
-                    </select>
-                    @error('roleName') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-800">Unidade Vinculada</label>
-                    <select wire:model="unidade_id" class="w-full mt-1">
-                        <option value="">Acesso Global (Sem Unidade)</option>
-                        @foreach($unidades as $unidade)
-                            <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
-                        @endforeach
-                    </select>
-                    @error('unidade_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-
-            </div>
-
-            <div class="flex gap-2 pt-2 border-t border-gray-100">
-                <button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                    {{ $isEditMode ? 'Atualizar Usuário' : 'Adicionar Usuário' }}
-                </button>
-                @if($isEditMode)
-                    <button type="button" wire:click="cancel" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-                        Cancelar
-                    </button>
-                @endif
-            </div>
-        </form>
-    </div>
 
     <!-- Lista de Usuários -->
     <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl">
@@ -84,7 +21,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Nome / E-mail</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Role Principal</th>
+                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Acesso</th>
                     <th class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Ações</th>
                 </tr>
             </thead>
@@ -92,31 +29,41 @@
                 @forelse($users as $user)
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                            <div class="text-sm font-bold text-gray-900">{{ $user->name }}</div>
                             <div class="text-sm text-gray-500">{{ $user->email }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             @foreach($user->roles as $role)
-                                <span class="inline-flex px-2 text-xs font-semibold leading-5 text-indigo-800 bg-indigo-100 rounded-full uppercase">
+                                <span class="inline-flex px-2 text-xs font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase">
                                     {{ $role->name }}
                                 </span>
                             @endforeach
-                            @if($user->roles->isEmpty())
-                                <span class="text-sm text-gray-400">Sem role</span>
-                            @endif
                             @if($user->unidade)
-                                <div class="text-xs font-semibold text-purpura-600 mt-1"><i class="ph ph-map-pin"></i> {{ $user->unidade->nome }}</div>
+                                <div class="text-xs font-semibold text-gray-500 mt-1"><i class="ph ph-map-pin"></i> {{ $user->unidade->nome }}</div>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                            <a href="{{ route('users.extra-permissions', $user->id) }}" class="mr-4 font-semibold text-orange-600 hover:text-orange-900">Permissões Extras</a>
-                            <button wire:click="edit({{ $user->id }})" class="text-indigo-600 hover:text-indigo-900">Editar</button>
-                            
-                            @if($user->id !== auth()->id() && !$user->hasRole('dev'))
-                                <button wire:click="delete({{ $user->id }})" class="ml-4 text-red-600 hover:text-red-900" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
-                                    Excluir
+                        
+                        <!-- Coluna de Ações APENAS com Ícones Padronizados -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-2">
+                                <button wire:click="showQuickDetails({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Detalhes Rápidos">
+                                    <i class="text-xl ph ph-eye"></i>
                                 </button>
-                            @endif
+                                
+                                <a href="{{ route('users.extra-permissions', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50" title="Permissões Extras">
+                                    <i class="text-xl ph ph-shield-plus"></i>
+                                </a>
+
+                                <button wire:click="edit({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Editar Usuário">
+                                    <i class="text-xl ph ph-pencil-simple"></i>
+                                </button>
+                                
+                                @if($user->id !== auth()->id() && !$user->hasRole('dev'))
+                                    <button wire:click="delete({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir Usuário" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
+                                        <i class="text-xl ph ph-trash"></i>
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -127,4 +74,73 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Modal de Cadastro / Edição -->
+    @if($showModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('showModal', false)"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                
+                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-xl sm:w-full sm:p-6 dark:bg-gray-800">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-100 pb-2">
+                        {{ $isEditMode ? 'Editar Usuário' : 'Novo Usuário' }}
+                    </h3>
+                    
+                    <form wire:submit="save" class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Nome Completo</label>
+                                <input type="text" wire:model="name" class="w-full mt-1">
+                                @error('name') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">E-mail</label>
+                                <input type="email" wire:model="email" class="w-full mt-1">
+                                @error('email') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Senha {{ $isEditMode ? '(Deixe em branco para não alterar)' : '' }}</label>
+                                <input type="password" wire:model="password" class="w-full mt-1">
+                                @error('password') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Grupo (Role)</label>
+                                <select wire:model="roleName" class="w-full mt-1">
+                                    <option value="">Selecione...</option>
+                                    @foreach($roles as $role)
+                                        <option value="{{ $role->name }}">{{ strtoupper($role->name) }}</option>
+                                    @endforeach
+                                </select>
+                                @error('roleName') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Unidade Vinculada</label>
+                                <select wire:model="unidade_id" class="w-full mt-1">
+                                    <option value="">Acesso Global</option>
+                                    @foreach($unidades as $unidade)
+                                        <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                                    @endforeach
+                                </select>
+                                @error('unidade_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-ponkan-500 hover:bg-ponkan-600">
+                                Salvar Usuário
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

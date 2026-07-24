@@ -234,7 +234,10 @@
             {{ $slot }}
         </div>
     </main>
-
+    <livewire:components.quick-view-drawer />
+    
     @livewireScripts
+
+    
 </body>
 </html>

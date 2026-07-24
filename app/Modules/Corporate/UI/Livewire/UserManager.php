@@ -23,11 +23,19 @@ class UserManager extends Component
 
     public ?int $unidade_id = null;
 
+    public bool $showModal = false;
+
     public function mount()
     {
         // Trava de segurança provisória (apenas DEV acessa).
         // Futuramente, podemos validar: auth()->user()->can('usuario.listar')
         abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
+    }
+
+    public function openModal()
+    {
+        $this->resetInputFields();
+        $this->showModal = true;
     }
 
     public function save()
@@ -74,7 +82,7 @@ class UserManager extends Component
 
         // Atribui a Role selecionada (sobrescrevendo qualquer outra que ele tivesse)
         $user->syncRoles([$this->roleName]);
-
+        $this->showModal = false;
         $this->resetInputFields();
         session()->flash('success', 'Usuário salvo com sucesso!');
     }
@@ -92,6 +100,7 @@ class UserManager extends Component
         $this->roleName = $user->roles->first()?->name ?? '';
         
         $this->isEditMode = true;
+        $this->showModal = true;
     }
 
     public function delete(int $id)
@@ -130,6 +139,27 @@ class UserManager extends Component
         $this->isEditMode = false;
         $this->unidade_id = null;
         $this->resetErrorBag();
+    }
+
+    public function showQuickDetails(int $id)
+    {
+        $user = \App\Models\User::with('roles', 'unidade')->findOrFail($id);
+        
+        $detalhes = [
+            'Nome Completo' => $user->name,
+            'E-mail' => $user->email,
+            'Grupo Principal' => $user->roles->first()?->name ?? 'Sem grupo',
+            'Unidade Vinculada' => $user->unidade?->nome ?? 'Acesso Global',
+            'Criado em' => $user->created_at->format('d/m/Y H:i'),
+        ];
+
+        // Dispara enviando UM ÚNICO array
+        $this->dispatch('load-quick-view', [
+            'title' => 'Perfil do Usuário', 
+            'icon' => 'ph-user-circle', 
+            'data' => $detalhes,
+            'subtitle' => 'Visualização rápida de dados'
+        ]);
     }
 
     public function render()
