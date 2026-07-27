@@ -25,6 +25,8 @@
                                 Biblioteca
                             </a>
                         @endfeature
+
+                        <a href="{{ route('student.profile') }}" class="px-3 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-500 rounded-md transition-colors">Meu Perfil</a>
                     </div>
                 </div>
                 <div class="flex items-center gap-4 text-white">
