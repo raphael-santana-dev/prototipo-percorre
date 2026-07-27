@@ -40,6 +40,7 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <button wire:click="abrirModal({{ $ciclo->id }})" class="text-indigo-600 hover:text-indigo-900 font-medium">Editar</button>
+                            <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="text-blue-600 hover:text-blue-900 font-medium mr-3">Gerenciar Perguntas</a>
                         </td>
                     </tr>
                 @empty

@@ -14,6 +14,8 @@ use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
 use App\Modules\Period\UI\Livewire\PeriodManager;
+use App\Modules\Period\UI\Livewire\StepManager;
+use App\Modules\Period\UI\Livewire\DynamicFields;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('home');
@@ -37,6 +39,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
     Route::get('/incricoes', \App\Modules\Registration\UI\Livewire\RegistrationManager::class)->name('inscricoes.index');
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
+
+    Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
+    Route::get('/campos', DynamicFields::class)->name('ciclos.campos');
 });
 
 // ==========================================
