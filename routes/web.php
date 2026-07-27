@@ -47,6 +47,7 @@ Route::prefix('alunos')->name('student.')->group(function () {
     // Alunos logados
     Route::middleware('auth:student')->group(function () {
         Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
+        Route::get('/meu-perfil', \App\Modules\Student\UI\Livewire\ProfileManager::class)->name('profile');
         Route::get('/biblioteca', StudentLibrary::class)
             ->name('library')
             ->middleware('feature:alunos.biblioteca');
