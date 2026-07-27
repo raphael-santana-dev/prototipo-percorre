@@ -134,7 +134,9 @@
                                 </button>
                             @endfeature
 
-                            <span class="text-sm">Olá, <strong>{{ auth()->user()->name }}</strong></span>
+                            <a href="{{ route('profile.show') }}" class="text-sm transition-colors hover:text-purpura-600 dark:hover:text-purpura-400">
+                                Olá, <strong>{{ auth()->user()->name }}</strong>
+                            </a>
                             
                             <livewire:auth.logout-button />
                         </div>
@@ -179,8 +181,10 @@
                 <div class="absolute flex items-center gap-3 bottom-4 left-4">
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=fff&color=9B26B6&bold=true" alt="Avatar" class="w-12 h-12 border-2 border-white rounded-full shadow-md">
                     <div class="text-white">
-                        <div class="font-bold leading-tight truncate w-44">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-white/80 truncate w-44">{{ auth()->user()->email }}</div>
+                        <a href="{{ route('profile.show') }}" class="text-white block hover:opacity-80 transition-opacity">
+                            <div class="font-bold leading-tight truncate w-44">{{ auth()->user()->name }}</div>
+                            <div class="text-xs text-white/80 truncate w-44">{{ auth()->user()->email }}</div>
+                        </a>
                     </div>
                 </div>
             </div>

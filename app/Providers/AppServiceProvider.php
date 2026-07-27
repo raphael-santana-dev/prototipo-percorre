@@ -88,6 +88,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.auth.logout-button', StudentLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
         Livewire::component('student.library', StudentLibrary::class);
+
+        Livewire::component('auth.profile-manager', \App\Modules\Auth\UI\Livewire\ProfileManager::class);
         
 
         // Revogação Automática de Permissões Vencidas
