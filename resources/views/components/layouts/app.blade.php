@@ -99,6 +99,13 @@
                                             <i class="ph ph-shield-check"></i> Roles (Grupos)
                                         </a>
 
+                                        @can('estudante.listar')
+                                            <a href="{{ route('students.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                                <!-- (Se for no mobile, use as classes: flex items-center gap-3 px-3 py-3...) -->
+                                                Estudantes
+                                            </a>
+                                        @endcan
+
                                         @role('dev')
                                             <div class="h-px my-2 bg-gray-100 dark:bg-gray-700"></div>
                                             <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
@@ -210,6 +217,11 @@
                     <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                         <i class="text-lg ph ph-shield-check"></i> Roles (Grupos)
                     </a>
+                    @can('estudante.listar')
+                        <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                            Estudantes
+                        </a>
+                    @endcan
 
                     @role('dev')
                         <a href="{{ route('permissions.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">

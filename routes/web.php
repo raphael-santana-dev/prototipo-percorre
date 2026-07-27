@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/turnos', TurnoManager::class)->name('turnos.index')->middleware('feature:turno');
     Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index')->middleware('feature:unidade');
     Route::get('/unidades/{id}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show')->middleware('feature:unidade');
+    Route::get('/estudantes', \App\Modules\Student\UI\Livewire\StudentManager::class)->name('students.index');
 });
 
 // ==========================================
