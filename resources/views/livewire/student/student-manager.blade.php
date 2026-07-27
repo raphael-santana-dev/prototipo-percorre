@@ -54,6 +54,10 @@
                                 <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
                                     <i class="text-xl ph ph-identification-card"></i>
                                 </button>
+
+                                <a href="{{ route('students.show', $student->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                    <i class="text-xl ph ph-user-focus"></i>
+                                </a>
                                 
                                 @can('estudante.editar')
                                     <button wire:click="edit({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">

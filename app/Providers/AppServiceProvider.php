@@ -81,6 +81,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('website.home', \App\Modules\Website\UI\Livewire\Home::class);
         Livewire::component('student.student-manager', \App\Modules\Student\UI\Livewire\StudentManager::class);
 
+        Livewire::component('student.student-details', \App\Modules\Student\UI\Livewire\StudentDetails::class);
+        Livewire::component('corporate.user-details', \App\Modules\Corporate\UI\Livewire\UserDetails::class);
+
         Livewire::component('student.auth.login', StudentLogin::class);
         Livewire::component('student.auth.logout-button', StudentLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
