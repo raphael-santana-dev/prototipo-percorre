@@ -99,6 +99,13 @@
                                             <i class="ph ph-shield-check"></i> Roles (Grupos)
                                         </a>
 
+                                        @can('estudante.listar')
+                                            <a href="{{ route('students.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                                <!-- (Se for no mobile, use as classes: flex items-center gap-3 px-3 py-3...) -->
+                                                Estudantes
+                                            </a>
+                                        @endcan
+
                                         @role('dev')
                                             <div class="h-px my-2 bg-gray-100 dark:bg-gray-700"></div>
                                             <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
@@ -127,7 +134,9 @@
                                 </button>
                             @endfeature
 
-                            <span class="text-sm">Olá, <strong>{{ auth()->user()->name }}</strong></span>
+                            <a href="{{ route('profile.show') }}" class="text-sm transition-colors hover:text-purpura-600 dark:hover:text-purpura-400">
+                                Olá, <strong>{{ auth()->user()->name }}</strong>
+                            </a>
                             
                             <livewire:auth.logout-button />
                         </div>
@@ -172,8 +181,10 @@
                 <div class="absolute flex items-center gap-3 bottom-4 left-4">
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=fff&color=9B26B6&bold=true" alt="Avatar" class="w-12 h-12 border-2 border-white rounded-full shadow-md">
                     <div class="text-white">
-                        <div class="font-bold leading-tight truncate w-44">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-white/80 truncate w-44">{{ auth()->user()->email }}</div>
+                        <a href="{{ route('profile.show') }}" class="text-white block hover:opacity-80 transition-opacity">
+                            <div class="font-bold leading-tight truncate w-44">{{ auth()->user()->name }}</div>
+                            <div class="text-xs text-white/80 truncate w-44">{{ auth()->user()->email }}</div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -210,6 +221,11 @@
                     <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                         <i class="text-lg ph ph-shield-check"></i> Roles (Grupos)
                     </a>
+                    @can('estudante.listar')
+                        <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                            Estudantes
+                        </a>
+                    @endcan
 
                     @role('dev')
                         <a href="{{ route('permissions.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">

@@ -49,6 +49,10 @@
                                 <button wire:click="showQuickDetails({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Detalhes Rápidos">
                                     <i class="text-xl ph ph-eye"></i>
                                 </button>
+
+                                <a href="{{ route('users.show', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                    <i class="text-xl ph ph-user-focus"></i>
+                                </a>
                                 
                                 <a href="{{ route('users.extra-permissions', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50" title="Permissões Extras">
                                     <i class="text-xl ph ph-shield-plus"></i>
