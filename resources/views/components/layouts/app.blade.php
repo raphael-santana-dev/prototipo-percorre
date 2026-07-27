@@ -2,27 +2,36 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
       x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
       x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-      :class="tema === 'dark' ? 'dark h-full bg-gray-900' : 'h-full bg-slate-50'">
+      :class="{ 'dark': tema === 'dark' }"
+      class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Sistema' }}</title>
     
+    <!-- Script Bloqueante: Evita a piscada branca (FOUC) antes do AlpineJS carregar -->
+    <script>
+        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body class="h-full text-gray-900 dark:text-white antialiased">
+
+<!-- O background e a transição suave foram movidos para o body -->
+<body class="h-full antialiased text-gray-900 transition-colors duration-500 bg-slate-50 dark:bg-gray-900 dark:text-gray-100">
+    
     <!-- Wrapper do Menu com estado do AlpineJS -->
     <div x-data="{ drawerOpen: false }">
         
-        <!-- ========================================== -->
-        <!-- NAVBAR SUPERIOR -->
-        <!-- ========================================== -->
-        <nav class="bg-purpura-500 border-b border-purpura-600 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <!-- Navbar Superior (com transição suave) -->
+        <nav class="transition-colors duration-500 bg-purpura-600 border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     
