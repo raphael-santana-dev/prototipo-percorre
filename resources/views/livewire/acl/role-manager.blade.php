@@ -1,65 +1,123 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Gerenciamento de Roles (Grupos)</h1>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2 dark:text-white">
+            <i class="ph ph-shield-check text-purpura-500"></i> Roles (Grupos)
+        </h1>
+        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg bg-purpura-500 hover:bg-purpura-600">
+            <i class="ph ph-plus"></i> Novos Grupos
+        </button>
     </div>
 
-    <!-- Formulário -->
-    <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ $isEditMode ? 'Editar Role' : 'Cadastrar Nova Role' }}
-        </h2>
-        <form wire:submit="save" class="flex items-end gap-4 mt-4">
-            <div class="flex-1">
-                <label for="name" class="block text-sm font-medium text-gray-700">Nome da Role (ex: gerente, financeiro)</label>
-                <input type="text" id="name" wire:model="name" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                @error('name') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-            </div>
-            <div class="flex gap-2">
-                <button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                    {{ $isEditMode ? 'Atualizar' : 'Adicionar' }}
-                </button>
-                @if($isEditMode)
-                    <button type="button" wire:click="cancel" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-                        Cancelar
-                    </button>
-                @endif
-            </div>
-        </form>
-    </div>
+    @if (session()->has('success'))
+        <div class="p-4 rounded-md text-pistache-100 bg-pistache-500"><i class="ph ph-check-circle"></i> {{ session('success') }}</div>
+    @endif
+    @if (session()->has('error'))
+        <div class="p-4 rounded-md text-red-100 bg-red-500"><i class="ph ph-warning"></i> {{ session('error') }}</div>
+    @endif
 
-    <!-- Lista -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">ID</th>
-                    <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Nome da Role</th>
-                    <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Ações</th>
+                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">ID</th>
+                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Nome do Grupo</th>
+                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Usuários Vinculados</th>
+                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Ações</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach($roles as $role)
-                    <tr>
-                        <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $role->id }}</td>
-                        <td class="px-6 py-4 font-mono text-sm font-medium text-gray-900 whitespace-nowrap">
-                            {{ $role->name }}
-                            @if(in_array($role->name, ['dev', 'admin']))
-                                <span class="ml-2 inline-flex px-2 text-xs font-semibold leading-5 text-blue-800 bg-blue-100 rounded-full">Nativo</span>
-                            @endif
+            <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                @forelse($roles as $role)
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-400">#{{ $role->id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-3 py-1 text-sm font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase">
+                                {{ $role->name }}
+                            </span>
                         </td>
-                        <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                            <a href="{{ route('roles.permissions', $role->id) }}" class="text-green-600 hover:text-green-900 mr-4">Permissões</a>
-                            <button wire:click="edit({{ $role->id }})" class="text-indigo-600 hover:text-indigo-900">Editar</button>
-                            
-                            @if(!in_array($role->name, ['dev', 'admin']))
-                                <button wire:click="delete({{ $role->id }})" class="ml-4 text-red-600 hover:text-red-900" onclick="confirm('Tem certeza que deseja excluir esta role?') || event.stopImmediatePropagation()">
-                                    Excluir
-                                </button>
-                            @endif
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $role->users_count }} usuários</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{{ route('roles.permissions', $role->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
+                                    <i class="text-xl ph ph-key"></i>
+                                </a>
+                                
+                                @if(!in_array($role->name, ['dev', 'admin']))
+                                    <button wire:click="edit({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
+                                        <i class="text-xl ph ph-pencil-simple"></i>
+                                    </button>
+                                    <button wire:click="delete({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
+                                        <i class="text-xl ph ph-trash"></i>
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Nenhum grupo cadastrado.</td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
+
+    <!-- Modal de Inserção Múltipla / Edição -->
+    @if($showModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('showModal', false)"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                
+                <!-- Modal mais estreito (max-w-lg) já que tem apenas um campo -->
+                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-visible text-left align-bottom transition-all transform bg-white rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 dark:bg-gray-800">
+                    
+                    <h3 class="mb-4 text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 dark:text-white dark:border-gray-700">
+                        {{ $isEditMode ? 'Editar Grupo' : 'Cadastrar Grupos' }}
+                    </h3>
+                    
+                    <form wire:submit="save" class="space-y-4">
+                        
+                        @foreach($items as $index => $item)
+                            <div class="flex items-start gap-4">
+                                <div class="flex-1">
+                                    <label class="block mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        Nome do Grupo {{ count($items) > 1 ? ($index + 1) : '' }}
+                                    </label>
+                                    <input type="text" wire:model="items.{{ $index }}.name" class="w-full text-sm" placeholder="ex: gestor">
+                                    @error("items.{$index}.name") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                </div>
+                                
+                                @if(count($items) > 1 && !$isEditMode)
+                                    <div class="pt-6">
+                                        <button type="button" wire:click="removeItem({{ $index }})" class="p-2 text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-gray-700" title="Remover Linha">
+                                            <i class="text-lg ph-bold ph-trash"></i>
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+
+                        @if(!$isEditMode)
+                            <div class="pt-2">
+                                <button type="button" wire:click="addItem" class="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-purpura-600 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-gray-700 dark:text-purpura-400">
+                                    <i class="ph-bold ph-plus"></i> Adicionar outra linha
+                                </button>
+                            </div>
+                        @endif
+
+                        <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-ponkan-500 hover:bg-ponkan-600 shadow-sm">
+                                Salvar Tudo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
