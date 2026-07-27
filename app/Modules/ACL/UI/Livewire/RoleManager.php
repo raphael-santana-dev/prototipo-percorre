@@ -11,83 +11,111 @@ use Spatie\Permission\Models\Role;
 #[Title('Gerenciar Roles - Administrativo')]
 class RoleManager extends Component
 {
-    public string $name = '';
-    public ?int $roleId = null;
+    public bool $showModal = false;
     public bool $isEditMode = false;
+    public ?int $roleId = null;
+
+    // Array para inserção múltipla, contendo apenas o 'name'
+    public array $items = [];
 
     public function mount()
     {
-        // Neste primeiro momento, apenas DEV gerencia Roles. 
-        // No futuro, ADMIN com permissão específica também poderá.
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito.');
+        abort_if(!auth()->user()->hasRole('dev'), 403);
     }
 
-    public function save()
+    public function openModal()
     {
-        $this->name = strtolower(trim($this->name)); // Força minúsculo
-
-        $rules = [
-            'name' => 'required|string|min:3|unique:roles,name' . ($this->roleId ? ',' . $this->roleId : '')
-        ];
-
-        $this->validate($rules);
-
-        if ($this->isEditMode) {
-            $role = Role::findOrFail($this->roleId);
-            
-            // Impede a renomeação das roles base
-            if (in_array($role->name, ['dev', 'admin']) && $role->name !== $this->name) {
-                $this->addError('name', 'Não é permitido renomear as roles nativas do sistema.');
-                return;
-            }
-
-            $role->update(['name' => $this->name]);
-        } else {
-            Role::create(['name' => $this->name, 'guard_name' => 'web']);
-        }
-
         $this->resetInputFields();
+        $this->items = [['name' => '']];
+        $this->showModal = true;
+    }
+
+    public function addItem()
+    {
+        $this->items[] = ['name' => ''];
+    }
+
+    public function removeItem(int $index)
+    {
+        unset($this->items[$index]);
+        $this->items = array_values($this->items);
     }
 
     public function edit(int $id)
     {
+        $this->resetInputFields();
         $role = Role::findOrFail($id);
-        $this->roleId = $id;
-        $this->name = $role->name;
+        
+        if ($role->name === 'dev' && !auth()->user()->hasRole('dev')) {
+            session()->flash('error', 'A Role DEV não pode ser alterada.');
+            return;
+        }
+
+        $this->roleId = $role->id;
         $this->isEditMode = true;
+        $this->items[0] = ['name' => $role->name];
+        
+        $this->showModal = true;
+    }
+
+    public function save()
+    {
+        $this->validate([
+            'items.*.name' => 'required|string|min:3|max:255',
+        ], [
+            'items.*.name.required' => 'O nome do grupo é obrigatório.',
+        ]);
+
+        foreach ($this->items as $index => $item) {
+            $name = strtolower(trim($item['name']));
+
+            if ($this->isEditMode && $this->roleId) {
+                if (Role::where('name', $name)->where('id', '!=', $this->roleId)->exists()) {
+                    $this->addError("items.{$index}.name", 'Este grupo já existe.');
+                    return;
+                }
+                
+                Role::where('id', $this->roleId)->update(['name' => $name]);
+            } else {
+                if (Role::where('name', $name)->exists()) {
+                    $this->addError("items.{$index}.name", 'O grupo '.$name.' já existe.');
+                    continue; 
+                }
+
+                Role::create(['name' => $name, 'guard_name' => 'web']);
+            }
+        }
+
+        $this->showModal = false;
+        $this->resetInputFields();
+        session()->flash('success', $this->isEditMode ? 'Grupo atualizado!' : 'Grupos cadastrados com sucesso!');
     }
 
     public function delete(int $id)
     {
         $role = Role::findOrFail($id);
-
-        // Impede a exclusão das roles base
+        
         if (in_array($role->name, ['dev', 'admin'])) {
-            // Emite um alerta visual ou simplesmente ignora, aqui vamos apenas retornar
+            session()->flash('error', 'Grupos base do sistema não podem ser excluídos.');
             return;
         }
 
         $role->delete();
-        $this->resetInputFields();
-    }
-
-    public function cancel()
-    {
-        $this->resetInputFields();
+        session()->flash('success', 'Grupo excluído com sucesso.');
     }
 
     private function resetInputFields()
     {
-        $this->name = '';
-        $this->roleId = null;
+        $this->items = [];
         $this->isEditMode = false;
+        $this->roleId = null;
         $this->resetErrorBag();
     }
 
     public function render()
     {
         return view('livewire.acl.role-manager', [
-            'roles' => Role::orderBy('name')->get()
+            'roles' => Role::withCount('users')->orderBy('name')->get()
         ]);
     }
 }
