@@ -2,43 +2,52 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
       x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
       x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-      :class="tema === 'dark' ? 'dark h-full bg-gray-900' : 'h-full bg-slate-50'">
+      :class="{ 'dark': tema === 'dark' }"
+      class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Sistema' }}</title>
     
+    <!-- Script Bloqueante: Evita a piscada branca (FOUC) antes do AlpineJS carregar -->
+    <script>
+        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body class="h-full text-gray-900 antialiased">
+
+<!-- O background e a transição suave foram movidos para o body -->
+<body class="h-full antialiased text-gray-900 transition-colors duration-500 bg-slate-50 dark:bg-gray-900 dark:text-gray-100">
+    
     <!-- Wrapper do Menu com estado do AlpineJS -->
     <div x-data="{ drawerOpen: false }">
         
-        <!-- ========================================== -->
-        <!-- NAVBAR SUPERIOR -->
-        <!-- ========================================== -->
-        <nav class="bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <!-- Navbar Superior (com transição suave) -->
+        <nav class="transition-colors duration-500 bg-purpura-600 border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     
                     <!-- Lado Esquerdo (Logo e Botão Hamburger Mobile) -->
                     <div class="flex items-center gap-4">
                         <!-- Botão Hambúrguer (Oculto no Desktop graças ao 'md:hidden') -->
-                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-gray-600 rounded-md md:hidden hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none">
+                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-white/80 rounded-md md:hidden hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none">
                             <i class="text-2xl ph ph-list"></i>
                         </button>
                         
                         <!-- Logo / Título -->
-                        <div class="flex items-center gap-2">
-                            <div class="flex items-center justify-center w-8 h-8 text-white rounded-lg bg-purpura-500">
-                                <span class="font-bold">S</span>
-                            </div>
-                            <span class="text-xl font-bold text-gray-900 dark:text-white">Sistema</span>
+                        <div class="flex-shrink-0 flex items-center">
+                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-10 w-auto" alt="Instituto Percorre">
+                            <span class="ml-3 text-[10px] uppercase tracking-wider bg-purpura-700 text-purpura-100 px-2 py-1 rounded hidden sm:inline-block border border-purpura-600">
+                                {{ auth()->user()->getRoleNames()->first() }}
+                            </span>
                         </div>
                     </div>
 
@@ -50,13 +59,18 @@
                         
                         <!-- Links Centrais -->
                         <div class="flex items-center gap-2">
-                            <a href="{{ route('dashboard') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                Dashboard
-                            </a>
+                            
+                            @feature('dashboard')
+                                @can('dashboard.visualizar')
+                                    <a href="{{ route('dashboard') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                        Dashboard
+                                    </a>
+                                @endcan
+                            @endfeature
                             
                             @feature('turno')
                                 @can('turno.listar')
-                                    <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
                                         Turnos
                                     </a>
                                 @endcan
@@ -64,7 +78,7 @@
 
                             @feature('unidade')
                                 @can('unidade.listar')
-                                    <a href="{{ route('unidades.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <a href="{{ route('unidades.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
                                         Unidades
                                     </a>
                                 @endcan
@@ -73,7 +87,7 @@
                             <!-- Dropdown de Configurações Administrativas -->
                             @role('dev|admin')
                                 <div class="relative" x-data="{ menuOpen: false }">
-                                    <button @click="menuOpen = !menuOpen" @click.outside="menuOpen = false" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none">
+                                    <button @click="menuOpen = !menuOpen" @click.outside="menuOpen = false" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800 focus:outline-none">
                                         <span>Engrenagens</span>
                                         <i class="transition-transform duration-200 ph ph-caret-down text-xs" :class="menuOpen ? 'rotate-180' : ''"></i>
                                     </button>
@@ -92,49 +106,71 @@
                                         <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
                                             Acessos
                                         </div>
-                                        <a href="{{ route('users.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                            <i class="ph ph-users"></i> Usuários
-                                        </a>
-                                        <a href="{{ route('roles.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                            <i class="ph ph-shield-check"></i> Roles (Grupos)
-                                        </a>
+                                        
+                                        @feature('usuarios')
+                                            @can('usuario.listar')
+                                                <a href="{{ route('users.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
+                                                    <i class="ph ph-users"></i> Usuários
+                                                </a>
+                                            @endcan
+                                        @endfeature
+                                        
+                                        @feature('roles')
+                                            @can('role.listar')
+                                                <a href="{{ route('roles.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
+                                                    <i class="ph ph-shield-check"></i> Roles (Grupos)
+                                                </a>
+                                            @endcan
+                                        @endfeature
 
-                                        @can('estudante.listar')
-                                            <a href="{{ route('students.index') }}" class="px-3 py-2 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                                <!-- (Se for no mobile, use as classes: flex items-center gap-3 px-3 py-3...) -->
-                                                Estudantes
-                                            </a>
-                                        @endcan
+                                        @feature('estudantes')
+                                            @can('estudante.listar')
+                                                <a href="{{ route('students.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
+                                                    <i class="ph ph-student"></i>Estudantes
+                                                </a>
+                                            @endcan
+                                        @endfeature
 
                                         @role('dev')
                                             <div class="h-px my-2 bg-gray-100 dark:bg-gray-700"></div>
                                             <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
                                                 Sistema
                                             </div>
-                                            <a href="{{ route('permissions.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                <i class="ph ph-key"></i> Permissões
-                                            </a>
-                                            <a href="{{ route('features.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                <i class="ph ph-toggle-right"></i> Feature Toggles
-                                            </a>
+                                            
+                                            @feature('permissoes')
+                                                @can('permissao.listar')
+                                                    <a href="{{ route('permissions.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
+                                                        <i class="ph ph-key"></i> Permissões
+                                                    </a>
+                                                @endcan
+                                            @endfeature
+                                            
+                                            @feature('features')
+                                                @can('feature.listar')
+                                                    <a href="{{ route('features.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
+                                                        <i class="ph ph-toggle-right"></i> Feature Toggles
+                                                    </a>
+                                                @endcan
+                                            @endfeature
                                         @endrole
                                     </div>
                                 </div>
                             @endrole
                         </div>
 
-                        <div class="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
+                        <!-- Divisor mais sutil -->
+                        <div class="w-px h-6 bg-purpura-400 dark:bg-gray-700"></div>
                         
                         <!-- Controles da Conta Desktop -->
-                        <div class="flex items-center gap-4 text-gray-700 dark:text-gray-200">
+                        <div class="flex items-center gap-4 text-white dark:text-gray-200">
                             @feature('sistema.tema')
-                                <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 transition-colors rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700" title="Alternar Tema">
+                                <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 transition-colors rounded-full hover:bg-white/10 dark:bg-gray-800 dark:hover:bg-gray-700" title="Alternar Tema">
                                     <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
                                     <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                                 </button>
                             @endfeature
 
-                            <a href="{{ route('profile.show') }}" class="text-sm transition-colors hover:text-purpura-600 dark:hover:text-purpura-400">
+                            <a href="{{ route('profile.show') }}" class="text-sm transition-colors hover:text-purpura-100 dark:hover:text-purpura-400">
                                 Olá, <strong>{{ auth()->user()->name }}</strong>
                             </a>
                             
@@ -148,7 +184,7 @@
                     <!-- ========================================== -->
                     <div class="flex md:hidden">
                         @feature('sistema.tema')
-                            <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-gray-600 rounded-full dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-white/90 rounded-full dark:text-gray-300 hover:bg-white/10 dark:hover:bg-gray-700">
                                 <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
                                 <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                             </button>
@@ -191,9 +227,14 @@
 
             <!-- Links do Menu Mobile -->
             <div class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                    <i class="text-lg ph ph-house"></i> Dashboard
-                </a>
+                
+                @feature('dashboard')
+                    @can('dashboard.visualizar')
+                        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                            <i class="text-lg ph ph-house"></i> Dashboard
+                        </a>
+                    @endcan
+                @endfeature
 
                 @feature('turno')
                     @can('turno.listar')
@@ -215,25 +256,47 @@
                     <div class="pt-4 pb-1 mt-4 border-t border-gray-100 dark:border-gray-700">
                         <p class="px-3 text-xs font-bold tracking-wider text-gray-400 uppercase">Administração</p>
                     </div>
-                    <a href="{{ route('users.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                        <i class="text-lg ph ph-users"></i> Usuários
-                    </a>
-                    <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                        <i class="text-lg ph ph-shield-check"></i> Roles (Grupos)
-                    </a>
-                    @can('estudante.listar')
-                        <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 transition-colors rounded-md dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800">
-                            Estudantes
-                        </a>
-                    @endcan
+                    
+                    @feature('usuarios')
+                        @can('usuario.listar')
+                            <a href="{{ route('users.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                <i class="text-lg ph ph-users"></i> Usuários
+                            </a>
+                        @endcan
+                    @endfeature
+                    
+                    @feature('roles')
+                        @can('role.listar')
+                            <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                <i class="text-lg ph ph-shield-check"></i> Roles (Grupos)
+                            </a>
+                        @endcan
+                    @endfeature
+                    
+                    @feature('estudantes')
+                        @can('estudante.listar')
+                            <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                <i class="text-lg ph ph-student"></i>Estudantes
+                            </a>
+                        @endcan
+                    @endfeature
 
                     @role('dev')
-                        <a href="{{ route('permissions.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <i class="text-lg ph ph-key"></i> Permissões
-                        </a>
-                        <a href="{{ route('features.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <i class="text-lg ph ph-toggle-right"></i> Feature Toggles
-                        </a>
+                        @feature('permissoes')
+                            @can('permissao.listar')
+                                <a href="{{ route('permissions.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                    <i class="text-lg ph ph-key"></i> Permissões
+                                </a>
+                            @endcan
+                        @endfeature
+                        
+                        @feature('features')
+                            @can('feature.listar')
+                                <a href="{{ route('features.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                    <i class="text-lg ph ph-toggle-right"></i> Feature Toggles
+                                </a>
+                            @endcan
+                        @endfeature
                     @endrole
                 @endrole
             </div>
@@ -254,6 +317,5 @@
     
     @livewireScripts
 
-    
 </body>
 </html>
