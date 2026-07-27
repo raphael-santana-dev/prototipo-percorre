@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Inscricao extends Model
 {
     use SoftDeletes;
+    protected $table = 'inscricoes';
     protected $fillable = [
         'ciclo_id',
         'student_id',
