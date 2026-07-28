@@ -165,17 +165,16 @@
             <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12"></div>
 
             @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
-                <div class="bg-gray-50 rounded-xl border border-gray-200 p-5">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
-                        <span class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">{{ $numEtapa }}</span>
+                <div class="p-5 bg-gray-50 rounded-xl border border-gray-200" wire:key="grupo-etapa-{{ $numEtapa }}">
+                    <h3 class="flex items-center gap-2 mb-4 text-lg font-bold text-gray-800">
+                        <span class="flex items-center justify-center w-6 h-6 text-xs text-white bg-indigo-600 rounded-full">{{ $numEtapa }}</span>
                         Campos da Etapa {{ $numEtapa }}
                     </h3>
                     
                     {{-- Grade que simula a visualização real do formulário (12 colunas) --}}
                     <div class="grid grid-cols-12 gap-3">
                         @foreach($camposDaEtapa as $c)
-                            <div class="col-span-{{ $c->largura }} relative group bg-white border {{ $campoId == $c->id ? 'border-indigo-500 ring-2 ring-indigo-500' : 'border-gray-200' }} rounded-lg p-3 shadow-sm hover:border-indigo-300 transition">
-                                <div class="flex justify-between items-start mb-1">
+                            <div wire:key="campo-{{ $c->id }}" class="col-span-{{ $c->largura }} relative group bg-white border {{ $campoId == $c->id ? 'border-indigo-500 ring-2 ring-indigo-500' : 'border-gray-200' }} rounded-lg p-3 shadow-sm hover:border-indigo-300 transition">                                <div class="flex justify-between items-start mb-1">
                                     <span class="text-xs font-bold text-gray-400">#{{ $c->ordem }}</span>
                                     <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                                         <button wire:click="editar({{ $c->id }})" class="text-indigo-600 hover:text-indigo-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>

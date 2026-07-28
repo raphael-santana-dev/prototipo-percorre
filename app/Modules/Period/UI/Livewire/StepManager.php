@@ -19,11 +19,24 @@ class StepManager extends Component
     use WithPagination; // Habilita a paginação sem recarregar a página
     use ComPadraoListagem; // Traz a ordenação e os registos por página
 
+    public bool $showModal = false;
+    public bool $isEditMode = false;
+    public ?int $stepId = null;
+
+    // Campos migrados do sistema antigo
+    public string $nome = '';
+    public ?int $numero = null;
+    public string $descricao = '';
+
     public function mount() 
     {
-        if (!auth()->user()->hasAnyRole(['dev'])) {
-            abort(403, 'Você não tem permissão para acessar esta página.');
-        }
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+    }
+
+    public function openModal()
+    {
+        $this->resetInputFields();
+        $this->showModal = true;
     }
 
     public function getHeadersProperty()
@@ -35,6 +48,64 @@ class StepManager extends Component
             ['key' => 'nome', 'label' => 'Nome', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'], // Coluna para ações
         ];
+    }
+
+    public function save()
+    {
+        $this->validate([
+            'nome' => 'required|string|max:255',
+            'numero' => 'required|integer|min:1',
+            'descricao' => 'nullable|string',
+        ], [
+            'nome.required' => 'O nome da etapa é obrigatório.',
+            'numero.required' => 'A ordem de execução é obrigatória.',
+        ]);
+
+        $data = [
+            'nome' => $this->nome,
+            'numero' => $this->numero,
+            'descricao' => $this->descricao,
+        ];
+
+        if ($this->isEditMode) {
+            Etapa::findOrFail($this->stepId)->update($data);
+        } else {
+            Etapa::create($data);
+        }
+
+        $this->showModal = false;
+        $this->resetInputFields();
+        session()->flash('success', $this->isEditMode ? 'Etapa atualizada com sucesso!' : 'Etapa cadastrada com sucesso!');
+    }
+
+    public function delete(int $id)
+    {
+        Etapa::findOrFail($id)->delete();
+        session()->flash('success', 'Etapa excluída com sucesso!');
+    }
+
+    private function resetInputFields()
+    {
+        $this->stepId = null;
+        $this->nome = '';
+        $this->numero = null;
+        $this->descricao = '';
+        $this->isEditMode = false;
+        $this->resetErrorBag();
+    }
+
+    public function edit(int $id)
+    {
+        $this->resetInputFields();
+        
+        $step = Etapa::findOrFail($id);
+        $this->stepId = $step->id;
+        $this->nome = $step->nome;
+        $this->numero = $step->numero;
+        $this->descricao = $step->descricao ?? '';
+        
+        $this->isEditMode = true;
+        $this->showModal = true;
     }
 
     public function render()

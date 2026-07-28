@@ -41,7 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
 
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
-    Route::get('/campos', DynamicFields::class)->name('ciclos.campos');
+    Route::get('/ciclos/{id}/campos', DynamicFields::class)->name('ciclos.campos');
 });
 
 // ==========================================

@@ -35,9 +35,15 @@ class DynamicFields extends Component
 
     public $etapasDisponiveis = [];
 
-    public function mount(Ciclo $ciclo)
+    public int $cicloIdAtual;
+
+    public function mount(int $id)
     {
+        // 1. Busca o ciclo explicitamente no banco, blindando contra falhas de rota
+        $ciclo = Ciclo::findOrFail($id);
+        
         $this->ciclo = $ciclo;
+        $this->cicloIdAtual = $ciclo->id;
         $this->etapasDisponiveis = Etapa::orderBy('numero', 'asc')->get();
         
         // Garante que, ao abrir a página, o campo "Ordem" já sugere o próximo número vazio
@@ -56,7 +62,7 @@ class DynamicFields extends Component
     {
         if (empty($this->etapa)) return;
 
-        $maxOrdem = CampoFormulario::where('ciclo_id', $this->ciclo->id)
+        $maxOrdem = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
             ->where('etapa', $this->etapa)
             ->max('ordem') ?? 0;
 
@@ -120,23 +126,30 @@ class DynamicFields extends Component
     {
         $this->validate([
             'etapa' => 'required',
-            'ordem' => 'required|integer|min:1', // min:1 Impede a introdução de ordens negativas ou zero
+            'ordem' => 'required|integer|min:1',
             'label' => 'required|min:2',
-            'name' => 'required|regex:/^[a-z0-9_]+$/',
+            'name' => [
+                'required', 
+                'regex:/^[a-z0-9_]+$/',
+                // Trava de segurança: Garante que o name seja único apenas dentro deste mesmo Ciclo
+                \Illuminate\Validation\Rule::unique('campo_formularios', 'name')
+                    ->where('ciclo_id', $this->cicloIdAtual)
+                    ->ignore($this->campoId)
+            ],
             'tipo' => 'required',
             'largura' => 'required|integer',
+        ], [
+            'name.unique' => 'Já existe um campo com este identificador neste ciclo. Altere a pergunta.'
         ]);
 
         $arrayOpcoes = null;
         if (in_array($this->tipo, ['select', 'radio']) && !empty($this->opcoes)) {
             $opcoesLimpas = trim($this->opcoes);
             
-            // Verifica se o Administrador digitou bd:tabela no campo de texto
             if (str_starts_with(strtolower($opcoesLimpas), 'bd:')) {
                 $tabela = trim(substr($opcoesLimpas, 3));
                 $arrayOpcoes = ['origem_bd' => $tabela];
             } else {
-                // Se for texto normal, separa por vírgulas como antes
                 $arrayOpcoes = array_map('trim', explode(',', $this->opcoes));
             }
         }
@@ -145,59 +158,61 @@ class DynamicFields extends Component
         // LÓGICA DE REORDENAÇÃO (DANÇA DAS CADEIRAS)
         // =================================================================
         if ($this->campoId) {
-            // MODO EDIÇÃO
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
             $ordemNova = $this->ordem;
 
-            // Se mudou de ordem, mas permaneceu dentro da mesma etapa
             if ($ordemAntiga != $ordemNova && $campo->etapa == $this->etapa) {
                 if ($ordemNova < $ordemAntiga) {
-                    CampoFormulario::where('ciclo_id', $this->ciclo->id)
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
                         ->where('etapa', $this->etapa)
                         ->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])
                         ->increment('ordem');
                 } else {
-                    CampoFormulario::where('ciclo_id', $this->ciclo->id)
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
                         ->where('etapa', $this->etapa)
                         ->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])
                         ->decrement('ordem');
                 }
             }
         } else {
-            // MODO CRIAÇÃO
-            // Empurra para baixo qualquer campo da mesma etapa que tenha ordem igual ou maior
-            CampoFormulario::where('ciclo_id', $this->ciclo->id)
+            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
                 ->where('etapa', $this->etapa)
                 ->where('ordem', '>=', $this->ordem)
                 ->increment('ordem');
         }
 
-        // Salva o Registo
-        CampoFormulario::updateOrCreate(
-            ['id' => $this->campoId],
-            [
-                'ciclo_id' => empty($this->ciclo->id) ? 1 : $this->ciclo->id,
-                'etapa' => $this->etapa,
-                'ordem' => $this->ordem,
-                'label' => $this->label,
-                'name' => $this->name,
-                'tipo' => $this->tipo,
-                'largura' => $this->largura,
-                'subtipo' => $this->subtipo,
-                'tamanho_min' => empty($this->tamanho_min) ? null : $this->tamanho_min,
-                'tamanho_max' => empty($this->tamanho_max) ? null : $this->tamanho_max,
-                'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
-                'opcoes' => $arrayOpcoes,
-                'obrigatorio' => $this->obrigatorio,
-                'regras_validacao' => $this->regras_validacao,
-                'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
-                'depende_operador' => $this->depende_operador,
-                'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,
-            ]
-        );
+        // =================================================================
+        // PERSISTÊNCIA ROBUSTA SEPARADA
+        // =================================================================
+        $dadosGerais = [
+            'ciclo_id' => $this->cicloIdAtual, // Agora trava firmemente no ciclo da página
+            'etapa' => $this->etapa,
+            'ordem' => $this->ordem,
+            'label' => $this->label,
+            'name' => $this->name,
+            'tipo' => $this->tipo,
+            'largura' => $this->largura,
+            'subtipo' => $this->subtipo,
+            'tamanho_min' => empty($this->tamanho_min) ? null : $this->tamanho_min,
+            'tamanho_max' => empty($this->tamanho_max) ? null : $this->tamanho_max,
+            'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
+            'opcoes' => $arrayOpcoes,
+            'obrigatorio' => $this->obrigatorio,
+            'regras_validacao' => $this->regras_validacao,
+            'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
+            'depende_operador' => $this->depende_operador,
+            'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,
+        ];
 
-        $this->cancelarEdicao(); // Limpa e calcula o próximo espaço vazio
+        // Abordagem livre de falhas (evita inserção de id = null)
+        if ($this->campoId) {
+            CampoFormulario::findOrFail($this->campoId)->update($dadosGerais);
+        } else {
+            CampoFormulario::create($dadosGerais);
+        }
+
+        $this->cancelarEdicao(); 
         session()->flash('sucesso', 'Campo salvo e ordenado com sucesso!');
     }
 
@@ -210,7 +225,7 @@ class DynamicFields extends Component
         $campo->delete();
         
         // Puxa os campos de baixo para cima para "tapar o buraco" na listagem visual
-        CampoFormulario::where('ciclo_id', $this->ciclo->id)
+        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
             ->where('etapa', $etapaExcluida)
             ->where('ordem', '>', $ordemExcluida)
             ->decrement('ordem');
@@ -222,7 +237,7 @@ class DynamicFields extends Component
     public function render()
     {
         // Agrupa os campos por etapa e ordena corretamente
-        $camposCadastrados = CampoFormulario::where('ciclo_id', $this->ciclo->id)
+        $camposCadastrados = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
             ->orderBy('etapa')
             ->orderBy('ordem')
             ->orderBy('id')
