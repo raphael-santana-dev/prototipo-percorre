@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Ciclo extends Model
+{
+    protected $fillable = [
+        'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'regras_pontuacao'
+    ];
+
+    protected $casts = [
+        'data_inicio' => 'datetime',
+        'data_fim' => 'datetime',
+        'status' => 'boolean'
+    ];
+
+    public function inscricoes()
+    {
+        return $this->hasMany(Inscricao::class);
+    }
+
+    public function campos()
+    {
+        return $this->hasMany(CampoFormulario::class)->orderBy('ordem');
+    }
+}

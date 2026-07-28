@@ -83,6 +83,10 @@
                                     </a>
                                 @endcan
                             @endfeature
+
+                            <a href="{{ route('inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Inscricoes
+                            </a>
                             
                             <!-- Dropdown de Configurações Administrativas -->
                             @role('dev|admin')

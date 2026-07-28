@@ -1,0 +1,1 @@
+<div>{{dump($inscricoes)}}</div>

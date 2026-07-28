@@ -20,7 +20,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SystemBaseSeeder::class,
             PendingPermissionsAndFeaturesSeeder::class,
-            PendingFeaturesSeeder::class
+            PendingFeaturesSeeder::class,
+            EtapaSeeder::class
         ]);
     }
 }
