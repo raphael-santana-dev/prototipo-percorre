@@ -36,6 +36,13 @@ class StepManager extends Component
     public function openModal()
     {
         $this->resetInputFields();
+        
+        // Busca o maior número de etapa já cadastrado
+        $maiorOrdem = Etapa::max('numero');
+        
+        // Se já existir alguma etapa, soma 1. Se não existir (null), começa do 2.
+        $this->numero = $maiorOrdem ? $maiorOrdem + 1 : 2;
+        
         $this->showModal = true;
     }
 

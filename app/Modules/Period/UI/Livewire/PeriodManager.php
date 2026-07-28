@@ -102,7 +102,7 @@ class PeriodManager extends Component
 
     public function render()
     {
-        $ciclos = Ciclo::orderBy('id', 'desc')->paginate(1);
+        $ciclos = Ciclo::orderBy('id', 'desc')->paginate(10);
 
         return view('livewire.period.period-manager', [
             'ciclos' => $ciclos,
