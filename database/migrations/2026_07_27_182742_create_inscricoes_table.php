@@ -39,8 +39,6 @@ return new class extends Migration
             $table->integer('receber_informacoes')->nullable();
             $table->integer('autorizacao_uso_infos')->nullable();
             
-            
-
             $table->integer('pontuacao_total')->default(0);
             $table->string('pontuacao_detalhes')->nullable();
             $table->integer('posicao_ranking')->nullable();

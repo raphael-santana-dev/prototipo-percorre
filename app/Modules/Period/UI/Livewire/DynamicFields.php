@@ -45,6 +45,10 @@ class DynamicFields extends Component
         $this->ciclo = $ciclo;
         $this->cicloIdAtual = $ciclo->id;
         $this->etapasDisponiveis = Etapa::orderBy('numero', 'asc')->get();
+
+        if ($this->etapasDisponiveis->isNotEmpty()) {
+            $this->etapa = $this->etapasDisponiveis->first()->numero;
+        }
         
         // Garante que, ao abrir a página, o campo "Ordem" já sugere o próximo número vazio
         $this->atualizarProximaOrdem();

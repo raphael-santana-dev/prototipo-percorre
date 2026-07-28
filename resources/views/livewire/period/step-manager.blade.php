@@ -35,12 +35,16 @@
                 <td class="px-6 py-4">{{ $etapa->numero }}</td>
                 <td class="px-6 py-4">{{ $etapa->nome }}</td>
                 <td class="px-6 py-4 text-right">
-                    <button wire:click="edit({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
-                        <i class="text-xl ph ph-pencil-simple"></i>
-                    </button>
-                    <button wire:click="delete({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                    @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
+                        <button wire:click="edit({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </button>
+                        <button wire:click="delete({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    @else
+                        <span class="px-2 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-400">Etapa Fixa</span>
+                    @endif
                 </td>
             </tr>
         @empty

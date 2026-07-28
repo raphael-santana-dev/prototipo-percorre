@@ -87,7 +87,15 @@ class StepManager extends Component
 
     public function delete(int $id)
     {
-        Etapa::findOrFail($id)->delete();
+        $step = Etapa::findOrFail($id);
+
+        // Bloqueio de segurança
+        if ($step->numero === 1 && !auth()->user()->hasRole('dev')) {
+            session()->flash('error', 'A Etapa 1 é obrigatória para o funcionamento das inscrições e não pode ser excluída.');
+            return;
+        }
+
+        $step->delete();
         session()->flash('success', 'Etapa excluída com sucesso!');
     }
 
@@ -104,8 +112,14 @@ class StepManager extends Component
     public function edit(int $id)
     {
         $this->resetInputFields();
-        
         $step = Etapa::findOrFail($id);
+
+        // Bloqueio de segurança
+        if ($step->numero === 1 && !auth()->user()->hasRole('dev')) {
+            session()->flash('error', 'A Etapa 1 é padrão do sistema e só pode ser editada por desenvolvedores.');
+            return;
+        }
+        
         $this->stepId = $step->id;
         $this->nome = $step->nome;
         $this->numero = $step->numero;
