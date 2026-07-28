@@ -10,9 +10,16 @@ class UnidadeService extends BaseService
     public function __construct(UnidadeRepositoryInterface $repository) {
         $this->repository = $repository;
     }
+    
     public function listarTodos() { return $this->repository->getAll(); }
     public function criarUnidade(array $dados) { return $this->repository->create($dados); }
     public function atualizarUnidade(int $id, array $dados) { return $this->repository->update($id, $dados); }
     public function deletarUnidade(int $id) { return $this->repository->delete($id); }
     public function buscarPorId(int $id) { return $this->repository->findById($id); }
+
+    public function sincronizarCursos(int $unidadeId, array $cursosIds) 
+    {
+        $unidade = $this->repository->findById($unidadeId);
+        $unidade->cursos()->sync($cursosIds);
+    }
 }

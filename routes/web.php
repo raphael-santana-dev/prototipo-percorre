@@ -42,6 +42,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
     Route::get('/ciclos/{id}/campos', DynamicFields::class)->name('ciclos.campos');
+    Route::get('/cursos', \App\Modules\Curso\UI\Livewire\CursoManager::class)->name('cursos.index');
+    Route::get('/cursos/{id}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show');
+
+    Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status.index');
 });
 
 // ==========================================
