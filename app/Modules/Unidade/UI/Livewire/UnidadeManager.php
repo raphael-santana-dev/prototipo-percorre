@@ -119,6 +119,27 @@ class UnidadeManager extends Component
         $this->resetErrorBag();
     }
 
+    public function showQuickView(UnidadeService $service, int $id)
+    {
+        $unidade = $service->buscarPorId($id);
+        $unidade->load('cursos'); // Carrega a quantidade de cursos
+
+        // Dispara o evento passando o array exato que o seu QuickViewDrawer espera
+        $this->dispatch('load-quick-view', [
+            'title' => $unidade->nome,
+            'subtitle' => 'Status: ' . $unidade->status,
+            'icon' => 'ph-buildings',
+            'data' => [
+                'Endereço' => $unidade->endereco,
+                'E-mail' => $unidade->email ?: 'Não informado',
+                'Telefone' => $unidade->telefone ?: 'Não informado',
+                'Cursos Ofertados' => $unidade->cursos->count() . ' cursos vinculados',
+                // Como sua view renderiza HTML ({!! $value !!}), podemos passar o link direto!
+                'Mais Detalhes' => '<a href="'.route('unidades.show', $unidade->id).'" class="font-bold text-purpura-600 hover:underline">Ver Página Completa</a>'
+            ]
+        ]);
+    }
+
     public function render(UnidadeService $service) 
     {
         return view('livewire.unidade.unidade-manager', [

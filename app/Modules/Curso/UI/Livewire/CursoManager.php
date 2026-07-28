@@ -111,6 +111,29 @@ class CursoManager extends Component
         $this->resetErrorBag();
     }
 
+    public function showQuickView(CursoService $service, int $id)
+    {
+        $curso = $service->buscarPorId($id);
+        $curso->load(['unidades', 'turnosVinculados']);
+
+        $idadeMin = $curso->min_idade ? $curso->min_idade . ' anos' : 'Livre';
+        $idadeMax = $curso->max_idade ? $curso->max_idade . ' anos' : 'Sem limite';
+        $restricao = $curso->permite_estado_diferente ? 'Aceita alunos de outros Estados' : 'Apenas residentes do Estado local';
+
+        $this->dispatch('load-quick-view', [
+            'title' => $curso->nome,
+            'subtitle' => 'Status: ' . $curso->status,
+            'icon' => 'ph-graduation-cap',
+            'data' => [
+                'Slug / URL' => $curso->slug,
+                'Regras de Idade' => $idadeMin . ' até ' . $idadeMax,
+                'Restrição Geográfica' => $restricao,
+                'Disponibilidade' => $curso->unidades->count() . ' unidades | ' . $curso->turnosVinculados->count() . ' turnos',
+                'Mais Detalhes' => '<a href="'.route('cursos.show', $curso->id).'" class="font-bold text-purpura-600 hover:underline">Ver Página Completa</a>'
+            ]
+        ]);
+    }
+
     public function render(CursoService $service) 
     {
         return view('livewire.curso.curso-manager', [

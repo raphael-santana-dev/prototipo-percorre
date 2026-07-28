@@ -49,7 +49,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
                                 <!-- Botão de Quick View -->
-                                <button x-data @click="$dispatch('open-quick-view', { model: 'Curso', id: {{ $curso->id }} })" class="p-2 text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <button wire:click="showQuickView({{ $curso->id }})" class="p-2 text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="Visualização Rápida">
                                     <i class="text-xl ph ph-eye"></i>
                                 </button>
                                 
