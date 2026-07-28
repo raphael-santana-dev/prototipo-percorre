@@ -1,5 +1,6 @@
 {{-- O calc(100vh - 80px) garante o encaixe perfeito da tela sem gerar scroll duplo --}}
 <div class="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-brand-bg overflow-hidden">
+    
     {{-- Topo Mobile --}}
     <div class="flex md:hidden w-100 bg-brand-escuro h-20 items-center justify-center sticky top-0 z-[1050] shadow-md shrink-0">
         <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="max-h-11 object-contain" alt="Instituto Percorre">
@@ -13,7 +14,7 @@
                     <div class="mb-8 progresso-container">
                         <div class="font-bold text-gray-700 mb-2 text-sm">Passo {{ $etapaAtual }} de {{ $totalEtapas }}</div>
                         <div class="flex gap-2">
-                           @for($i = 1; $i <= $totalEtapas; $i++)
+                            @for($i = 1; $i <= $totalEtapas; $i++)
                                 <div class="h-2 rounded-full w-full {{ 1 >= $i ? 'bg-yellow-400' : 'bg-gray-200' }}"></div>
                             @endfor
                         </div>
@@ -53,7 +54,6 @@
                                         @error('nome_social') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                                     </div>
                                 @endif
-
 
                                 <div class="col-span-12 md:col-span-6">
                                     <label class="block text-sm font-semibold text-brand-textLabel mb-1">CPF <span class="text-red-500">*</span></label>
@@ -140,6 +140,54 @@
                                     <input wire:model="complemento" type="text" class="w-full rounded-md border border-brand-border px-3 py-2 bg-brand-bgInput text-gray-500 focus:outline-none">
                                 </div>
                             
+                                {{-- BLOCO INTELIGENTE: SELEÇÃO DE CURSO/UNIDADE --}}
+                                @if(empty($data_nascimento) || empty($estado))
+                                    <div class="col-span-12 mt-4 p-5 bg-gray-50 border border-gray-200 rounded-md text-center">
+                                        <p class="text-gray-500 text-sm m-0">Preencha sua <b>Data de Nascimento</b> e o <b>CEP</b> acima para visualizarmos os cursos disponíveis para o seu perfil e região.</p>
+                                    </div>
+                                @elseif(count($unidadesDisponiveis) > 0)
+                                    <div class="col-span-12 mt-4 p-5 bg-purple-50 rounded-md border border-purple-100 grid grid-cols-1 gap-4">
+                                        <h5 class="font-bold text-brand-purple">Cursos Disponíveis para o seu perfil</h5>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-semibold text-brand-textLabel mb-1">Unidade <span class="text-red-500">*</span></label>
+                                            <select wire:model.live="unidade" class="w-full rounded-md border px-3 py-2 focus:ring-brand-purple @error('unidade') border-red-500 @else @if(!empty($unidade)) border-green-500 @else border-brand-border @endif @enderror">
+                                                <option value="">Selecione a Unidade...</option>
+                                                @foreach($unidadesDisponiveis as $id => $nome)
+                                                    <option value="{{ $id }}">{{ $nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        @if(count($cursosDisponiveis) > 0)
+                                            <div>
+                                                <label class="block text-sm font-semibold text-brand-textLabel mb-1">Curso de Interesse <span class="text-red-500">*</span></label>
+                                                <select wire:model.live="curso" class="w-full rounded-md border px-3 py-2 focus:ring-brand-purple @error('curso') border-red-500 @else @if(!empty($curso)) border-green-500 @else border-brand-border @endif @enderror">
+                                                    <option value="">Selecione o Curso...</option>
+                                                    @foreach($cursosDisponiveis as $id => $nome)
+                                                        <option value="{{ $id }}">{{ $nome }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        @endif
+
+                                        @if(count($turnosDisponiveis) > 0)
+                                            <div>
+                                                <label class="block text-sm font-semibold text-brand-textLabel mb-1">Turno <span class="text-red-500">*</span></label>
+                                                <select wire:model.live="turno" class="w-full rounded-md border px-3 py-2 focus:ring-brand-purple @error('turno') border-red-500 @else @if(!empty($turno)) border-green-500 @else border-brand-border @endif @enderror">
+                                                    <option value="">Selecione o Turno...</option>
+                                                    @foreach($turnosDisponiveis as $id => $nome)
+                                                        <option value="{{ $id }}">{{ $nome }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="col-span-12 mt-4 p-5 bg-red-50 border border-red-200 rounded-md text-center">
+                                        <p class="text-red-600 font-bold m-0">Não há vagas disponíveis para a sua idade na localidade selecionada.</p>
+                                    </div>
+                                @endif
                             @endif
 
                             @if($camposDinamicos && $camposDinamicos->where('etapa', $etapaAtual)->count() > 0)
@@ -188,7 +236,36 @@
                             </button>
                         </div>
                     </div>
-                @endif 
+                @endif
+                {{-- TELA 99: SUCESSO --}}
+                @if($etapaAtual === 99)
+                <div class="text-center p-8 md:p-12">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <h2 class="text-3xl font-bold text-green-600 mb-4">Inscrição Concluída!</h2>
+                    <p class="text-gray-600 mb-8 leading-relaxed">
+                        Olá! Recebemos a sua inscrição!<br>
+                        Fique de olho em nossas redes sociais, em breve divulgaremos a lista de selecionados.<br>
+                        Qualquer dúvida, acione nossa Central de Atendimento. Desejamos muito sucesso!
+                    </p>
+                    <button type="button" onclick="window.location.reload()" class="bg-brand-purple hover:bg-brand-purpleHover text-white font-bold py-3 px-8 rounded-md shadow-md transition duration-200">Voltar ao Início</button>
+                </div>
+                @endif
+
+                {{-- TELA 100: LISTA DE ESPERA --}}
+                @if($etapaAtual === 100)
+                <div class="text-center p-8 md:p-12">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 text-yellow-600 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <h2 class="text-3xl font-bold text-yellow-600 mb-4">Inscrição na Lista de Espera!</h2>
+                    <p class="text-gray-600 mb-8 leading-relaxed">
+                        Seus dados foram salvos no banco de dados. Enviaremos uma notificação assim que novas vagas forem abertas para o seu perfil e localidade.
+                    </p>
+                    <button type="button" onclick="window.location.reload()" class="bg-brand-purple hover:bg-brand-purpleHover text-white font-bold py-3 px-8 rounded-md shadow-md transition duration-200">Voltar ao Início</button>
+                </div>
+                @endif
                 
             @else
                 <div class="bg-white rounded-xl shadow-md border-none p-8 md:p-12 card-form text-center mt-10">
