@@ -77,6 +77,10 @@
                                 Unidades
                             </a>
 
+                            <a href="{{ route('status-inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Status
+                            </a>
+
                             <a href="{{ route('inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
                                 Inscricoes
                             </a>

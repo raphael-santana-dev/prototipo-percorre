@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/users/{id}', \App\Modules\Corporate\UI\Livewire\UserDetails::class)->name('users.show');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
     Route::get('/incricoes', \App\Modules\Registration\UI\Livewire\RegistrationManager::class)->name('inscricoes.index');
+    Route::get('/status-inscricoes', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status-inscricoes.index');
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
 
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
