@@ -77,17 +77,17 @@ class RegistrationManager extends Component
     
     // Este método é chamado silenciosamente pelo AlpineJS quando clicamos nos botões de status dentro do Drawer
     #[On('quick-change-status')]
-    public function alterarStatusQuickView($payload)
+    public function alterarStatusQuickView($id, $status)
     {
-        $inscricao = Inscricao::find($payload['id']);
+        $inscricao = Inscricao::find($id);
         if ($inscricao) {
-            $inscricao->status_inscricao_id = $payload['status'];
+            $inscricao->status_inscricao_id = $status;
             $inscricao->save();
             
             $this->dispatch('sucesso', msg: 'Status do candidato atualizado!');
             
             // Recarrega o próprio Quick View na hora para mostrar os botões novos selecionados
-            $this->showQuickView($payload['id']);
+            $this->showQuickView($id);
         }
     }
 
