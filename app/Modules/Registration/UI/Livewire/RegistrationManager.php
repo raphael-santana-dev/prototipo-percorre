@@ -38,10 +38,14 @@ class RegistrationManager extends Component
     public array $selecionadas = []; 
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
+
+    public array $breadcrumbs = [];
     
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function updating($nomePropriedade)
@@ -239,7 +243,6 @@ class RegistrationManager extends Component
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
-            'breadcrumbs' => BreadcrumbHelper::generate(),
             'statusInscricoesDb' => \App\Models\StatusInscricao::orderBy('nome')->get(),
             'ciclosDb' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
