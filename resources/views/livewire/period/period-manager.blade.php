@@ -44,7 +44,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
-                                <!-- AÇÕES TRANSFORMADAS EM ÍCONES -->
+                                <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
+                                    <i class="text-xl ph ph-arrow-square-out"></i>
+                                </a>
+                                
                                 <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
                                     <i class="text-xl ph ph-pencil-simple"></i>
                                 </button>
