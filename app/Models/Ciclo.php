@@ -28,6 +28,6 @@ class Ciclo extends Model
 
     public function cursos()
     {
-        return $this->belongsToMany(Curso::class, 'ciclo_curso')->withTimestamps();
+        return $this->belongsToMany(Curso::class, 'ciclo_curso');
     }
 }

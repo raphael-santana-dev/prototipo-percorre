@@ -30,9 +30,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions');
     Route::get('/users', UserManager::class)->name('users.index');
     Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions');
-    Route::get('/turnos', TurnoManager::class)->name('turnos.index')->middleware('feature:turno');
-    Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index')->middleware('feature:unidade');
-    Route::get('/unidades/{id}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show')->middleware('feature:unidade');
+    Route::get('/turnos', TurnoManager::class)->name('turnos.index');
+    Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index');
+    Route::get('/unidades/{id}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show');
     Route::get('/estudantes', \App\Modules\Student\UI\Livewire\StudentManager::class)->name('students.index');
     Route::get('/estudantes/{id}', \App\Modules\Student\UI\Livewire\StudentDetails::class)->name('students.show');
     Route::get('/users/{id}', \App\Modules\Corporate\UI\Livewire\UserDetails::class)->name('users.show');

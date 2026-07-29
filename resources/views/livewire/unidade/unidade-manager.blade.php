@@ -67,9 +67,7 @@
                 @endforelse
             </tbody>
         </table>
-        <div class="p-4 bg-white border-t border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-            {{ $unidades->links() }}
-        </div>
+        
     </div>
 
     <!-- Modal de Inserção/Edição -->
