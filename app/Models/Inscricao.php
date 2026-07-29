@@ -54,4 +54,24 @@ class Inscricao extends Model
     {
         return $this->belongsTo(Ciclo::class, 'ciclo_id');
     }
+
+    public function unidade()
+    {
+        return $this->belongsTo(Unidade::class, 'unidade_id');
+    }
+
+    public function curso()
+    {
+        return $this->belongsTo(Curso::class, 'curso_id');
+    }
+
+    public function turno()
+    {
+        return $this->belongsTo(Turno::class, 'turno_id');
+    }
+    
+    public function statusInscricao()
+    {
+        return $this->belongsTo(StatusInscricao::class, 'status_inscricao_id');
+    }
 }
