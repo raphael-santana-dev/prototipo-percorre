@@ -140,10 +140,12 @@
                 </td>
                 
                 <td class="px-6 py-4 border-b dark:border-gray-700">
-                    <span class="px-3 py-1 text-xs font-bold rounded-full 
-                        @if($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Aprovado') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                        @elseif($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Reprovado') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                        @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 @endif">
+                    @php
+                        // Pega a cor do banco, ou um cinza padrão se não tiver status
+                        $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; 
+                    @endphp
+                    <span class="px-3 py-1 text-xs font-bold rounded-md border whitespace-nowrap"
+                        style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
                         {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
                     </span>
                 </td>
