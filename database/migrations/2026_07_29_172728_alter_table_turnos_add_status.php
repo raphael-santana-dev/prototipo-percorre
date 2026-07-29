@@ -11,14 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('unidades', function (Blueprint $table) {
-            $table->id();
-            $table->string('nome');
-            $table->string('endereco')->nullable();
-            $table->string('email')->nullable();
-            $table->string('contatos')->nullable();
+        Schema::table('turnos', function (Blueprint $table) {
             $table->boolean('status')->default(true);
-            $table->timestamps();
         });
     }
 
@@ -27,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('unidades');
+        Schema::table('turnos', function (Blueprint $table) {
+            $table->dropColumn('status');
+        });
     }
 };

@@ -1,1 +1,216 @@
-<div>{{dump($inscricoes)}}</div>
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
+    <x-breadcrumb :items="$breadcrumbs" />
+    
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Inscrições</h2>
+
+        <span class="bg-purple-100 text-purple-800 text-sm font-semibold px-4 py-2 rounded-full border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+            Visão Global (Administrador)
+        </span>
+    </div>
+
+    @if(isset($metricas))
+        <x-summary-cards :metricas="$metricas" />
+    @endif
+
+    {{-- BLOCO DE FILTROS COM GRID --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+        
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar Candidato
+            </label>
+            <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-tag text-purpura-500"></i> Status
+            </label>
+            <select wire:model.live="filtroStatus" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Status</option>
+                @foreach($statusInscricoesDb as $status) 
+                    <option value="{{ $status->id }}">{{ $status->nome }}</option> 
+                @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-calendar-check text-purpura-500"></i> Semestre / Ciclo
+            </label>
+            <select wire:model.live="filtroCiclo" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Semestres</option>
+                @foreach($ciclosDb as $ciclo) 
+                    <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option> 
+                @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-buildings text-purpura-500"></i> Unidade
+            </label>
+            <select wire:model.live="filtroUnidade" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todas as Unidades</option>
+                @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-clock text-purpura-500"></i> Turno
+            </label>
+            <select wire:model.live="filtroTurno" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Turnos</option>
+                @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
+            </label>
+            <select wire:model.live="filtroCurso" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Cursos</option>
+                @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+            </select>
+        </div>
+    </div>
+
+    {{-- BOTÕES DE SELEÇÃO RÁPIDA E BARRA DE LOTE --}}
+    <div class="flex justify-end items-center mb-4 gap-2">
+        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Selecionar rápido:</span>
+        <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 10</button>
+        <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 50</button>
+    </div>
+
+    @if(count($selecionadas) > 0)
+    <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+        <div class="flex items-center">
+            <span class="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
+            <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 hover:underline font-medium">Limpar seleção</button>
+        </div>
+        
+        <div class="flex flex-wrap items-center justify-end gap-2">
+            <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase mr-1">Alterar status para:</span>
+            
+            @foreach($statusInscricoesDb as $status)
+                <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
+                    {{ $status->nome }}
+                </button>
+            @endforeach
+
+            <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-1 hidden md:block"></div>
+            <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition">
+                Ver no Modal
+            </button>
+        </div>
+    </div>
+    @endif
+
+    {{-- TABELA DE DADOS --}}
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao">
+
+        @forelse($registros as $inscricao)
+            <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                
+                <td class="px-6 py-4 text-center border-b dark:border-gray-700">
+                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                </td>
+
+                <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-300 border-b dark:border-gray-700">#{{ $inscricao->id }}</td>
+                
+                <td class="px-6 py-4 border-b dark:border-gray-700">
+                    <div class="font-bold text-gray-900 dark:text-white">{{ $inscricao->nome }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $inscricao->cpf }}</div>
+                </td>
+                
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                    <div class="font-bold">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
+                    <div class="text-xs text-gray-500">{{ $inscricao->unidade->nome ?? '-' }}</div>
+                </td>
+                
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                    Passo {{ $inscricao->etapa_atual }}
+                </td>
+                
+                <td class="px-6 py-4 border-b dark:border-gray-700">
+                    <span class="px-3 py-1 text-xs font-bold rounded-full 
+                        @if($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Aprovado') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                        @elseif($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Reprovado') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                        @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 @endif">
+                        {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                    </span>
+                </td>
+                
+                <td class="px-6 py-4 text-right border-b dark:border-gray-700">
+                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-2 text-gray-500 transition-colors rounded-lg hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:text-gray-300 dark:hover:text-purpura-400" title="Visualização Rápida">
+                        <i class="text-xl ph ph-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+                    <p class="text-lg font-semibold">Nenhuma inscrição encontrada.</p>
+                    <p class="text-sm">Ajuste os filtros ou aguarde novos candidatos.</p>
+                </td>
+            </tr>   
+        @endforelse
+    </x-table>
+
+    {{-- MODAL DE ALTERAÇÃO EM LOTE --}}
+    @if($modalLoteAberto)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+            
+            <div class="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Alterar Status em Lote</h3>
+                <button wire:click="$set('modalLoteAberto', false)" class="text-gray-400 hover:text-red-500 transition">
+                    <i class="text-2xl ph ph-x"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 p-4 rounded-lg mb-6 border border-indigo-100 dark:border-indigo-800">
+                    Você está prestes a alterar o status de <strong class="text-lg">{{ count($selecionadas) }}</strong> inscrições simultaneamente.
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Selecione o Novo Status <span class="text-red-500">*</span></label>
+                    <select wire:model="novoStatusId" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                        <option value="">-- Selecione --</option>
+                        @foreach($statusInscricoesDb as $status)
+                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                        @endforeach
+                    </select>
+                    @error('novoStatusId') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                </div>
+            </div>
+            
+            <div class="p-5 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                <button wire:click="$set('modalLoteAberto', false)" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg transition shadow-sm">
+                    Cancelar
+                </button>
+                <button wire:click="salvarStatusEmLote" class="px-4 py-2 bg-purpura-500 hover:bg-purpura-600 text-white font-bold rounded-lg transition shadow-sm">
+                    Confirmar Alteração
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- TOAST --}}
+    <div x-data="{ show: false, msg: '' }" 
+        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
+        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
+        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
+        <i class="text-2xl ph ph-check-circle text-white"></i>
+        <span x-text="msg"></span>
+    </div>
+</div>

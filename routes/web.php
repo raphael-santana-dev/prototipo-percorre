@@ -30,18 +30,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions');
     Route::get('/users', UserManager::class)->name('users.index');
     Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions');
-    Route::get('/turnos', TurnoManager::class)->name('turnos.index')->middleware('feature:turno');
-    Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index')->middleware('feature:unidade');
-    Route::get('/unidades/{id}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show')->middleware('feature:unidade');
+    Route::get('/turnos', TurnoManager::class)->name('turnos.index');
+    Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index');
+    Route::get('/unidades/{id}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show');
     Route::get('/estudantes', \App\Modules\Student\UI\Livewire\StudentManager::class)->name('students.index');
     Route::get('/estudantes/{id}', \App\Modules\Student\UI\Livewire\StudentDetails::class)->name('students.show');
     Route::get('/users/{id}', \App\Modules\Corporate\UI\Livewire\UserDetails::class)->name('users.show');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
     Route::get('/incricoes', \App\Modules\Registration\UI\Livewire\RegistrationManager::class)->name('inscricoes.index');
+    Route::get('/inscricoes/{id}', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class)->name('inscricoes.show');
+    Route::get('/status-inscricoes', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status-inscricoes.index');
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
+    Route::get('/ciclos/{id}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show');
 
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
     Route::get('/ciclos/{id}/campos', DynamicFields::class)->name('ciclos.campos');
+    Route::get('/cursos', \App\Modules\Curso\UI\Livewire\CursoManager::class)->name('cursos.index');
+    Route::get('/cursos/{id}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show');
+
+    Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status.index');
 });
 
 // ==========================================

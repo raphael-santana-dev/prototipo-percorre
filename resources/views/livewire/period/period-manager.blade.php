@@ -44,7 +44,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
-                                <!-- AÇÕES TRANSFORMADAS EM ÍCONES -->
+                                <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
+                                    <i class="text-xl ph ph-arrow-square-out"></i>
+                                </a>
+                                
                                 <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
                                     <i class="text-xl ph ph-pencil-simple"></i>
                                 </button>
@@ -116,6 +119,26 @@
                                 <input type="datetime-local" wire:model="data_fim" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 @error('data_fim') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
+                        </div>
+
+                        <!-- Seleção de Cursos do Processo Seletivo -->
+                        <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700 mb-4">
+                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos ofertados neste Ciclo
+                            </label>
+                            <div class="grid grid-cols-1 gap-2 p-3 border border-gray-200 rounded-lg sm:grid-cols-2 bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-48 overflow-y-auto">
+                                @forelse($cursosDisponiveis as $curso)
+                                    <label class="flex items-center gap-2 p-2 transition-colors border border-transparent rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
+                                        <input type="checkbox" wire:model="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
+                                        <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300" title="{{ $curso->nome }}">
+                                            {{ $curso->nome }}
+                                        </span>
+                                    </label>
+                                @empty
+                                    <p class="text-sm text-gray-500 col-span-full dark:text-gray-400">Nenhum curso ativo encontrado. Cadastre-os primeiro.</p>
+                                @endforelse
+                            </div>
+                            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Apenas os cursos marcados acima aparecerão no formulário público de inscrição deste semestre.</p>
                         </div>
 
                         <div class="flex items-center pt-2">

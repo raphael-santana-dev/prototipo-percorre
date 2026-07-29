@@ -13,7 +13,7 @@
                 </p>
             </div>
             @if(isset($metrica['icon']))
-                <div class="p-3 rounded-lg {{ $metrica['color_bg'] ?? 'bg-gray-50 dark:bg-gray-700 text-gray-400' }}">
+                <div class="w-12 h-12 flex items-center justify-center rounded-lg {{ $metrica['color_bg'] }}">
                     {!! $metrica['icon'] !!}
                 </div>
             @endif

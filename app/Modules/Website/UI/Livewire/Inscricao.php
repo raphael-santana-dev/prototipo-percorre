@@ -11,19 +11,27 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\Ciclo;
+use App\Models\Inscricao as InscricaoModel; // Alias adicionado para evitar conflito com a classe do componente
+use App\Models\User;
+use App\Models\Unidade;
+use App\Models\Curso;
+use App\Models\Turno;
+use App\Models\StatusInscricao;
+use App\Models\RegraPontuacao;
+use App\Traits\WithCepConsulta;
 
 #[Layout('components.layouts.public')]
 #[Title('Inscrição - Instituto Percorre')]
 class Inscricao extends Component
 {
+    use WithCepConsulta;
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
     public $inscricaoId = null;
     public $cicloAtivoId = null;
     public $inscricoesAbertas = false;
 
-
-    //Campos estáticos - Etapa 1
+    // Campos estáticos - Etapa 1
     public $nome, $nome_social, $cpf, $email, $celular, $data_nascimento, $cep, $logradouro, $bairro, $cidade, $estado, $numero, $complemento, $unidade, $turno, $curso, $natureza_deficiencia;
     public $possui_deficiencia = 'nao';
     public $possui_nome_social = 'nao';
@@ -33,6 +41,11 @@ class Inscricao extends Component
 
     public $camposDinamicos = [];
     public $respostas = [];
+
+    // Arrays de Cascata trazidos do sistema antigo
+    public array $unidadesDisponiveis = [];
+    public array $turnosDisponiveis = [];
+    public array $cursosDisponiveis = [];
 
     public function mount()
     {
@@ -156,25 +169,76 @@ class Inscricao extends Component
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            $senhaProvisoria = Str::random(8);
-            $usuarioAluno = User::firstOrCreate(
-                ['email' => $this->email],
-                ['name' => $this->nome, 'password' => Hash::make($senhaProvisoria), 'precisa_trocar_senha' => true]
-            );
+            // $senhaProvisoria = Str::random(8);
+            // $usuarioAluno = User::firstOrCreate(
+            //     ['email' => $this->email],
+            //     ['name' => $this->nome, 'password' => Hash::make($senhaProvisoria), 'precisa_trocar_senha' => true]
+            // );
 
-            if ($usuarioAluno->wasRecentlyCreated) {
-                $usuarioAluno->assignRole('aluno');
-                \Illuminate\Support\Facades\Mail::to($usuarioAluno->email)
-                    ->send(new \App\Mail\BoasVindasAluno($usuarioAluno, $senhaProvisoria));
-            }
-            Inscricao::where('id', $this->inscricaoId)->update(['usuario_id' => $usuarioAluno->id]);
+            // if ($usuarioAluno->wasRecentlyCreated) {
+            //     $usuarioAluno->assignRole('aluno');
+            //     \Illuminate\Support\Facades\Mail::to($usuarioAluno->email)
+            //         ->send(new \App\Mail\BoasVindasAluno($usuarioAluno, $senhaProvisoria));
+            // }
+            // InscricaoModel::where('id', $this->inscricaoId)->update(['usuario_id' => $usuarioAluno->id]);
             
             $this->etapaAtual = 99; 
             $this->dispatch('inscricao-concluida');
         }
     }
 
-     private function salvarProgresso($statusForcado = null)
+    // Método de Pontuação resgatado do sistema antigo
+    // private function calcularPontuacao() { 
+    //     $total = 0;
+    //     $detalhes = [];
+    //     $regras = RegraPontuacao::where('ciclo_id', $this->cicloAtivoId)->get();
+
+    //     foreach ($regras as $regra) {
+    //         $campo = $regra->campo_name;
+    //         $valorResposta = $this->respostas[$campo] ?? null;
+    //         $pontuou = false;
+
+    //         if ($valorResposta !== null && $valorResposta !== '') {
+    //             $valoresEsperados = is_array($regra->valor_esperado) ? $regra->valor_esperado : [$regra->valor_esperado];
+    //             $valorAlvo = $valoresEsperados[0] ?? null;
+
+    //             switch ($regra->operador) {
+    //                 case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+    //                 case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+    //                 case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+    //                 case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+    //                 case 'between':
+    //                     $min = (float)($valoresEsperados[0] ?? 0);
+    //                     $max = (float)($valoresEsperados[1] ?? $min);
+    //                     $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
+    //                     break;
+    //                 case 'in':
+    //                     $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
+    //                     $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+    //                     break;
+    //             }
+    //         }
+
+    //         if ($pontuou) {
+    //             $total += $regra->pontos;
+    //             $detalhes[$campo] = [
+    //                 'resposta_dada' => $valorResposta,
+    //                 'pontos_ganhos' => $regra->pontos,
+    //                 'condicao' => "{$regra->operador} " . implode(', ', $valoresEsperados)
+    //             ];
+    //         }
+    //     }
+
+    //     return [
+    //         'total' => $total,
+    //         'detalhes' => json_encode([
+    //             'auditoria_detalhada' => $detalhes,
+    //             'motivo_auditoria' => "Candidato avaliado pelo Motor Dinâmico. Total: {$total} pontos."
+    //         ], JSON_UNESCAPED_UNICODE)
+    //     ];
+    // }
+
+    private function salvarProgresso($statusForcado = null)
     {
         $nomeStatus = 'Incompleto'; 
 
@@ -192,15 +256,15 @@ class Inscricao extends Component
             'curso_id' => $this->curso,
             'possui_deficiencia' => $this->possui_deficiencia,
             'natureza_deficiencia' => $this->natureza_deficiencia,
-            'dados_dinamicos' => $this->respostas, 
+            'dados_dinamicos' => !empty($this->respostas) ? $this->respostas : null,
         ];
 
         if ($this->etapaAtual === $this->totalEtapas && !$statusForcado) {
             $nomeStatus = 'Pendente';
             
-            $pontuacao = $this->calcularPontuacao();
-            $dados['pontuacao_total'] = $pontuacao['total'];
-            $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
+            // $pontuacao = $this->calcularPontuacao();
+            // $dados['pontuacao_total'] = $pontuacao['total'];
+            // $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
             
         } elseif ($statusForcado) {
             $nomeStatus = ucfirst($statusForcado); 
@@ -209,7 +273,7 @@ class Inscricao extends Component
         $statusDb = StatusInscricao::where('nome', $nomeStatus)->first();
         $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
 
-        $inscricao = Inscricao::updateOrCreate(['id' => $this->inscricaoId], $dados);
+        $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
         if (!$this->inscricaoId) $this->inscricaoId = $inscricao->id;
     }
 
@@ -219,8 +283,8 @@ class Inscricao extends Component
             $this->atualizarDisponibilidade();
             
             // Re-aplicando as seleções que vieram do Cache
-            // if ($this->unidade) $this->updatedUnidade($this->unidade);
-            // if ($this->curso) $this->updatedCurso($this->curso);
+            if ($this->unidade) $this->updatedUnidade($this->unidade);
+            if ($this->curso) $this->updatedCurso($this->curso);
         }
     }
 
@@ -239,7 +303,7 @@ class Inscricao extends Component
                     for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
                     if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
                 },
-                // Rule::unique('inscricoes', 'cpf')->ignore($this->inscricaoId) // Corrigido de 'inscricaos' para 'inscricoes'
+                Rule::unique('inscricoes', 'cpf')->ignore($this->inscricaoId) // Restabelecida a regra do sistema antigo
             ],
             'nome_social' => 'required_if:possui_nome_social,sim',
             'possui_deficiencia' => 'required',
@@ -268,34 +332,110 @@ class Inscricao extends Component
         }
     }
 
-    public function updatedCep($valor)
+    // Atualização da Data de Nascimento (Restaurado do sistema antigo)
+    public function updatedDataNascimento()
     {
-        $cepLimpo = preg_replace('/[^0-9]/', '', $valor);
+        $this->atualizarDisponibilidade();
+    }
 
-        if (strlen($cepLimpo) === 8) {
-            $response = Http::get("https://viacep.com.br/ws/{$cepLimpo}/json/");
+    // =======================================================================
+    // MOTOR DE DISPONIBILIDADE INTELIGENTE (Cascata Automática) 
+    // Trazido do sistema antigo
+    // =======================================================================
+    public function atualizarDisponibilidade()
+    {
+        $this->unidadesDisponiveis = [];
+        $this->cursosDisponiveis = [];
+        $this->turnosDisponiveis = [];
+        $this->unidade = null;
+        $this->curso = null;
+        $this->turno = null;
+        $this->temVagasDisponiveis = false;
 
-            if ($response->successful() && !isset($response['erro'])) {
-                $this->logradouro = $response['logradouro'];
-                $this->bairro = $response['bairro'];
-                $this->cidade = $response['localidade'];
-                $this->estado = $response['uf'];
-                // $this->atualizarDisponibilidade();
-            } else {
-                $this->limparEndereco();
+        if (!$this->estado || !$this->data_nascimento) return;
+
+        $idade = Carbon::parse($this->data_nascimento)->age;
+        
+        // 1. Busca os cursos do Estado que atendem a idade e ESTÃO VINCULADOS AO CICLO ATUAL
+        $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+            ->whereHas('ciclos', function($q) {
+                $q->where('ciclos.id', $this->cicloAtivoId);
+            })
+            ->where('min_idade', '<=', $idade)
+            ->with(['unidades' => function($q) {
+                $q->where('estado', $this->estado)->whereIn('status', ['Ativa', '1', true]);
+            }])
+            ->get();
+
+        // 2. Extrai e remove as duplicadas das Unidades que possuem esses cursos
+        $unidadesDisponiveisList = collect();
+        foreach($cursosValidos as $curso) {
+            foreach($curso->unidades as $unidade) {
+                $unidadesDisponiveisList->put($unidade->id, $unidade->nome);
+            }
+        }
+
+        if ($unidadesDisponiveisList->count() > 0) {
+            $this->temVagasDisponiveis = true;
+            $this->unidadesDisponiveis = $unidadesDisponiveisList->unique()->toArray();
+
+            // Auto-select se houver apenas 1 Unidade
+            if (count($this->unidadesDisponiveis) === 1) {
+                $this->unidade = array_key_first($this->unidadesDisponiveis);
+                $this->updatedUnidade($this->unidade);
             }
         } else {
-            $this->limparEndereco();
+            $this->temVagasDisponiveis = false;
         }
     }
 
-    private function limparEndereco()
+    public function updatedUnidade($unidadeId)
     {
-        $this->logradouro = null;
-        $this->bairro = null;
-        $this->cidade = null;
-        $this->estado = null;
-        // $this->atualizarDisponibilidade();
+        $this->curso = null;
+        $this->turno = null;
+        $this->cursosDisponiveis = [];
+        $this->turnosDisponiveis = [];
+
+        if (!$unidadeId || !$this->data_nascimento) return;
+
+        $idade = Carbon::parse($this->data_nascimento)->age;
+
+        $cursosDb = Curso::query()
+            ->whereIn('status', ['Ativo', 'ativo', '1', true])
+            ->whereHas('ciclos', function($q) {
+                $q->where('ciclos.id', $this->cicloAtivoId);
+            })
+            ->whereHas('unidades', function ($q) use ($unidadeId) {
+                $q->where('unidades.id', $unidadeId);
+            })
+            ->where('min_idade', '<=', $idade)
+            ->get();
+
+        $this->cursosDisponiveis = $cursosDb->pluck('nome', 'id')->toArray();
+
+        // Auto-select se houver apenas 1 Curso
+        if (count($this->cursosDisponiveis) === 1) {
+            $this->curso = array_key_first($this->cursosDisponiveis);
+            $this->updatedCurso($this->curso);
+        }
+    }
+
+    public function updatedCurso($cursoId)
+    {
+        $this->turno = null;
+        $this->turnosDisponiveis = [];
+
+        if (!$cursoId) return;
+
+        $curso = Curso::find($cursoId);
+        if ($curso) {
+            $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
+            
+            // Auto-select se houver apenas 1 Turno
+            if (count($this->turnosDisponiveis) === 1) {
+                $this->turno = array_key_first($this->turnosDisponiveis);
+            }
+        }
     }
 
     public function render()

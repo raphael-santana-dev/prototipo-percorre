@@ -25,4 +25,9 @@ class Ciclo extends Model
     {
         return $this->hasMany(CampoFormulario::class)->orderBy('ordem');
     }
+
+    public function cursos()
+    {
+        return $this->belongsToMany(Curso::class, 'ciclo_curso');
+    }
 }

@@ -34,7 +34,19 @@ class Inscricao extends Model
         'autorizacao_uso_infos',
         'pontuacao_total',
         'pontuacao_detalhes',
-        'posicao_ranking'
+        'posicao_ranking',
+        'dados_dinamicos',
+        'curso_id',
+        'turno_id',
+        'unidade_id',
+        'status_inscricao_id'
+    ];
+
+    protected $casts = [
+        'dados_dinamicos' => 'array',
+        'pontuacao_detalhes' => 'array',
+        'data_nascimento' => 'date',
+        'status' => 'boolean'
     ];
 
     public function student()
@@ -45,5 +57,25 @@ class Inscricao extends Model
     public function ciclo()
     {
         return $this->belongsTo(Ciclo::class, 'ciclo_id');
+    }
+
+    public function unidade()
+    {
+        return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
+    }
+
+    public function curso()
+    {
+        return $this->belongsTo(Curso::class, 'curso_id');
+    }
+
+    public function turno()
+    {
+        return $this->belongsTo(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_id');
+    }
+    
+    public function statusInscricao()
+    {
+        return $this->belongsTo(StatusInscricao::class, 'status_inscricao_id');
     }
 }
