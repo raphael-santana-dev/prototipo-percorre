@@ -23,6 +23,9 @@ class RegistrationManager extends Component
     use WithPagination;
     use ComPadraoListagem;
 
+    // Filtros
+    public $filtroNome = '';
+    public $filtroStatus = '';
     public $filtroCiclo = ''; 
     public $filtroUnidade = '';
     public $filtroTurno = '';
@@ -30,47 +33,109 @@ class RegistrationManager extends Component
 
     public $inscricaoSelecionada = null;
 
-    public $selecionadas = []; 
-    public $modalLoteAberto = false;
+    // Variáveis de Lote (Etapa 2)
+    public array $selecionadas = []; 
+    public bool $modalLoteAberto = false;
     public $novoStatusId = '';
     
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
     }
 
-    // Isola a Query para que a tabela e a seleção em lote usem EXATAMENTE os mesmos filtros
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo', 'filtroNome', 'filtroStatus'])) {
+            $this->resetPage();
+            $this->desmarcarTodas(); // Limpa as seleções em lote se mudar de página/filtro
+        }
+    }
+
     protected function obterQueryFiltrada()
     {
-        $query = \App\Models\Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
-        $usuario = Auth::user();
-
-        $isAdministrador = $usuario->hasRole('dev|dev');
-        // $temPermissaoEspecial = $usuario->hasPermissionTo('visualizar todas inscricoes');
-        // $podeAvaliarGlobal = $usuario->hasPermissionTo('avaliar turmas globais');
-
-        if (!$isAdministrador && !$temPermissaoEspecial && !$podeAvaliarGlobal) {
-            $extras = $usuario->acessos_extras ?? [];
-            $unidadesPermitidas = array_unique(array_filter(array_merge([$usuario->unidade_id], $extras['unidades'] ?? [])));
-            $cursosPermitidos = array_unique(array_filter(array_merge([$usuario->curso_id], $extras['cursos'] ?? [])));
-            $turnosPermitidos = array_unique(array_filter(array_merge([$usuario->turno_id], $extras['turnos'] ?? [])));
-
-            $query->whereIn('unidade_id', $unidadesPermitidas)
-                  ->whereIn('curso_id', $cursosPermitidos)
-                  ->whereIn('turno_id', $turnosPermitidos);
-        } else {
-            if (!empty($this->filtroUnidade)) $query->where('unidade_id', $this->filtroUnidade);
-            if (!empty($this->filtroTurno)) $query->where('turno_id', $this->filtroTurno);
-            if (!empty($this->filtroCurso)) $query->where('curso_id', $this->filtroCurso);
-            if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
+        $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
+        
+        // Aplicação dos Filtros Dinâmicos
+        if (!empty($this->filtroNome)) {
+            $query->where(function($q) {
+                // Busca tanto por nome quanto por CPF
+                $q->where('nome', 'ilike', '%' . $this->filtroNome . '%')
+                  ->orWhere('cpf', 'like', '%' . $this->filtroNome . '%');
+            });
         }
+        if (!empty($this->filtroStatus)) $query->where('status_inscricao_id', $this->filtroStatus);
+        if (!empty($this->filtroUnidade)) $query->where('unidade_id', $this->filtroUnidade);
+        if (!empty($this->filtroTurno)) $query->where('turno_id', $this->filtroTurno);
+        if (!empty($this->filtroCurso)) $query->where('curso_id', $this->filtroCurso);
+        if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
 
-        return $query; // Devolvemos a query "limpa" para podermos calcular os cards e ordenar depois
+        return $query; 
     }
 
+    // ==========================================
+    // MÉTODOS DE AÇÃO EM LOTE (ETAPA 2)
+    // ==========================================
+    public function selecionarQuantidade($quantidade)
+    {
+        $this->selecionadas = $this->obterQueryFiltrada()
+            ->limit($quantidade)
+            ->pluck('id')
+            ->map(fn($id) => (string) $id) 
+            ->toArray();
+    }
+
+    public function desmarcarTodas()
+    {
+        $this->selecionadas = [];
+    }
+
+    public function abrirModalLote()
+    {
+        if (count($this->selecionadas) === 0) return;
+        $this->novoStatusId = '';
+        $this->modalLoteAberto = true;
+    }
+
+    public function salvarStatusEmLote()
+    {
+        $this->validate([
+            'novoStatusId' => 'required',
+            'selecionadas' => 'required|array|min:1'
+        ], [
+            'novoStatusId.required' => 'Você precisa escolher o novo status.',
+        ]);
+
+        // Faz o UPDATE massivo em uma única instrução SQL (Alta Performance)
+        Inscricao::whereIn('id', $this->selecionadas)->update([
+            'status_inscricao_id' => $this->novoStatusId
+        ]);
+
+        $this->modalLoteAberto = false;
+        $this->desmarcarTodas(); 
+        
+        // Dispara o alerta verde (toast) na tela
+        $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
+    }
+
+    public function alterarStatusLoteRapido($statusId)
+    {
+        if (count($this->selecionadas) === 0) return;
+
+        Inscricao::whereIn('id', $this->selecionadas)->update([
+            'status_inscricao_id' => $statusId
+        ]);
+
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: 'Status alterado rapidamente com sucesso!');
+    }
+
+    // ==========================================
+    // CONFIGURAÇÃO DA TABELA
+    // ==========================================
     public function getHeadersProperty()
     {
         return [
+            ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'], // <- NOVA COLUNA PARA O LOTE
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
@@ -80,26 +145,15 @@ class RegistrationManager extends Component
         ];
     }
 
-    public function updating($nomePropriedade)
-    {
-        // Se a propriedade alterada for algum dos nossos filtros, voltamos para a página 1 e limpamos seleções
-        if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo'])) {
-            $this->resetPage();
-            $this->selecionadas = []; // Limpa checkboxes de ações em lote
-        }
-    }
-
     public function render()
     {
         $queryBase = $this->obterQueryFiltrada();
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        // Aplica a mágica da ordenação da Trait
         if ($this->ordenacaoCampo) {
             $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
-            // Ordem padrão: pelo número da etapa
-            $queryBase->orderBy('id', 'asc');
+            $queryBase->orderBy('id', 'desc');
         }
 
         $metricas = [
@@ -139,9 +193,12 @@ class RegistrationManager extends Component
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'breadcrumbs' => BreadcrumbHelper::generate(),
+            
+            // Dados para os Selects
+            'statusInscricoesDb' => \App\Models\StatusInscricao::orderBy('nome')->get(),
             'ciclosDb' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
-            'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::where('status', true)->get(),
+            'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),
             'cursosDb' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->get(),
         ]);
     }
