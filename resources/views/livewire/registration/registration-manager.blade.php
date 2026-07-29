@@ -149,7 +149,7 @@
                 </td>
                 
                 <td class="px-6 py-4 text-right border-b dark:border-gray-700">
-                    <button class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes">
+                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-2 text-gray-500 transition-colors rounded-lg hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:text-gray-300 dark:hover:text-purpura-400" title="Visualização Rápida">
                         <i class="text-xl ph ph-eye"></i>
                     </button>
                 </td>

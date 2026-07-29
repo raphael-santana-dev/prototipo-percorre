@@ -99,8 +99,10 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('period.period-manager', \App\Modules\Period\UI\Livewire\PeriodManager::class);
         Livewire::component('period.dynamic-fields', \App\Modules\Period\UI\Livewire\DynamicFields::class);
         Livewire::component('period.step-manager', \App\Modules\Period\UI\Livewire\StepManager::class);
+        Livewire::component('period.period-details', \App\Modules\Period\UI\Livewire\PeriodDetails::class);
         Livewire::component('registration.registration-manager', \App\Modules\Registration\UI\Livewire\RegistrationManager::class);
         Livewire::component('registration.status-manager', \App\Modules\Registration\UI\Livewire\StatusManager::class); // <- NOVO
+        Livewire::component('registration.registration-details', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class);
 
         // Website e Alunos
         Livewire::component('website.home', \App\Modules\Website\UI\Livewire\Home::class);
