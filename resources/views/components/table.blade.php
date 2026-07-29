@@ -11,6 +11,7 @@
         <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-gray-500 dark:text-gray-400">Mostrar</span>
             <select wire:model.live="porPagina" class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md text-sm py-1.5 focus:ring-brand-purple">
+                <option value="5">5</option>    
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
@@ -58,7 +59,7 @@
         </div>
 
         {{-- PAGINAÇÃO DINÂMICA --}}
-        <div class="p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-center">
+        <div class="p-6 bg-white dark:bg-gray-800 flex justify-center">
             {{ $registros->links('components.paginacao-customizada') }}
         </div>
     </div>

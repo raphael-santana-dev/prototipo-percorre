@@ -56,7 +56,7 @@
             </tr>   
         @endforelse
 
-    </x-admin.table>
+    </x-table>
 
 
     <div x-data="{ show: false, msg: '' }" 
