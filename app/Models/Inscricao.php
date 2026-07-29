@@ -61,7 +61,7 @@ class Inscricao extends Model
 
     public function unidade()
     {
-        return $this->belongsTo(Unidade::class, 'unidade_id');
+        return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
     }
 
     public function curso()
@@ -71,7 +71,7 @@ class Inscricao extends Model
 
     public function turno()
     {
-        return $this->belongsTo(Turno::class, 'turno_id');
+        return $this->belongsTo(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_id');
     }
     
     public function statusInscricao()

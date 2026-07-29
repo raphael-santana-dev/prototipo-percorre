@@ -23,12 +23,12 @@ class Curso extends Model
 
     public function unidades()
     {
-        return $this->belongsToMany(Unidade::class, 'curso_unidade');
+        return $this->belongsToMany(\App\Modules\Unidade\Domain\Models\Unidade::class, 'curso_unidade');
     }
 
     public function turnosVinculados() 
     {
-        return $this->belongsToMany(Turno::class, 'curso_turno');
+        return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'curso_turno');
     }
 
     public function ciclos()
