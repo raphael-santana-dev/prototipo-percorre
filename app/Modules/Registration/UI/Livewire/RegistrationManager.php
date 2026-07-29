@@ -80,6 +80,15 @@ class RegistrationManager extends Component
         ];
     }
 
+    public function updating($nomePropriedade)
+    {
+        // Se a propriedade alterada for algum dos nossos filtros, voltamos para a página 1 e limpamos seleções
+        if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo'])) {
+            $this->resetPage();
+            $this->selecionadas = []; // Limpa checkboxes de ações em lote
+        }
+    }
+
     public function render()
     {
         $queryBase = $this->obterQueryFiltrada();
@@ -90,7 +99,7 @@ class RegistrationManager extends Component
             $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             // Ordem padrão: pelo número da etapa
-            $queryBase->orderBy('numero', 'asc');
+            $queryBase->orderBy('id', 'asc');
         }
 
         $metricas = [
@@ -129,7 +138,11 @@ class RegistrationManager extends Component
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
-            'breadcrumbs' => BreadcrumbHelper::generate()
+            'breadcrumbs' => BreadcrumbHelper::generate(),
+            'ciclosDb' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
+            'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
+            'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::where('status', true)->get(),
+            'cursosDb' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->get(),
         ]);
     }
 }

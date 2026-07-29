@@ -19,6 +19,47 @@
         <x-summary-cards :metricas="$metricas" />
     @endif
 
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6 flex flex-col md:flex-row gap-4">
+        <div class="w-full md:w-1/4">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-calendar-check text-purpura-500"></i> Semestre / Ciclo
+            </label>
+            <select wire:model.live="filtroCiclo" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Semestres</option>
+                @foreach($ciclosDb as $ciclo) 
+                    <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option> 
+                @endforeach
+            </select>
+        </div>
+        <div class="w-full md:w-1/4">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-buildings text-purpura-500"></i> Unidade
+            </label>
+            <select wire:model.live="filtroUnidade" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todas as Unidades</option>
+                @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+            </select>
+        </div>
+        <div class="w-full md:w-1/4">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-clock text-purpura-500"></i> Turno
+            </label>
+            <select wire:model.live="filtroTurno" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Turnos</option>
+                @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+            </select>
+        </div>
+        <div class="w-full md:w-1/4">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
+            </label>
+            <select wire:model.live="filtroCurso" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                <option value="">Todos os Cursos</option>
+                @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+            </select>
+        </div>
+    </div>
+
     <x-table
         :headers="$this->headers"
         :registros="$registros"
