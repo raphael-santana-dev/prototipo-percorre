@@ -32,7 +32,8 @@ class UnidadeManager extends Component
     public function mount() 
     { 
         // Mantivemos a sua trava de segurança original
-        abort_if(!auth()->user()->can('unidade.listar'), 403); 
+        // abort_if(!auth()->user()->can('unidade.listar'), 403); 
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
     }
 
     public function openModal() 

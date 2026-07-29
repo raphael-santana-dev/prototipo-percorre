@@ -138,8 +138,8 @@ class CursoManager extends Component
     {
         return view('livewire.curso.curso-manager', [
             'cursos' => $service->listarTodos(),
-            'unidadesDisponiveis' => \App\Models\Unidade::where('status', 'Ativa')->orderBy('nome')->get(),
-            'turnosDisponiveis' => \App\Models\Turno::orderBy('id')->get() // Assumindo que a Model Turno existe
+            'unidadesDisponiveis' => \App\Modules\Unidade\Domain\Models\Unidade::where('status', 'Ativa')->orderBy('nome')->get(),
+            'turnosDisponiveis' => \App\Modules\Turno\Domain\Models\Turno::orderBy('id')->get() // Assumindo que a Model Turno existe
         ]);
     }
 }

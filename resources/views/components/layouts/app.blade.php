@@ -68,13 +68,9 @@
                                 @endcan
                             @endfeature
                             
-                            @feature('turno')
-                                @can('turno.listar')
-                                    <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                        Turnos
-                                    </a>
-                                @endcan
-                            @endfeature
+                            <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Turnos
+                            </a>
 
                             @feature('unidade')
                                 @can('unidade.listar')
@@ -86,6 +82,18 @@
 
                             <a href="{{ route('inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
                                 Inscricoes
+                            </a>
+
+                            <a href="{{ route('cursos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Cursos
+                            </a>
+
+                            <a href="{{ route('ciclos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Ciclos
+                            </a>
+
+                            <a href="{{ route('ciclos.etapas') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                Etapas
                             </a>
                             
                             <!-- Dropdown de Configurações Administrativas -->
