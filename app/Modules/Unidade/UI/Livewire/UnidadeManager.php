@@ -8,12 +8,14 @@ use Livewire\Attributes\Title;
 use App\Modules\Unidade\Application\Services\UnidadeService;
 use Livewire\WithPagination;
 use Illuminate\Support\Str;
+use App\Traits\WithCepConsulta;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Unidades - Percorre')]
 class UnidadeManager extends Component
 {
     use WithPagination;
+    use WithCepConsulta;
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -23,6 +25,7 @@ class UnidadeManager extends Component
     public string $nome = '';
     public string $status = 'Ativa';
     public ?string $data_inauguracao = null;
+    public $cep, $logradouro, $numero, $complemento, $bairro, $cidade, $estado;
     public string $endereco = '';
     public string $email = '';
     public string $telefone = '';
@@ -46,21 +49,33 @@ class UnidadeManager extends Component
     {
         $this->validate([
             'nome' => 'required|string|max:255',
-            'endereco' => 'required|string|max:255',
+            'cep' => 'required|string|max:10',
+            'estado' => 'required|string|size:2',
+            'cidade' => 'required|string|max:255',
             'status' => 'required|in:Ativa,Inativa',
             'email' => 'nullable|email',
             'telefone' => 'nullable|string|max:20',
             'data_inauguracao' => 'nullable|date',
         ]);
 
+        $enderecoCompleto = "{$this->logradouro}, {$this->numero}" . ($this->complemento ? " - {$this->complemento}" : "") . " - {$this->bairro}, {$this->cidade}/{$this->estado}";
+
         $dados = [
             'nome' => $this->nome,
-            'slug' => \Illuminate\Support\Str::slug($this->nome),
-            'endereco' => $this->endereco,
+            'slug' => Str::slug($this->nome),
             'status' => $this->status,
             'email' => $this->email,
             'telefone' => $this->telefone,
             'data_inauguracao' => $this->data_inauguracao,
+            // Campos de endereço
+            'cep' => $this->cep,
+            'logradouro' => $this->logradouro,
+            'numero' => $this->numero,
+            'complemento' => $this->complemento,
+            'bairro' => $this->bairro,
+            'cidade' => $this->cidade,
+            'estado' => $this->estado,
+            'endereco' => $enderecoCompleto,
         ];
 
         if ($this->isEditMode) {
@@ -83,19 +98,25 @@ class UnidadeManager extends Component
     {
         $this->resetInputFields();
         $unidade = $service->buscarPorId($id);
-        $unidade->load('cursos'); // Carrega a relação
+        $unidade->load('cursos'); 
         
         $this->unidadeId = $unidade->id;
         $this->nome = $unidade->nome;
         $this->status = $unidade->status;
         $this->data_inauguracao = $unidade->data_inauguracao ? \Carbon\Carbon::parse($unidade->data_inauguracao)->format('Y-m-d') : null;
-        $this->endereco = $unidade->endereco;
         $this->email = $unidade->email ?? '';
         $this->telefone = $unidade->telefone ?? '';
         
-        // Extrai apenas os IDs dos cursos para preencher os checkboxes no HTML
-        $this->cursosSelecionados = $unidade->cursos->pluck('id')->toArray();
+        // Povoando os campos de endereço
+        $this->cep = $unidade->cep;
+        $this->logradouro = $unidade->logradouro;
+        $this->numero = $unidade->numero;
+        $this->complemento = $unidade->complemento;
+        $this->bairro = $unidade->bairro;
+        $this->cidade = $unidade->cidade;
+        $this->estado = $unidade->estado;
         
+        $this->cursosSelecionados = $unidade->cursos->pluck('id')->toArray();
         $this->isEditMode = true;
         $this->showModal = true;
     }
@@ -108,15 +129,8 @@ class UnidadeManager extends Component
 
     private function resetInputFields() 
     {
-        $this->unidadeId = null;
-        $this->nome = '';
+        $this->reset(['unidadeId', 'nome', 'data_inauguracao', 'email', 'telefone', 'cursosSelecionados', 'isEditMode', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado']);
         $this->status = 'Ativa';
-        $this->data_inauguracao = null;
-        $this->endereco = '';
-        $this->email = '';
-        $this->telefone = '';
-        $this->cursosSelecionados = []; // <- AQUI
-        $this->isEditMode = false;
         $this->resetErrorBag();
     }
 

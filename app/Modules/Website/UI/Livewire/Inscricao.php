@@ -18,11 +18,13 @@ use App\Models\Curso;
 use App\Models\Turno;
 use App\Models\StatusInscricao;
 use App\Models\RegraPontuacao;
+use App\Traits\WithCepConsulta;
 
 #[Layout('components.layouts.public')]
 #[Title('Inscrição - Instituto Percorre')]
 class Inscricao extends Component
 {
+    use WithCepConsulta;
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
     public $inscricaoId = null;
@@ -167,18 +169,18 @@ class Inscricao extends Component
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            $senhaProvisoria = Str::random(8);
-            $usuarioAluno = User::firstOrCreate(
-                ['email' => $this->email],
-                ['name' => $this->nome, 'password' => Hash::make($senhaProvisoria), 'precisa_trocar_senha' => true]
-            );
+            // $senhaProvisoria = Str::random(8);
+            // $usuarioAluno = User::firstOrCreate(
+            //     ['email' => $this->email],
+            //     ['name' => $this->nome, 'password' => Hash::make($senhaProvisoria), 'precisa_trocar_senha' => true]
+            // );
 
-            if ($usuarioAluno->wasRecentlyCreated) {
-                $usuarioAluno->assignRole('aluno');
-                \Illuminate\Support\Facades\Mail::to($usuarioAluno->email)
-                    ->send(new \App\Mail\BoasVindasAluno($usuarioAluno, $senhaProvisoria));
-            }
-            InscricaoModel::where('id', $this->inscricaoId)->update(['usuario_id' => $usuarioAluno->id]);
+            // if ($usuarioAluno->wasRecentlyCreated) {
+            //     $usuarioAluno->assignRole('aluno');
+            //     \Illuminate\Support\Facades\Mail::to($usuarioAluno->email)
+            //         ->send(new \App\Mail\BoasVindasAluno($usuarioAluno, $senhaProvisoria));
+            // }
+            // InscricaoModel::where('id', $this->inscricaoId)->update(['usuario_id' => $usuarioAluno->id]);
             
             $this->etapaAtual = 99; 
             $this->dispatch('inscricao-concluida');
@@ -186,55 +188,55 @@ class Inscricao extends Component
     }
 
     // Método de Pontuação resgatado do sistema antigo
-    private function calcularPontuacao() { 
-        $total = 0;
-        $detalhes = [];
-        $regras = RegraPontuacao::where('ciclo_id', $this->cicloAtivoId)->get();
+    // private function calcularPontuacao() { 
+    //     $total = 0;
+    //     $detalhes = [];
+    //     $regras = RegraPontuacao::where('ciclo_id', $this->cicloAtivoId)->get();
 
-        foreach ($regras as $regra) {
-            $campo = $regra->campo_name;
-            $valorResposta = $this->respostas[$campo] ?? null;
-            $pontuou = false;
+    //     foreach ($regras as $regra) {
+    //         $campo = $regra->campo_name;
+    //         $valorResposta = $this->respostas[$campo] ?? null;
+    //         $pontuou = false;
 
-            if ($valorResposta !== null && $valorResposta !== '') {
-                $valoresEsperados = is_array($regra->valor_esperado) ? $regra->valor_esperado : [$regra->valor_esperado];
-                $valorAlvo = $valoresEsperados[0] ?? null;
+    //         if ($valorResposta !== null && $valorResposta !== '') {
+    //             $valoresEsperados = is_array($regra->valor_esperado) ? $regra->valor_esperado : [$regra->valor_esperado];
+    //             $valorAlvo = $valoresEsperados[0] ?? null;
 
-                switch ($regra->operador) {
-                    case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
-                    case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
-                    case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
-                    case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
-                    case 'between':
-                        $min = (float)($valoresEsperados[0] ?? 0);
-                        $max = (float)($valoresEsperados[1] ?? $min);
-                        $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
-                        break;
-                    case 'in':
-                        $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
-                        $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
-                        break;
-                }
-            }
+    //             switch ($regra->operador) {
+    //                 case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+    //                 case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+    //                 case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+    //                 case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+    //                 case 'between':
+    //                     $min = (float)($valoresEsperados[0] ?? 0);
+    //                     $max = (float)($valoresEsperados[1] ?? $min);
+    //                     $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
+    //                     break;
+    //                 case 'in':
+    //                     $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
+    //                     $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+    //                     break;
+    //             }
+    //         }
 
-            if ($pontuou) {
-                $total += $regra->pontos;
-                $detalhes[$campo] = [
-                    'resposta_dada' => $valorResposta,
-                    'pontos_ganhos' => $regra->pontos,
-                    'condicao' => "{$regra->operador} " . implode(', ', $valoresEsperados)
-                ];
-            }
-        }
+    //         if ($pontuou) {
+    //             $total += $regra->pontos;
+    //             $detalhes[$campo] = [
+    //                 'resposta_dada' => $valorResposta,
+    //                 'pontos_ganhos' => $regra->pontos,
+    //                 'condicao' => "{$regra->operador} " . implode(', ', $valoresEsperados)
+    //             ];
+    //         }
+    //     }
 
-        return [
-            'total' => $total,
-            'detalhes' => json_encode([
-                'auditoria_detalhada' => $detalhes,
-                'motivo_auditoria' => "Candidato avaliado pelo Motor Dinâmico. Total: {$total} pontos."
-            ], JSON_UNESCAPED_UNICODE)
-        ];
-    }
+    //     return [
+    //         'total' => $total,
+    //         'detalhes' => json_encode([
+    //             'auditoria_detalhada' => $detalhes,
+    //             'motivo_auditoria' => "Candidato avaliado pelo Motor Dinâmico. Total: {$total} pontos."
+    //         ], JSON_UNESCAPED_UNICODE)
+    //     ];
+    // }
 
     private function salvarProgresso($statusForcado = null)
     {
@@ -254,15 +256,15 @@ class Inscricao extends Component
             'curso_id' => $this->curso,
             'possui_deficiencia' => $this->possui_deficiencia,
             'natureza_deficiencia' => $this->natureza_deficiencia,
-            'dados_dinamicos' => $this->respostas, 
+            'dados_dinamicos' => !empty($this->respostas) ? $this->respostas : null,
         ];
 
         if ($this->etapaAtual === $this->totalEtapas && !$statusForcado) {
             $nomeStatus = 'Pendente';
             
-            $pontuacao = $this->calcularPontuacao();
-            $dados['pontuacao_total'] = $pontuacao['total'];
-            $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
+            // $pontuacao = $this->calcularPontuacao();
+            // $dados['pontuacao_total'] = $pontuacao['total'];
+            // $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
             
         } elseif ($statusForcado) {
             $nomeStatus = ucfirst($statusForcado); 
@@ -330,36 +332,6 @@ class Inscricao extends Component
         }
     }
 
-    public function updatedCep($valor)
-    {
-        $cepLimpo = preg_replace('/[^0-9]/', '', $valor);
-
-        if (strlen($cepLimpo) === 8) {
-            $response = Http::get("https://viacep.com.br/ws/{$cepLimpo}/json/");
-
-            if ($response->successful() && !isset($response['erro'])) {
-                $this->logradouro = $response['logradouro'];
-                $this->bairro = $response['bairro'];
-                $this->cidade = $response['localidade'];
-                $this->estado = $response['uf'];
-                $this->atualizarDisponibilidade(); // Removido o comentário do código novo
-            } else {
-                $this->limparEndereco();
-            }
-        } else {
-            $this->limparEndereco();
-        }
-    }
-
-    private function limparEndereco()
-    {
-        $this->logradouro = null;
-        $this->bairro = null;
-        $this->cidade = null;
-        $this->estado = null;
-        $this->atualizarDisponibilidade(); // Removido o comentário do código novo
-    }
-
     // Atualização da Data de Nascimento (Restaurado do sistema antigo)
     public function updatedDataNascimento()
     {
@@ -383,7 +355,7 @@ class Inscricao extends Component
         if (!$this->estado || !$this->data_nascimento) return;
 
         $idade = Carbon::parse($this->data_nascimento)->age;
-
+        
         // 1. Busca os cursos do Estado que atendem a idade e ESTÃO VINCULADOS AO CICLO ATUAL
         $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
             ->whereHas('ciclos', function($q) {

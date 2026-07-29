@@ -15,8 +15,9 @@ class Unidade extends Model
     // Campos alinhados com a Migration Consolidada
     protected $fillable = [
         'nome', 'slug', 'status', 'data_inauguracao', 'endereco', 'email', 'telefone', 'foto_path',
+        'cep', 'estado', 'cidade', 'bairro', 'logradouro', 'numero', 'complemento' // <- Adicionados
     ];
-
+    
     // Relação existente (Usuários da Unidade)
     public function usuarios()
     {

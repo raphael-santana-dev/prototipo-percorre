@@ -34,7 +34,15 @@ class Inscricao extends Model
         'autorizacao_uso_infos',
         'pontuacao_total',
         'pontuacao_detalhes',
-        'posicao_ranking'
+        'posicao_ranking',
+        'dados_dinamicos',
+    ];
+
+    protected $casts = [
+        'dados_dinamicos' => 'array',
+        'pontuacao_detalhes' => 'array',
+        'data_nascimento' => 'date',
+        'status' => 'boolean'
     ];
 
     public function student()

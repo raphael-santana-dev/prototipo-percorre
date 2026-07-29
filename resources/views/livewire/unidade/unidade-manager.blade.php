@@ -90,10 +90,50 @@
                                 @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
                             
-                            <div class="md:col-span-2">
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Endereço Completo <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model="endereco" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('endereco') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                            <!-- Seção de Endereço -->
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2 p-4 border border-gray-100 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 dark:border-gray-700">
+                                
+                                <div class="col-span-1 md:col-span-12 mb-1">
+                                    <h4 class="text-sm font-bold text-purpura-600 dark:text-purpura-400"><i class="ph ph-map-pin"></i> Localização</h4>
+                                </div>
+
+                                <div class="col-span-1 md:col-span-3">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">CEP <span class="text-red-500">*</span></label>
+                                    <!-- .live.debounce para disparar o ViaCEP apenas quando parar de digitar -->
+                                    <input type="text" wire:model.live.debounce.500ms="cep" x-mask="99999-999" placeholder="00000-000" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    @error('cep') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="col-span-1 md:col-span-7">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Logradouro / Rua</label>
+                                    <input type="text" wire:model="logradouro" readonly class="w-full mt-1 border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 dark:bg-gray-800 dark:border-gray-700">
+                                </div>
+
+                                <div class="col-span-1 md:col-span-2">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Número <span class="text-red-500">*</span></label>
+                                    <input type="text" wire:model="numero" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    @error('numero') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="col-span-1 md:col-span-4">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Complemento</label>
+                                    <input type="text" wire:model="complemento" placeholder="Opcional" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+
+                                <div class="col-span-1 md:col-span-4">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Bairro</label>
+                                    <input type="text" wire:model="bairro" readonly class="w-full mt-1 border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 dark:bg-gray-800 dark:border-gray-700">
+                                </div>
+
+                                <div class="col-span-1 md:col-span-3">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Cidade</label>
+                                    <input type="text" wire:model="cidade" readonly class="w-full mt-1 border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 dark:bg-gray-800 dark:border-gray-700">
+                                </div>
+
+                                <div class="col-span-1 md:col-span-1">
+                                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">UF</label>
+                                    <input type="text" wire:model="estado" readonly class="w-full mt-1 border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 dark:bg-gray-800 dark:border-gray-700">
+                                </div>
                             </div>
 
                             <div>
