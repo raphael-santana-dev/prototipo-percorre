@@ -114,54 +114,105 @@
         :headers="$this->headers"
         :registros="$registros"
         :ordenacaoCampo="$ordenacaoCampo"
-        :ordenacaoDirecao="$ordenacaoDirecao">
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
 
+        {{-- SLOT PADRÃO (LISTA MINIMALISTA) --}}
         @forelse($registros as $inscricao)
-            <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+            <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                 
-                <td class="px-6 py-4 text-center border-b dark:border-gray-700">
-                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                {{-- Reduzimos o padding de py-4 para py-2.5 --}}
+                <td class="px-4 py-2.5 text-center">
+                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                 </td>
 
-                <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-300 border-b dark:border-gray-700">#{{ $inscricao->id }}</td>
+                <td class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs">#{{ $inscricao->id }}</td>
                 
-                <td class="px-6 py-4 border-b dark:border-gray-700">
-                    <div class="font-bold text-gray-900 dark:text-white">{{ $inscricao->nome }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $inscricao->cpf }}</div>
+                <td class="px-4 py-2.5">
+                    <div class="font-bold text-gray-900 text-sm dark:text-white">{{ $inscricao->nome }}</div>
+                    <div class="text-[11px] text-gray-400 dark:text-gray-500">{{ $inscricao->cpf }}</div>
                 </td>
                 
-                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
-                    <div class="font-bold">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
-                    <div class="text-xs text-gray-500">{{ $inscricao->unidade->nome ?? '-' }}</div>
+                <td class="px-4 py-2.5">
+                    <div class="font-semibold text-gray-700 text-sm dark:text-gray-300">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
+                    <div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div>
                 </td>
                 
-                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400">
                     Passo {{ $inscricao->etapa_atual }}
                 </td>
                 
-                <td class="px-6 py-4 border-b dark:border-gray-700">
-                    <span class="px-3 py-1 text-xs font-bold rounded-full 
-                        @if($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Aprovado') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                        @elseif($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Reprovado') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                        @else bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 @endif">
+                <td class="px-4 py-2.5">
+                    @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                    <span class="px-2.5 py-1 text-[11px] font-bold rounded border whitespace-nowrap" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
                         {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
                     </span>
                 </td>
                 
-                <td class="px-6 py-4 text-right border-b dark:border-gray-700">
-                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-2 text-gray-500 transition-colors rounded-lg hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:text-gray-300 dark:hover:text-purpura-400" title="Visualização Rápida">
-                        <i class="text-xl ph ph-eye"></i>
+                <td class="px-4 py-2.5 text-right">
+                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:hover:text-purpura-400" title="Visualização Rápida">
+                        <i class="text-lg ph ph-dots-three-outline-vertical"></i>
                     </button>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-                    <p class="text-lg font-semibold">Nenhuma inscrição encontrada.</p>
-                    <p class="text-sm">Ajuste os filtros ou aguarde novos candidatos.</p>
+                <td colspan="7" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                    Nenhuma inscrição encontrada.
                 </td>
             </tr>   
         @endforelse
+
+        {{-- SLOT DO GRID (CARDS MINIMALISTAS) --}}
+        <x-slot name="gridSlot">
+            @foreach($registros as $inscricao)
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    
+                    <!-- Topo do Card (Status + Ações) -->
+                    <div class="flex items-center justify-between mb-4">
+                        @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                        <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1.5" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
+                            {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                        </span>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                            <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1 text-gray-400 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <i class="text-lg ph ph-dots-three"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Meio do Card (Avatar/Icone e Nome) -->
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="flex items-center justify-center w-10 h-10 text-xl text-gray-400 bg-gray-50 rounded-full dark:bg-gray-700 dark:text-gray-300 shrink-0">
+                            <i class="ph ph-user"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 class="text-sm font-bold text-gray-900 truncate dark:text-white">{{ $inscricao->nome }}</h4>
+                            <p class="text-xs text-gray-500 truncate dark:text-gray-400">ID: {{ $inscricao->id }} • {{ $inscricao->cpf }}</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-50 dark:border-gray-700/50 border-dashed my-2"></div>
+
+                    <!-- Rodapé do Card (Info extra) -->
+                    <div class="flex items-center justify-between mt-2">
+                        <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                            <i class="text-sm ph ph-graduation-cap"></i>
+                            <span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span>
+                        </div>
+                        <div class="text-xs font-bold text-gray-600 dark:text-gray-300">
+                            {{ $inscricao->pontuacao_total }} pts
+                        </div>
+                    </div>
+
+                </div>
+            @endforeach
+        </x-slot>
+
     </x-table>
 
     {{-- MODAL DE ALTERAÇÃO EM LOTE --}}

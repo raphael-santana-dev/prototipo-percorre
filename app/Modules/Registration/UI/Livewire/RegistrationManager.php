@@ -46,6 +46,8 @@ class RegistrationManager extends Component
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
+
+        $this->permiteGrid = true;
     }
 
     public function updating($nomePropriedade)
