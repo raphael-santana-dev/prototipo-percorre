@@ -90,7 +90,7 @@ class StepManager extends Component
         $step = Etapa::findOrFail($id);
 
         // Bloqueio de segurança
-        if ($step->numero === 1 && !auth()->user()->hasRole('dev')) {
+        if ($step->numero === 1) {
             session()->flash('error', 'A Etapa 1 é obrigatória para o funcionamento das inscrições e não pode ser excluída.');
             return;
         }

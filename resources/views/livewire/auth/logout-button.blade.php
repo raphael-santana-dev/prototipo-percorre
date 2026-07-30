@@ -1,5 +1,3 @@
-<button wire:click="logout" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 transition-colors rounded-md hover:bg-red-50 hover:text-red-700">
-    <!-- Ícone Heroicons de saída -->
-    <x-heroicon-o-arrow-right-on-rectangle class="w-5 h-5" />
-    Sair do Sistema
-</button>
+<button wire:click="logout" title="Sair do Sistema" class="flex items-center justify-center p-2 ml-1 text-white/70 transition-colors rounded-full hover:bg-red-500/20 hover:text-red-400">
+        <i class="text-2xl ph ph-power"></i>
+    </button>

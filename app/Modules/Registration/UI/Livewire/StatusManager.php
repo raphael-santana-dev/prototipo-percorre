@@ -21,6 +21,8 @@ class StatusManager extends Component
     public string $nome = '';
     public string $descricao = '';
 
+    public string $cor = '#9CA3AF';
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
@@ -40,7 +42,7 @@ class StatusManager extends Component
         $this->statusId = $status->id;
         $this->nome = $status->nome;
         $this->descricao = $status->descricao ?? '';
-        
+        $this->cor = $status->cor ?? '#9CA3AF';
         $this->isEditMode = true;
         $this->showModal = true;
     }
@@ -58,6 +60,7 @@ class StatusManager extends Component
         $data = [
             'nome' => $this->nome,
             'descricao' => $this->descricao,
+            'cor' => $this->cor,
         ];
 
         if ($this->isEditMode) {
@@ -83,6 +86,7 @@ class StatusManager extends Component
         $this->nome = '';
         $this->descricao = '';
         $this->isEditMode = false;
+        $this->cor = '#9CA3AF';
         $this->resetErrorBag();
     }
 

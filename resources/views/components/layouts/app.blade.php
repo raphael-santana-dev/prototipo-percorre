@@ -27,155 +27,125 @@
 <!-- O background e a transição suave foram movidos para o body -->
 <body class="h-full antialiased text-gray-900 transition-colors duration-500 bg-slate-50 dark:bg-gray-900 dark:text-gray-100">
     
-    <!-- Wrapper do Menu com estado do AlpineJS -->
     <div x-data="{ drawerOpen: false }">
         
-        <!-- Navbar Superior (com transição suave) -->
         <nav class="transition-colors duration-500 bg-purpura-600 border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     
-                    <!-- Lado Esquerdo (Logo e Botão Hamburger Mobile) -->
+                    <!-- Lado Esquerdo -->
                     <div class="flex items-center gap-4">
-                        <!-- Botão Hambúrguer (Oculto no Desktop graças ao 'md:hidden') -->
                         <button @click="drawerOpen = true" class="p-2 -ml-2 text-white/80 rounded-md md:hidden hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none">
                             <i class="text-2xl ph ph-list"></i>
                         </button>
                         
-                        <!-- Logo / Título -->
                         <div class="flex-shrink-0 flex items-center">
                             <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-10 w-auto" alt="Instituto Percorre">
                             <span class="ml-3 text-[10px] uppercase tracking-wider bg-purpura-700 text-purpura-100 px-2 py-1 rounded hidden sm:inline-block border border-purpura-600">
-                                {{ auth()->user()->getRoleNames()->first() }}
+                                {{ auth()->user()->getRoleNames()->first() ?? 'Usuário' }}
                             </span>
                         </div>
                     </div>
 
                     <!-- ========================================== -->
-                    <!-- VISÃO DESKTOP (Menu, Dropdown, Tema e Perfil) -->
-                    <!-- Oculto no Mobile graças ao 'hidden md:flex' -->
+                    <!-- VISÃO DESKTOP (Menu Agrupado e Minimalista) -->
                     <!-- ========================================== -->
-                    <div class="items-center hidden gap-6 md:flex">
+                    <div class="items-center hidden md:flex">
                         
-                        <!-- Links Centrais -->
-                        <div class="flex items-center gap-2">
+                        <!-- LINKS AGRUPADOS -->
+                        <div class="flex items-center gap-2 lg:gap-4">
                             
+                            <!-- 1. Dashboard -->
                             @feature('dashboard')
                                 @can('dashboard.visualizar')
-                                    <a href="{{ route('dashboard') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
+                                    <a href="{{ route('dashboard') }}" class="px-3 py-2 text-sm font-medium text-white/90 transition-colors rounded-md hover:bg-white/10 hover:text-white">
                                         Dashboard
                                     </a>
                                 @endcan
                             @endfeature
-                            
-                            <a href="{{ route('turnos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Turnos
-                            </a>
 
-                            
-                            <a href="{{ route('unidades.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Unidades
-                            </a>
-
-                            <a href="{{ route('status-inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Status
-                            </a>
-
-                            <a href="{{ route('inscricoes.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Inscricoes
-                            </a>
-
-                            <a href="{{ route('cursos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Cursos
-                            </a>
-
-                            <a href="{{ route('ciclos.index') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Ciclos
-                            </a>
-
-                            <a href="{{ route('ciclos.etapas') }}" class="px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800">
-                                Etapas
-                            </a>
-                            
-                            <!-- Dropdown de Configurações Administrativas -->
-                            @role('dev|admin')
-                                <div class="relative" x-data="{ menuOpen: false }">
-                                    <button @click="menuOpen = !menuOpen" @click.outside="menuOpen = false" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white transition-colors rounded-md dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-800 focus:outline-none">
-                                        <span>Engrenagens</span>
-                                        <i class="transition-transform duration-200 ph ph-caret-down text-xs" :class="menuOpen ? 'rotate-180' : ''"></i>
-                                    </button>
-
-                                    <!-- Menu Flutuante -->
-                                    <div x-show="menuOpen" 
-                                        x-transition:enter="transition ease-out duration-100"
-                                        x-transition:enter-start="transform opacity-0 scale-95"
-                                        x-transition:enter-end="transform opacity-100 scale-100"
-                                        x-transition:leave="transition ease-in duration-75"
-                                        x-transition:leave-start="transform opacity-100 scale-100"
-                                        x-transition:leave-end="transform opacity-0 scale-95"
-                                        class="absolute right-0 z-50 w-48 py-2 mt-2 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700"
-                                        x-cloak>
-                                        
-                                        <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                                            Acessos
-                                        </div>
-                                        
-                                        @feature('usuarios')
-                                            @can('usuario.listar')
-                                                <a href="{{ route('users.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                    <i class="ph ph-users"></i> Usuários
-                                                </a>
-                                            @endcan
-                                        @endfeature
-                                        
-                                        @feature('roles')
-                                            @can('role.listar')
-                                                <a href="{{ route('roles.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                    <i class="ph ph-shield-check"></i> Roles (Grupos)
-                                                </a>
-                                            @endcan
-                                        @endfeature
-
-                                        @feature('estudantes')
-                                            @can('estudante.listar')
-                                                <a href="{{ route('students.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                    <i class="ph ph-student"></i>Estudantes
-                                                </a>
-                                            @endcan
-                                        @endfeature
-
-                                        @role('dev')
-                                            <div class="h-px my-2 bg-gray-100 dark:bg-gray-700"></div>
-                                            <div class="px-4 py-2 text-xs font-bold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                                                Sistema
-                                            </div>
-                                            
-                                            @feature('permissoes')
-                                                @can('permissao.listar')
-                                                    <a href="{{ route('permissions.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                        <i class="ph ph-key"></i> Permissões
-                                                    </a>
-                                                @endcan
-                                            @endfeature
-                                            
-                                            @feature('features')
-                                                @can('feature.listar')
-                                                    <a href="{{ route('features.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-purpura-500 dark:hover:text-purpura-400">
-                                                        <i class="ph ph-toggle-right"></i> Feature Toggles
-                                                    </a>
-                                                @endcan
-                                            @endfeature
-                                        @endrole
-                                    </div>
+                            <!-- 2. Processos Seletivos (Dropdown) -->
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                <button @click="open = !open" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/90 transition-colors rounded-md hover:bg-white/10 hover:text-white">
+                                    Processos Seletivos <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                </button>
+                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                    <a href="{{ route('ciclos.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Ingresso</a>
+                                    <a href="{{ route('ciclos.etapas') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Etapas do Funil</a>
                                 </div>
+                            </div>
+
+                            <!-- 3. Secretaria (Dropdown) -->
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                <button @click="open = !open" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/90 transition-colors rounded-md hover:bg-white/10 hover:text-white">
+                                    Secretaria <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                </button>
+                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                    <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Fichas de Inscrição</a>
+                                    
+                                    @feature('estudantes')
+                                        @can('estudante.listar')
+                                            <a href="{{ route('students.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Base de Alunos</a>
+                                        @endcan
+                                    @endfeature
+                                    
+                                    <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tags de Status</a>
+                                </div>
+                            </div>
+
+                            <!-- 4. Instituição (Dropdown) -->
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                <button @click="open = !open" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/90 transition-colors rounded-md hover:bg-white/10 hover:text-white">
+                                    Instituição <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                </button>
+                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                    <a href="{{ route('cursos.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Portfólio de Cursos</a>
+                                    <a href="{{ route('turnos.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Grade de Turnos</a>
+                                    <a href="{{ route('unidades.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Unidades Sede</a>
+                                </div>
+                            </div>
+
+                            <!-- 5. Configurações (Restrito) -->
+                            @role('dev|admin')
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                <button @click="open = !open" class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/90 transition-colors rounded-md hover:bg-white/10 hover:text-white">
+                                    Engrenagens <i class="ph ph-gear text-sm"></i>
+                                </button>
+                                <div x-show="open" x-transition.opacity class="absolute right-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                    
+                                    @feature('usuarios')
+                                        @can('usuario.listar')
+                                            <a href="{{ route('users.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Usuários</a>
+                                        @endcan
+                                    @endfeature
+                                    
+                                    @feature('roles')
+                                        @can('role.listar')
+                                            <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a>
+                                        @endcan
+                                    @endfeature
+
+                                    @role('dev')
+                                        <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
+                                        @feature('permissoes')
+                                            @can('permissao.listar')
+                                                <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tabela de Permissões</a>
+                                            @endcan
+                                        @endfeature
+                                        
+                                        @feature('features')
+                                            @can('feature.listar')
+                                                <a href="{{ route('features.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Feature Toggles</a>
+                                            @endcan
+                                        @endfeature
+                                    @endrole
+                                </div>
+                            </div>
                             @endrole
                         </div>
 
-                        <!-- Divisor mais sutil -->
-                        <div class="w-px h-6 bg-purpura-400 dark:bg-gray-700"></div>
-                        
-                        <!-- Controles da Conta Desktop -->
-                        <div class="flex items-center gap-4 text-white dark:text-gray-200">
+                        <!-- DIVISOR E LOGOUT MINIMALISTA -->
+                        <div class="flex items-center gap-3 pl-4 ml-2 border-l border-white/20">
                             
                             @feature('sistema.tema')
                                 <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-700">
@@ -183,19 +153,21 @@
                                     <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                                 </button>
                             @endfeature
-
-                            <a href="{{ route('profile.show') }}" class="text-sm transition-colors hover:text-purpura-100 dark:hover:text-purpura-400">
-                                Olá, <strong>{{ auth()->user()->name }}</strong>
+                            
+                            <a href="{{ route('profile.show') }}" class="flex flex-col text-right text-white hover:opacity-80 transition-opacity">
+                                <span class="text-[10px] font-medium opacity-80 uppercase tracking-widest">Olá,</span>
+                                <span class="text-sm font-bold leading-tight">{{ auth()->user()->name }}</span>
                             </a>
                             
-                            <livewire:auth.logout-button />
+                            <!-- Botão de Logout substituído por ação Alpine+Livewire minimalista -->
+                            <button x-data @click="$dispatch('logout')" title="Sair do Sistema" class="flex items-center justify-center p-2 ml-1 text-white/70 transition-colors rounded-full hover:bg-red-500/20 hover:text-red-400">
+                                <i class="text-2xl ph ph-power"></i>
+                            </button>
                         </div>
+
                     </div>
                     
-                    <!-- ========================================== -->
-                    <!-- VISÃO MOBILE (Apenas o Botão de Tema) -->
-                    <!-- Oculto no Desktop graças ao 'md:hidden' -->
-                    <!-- ========================================== -->
+                    <!-- Lado Direito Mobile -->
                     <div class="flex md:hidden">
                         @feature('sistema.tema')
                             <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-white/90 rounded-full dark:text-gray-300 hover:bg-white/10 dark:hover:bg-gray-700">
@@ -212,20 +184,10 @@
         <!-- ========================================== -->
         <!-- NAVIGATION DRAWER (MOBILE) -->
         <!-- ========================================== -->
-        
-        <!-- Overlay Escuro (Fica atrás do menu) -->
-        <div x-show="drawerOpen" 
-            x-transition.opacity.duration.300ms 
-            @click="drawerOpen = false"
-            class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" 
-            x-cloak>
-        </div>
+        <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
 
-        <!-- O Drawer Deslizante -->
-        <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden"
-            :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
+        <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
             
-            <!-- Header do Drawer -->
             <div class="relative flex-shrink-0 h-40 overflow-hidden bg-gradient-to-br from-petunia-900 to-purpura-500">
                 <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
                 <div class="absolute flex items-center gap-3 bottom-4 left-4">
@@ -239,79 +201,20 @@
                 </div>
             </div>
 
-            <!-- Links do Menu Mobile -->
+            <!-- O menu mobile também poderia ser agrupado por categorias visuais para facilitar a rolagem -->
             <div class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <p class="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-gray-400 uppercase">Principal</p>
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-house"></i> Dashboard</a>
                 
-                @feature('dashboard')
-                    @can('dashboard.visualizar')
-                        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <i class="text-lg ph ph-house"></i> Dashboard
-                        </a>
-                    @endcan
-                @endfeature
-
-                @feature('turno')
-                    @can('turno.listar')
-                        <a href="{{ route('turnos.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <i class="text-lg ph ph-clock"></i> Turnos
-                        </a>
-                    @endcan
-                @endfeature
-
-                @feature('unidade')
-                    @can('unidade.listar')
-                        <a href="{{ route('unidades.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <i class="text-lg ph ph-map-pin"></i> Unidades
-                        </a>
-                    @endcan
-                @endfeature
-
+                <p class="px-3 pt-4 pb-1 mt-2 text-xs font-bold tracking-wider text-gray-400 uppercase border-t border-gray-100 dark:border-gray-700">Operacional</p>
+                <a href="{{ route('inscricoes.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-files"></i> Inscrições</a>
+                <a href="{{ route('ciclos.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-calendar"></i> Ciclos</a>
+                <a href="{{ route('cursos.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-graduation-cap"></i> Cursos</a>
+                
                 @role('dev|admin')
-                    <div class="pt-4 pb-1 mt-4 border-t border-gray-100 dark:border-gray-700">
-                        <p class="px-3 text-xs font-bold tracking-wider text-gray-400 uppercase">Administração</p>
-                    </div>
-                    
-                    @feature('usuarios')
-                        @can('usuario.listar')
-                            <a href="{{ route('users.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                <i class="text-lg ph ph-users"></i> Usuários
-                            </a>
-                        @endcan
-                    @endfeature
-                    
-                    @feature('roles')
-                        @can('role.listar')
-                            <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                <i class="text-lg ph ph-shield-check"></i> Roles (Grupos)
-                            </a>
-                        @endcan
-                    @endfeature
-                    
-                    @feature('estudantes')
-                        @can('estudante.listar')
-                            <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                <i class="text-lg ph ph-student"></i>Estudantes
-                            </a>
-                        @endcan
-                    @endfeature
-
-                    @role('dev')
-                        @feature('permissoes')
-                            @can('permissao.listar')
-                                <a href="{{ route('permissions.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                    <i class="text-lg ph ph-key"></i> Permissões
-                                </a>
-                            @endcan
-                        @endfeature
-                        
-                        @feature('features')
-                            @can('feature.listar')
-                                <a href="{{ route('features.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                    <i class="text-lg ph ph-toggle-right"></i> Feature Toggles
-                                </a>
-                            @endcan
-                        @endfeature
-                    @endrole
+                    <p class="px-3 pt-4 pb-1 mt-2 text-xs font-bold tracking-wider text-gray-400 uppercase border-t border-gray-100 dark:border-gray-700">Administração</p>
+                    <a href="{{ route('users.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-users"></i> Usuários</a>
+                    <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-shield-check"></i> Perfis</a>
                 @endrole
             </div>
 
