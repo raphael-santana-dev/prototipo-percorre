@@ -5,70 +5,96 @@ namespace App\Modules\Curso\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Computed;
 use App\Models\Curso;
 use App\Models\User;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes do Curso - Administrativo')]
 class CursoDetalhes extends Component
 {
-    public Curso $curso;
+    // Armazenamos APENAS o ID de forma pública. Isso mata o Erro 419 para sempre.
+    public int $cursoId;
     
-    // Controle de Edição Inline
-    public bool $isEditMode = false;
+    public bool $showModal = false;
     
-    // Campos editáveis
+    // Campos do Formulário
     public $nome;
     public $min_idade;
     public $max_idade;
     public $permite_estado_diferente;
     public $status;
 
-    // Coleções para exibição
-    public $professoresVinculados = [];
+    public array $unidadesSelecionadas = [];
+    public array $turnosSelecionados = [];
 
     public function mount(int $id)
     {
         abort_if(!auth()->user()->can('curso.listar'), 403);
-        
-        $this->carregarCurso($id);
+        $this->cursoId = $id; // Guarda apenas o número inteiro
     }
 
-    public function carregarCurso($id)
+    // ==========================================
+    // PROPRIEDADES COMPUTADAS (Segurança e Performance)
+    // ==========================================
+    
+    #[Computed]
+    public function curso()
     {
-        // Carrega o curso com suas unidades, turnos e as últimas 10 inscrições
-        $this->curso = Curso::with(['unidades', 'turnosVinculados', 'inscricoes' => function($q) {
-            $q->latest()->take(10);
-        }])->findOrFail($id);
-
-        // Busca os usuários do grupo 'professor' que estão vinculados a este curso (Graças à nossa nova arquitetura N:M)
-        $this->professoresVinculados = User::role('professor')
-            ->whereHas('cursos', function($q) use ($id) {
-                $q->where('cursos.id', $id);
+        // O Livewire busca no banco toda vez, sem precisar trafegar pela rede
+        return Curso::with(['unidades', 'turnosVinculados'])->findOrFail($this->cursoId);
+    }
+    
+    #[Computed]
+    public function professoresVinculados()
+    {
+        return User::role('professor')
+            ->whereHas('cursos', function($q) {
+                $q->where('cursos.id', $this->cursoId);
             })->get();
-
-        $this->preencherFormulario();
     }
 
-    public function preencherFormulario()
+    #[Computed]
+    public function inscricoesRecentes()
     {
-        $this->nome = $this->curso->nome;
-        $this->min_idade = $this->curso->min_idade;
-        $this->max_idade = $this->curso->max_idade;
-        $this->permite_estado_diferente = (bool) $this->curso->permite_estado_diferente;
-        $this->status = $this->curso->status;
+        return $this->curso->inscricoes()->latest()->take(10)->get();
     }
 
-    public function toggleEditMode()
+    #[Computed]
+    public function todasUnidades()
+    {
+        return Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get();
+    }
+
+    #[Computed]
+    public function todosTurnos()
+    {
+        return Turno::orderBy('nome')->get();
+    }
+
+    // ==========================================
+    // MÉTODOS DO MODAL
+    // ==========================================
+
+    public function openModal()
     {
         abort_if(!auth()->user()->can('curso.editar'), 403);
-        $this->isEditMode = !$this->isEditMode;
         
-        // Se cancelou a edição, restaura os dados originais
-        if (!$this->isEditMode) {
-            $this->preencherFormulario();
-            $this->resetErrorBag();
-        }
+        $curso = $this->curso; // Acessa o método Computed
+
+        $this->nome = $curso->nome;
+        $this->min_idade = $curso->min_idade;
+        $this->max_idade = $curso->max_idade;
+        $this->permite_estado_diferente = (bool) $curso->permite_estado_diferente;
+        $this->status = $curso->status;
+
+        $this->unidadesSelecionadas = $curso->unidades->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->turnosSelecionados = $curso->turnosVinculados->pluck('id')->map(fn($id) => (string) $id)->toArray();
+
+        $this->resetErrorBag();
+        $this->showModal = true;
     }
 
     public function salvarAlteracoes()
@@ -80,9 +106,13 @@ class CursoDetalhes extends Component
             'min_idade' => 'nullable|integer|min:0',
             'max_idade' => 'nullable|integer|gte:min_idade',
             'status' => 'required|in:Ativo,Inativo',
+            'unidadesSelecionadas' => 'nullable|array',
+            'turnosSelecionados' => 'nullable|array',
         ]);
 
-        $this->curso->update([
+        $curso = $this->curso; // Acessa o método Computed
+
+        $curso->update([
             'nome' => $this->nome,
             'min_idade' => $this->min_idade,
             'max_idade' => $this->max_idade,
@@ -90,11 +120,13 @@ class CursoDetalhes extends Component
             'status' => $this->status,
         ]);
 
-        $this->isEditMode = false;
-        session()->flash('success', 'Curso atualizado com sucesso!');
-        
-        // Recarrega os dados fresquinhos
-        $this->carregarCurso($this->curso->id);
+        $curso->unidades()->sync($this->unidadesSelecionadas);
+        $curso->turnosVinculados()->sync($this->turnosSelecionados);
+
+        unset($this->curso); // Limpa o cache computado para forçar a atualização visual
+
+        $this->showModal = false;
+        session()->flash('success', 'Curso e vínculos atualizados com sucesso!');
     }
 
     public function render()
