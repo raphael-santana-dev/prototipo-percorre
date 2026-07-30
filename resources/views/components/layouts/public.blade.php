@@ -27,42 +27,46 @@
     <!-- Wrapper do Menu AlpineJS -->
     <div x-data="{ drawerOpen: false }">
         
-        <!-- Navbar Pública -->
-        <header class="transition-colors duration-500 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700 relative z-30">
+        <!-- NAVBAR PÚBLICA (ESTILO ADMIN) -->
+        <nav class="transition-colors duration-500 bg-purpura-600 border-b border-purpura-700 shadow-sm dark:bg-gray-800 dark:border-gray-700 relative z-30">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-20">
+                <!-- Altura h-16 para igualar ao admin -->
+                <div class="flex items-center justify-between h-16">
                     
-                    <!-- Lado Esquerdo (Menu Mobile + Logo) -->
+                    <!-- Lado Esquerdo (Menu Mobile + Logo Oficial) -->
                     <div class="flex items-center gap-4">
-                        <!-- Botão Hambúrguer (Oculto no Desktop) -->
-                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-gray-500 rounded-md md:hidden hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none transition-colors">
+                        <!-- Botão Hambúrguer -->
+                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-white/80 rounded-md md:hidden hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none transition-colors">
                             <i class="text-2xl ph ph-list"></i>
                         </button>
 
-                        <!-- Logo -->
-                        <a href="/" class="flex items-center gap-3 transition-opacity hover:opacity-80">
-                            <div class="flex items-center justify-center w-10 h-10 text-white rounded-xl bg-purpura-500 shadow-sm shrink-0">
-                                <span class="text-xl font-bold">P</span>
-                            </div>
-                            <span class="text-2xl font-bold text-purpura-700 dark:text-purpura-400">Percorre</span>
+                        <!-- Logo SVG Branca -->
+                        <a href="/" class="flex-shrink-0 flex items-center transition-opacity hover:opacity-80">
+                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-10 w-auto" alt="Instituto Percorre">
                         </a>
                     </div>
 
                     <!-- Lado Direito (Ações Desktop) -->
                     <div class="hidden items-center gap-4 md:flex">
-                        <!-- Botão de Tema -->
-                        <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-gray-500 transition-colors rounded-full dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <i class="text-2xl ph ph-moon" x-show="tema === 'light'"></i>
-                            <i class="text-2xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                        <!-- Botão de Tema (Agora com cor branca) -->
+                        <button
+                            @click="tema = tema === 'light' ? 'dark' : 'light'"
+                            class="p-2 rounded-full flex items-center justify-center text-white/90 transition-colors hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-700"
+                        >
+                            <i class="ph ph-moon text-xl" x-show="tema === 'light'"></i>
+                            <i class="ph ph-sun text-xl text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                         </button>
 
-                        <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
+                        <!-- Divisor -->
+                        <div class="w-px h-6 bg-purpura-400 dark:bg-gray-700"></div>
 
                         <!-- Botões de Login -->
                         <div class="flex gap-3">
-                            <a href="{{ route('login') }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700 transition-colors">
+                            <!-- Acesso Restrito vazado (borda branca translúcida) -->
+                            <a href="{{ route('login') }}" class="px-4 py-2 text-sm font-bold text-white transition-colors border border-white/30 rounded-lg hover:bg-white/10 dark:border-gray-600 dark:hover:bg-gray-700">
                                 Acesso Restrito
                             </a>
+                            <!-- Botão de Estudante (Cor sólida Ponkan/Laranja destaca bem no Roxo) -->
                             <a href="{{ route('student.login') }}" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition-colors">
                                 <i class="mr-1 ph-bold ph-graduation-cap"></i> Sou Estudante
                             </a>
@@ -71,15 +75,15 @@
 
                     <!-- Lado Direito (Mobile - Apenas Tema) -->
                     <div class="flex md:hidden">
-                        <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-gray-500 transition-colors rounded-full dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <i class="text-2xl ph ph-moon" x-show="tema === 'light'"></i>
-                            <i class="text-2xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                        <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-700">
+                            <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
+                            <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                         </button>
                     </div>
 
                 </div>
             </div>
-        </header>
+        </nav>
 
         <!-- ========================================== -->
         <!-- NAVIGATION DRAWER (MOBILE) -->
@@ -97,20 +101,16 @@
         <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden"
             :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
             
-            <!-- Header do Drawer Público -->
-            <div class="relative flex items-center gap-3 p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                <div class="flex items-center justify-center w-10 h-10 text-white rounded-xl bg-purpura-500 shadow-sm shrink-0">
-                    <span class="text-xl font-bold">P</span>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-purpura-700 dark:text-purpura-400">Percorre</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Portal Público</p>
+            <!-- Header do Drawer (Mantido o estilo Roxo Gradient do Admin) -->
+            <div class="relative flex-shrink-0 h-40 overflow-hidden bg-gradient-to-br from-petunia-900 to-purpura-500">
+                <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
+                <div class="absolute flex items-center gap-3 bottom-4 left-4">
+                    <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-8 w-auto filter drop-shadow-sm">
                 </div>
             </div>
 
             <!-- Links do Menu Mobile -->
             <div class="flex-1 px-4 py-6 space-y-4 overflow-y-auto">
-                
                 <a href="{{ route('login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700 transition-colors">
                     <i class="text-lg ph ph-lock-key"></i> Acesso Restrito
                 </a>

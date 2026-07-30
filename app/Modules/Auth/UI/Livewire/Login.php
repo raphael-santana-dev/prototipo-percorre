@@ -7,7 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\Auth;
 
-#[Layout('components.layouts.auth')]
+#[Layout('components.layouts.public')]
 #[Title('Login - Painel Administrativo')]
 class Login extends Component
 {

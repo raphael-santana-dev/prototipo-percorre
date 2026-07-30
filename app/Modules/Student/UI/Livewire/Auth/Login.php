@@ -7,7 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\Auth;
 
-#[Layout('components.layouts.student-auth')]
+#[Layout('components.layouts.public')]
 #[Title('Login - Portal do Aluno')]
 class Login extends Component
 {
