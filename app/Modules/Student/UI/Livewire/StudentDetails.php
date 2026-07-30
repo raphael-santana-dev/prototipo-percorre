@@ -17,8 +17,8 @@ class StudentDetails extends Component
     {
         abort_if(!auth()->user()->can('estudante.listar'), 403);
         
-        // O Global Scope (Tenantable) atua aqui garantindo a segurança de acesso
-        $this->student = Student::with('unidade')->findOrFail($id);
+        // Filtramos para garantir que ele não acesse via URL um aluno de outra unidade
+        $this->student = Student::with('unidade')->apenasVinculosPermitidos()->findOrFail($id);
     }
 
     public function render()

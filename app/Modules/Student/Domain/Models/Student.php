@@ -5,12 +5,12 @@ namespace App\Modules\Student\Domain\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Traits\Tenantable;
+use App\Traits\FiltraPorVinculo;
 
 
 class Student extends Authenticatable
 {
-    use HasFactory, Notifiable, Tenantable;
+    use HasFactory, Notifiable, FiltraPorVinculo;
 
     protected $fillable = [
         'name',
@@ -30,4 +30,9 @@ class Student extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
     ];
+
+    public function unidade()
+    {
+        return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
+    }
 }

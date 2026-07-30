@@ -43,7 +43,7 @@ class RegistrationManager extends Component
     
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
 
@@ -196,9 +196,11 @@ class RegistrationManager extends Component
 
     public function render()
     {
-        $queryBase = $this->obterQueryFiltrada();
+        // APLICAMOS O BLOQUEIO AQUI NO INÍCIO!
+        // Assim, tanto a tabela quanto os cards respeitarão o isolamento de dados.
+        $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
-        // 1. Calcula os cards ANTES da paginação e ordenação
+        // 1. Calcula os cards (Agora protegidos pelo filtro acima)
         $metricas = [
             [
                 'label' => 'Total',
@@ -232,14 +234,14 @@ class RegistrationManager extends Component
             ],
         ];
 
-        // 2. APLICA A ORDENAÇÃO (CORRIGIDO)
+        // 2. APLICA A ORDENAÇÃO
         if ($this->ordenacaoCampo) {
             $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $queryBase->orderBy('id', 'desc');
         }
 
-        // 3. PAGINAÇÃO SEMPRE POR ÚLTIMO
+        // 3. PAGINAÇÃO SEMPRE POR ÚLTIMO (Removido o escopo daqui, pois já foi aplicado lá em cima)
         $inscricoes = $queryBase->paginate($this->porPagina);
 
         return view('livewire.registration.registration-manager', [

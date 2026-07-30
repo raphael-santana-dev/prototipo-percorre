@@ -136,17 +136,15 @@ class StudentManager extends Component
         $this->password = '';
         $this->is_active = true;
         // Se o usuário logado for de uma unidade, já preenche o campo para ele
-        $this->unidade_id = auth()->user()->unidade_id ?? null; 
+        $this->unidade_id = auth()->user()->unidades->first()->id ?? null;
         $this->isEditMode = false;
         $this->resetErrorBag();
     }
 
     public function render()
     {
-        // O Global Scope configurado na trait Tenantable cuidará de exibir apenas 
-        // os alunos da unidade do usuário logado automaticamente!
         return view('livewire.student.student-manager', [
-            'students' => Student::with('unidade')->orderBy('name')->get(),
+            'students' => Student::with('unidade')->apenasVinculosPermitidos()->orderBy('name')->get(),
             'unidades' => Unidade::orderBy('nome')->get(),
         ]);
     }

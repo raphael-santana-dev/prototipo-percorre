@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use App\Traits\FiltraPorVinculo;
 
 class Inscricao extends Model
 {
     use SoftDeletes;
+    use FiltraPorVinculo;
+    
     protected $table = 'inscricoes';
     protected $fillable = [
         'ciclo_id',
