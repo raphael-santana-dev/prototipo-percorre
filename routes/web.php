@@ -18,7 +18,7 @@ use App\Modules\Period\UI\Livewire\StepManager;
 use App\Modules\Period\UI\Livewire\DynamicFields;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
-Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('home');
+Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
 
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 

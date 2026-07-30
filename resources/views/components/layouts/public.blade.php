@@ -1,19 +1,39 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-      :class="tema === 'dark' ? 'dark h-full bg-gray-900' : 'h-full bg-slate-50'">
+      x-data="{ 
+          tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+          toggleTema() {
+              this.tema = this.tema === 'light' ? 'dark' : 'light';
+              localStorage.setItem('tema_sistema', this.tema);
+              if (this.tema === 'dark') {
+                  document.documentElement.classList.add('dark');
+              } else {
+                  document.documentElement.classList.remove('dark');
+              }
+          }
+      }" 
+      x-init="
+          if (tema === 'dark') { document.documentElement.classList.add('dark'); }
+          else { document.documentElement.classList.remove('dark'); }
+      "
+      :class="tema === 'dark' ? 'dark h-full' : 'h-full'">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Instituto Percorre' }}</title>
 
-    <!-- Script Bloqueante: Evita a piscada branca (FOUC) antes do AlpineJS carregar -->
+    <!-- Script Bloqueante: Evita FOUC (piscada de tema) -->
     <script>
-        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
+        (function() {
+            const temaSalvo = localStorage.getItem('tema_sistema');
+            const prefereEscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (temaSalvo === 'dark' || (!temaSalvo && prefereEscuro)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
     </script>
     
     <!-- Phosphor Icons -->
@@ -22,62 +42,58 @@
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-500 bg-slate-50 dark:text-gray-100 dark:bg-gray-900 antialiased">
+<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 bg-slate-50 dark:text-gray-100 dark:bg-gray-950 antialiased">
     
     <!-- Wrapper do Menu AlpineJS -->
     <div x-data="{ drawerOpen: false }">
         
-        <!-- NAVBAR PÚBLICA (ESTILO ADMIN) -->
-        <nav class="transition-colors duration-500 bg-purpura-600 border-b border-purpura-700 shadow-sm dark:bg-gray-800 dark:border-gray-700 relative z-30">
+        <!-- NAVBAR PÚBLICA -->
+        <nav class="transition-colors duration-300 bg-[#310B47] border-b border-white/10 dark:bg-gray-900 dark:border-gray-800 relative z-30">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <!-- Altura h-16 para igualar ao admin -->
                 <div class="flex items-center justify-between h-16">
                     
                     <!-- Lado Esquerdo (Menu Mobile + Logo Oficial) -->
                     <div class="flex items-center gap-4">
-                        <!-- Botão Hambúrguer -->
-                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-white/80 rounded-md md:hidden hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-700 focus:outline-none transition-colors">
+                        <button @click="drawerOpen = true" class="p-2 -ml-2 text-white/80 rounded-md md:hidden hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-800 focus:outline-none transition-colors">
                             <i class="text-2xl ph ph-list"></i>
                         </button>
 
-                        <!-- Logo SVG Branca -->
-                        <a href="/" class="flex-shrink-0 flex items-center transition-opacity hover:opacity-80">
-                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-10 w-auto" alt="Instituto Percorre">
+                        <a href="/" class="flex-shrink-0 flex items-center transition-opacity hover:opacity-90">
+                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-9 w-auto" alt="Instituto Percorre">
                         </a>
                     </div>
 
                     <!-- Lado Direito (Ações Desktop) -->
-                    <div class="hidden items-center gap-4 md:flex">
-                        <!-- Botão de Tema (Agora com cor branca) -->
+                    <div class="hidden items-center gap-3 md:flex">
+                        <!-- Botão de Alternância de Tema -->
                         <button
-                            @click="tema = tema === 'light' ? 'dark' : 'light'"
-                            class="p-2 rounded-full flex items-center justify-center text-white/90 transition-colors hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-700"
+                            @click="toggleTema()"
+                            type="button"
+                            title="Alternar Tema"
+                            class="p-2 rounded-full flex items-center justify-center text-white/90 transition-colors hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                             <i class="ph ph-moon text-xl" x-show="tema === 'light'"></i>
-                            <i class="ph ph-sun text-xl text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                            <i class="ph ph-sun text-xl text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
                         </button>
 
-                        <!-- Divisor -->
-                        <div class="w-px h-6 bg-purpura-400 dark:bg-gray-700"></div>
+                        <div class="w-px h-5 bg-white/20 dark:bg-gray-700"></div>
 
-                        <!-- Botões de Login -->
-                        <div class="flex gap-3">
-                            <!-- Acesso Restrito vazado (borda branca translúcida) -->
-                            <a href="{{ route('login') }}" class="px-4 py-2 text-sm font-bold text-white transition-colors border border-white/30 rounded-lg hover:bg-white/10 dark:border-gray-600 dark:hover:bg-gray-700">
+                        <!-- Botões de Login Delicados / Arredondados -->
+                        <div class="flex items-center gap-2.5">
+                            <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors border border-white/25 rounded-full hover:bg-white/10">
                                 Acesso Restrito
                             </a>
-                            <!-- Botão de Estudante (Cor sólida Ponkan/Laranja destaca bem no Roxo) -->
-                            <a href="{{ route('student.login') }}" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition-colors">
-                                <i class="mr-1 ph-bold ph-graduation-cap"></i> Sou Estudante
+                            <a href="{{ route('student.login') }}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm">
+                                <i class="mr-1 ph-bold ph-graduation-cap text-sm"></i> Sou Estudante
                             </a>
                         </div>
                     </div>
 
                     <!-- Lado Direito (Mobile - Apenas Tema) -->
                     <div class="flex md:hidden">
-                        <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-700">
+                        <button @click="toggleTema()" type="button" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-300">
                             <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
-                            <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                            <i class="text-xl ph ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
                         </button>
                     </div>
 
@@ -85,11 +101,7 @@
             </div>
         </nav>
 
-        <!-- ========================================== -->
         <!-- NAVIGATION DRAWER (MOBILE) -->
-        <!-- ========================================== -->
-        
-        <!-- Overlay Escuro -->
         <div x-show="drawerOpen" 
             x-transition.opacity.duration.300ms 
             @click="drawerOpen = false"
@@ -97,57 +109,103 @@
             x-cloak>
         </div>
 
-        <!-- Drawer Deslizante -->
-        <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden"
+        <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-900 md:hidden"
             :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
             
-            <!-- Header do Drawer (Mantido o estilo Roxo Gradient do Admin) -->
-            <div class="relative flex-shrink-0 h-40 overflow-hidden bg-gradient-to-br from-petunia-900 to-purpura-500">
-                <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
-                <div class="absolute flex items-center gap-3 bottom-4 left-4">
-                    <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-8 w-auto filter drop-shadow-sm">
-                </div>
+            <div class="relative flex-shrink-0 h-36 overflow-hidden bg-[#310B47] flex items-center px-6">
+                <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-8 w-auto">
             </div>
 
-            <!-- Links do Menu Mobile -->
-            <div class="flex-1 px-4 py-6 space-y-4 overflow-y-auto">
-                <a href="{{ route('login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700 transition-colors">
-                    <i class="text-lg ph ph-lock-key"></i> Acesso Restrito
+            <div class="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
+                <a href="{{ route('login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider border rounded-full text-[#310B47] border-[#310B47] dark:text-white dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <i class="text-base ph ph-lock-key"></i> Acesso Restrito
                 </a>
                 
-                <a href="{{ route('student.login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition-colors">
-                    <i class="text-lg ph ph-graduation-cap"></i> Sou Estudante
+                <a href="{{ route('student.login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
+                    <i class="text-base ph ph-graduation-cap"></i> Sou Estudante
                 </a>
-
-                <div class="pt-6 mt-6 border-t border-gray-100 dark:border-gray-700">
-                    <p class="text-sm text-center text-gray-500 dark:text-gray-400">
-                        O Instituto Percorre oferece cursos e oportunidades para o seu desenvolvimento.
-                    </p>
-                </div>
             </div>
             
-            <!-- Footer do Menu -->
-            <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                <button @click="drawerOpen = false" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-600">
-                    Fechar Menu
+            <div class="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <button @click="drawerOpen = false" class="px-4 py-2 text-xs font-bold uppercase text-gray-600 bg-gray-100 rounded-full dark:bg-gray-800 dark:text-gray-300 transition-colors hover:bg-gray-200">
+                    Fechar
                 </button>
             </div>
         </div>
-    </div> <!-- Fim do Wrapper do Menu -->
+    </div>
 
     <!-- Conteúdo da Página -->
     <main class="flex-1 flex flex-col">
         {{ $slot }}
     </main>
 
-    <!-- Rodapé Público -->
-    <footer class="py-8 bg-white border-t border-gray-200 dark:bg-gray-900 dark:border-gray-800 transition-colors duration-500 mt-auto relative z-10">
-        <div class="px-4 text-center text-gray-500 dark:text-gray-400 max-w-7xl mx-auto">
-            <p class="text-sm font-medium">© {{ date('Y') }} Instituto Percorre. Todos os direitos reservados.</p>
+    <!-- RODAPÉ INSTITUCIONAL -->
+    <footer class="bg-[#1f072e] text-gray-300 pt-16 pb-12 transition-colors duration-300 mt-auto relative z-10 dark:bg-gray-950 dark:border-t dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">
+                
+                <!-- Coluna Esquerda -->
+                <div class="md:col-span-5 lg:col-span-6 space-y-5">
+                    <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-9 w-auto">
+                    <p class="text-sm text-gray-300/90 max-w-sm leading-relaxed font-normal">
+                        Formação profissional gratuita e empregabilidade para jovens e PcD desde 1998.
+                    </p>
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                            <i class="ph ph-check-circle text-sm"></i> Certificado CEBAS - Beneficente
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Colunas da Direita -->
+                <div class="md:col-span-2 space-y-3">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Estudante</h3>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Cursos</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Quem somos</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2 space-y-3">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Empresa</h3>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-colors">Contratar talentos</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Apoie o Percorre</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-3 lg:col-span-2 space-y-3">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Contato</h3>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="mailto:contato@percorre.org.br" class="hover:text-white transition-colors">contato@percorre.org.br</a></li>
+                        <li><span class="text-gray-400">(11) 2503-2617</span></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Instagram</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">LinkedIn</a></li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <div class="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+                <p>© {{ date('Y') }} Instituto Percorre - CNPJ 02.449.283/0001-89</p>
+                
+                <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                    <div class="flex items-center gap-4">
+                        <a href="#" class="hover:text-white transition-colors">Política de Privacidade</a>
+                        <span>·</span>
+                        <a href="#" class="hover:text-white transition-colors">Termos de Uso</a>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <a href="#" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors"><i class="ph ph-linkedin-logo text-base"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors"><i class="ph ph-instagram-logo text-base"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors"><i class="ph ph-facebook-logo text-base"></i></a>
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 
-    <!-- Renderiza o QuickViewGlobal caso algum componente público decida usar -->
     <livewire:components.quick-view-drawer />
     @livewireScripts
 </body>
