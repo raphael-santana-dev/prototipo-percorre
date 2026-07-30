@@ -12,6 +12,8 @@ class Student extends Authenticatable
 {
     use HasFactory, Notifiable, FiltraPorVinculo;
 
+    public $moduloPermissao = 'students';
+
     protected $fillable = [
         'name',
         'email',

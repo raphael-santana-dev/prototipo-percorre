@@ -13,14 +13,12 @@ trait FiltraPorVinculo
     public function scopeApenasVinculosPermitidos($query)
     {
         $user = auth()->user();
-        $tabela = $this->getTable(); // Retorna 'inscricoes', 'students', 'cursos', etc.
+        $tabela = $this->getTable(); 
 
-        // Mapeamento simples de segurança: Traduz o nome da tabela para o nome do módulo de permissões
-        $modulo = $tabela; 
-        if ($tabela === 'students') $modulo = 'estudantes';
-        if ($tabela === 'users') $modulo = 'usuarios';
+        // Lê o nome do módulo definido no Model. Se não existir, usa o nome da tabela por padrão.
+        $modulo = property_exists($this, 'moduloPermissao') ? $this->moduloPermissao : $tabela;
 
-        // Agora ele checa a permissão exata: ex: 'estudantes.visao_global'
+        // Checa a permissão exata: ex: 'estudantes.visao_global'
         if (!$user || $user->temVisaoGlobal($modulo)) {
             return $query;
         }
@@ -35,7 +33,7 @@ trait FiltraPorVinculo
             if (count($unidadesIds) > 0) {
                 $query->whereIn("$tabela.unidade_id", $unidadesIds);
             } else {
-                $query->whereRaw('1 = 0'); // Trava de segurança
+                $query->whereRaw('1 = 0'); // Trava de segurança total
             }
         }
 

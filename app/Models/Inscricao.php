@@ -10,6 +10,8 @@ class Inscricao extends Model
 {
     use SoftDeletes;
     use FiltraPorVinculo;
+
+    public $moduloPermissao = 'inscricoes';
     
     protected $table = 'inscricoes';
     protected $fillable = [
