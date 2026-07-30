@@ -1,26 +1,4 @@
 <div class="max-w-7xl px-4 py-8 mx-auto font-sans relative">
-    
-    <!-- Navegação Topo -->
-    <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-3">
-            <a href="{{ route('cursos.index') }}" class="p-2 text-gray-500 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
-                <i class="text-xl ph ph-arrow-left"></i>
-            </a>
-            <nav class="hidden sm:flex text-sm text-gray-500 font-medium">
-                <a href="{{ route('dashboard') }}" class="hover:text-purpura-600 transition-colors">Início</a>
-                <span class="mx-2 text-gray-300">/</span>
-                <a href="{{ route('cursos.index') }}" class="hover:text-purpura-600 transition-colors">Cursos</a>
-                <span class="mx-2 text-gray-300">/</span>
-                <span class="text-gray-900 dark:text-gray-200">{{ $this->curso->nome }}</span>
-            </nav>
-        </div>
-        
-        @if (session()->has('success'))
-            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" class="px-4 py-2 text-sm font-bold text-pistache-700 bg-pistache-100 border border-pistache-200 rounded-lg shadow-sm animate-fade-in-down">
-                <i class="ph ph-check-circle"></i> {{ session('success') }}
-            </div>
-        @endif
-    </div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
         
@@ -38,7 +16,6 @@
                     <p class="text-xs text-gray-400 font-mono mt-1">ID: #{{ str_pad($this->curso->id, 4, '0', STR_PAD_LEFT) }} • {{ $this->curso->slug }}</p>
                 </div>
 
-                <!-- MODO LEITURA (Sempre Visível) -->
                 <div class="space-y-4">
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl dark:bg-gray-700/30">
                         <span class="text-sm font-bold text-gray-600 dark:text-gray-300"><i class="ph ph-activity text-purpura-500"></i> Status</span>
@@ -68,14 +45,6 @@
                             <i class="text-xl ph-fill ph-x-circle text-red-500"></i>
                         @endif
                     </div>
-
-                    @can('curso.editar')
-                        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <button wire:click="openModal" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-purpura-600 bg-purpura-50 rounded-lg hover:bg-purpura-100 transition-colors border border-purpura-100 dark:bg-gray-700 dark:text-purpura-400 dark:border-gray-600 dark:hover:bg-gray-600">
-                                <i class="text-lg ph ph-pencil-simple"></i> Editar & Vincular
-                            </button>
-                        </div>
-                    @endcan
                 </div>
             </div>
 
@@ -179,106 +148,4 @@
         </div>
 
     </div>
-
-    <!-- ========================================== -->
-    <!-- MODAL DE EDIÇÃO E VINCULAÇÃO RÁPIDA        -->
-    <!-- ========================================== -->
-    @if($showModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('showModal', false)"></div>
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-                
-                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6 dark:bg-gray-800 animate-fade-in-down">
-                    <h3 class="mb-4 text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 dark:text-white dark:border-gray-700">
-                        Configurações do Curso
-                    </h3>
-                    
-                    <form wire:submit="salvarAlteracoes" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="md:col-span-2">
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Curso <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model="nome" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Idade Mínima</label>
-                                <input type="number" wire:model="min_idade" placeholder="Opcional" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('min_idade') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Idade Máxima</label>
-                                <input type="number" wire:model="max_idade" placeholder="Opcional" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('max_idade') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Status</label>
-                                <select wire:model="status" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                    <option value="Ativo">Ativo</option>
-                                    <option value="Inativo">Inativo</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Vinculação Rápida (Multi-tenancy) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
-                            <!-- Unidades -->
-                            <div>
-                                <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    <i class="ph ph-buildings text-purpura-500"></i> Unidades que ofertam
-                                </label>
-                                <div class="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-40 overflow-y-auto custom-scrollbar">
-                                    @forelse($this->todasUnidades as $unidade)
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model="unidadesSelecionadas" value="{{ $unidade->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                                            <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300">{{ $unidade->nome }}</span>
-                                        </label>
-                                    @empty
-                                        <p class="text-xs text-gray-500">Nenhuma unidade ativa.</p>
-                                    @endforelse
-                                </div>
-                            </div>
-
-                            <!-- Turnos -->
-                            <div>
-                                <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    <i class="ph ph-clock text-ponkan-500"></i> Turnos de aula
-                                </label>
-                                <div class="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-40 overflow-y-auto custom-scrollbar">
-                                    @forelse($this->todosTurnos as $turno)
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                                            <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300">{{ $turno->nome }}</span>
-                                        </label>
-                                    @empty
-                                        <p class="text-xs text-gray-500">Nenhum turno cadastrado.</p>
-                                    @endforelse
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <div class="flex items-start">
-                                <div class="flex items-center h-5">
-                                    <input type="checkbox" wire:model="permite_estado_diferente" id="estadoDif" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                </div>
-                                <div class="ml-3 text-sm">
-                                    <label for="estadoDif" class="font-bold text-gray-900 dark:text-white">Permitir alunos de outro Estado</label>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Marca se o curso aceita matrículas de residentes fora da UF da unidade.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
-                            <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
-                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">Salvar Alterações</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
 </div>
