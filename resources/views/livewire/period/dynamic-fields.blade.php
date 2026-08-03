@@ -57,6 +57,7 @@
                         <select wire:model.live="tipo" class="w-full text-sm rounded-md border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <option value="text">Texto (Input)</option>
                             <option value="select">Select (Lista)</option>
+                            <option value="check">Checkbox</option>
                             <option value="radio">Múltipla Escolha</option>
                         </select>
                     </div>
@@ -100,7 +101,7 @@
                     </div>
                 @endif
 
-                @if(in_array($tipo, ['select', 'radio']))
+                @if(in_array($tipo, ['select', 'radio', 'check']))
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">Opções (Separadas por vírgula)</label>
                         <textarea wire:model="opcoes" rows="2" class="w-full text-sm rounded-md border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>

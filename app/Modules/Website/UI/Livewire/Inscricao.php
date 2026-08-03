@@ -64,7 +64,11 @@ class Inscricao extends Component
 
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
-                    $this->respostas[$campo->name] = '';
+                    if ($campo->tipo === 'check') {
+                        $this->respostas[$campo->name] = [];
+                    } else {
+                        $this->respostas[$campo->name] = '';
+                    }
                 }
             }
         }

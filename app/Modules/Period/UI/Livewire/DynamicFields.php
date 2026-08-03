@@ -147,7 +147,7 @@ class DynamicFields extends Component
         ]);
 
         $arrayOpcoes = null;
-        if (in_array($this->tipo, ['select', 'radio']) && !empty($this->opcoes)) {
+        if (in_array($this->tipo, ['select', 'radio', 'check']) && !empty($this->opcoes)) {
             $opcoesLimpas = trim($this->opcoes);
             
             if (str_starts_with(strtolower($opcoesLimpas), 'bd:')) {

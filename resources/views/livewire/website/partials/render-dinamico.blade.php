@@ -51,6 +51,15 @@
                     </label>
                 @endforeach
             </div>
+        @elseif($campo->tipo === 'check')
+            <div class="flex flex-wrap gap-4 mt-2">
+                @foreach($listaOpcoes as $opcao)
+                    <label class="inline-flex items-center">
+                        <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" class="form-checkbox text-brand-purple focus:ring-brand-purple">
+                        <span class="ml-2 text-sm text-gray-700">{{ trim($opcao) }}</span>
+                    </label>
+                @endforeach
+            </div>
 
         @else
             <input type="{{ $campo->subtipo ?? 'text' }}" 
