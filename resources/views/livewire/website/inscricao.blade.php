@@ -1,12 +1,11 @@
-{{-- O calc(100vh - 80px) garante o encaixe perfeito da tela sem gerar scroll duplo --}}
-<div class="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-brand-bg overflow-hidden">
+<div class="flex flex-col md:flex-row w-full bg-brand-bg">
     
     {{-- Topo Mobile --}}
-    <div class="flex md:hidden w-100 bg-brand-escuro h-20 items-center justify-center sticky top-0 z-[1050] shadow-md shrink-0">
+    <div class="flex md:hidden w-full bg-brand-escuro h-20 items-center justify-center shadow-md shrink-0">
         <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="max-h-11 object-contain" alt="Instituto Percorre">
     </div>
 
-    <div class="w-full p-6 md:p-12 bg-brand-bg overflow-y-auto h-full painel-direito">
+    <div class="w-full p-6 md:p-12 py-12 md:py-16 bg-brand-bg painel-direito">
         <div class="max-w-3xl mx-auto form-container">
             @if($inscricoesAbertas)
                 

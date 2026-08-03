@@ -27,26 +27,6 @@
                     </a>
                 </div>
             @endif
-
-            <!-- CTAs Mobile (Pill Arredondado Minimalista) -->
-            <div class="flex flex-col items-center justify-center gap-3 mt-10 md:hidden">
-                <a href="{{ route('student.login') }}" class="w-full px-8 py-3.5 text-sm font-bold text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
-                    Conheça os cursos
-                </a>
-                <a href="{{ route('login') }}" class="w-full px-8 py-3.5 text-sm font-semibold text-white border-2 border-white rounded-full hover:bg-white/10 transition-colors">
-                    Como apoiar
-                </a>
-            </div>
-            
-            <!-- CTAs Desktop (Pill Arredondado - Fiel à captura DevTools) -->
-            <div class="hidden md:flex items-center justify-center gap-4 mt-10">
-                <a href="{{ route('student.login') }}" class="px-8 py-3.5 text-base font-bold text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
-                    Conheça os cursos
-                </a>
-                <a href="{{ route('login') }}" class="px-8 py-3.5 text-base font-semibold text-white border-2 border-white rounded-full hover:bg-white/10 transition-colors">
-                    Como apoiar
-                </a>
-            </div>
         </div>
     </section>
 </div>

@@ -13,8 +13,12 @@ return new class extends Migration
             $table->string('module')->after('id')->default('geral')->comment('Agrupador lógico, ex: curso, turma, role');
         });
 
-        // Adiciona as colunas module e description na tabela permissions do Spatie
-        Schema::table('permissions', function (Blueprint $table) {
+        // Busca o nome exato da tabela de permissões mapeada pelo Spatie
+        $tableNames = config('permission.table_names');
+        $tableName = $tableNames['permissions'] ?? 'permissions';
+
+        // Adiciona as colunas module e description na tabela dinâmica do Spatie
+        Schema::table($tableName, function (Blueprint $table) {
             $table->string('module')->after('id')->default('geral');
             $table->string('description')->after('name')->nullable();
         });
@@ -26,7 +30,10 @@ return new class extends Migration
             $table->dropColumn('module');
         });
 
-        Schema::table('permissions', function (Blueprint $table) {
+        $tableNames = config('permission.table_names');
+        $tableName = $tableNames['permissions'] ?? 'permissions';
+
+        Schema::table($tableName, function (Blueprint $table) {
             $table->dropColumn(['module', 'description']);
         });
     }

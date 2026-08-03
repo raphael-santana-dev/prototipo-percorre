@@ -1,48 +1,66 @@
-<div class="flex items-center justify-center flex-1 w-full px-4 py-12 sm:px-6 lg:px-8">
+<div class="flex min-h-screen bg-white dark:bg-gray-900 w-full">
     
-    <div class="w-full max-w-md p-8 space-y-6 bg-white border border-gray-100 shadow-xl rounded-2xl dark:bg-gray-800 dark:border-gray-700 animate-fade-in-down">
+    <!-- Lado Esquerdo: Imagem e Branding -->
+    <div class="hidden lg:flex lg:w-1/2 relative bg-ponkan-500 items-center justify-center overflow-hidden">
+        <!-- Overlay escurecido para a imagem SVG -->
+        <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 mix-blend-multiply" style="background-image: url('{{ Vite::asset('resources/images/bg-hero.svg') }}');"></div>
         
-        <div class="text-center border-b border-gray-100 pb-4 dark:border-gray-700">
-            <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white">Portal do Aluno</h2>
-            <p class="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">Acesse sua sala de aula virtual</p>
+        <div class="relative z-10 text-white text-center px-12 lg:px-24">
+            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Instituto Percorre" class="h-16 mx-auto mb-10 filter drop-shadow-md">
+            <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6 leading-tight">Sua jornada <br>começa agora.</h1>
+            <p class="text-lg text-white/90 font-medium">Acesse a sala de aula virtual e acompanhe a sua evolução em nossos cursos.</p>
         </div>
+    </div>
+
+    <!-- Lado Direito: Formulário de Login -->
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-gray-50 dark:bg-gray-950">
         
-        <form wire:submit="authenticate" class="space-y-5">
+        <div class="w-full max-w-md space-y-8 animate-fade-in-down">
             
-            <div>
-                <label for="email" class="block text-sm font-bold text-gray-700 dark:text-gray-300">E-mail</label>
-                <div class="relative mt-1">
-                    <i class="absolute text-gray-400 transform -translate-y-1/2 left-3 top-1/2 ph ph-envelope-simple"></i>
-                    <input id="email" type="email" wire:model="email" class="w-full pl-10 border-gray-300 rounded-lg shadow-sm focus:border-ponkan-500 focus:ring-ponkan-500 dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:text-sm" placeholder="seu@email.com" required autofocus>
-                </div>
-                @error('email') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+            <div class="text-center pb-2">
+                <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Logo" class="h-12 mx-auto mb-6 lg:hidden filter brightness-0 dark:invert">
+                <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white">Portal do Aluno</h2>
+                <p class="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">Insira seu e-mail e senha para acessar</p>
             </div>
-
-            <div>
-                <label for="password" class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
-                <div class="relative mt-1">
-                    <i class="absolute text-gray-400 transform -translate-y-1/2 left-3 top-1/2 ph ph-lock-key"></i>
-                    <input id="password" type="password" wire:model="password" class="w-full pl-10 border-gray-300 rounded-lg shadow-sm focus:border-ponkan-500 focus:ring-ponkan-500 dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:text-sm" placeholder="••••••••" required>
-                </div>
-                @error('password') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <input id="remember" type="checkbox" wire:model="remember" class="w-4 h-4 border-gray-300 rounded text-ponkan-600 focus:ring-ponkan-500 dark:border-gray-600 dark:bg-gray-700">
-                    <label for="remember" class="block ml-2 text-sm text-gray-700 dark:text-gray-300">Lembrar de mim</label>
-                </div>
+            
+            <form wire:submit="authenticate" class="space-y-6 mt-8">
                 
-                <div class="text-sm">
-                    <a href="#" class="font-bold text-ponkan-600 hover:text-ponkan-500 dark:text-ponkan-400 dark:hover:text-ponkan-300">Esqueceu a senha?</a>
+                <div>
+                    <label for="email" class="block text-sm font-bold text-gray-700 dark:text-gray-300">E-mail do Aluno</label>
+                    <div class="relative mt-2">
+                        <i class="absolute text-gray-400 transform -translate-y-1/2 left-4 top-1/2 ph ph-envelope-simple text-lg"></i>
+                        <input id="email" type="email" wire:model="email" class="w-full pl-12 py-3 bg-white border border-gray-200 rounded-xl shadow-sm focus:border-ponkan-500 focus:ring-2 focus:ring-ponkan-500/20 dark:bg-gray-900 dark:border-gray-700 dark:text-white transition-all" placeholder="seu@email.com" required autofocus>
+                    </div>
+                    @error('email') <span class="block mt-1 text-xs font-semibold text-red-500">{{ $message }}</span> @enderror
                 </div>
-            </div>
 
-            <div>
-                <button type="submit" class="flex justify-center w-full px-4 py-2.5 text-sm font-bold text-white transition-colors border border-transparent rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ponkan-500">
-                    <i class="mr-2 text-lg ph ph-graduation-cap"></i> Acessar Portal
-                </button>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="password" class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
+                        <a href="#" class="text-xs font-bold text-ponkan-600 hover:text-ponkan-700 dark:text-ponkan-400">Esqueceu a senha?</a>
+                    </div>
+                    <div class="relative">
+                        <i class="absolute text-gray-400 transform -translate-y-1/2 left-4 top-1/2 ph ph-lock-key text-lg"></i>
+                        <input id="password" type="password" wire:model="password" class="w-full pl-12 py-3 bg-white border border-gray-200 rounded-xl shadow-sm focus:border-ponkan-500 focus:ring-2 focus:ring-ponkan-500/20 dark:bg-gray-900 dark:border-gray-700 dark:text-white transition-all" placeholder="••••••••" required>
+                    </div>
+                    @error('password') <span class="block mt-1 text-xs font-semibold text-red-500">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="flex items-center">
+                    <input id="remember" type="checkbox" wire:model="remember" class="w-4 h-4 border-gray-300 rounded text-ponkan-600 focus:ring-ponkan-500 dark:border-gray-600 dark:bg-gray-900">
+                    <label for="remember" class="block ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Manter conectado</label>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="flex items-center justify-center w-full px-4 py-3.5 text-sm font-bold text-gray-900 transition-transform transform rounded-xl shadow-sm bg-ponkan-500 hover:bg-ponkan-600 hover:-translate-y-0.5">
+                        Acessar Sala de Aula <i class="ml-2 text-lg ph-bold ph-graduation-cap"></i>
+                    </button>
+                </div>
+            </form>
+            
+            <div class="text-center pt-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                &copy; {{ date('Y') }} Instituto Percorre.
             </div>
-        </form>
+        </div>
     </div>
 </div>

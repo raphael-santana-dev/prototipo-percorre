@@ -150,11 +150,6 @@
                     <p class="text-sm text-gray-300/90 max-w-sm leading-relaxed font-normal">
                         Formação profissional gratuita e empregabilidade para jovens e PcD desde 1998.
                     </p>
-                    <div>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
-                            <i class="ph ph-check-circle text-sm"></i> Certificado CEBAS - Beneficente
-                        </span>
-                    </div>
                 </div>
 
                 <!-- Colunas da Direita -->
