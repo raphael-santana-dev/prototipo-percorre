@@ -88,6 +88,9 @@
                         Abertura: {{ $ciclo->data_inicio->format('d/m/Y H:i') }}<br>
                         Encerramento: {{ $ciclo->data_fim->format('d/m/Y H:i') }}
                     </div>
+                    <div class="mb-4 text-xs font-bold text-purpura-600 dark:text-purpura-400 flex items-center gap-1">
+                        <i class="ph-fill ph-users"></i> {{ $ciclo->inscricoes_count ?? 0 }} inscrições registradas
+                    </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
                         <div class="flex items-center gap-2">
