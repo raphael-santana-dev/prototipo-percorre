@@ -38,6 +38,11 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_inicio->format('d/m/Y H:i') }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_fim->format('d/m/Y H:i') }}</td>
                 <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-3 py-1 text-xs font-bold text-purpura-700 bg-purpura-100 rounded-full dark:bg-purpura-900/30 dark:text-purpura-400">
+                        {{ $ciclo->inscricoes_count ?? 0 }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
                     <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
 
                     <div class="text-[10px] mt-1 font-bold {{ $ciclo->status ? 'text-green-600' : 'text-gray-500' }}">
