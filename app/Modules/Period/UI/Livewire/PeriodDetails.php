@@ -7,6 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\WithPagination;
 use App\Models\Ciclo;
+use App\Helpers\BreadcrumbHelper;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes do Ciclo - Administrativo')]
@@ -18,10 +19,13 @@ class PeriodDetails extends Component
     
     // Campo para buscar inscrições específicas
     public string $search = '';
+    public array $breadcrumbs = [];
 
     public function mount(int $id)
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
         
         // Eager load apenas dos cursos, as inscrições deixamos para o render (para paginar)
         $this->ciclo = Ciclo::with('cursos')->findOrFail($id);

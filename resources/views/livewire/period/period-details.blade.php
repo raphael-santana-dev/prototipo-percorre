@@ -1,11 +1,6 @@
 <div class="p-6 mx-auto font-sans max-w-7xl">
     
-    <!-- Botão de Voltar -->
-    <div class="mb-4">
-        <a href="{{ route('ciclos.index') }}" class="inline-flex items-center justify-center w-10 h-10 text-gray-500 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
-            <i class="text-lg ph ph-arrow-left"></i>
-        </a>
-    </div>
+    <x-breadcrumb :items="$breadcrumbs" />
 
     <!-- CABEÇALHO PADRONIZADO REUTILIZÁVEL -->
     <x-details-header 
