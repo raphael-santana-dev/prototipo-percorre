@@ -144,7 +144,6 @@
                                     <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a>
                                 @endcan
                             @endfeature
-                            <a href="{{ route('logs.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Logs</a>
                             @role('dev')
                                 <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                 @feature('permissoes')

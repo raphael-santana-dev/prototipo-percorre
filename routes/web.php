@@ -49,8 +49,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/cursos/{id}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show');
 
     Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status.index');
-
-    Route::get('/logs', \App\Modules\Log\UI\Livewire\LogManager::class)->name('logs.index');
 });
 
 // ==========================================
