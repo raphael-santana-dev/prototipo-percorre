@@ -21,7 +21,9 @@ class DatabaseSeeder extends Seeder
             SystemBaseSeeder::class,
             PendingPermissionsAndFeaturesSeeder::class,
             PendingFeaturesSeeder::class,
-            EtapaSeeder::class
+            EtapaSeeder::class,
+            StudentSeeder::class,
+            StatusInscricaoBaseSeeder::class
         ]);
     }
 }

@@ -41,6 +41,8 @@ use App\Modules\Student\UI\Livewire\Auth\LogoutButton as StudentLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
+use App\Models\AuditoriaLog;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -137,6 +139,25 @@ class AppServiceProvider extends ServiceProvider
                 $user->permissions()->detach($expiredPermissionIds);
                 app(PermissionRegistrar::class)->forgetCachedPermissions();
             }
+        });
+
+        // Escuta o evento nativo de Login do Laravel e registra a auditoria
+        Event::listen(function (Login $event) {
+            $usuario = $event->user;
+
+            AuditoriaLog::create([
+                'tabela_alterada' => 'sessao', // Apenas para identificar visualmente
+                'registro_id' => $usuario->id,
+                'acao' => 'login',
+                'informacao_anterior' => null,
+                'nova_informacao' => null, // Poderia ser vazio ou null
+                'usuario_id' => $usuario->id,
+                'usuario_nome' => $usuario->name,
+                'usuario_role' => method_exists($usuario, 'getRoleNames') ? $usuario->getRoleNames()->first() : 'N/A',
+                'usuario_login' => $usuario->email,
+                'ip' => request()->ip(),
+                'navegador' => request()->userAgent(),
+            ]);
         });
     }
 }
