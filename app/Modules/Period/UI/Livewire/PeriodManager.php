@@ -8,17 +8,27 @@ use Livewire\Attributes\Title;
 use App\Models\Ciclo;
 use App\Models\Curso; // Importação necessária
 use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Ciclos - Administrativo')]
 class PeriodManager extends Component
 {
     use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
 
     public $modalAberto = false;
     public $unicoAtivo = true;
     public $status = false;
     public $cicloId = null;
+    
+
+    public $modelClass = Ciclo::class;
+
+    public array $breadcrumbs = [];
 
     public $nome, $ano, $semestre, $data_inicio, $data_fim;
     
@@ -28,6 +38,10 @@ class PeriodManager extends Component
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+
+        $this->permiteGrid = true;
     }
 
     protected function rules()
@@ -41,6 +55,66 @@ class PeriodManager extends Component
             'status' => 'boolean',
         ];
     }
+
+    public function showQuickView(int $id)
+    {
+        $ciclo = Ciclo::findOrFail($id);
+
+        $status = $ciclo->status
+            ? '<span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold">Ativo</span>'
+            : '<span class="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 font-semibold">Inativo</span>';
+
+        $informacoes = '
+            <div class="grid grid-cols-1 gap-2 text-sm">
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Ano</span>
+                    <span class="font-medium">'.$ciclo->ano.'</span>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Semestre</span>
+                    <span class="font-medium">'.$ciclo->semestre.'º</span>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Início</span>
+                    <span class="font-medium">'.$ciclo->data_inicio->format('d/m/Y H:i').'</span>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Encerramento</span>
+                    <span class="font-medium">'.$ciclo->data_fim->format('d/m/Y H:i').'</span>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Criado em</span>
+                    <span class="font-medium">'.$ciclo->created_at->format('d/m/Y H:i').'</span>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Última atualização</span>
+                    <span class="font-medium">'.$ciclo->updated_at->format('d/m/Y H:i').'</span>
+                </div>
+            </div>
+        ';
+
+        $this->dispatch('load-quick-view', [
+            'title' => $ciclo->nome,
+            'subtitle' => "Ano {$ciclo->ano} • {$ciclo->semestre}º semestre",
+            'icon' => 'ph-calendar',
+            'data' => [
+                'Status' => $status,
+                'Informações do Ciclo' => $informacoes,
+                'Período de Inscrição' => '
+                    <div class="text-sm leading-6">
+                        <b>Início:</b> '.$ciclo->data_inicio->format('d/m/Y H:i').'<br>
+                        <b>Fim:</b> '.$ciclo->data_fim->format('d/m/Y H:i').'
+                    </div>
+                '
+            ],
+        ]);
+    }
+
 
     public function abrirModal($id = null)
     {
@@ -106,15 +180,35 @@ class PeriodManager extends Component
         session()->flash('sucesso', 'Ciclo salvo com sucesso!');
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
+            ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
+            ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render()
     {
-        $ciclos = Ciclo::orderBy('id', 'desc')->paginate(10); // Ajustado para 10 itens por página
+        $query = Ciclo::query();
         
         // Busca os cursos ativos para exibir no modal
         $cursosDisponiveis = Curso::where('status', 'Ativo')->orderBy('nome')->get();
 
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        $ciclos = $query->paginate($this->porPagina);
+
         return view('livewire.period.period-manager', [
-            'ciclos' => $ciclos,
+            'registros' => $ciclos,
             'cursosDisponiveis' => $cursosDisponiveis
         ]);
     }

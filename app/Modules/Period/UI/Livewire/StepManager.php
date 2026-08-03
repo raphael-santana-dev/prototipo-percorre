@@ -28,8 +28,11 @@ class StepManager extends Component
     public ?int $numero = null;
     public string $descricao = '';
 
+    public array $breadcrumbs = [];
+
     public function mount() 
     {
+        $this->breadcrumbs = BreadcrumbHelper::generate();
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
     }
 
@@ -146,7 +149,6 @@ class StepManager extends Component
 
         return view('livewire.period.step-manager', [
             'registros' => $etapas,
-            'breadcrumbs' => BreadcrumbHelper::generate()
         ])->layout('components.layouts.app', ['title' => 'Gestão de Etapas']);
     }
 }
