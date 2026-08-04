@@ -44,13 +44,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/ciclos/{id}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show');
 
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
-    Route::get('/ciclos/{id}/campos', DynamicFields::class)->name('ciclos.campos');
     Route::get('/cursos', \App\Modules\Curso\UI\Livewire\CursoManager::class)->name('cursos.index');
     Route::get('/cursos/{id}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show');
 
     Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status.index');
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
+
+    // NOVA ROTA GLOBAL DO CONSTRUTOR DE FORMULÁRIOS:
+    Route::get('/construtor/{tipo}/{id}', \App\Modules\Period\UI\Livewire\DynamicFields::class)->name('construtor.campos');
+
+    // ROTAS DO GERENCIADOR DE FORMULÁRIOS GENÉRICOS:
+    Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
+
+    // ROTA PÚBLICA PARA RESPONDER:
+    Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)->name('formularios.publico');
 });
 
 // ==========================================

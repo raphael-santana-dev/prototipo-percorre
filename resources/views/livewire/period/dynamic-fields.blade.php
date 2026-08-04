@@ -2,11 +2,11 @@
     
     <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
         <div>
-            <a href="{{ route('ciclos.index') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para Ciclos
+            <a href="{{ $contextoTipo === 'ciclo' ? route('ciclos.index') : route('formularios.index') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
+                <i class="ph ph-arrow-left"></i> Voltar para {{ $contextoTipo === 'ciclo' ? 'Ciclos' : 'Formulários' }}
             </a>
             <h2 class="text-2xl font-bold text-gray-900 mt-1">Construtor do Formulário</h2>
-            <p class="text-gray-500 text-sm">Gerenciando os campos de inscrição para: <span class="font-bold text-purpura-600">{{ $ciclo->nome }}</span></p>
+            <p class="text-gray-500 text-sm">Gerenciando blocos para: <span class="font-bold text-purpura-600">{{ $contextoNome }}</span></p>
         </div>
         
         <div class="flex items-center gap-3">

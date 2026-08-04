@@ -13,8 +13,6 @@ use Illuminate\Support\Str;
 class DynamicFields extends Component
 {
     use WithFileUploads;
-
-    public Ciclo $ciclo;
     
     // Propriedades Base
     public $campoId = null;
@@ -48,29 +46,46 @@ class DynamicFields extends Component
         'bg_opacity' => '0.0',
     ];
 
+    public string $contextoTipo; // 'ciclo' ou 'formulario'
+    public int $contextoId;
+    public string $contextoNome = '';
+
     public $etapasDisponiveis = [];
-    public int $cicloIdAtual;
 
-    public function mount(int $id)
+    public function mount($tipo, $id)
     {
-        $ciclo = Ciclo::findOrFail($id);
-        
-        $this->ciclo = $ciclo;
-        $this->cicloIdAtual = $ciclo->id;
-        $this->etapasDisponiveis = Etapa::orderBy('numero', 'asc')->get();
+        $this->contextoTipo = $tipo;
+        $this->contextoId = $id;
 
-        if ($this->etapasDisponiveis->isNotEmpty()) {
-            $this->etapa = $this->etapasDisponiveis->first()->numero;
+        if ($tipo === 'ciclo') {
+            $model = \App\Models\Ciclo::findOrFail($id);
+            $this->contextoNome = $model->nome;
+            $this->etapasDisponiveis = \App\Models\Etapa::orderBy('numero', 'asc')->get();
+        } else {
+            $model = \App\Models\Formulario::findOrFail($id);
+            $this->contextoNome = $model->titulo;
+            // Para formulários customizados, podemos liberar até 5 etapas genéricas
+            $this->etapasDisponiveis = [
+                (object)['numero' => 1], (object)['numero' => 2], (object)['numero' => 3]
+            ];
+        }
+
+        if (count($this->etapasDisponiveis) > 0) {
+            $this->etapa = is_object($this->etapasDisponiveis[0]) ? $this->etapasDisponiveis[0]->numero : 1;
         }
         
         $this->loadFormSettings();
         $this->atualizarProximaOrdem();
     }
 
+    private function getContextColumn() {
+        return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
+    }
+
     // Carrega as configurações globais salvas no campo "fantasma"
     public function loadFormSettings()
     {
-        $cfg = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('name', '_form_config')->first();
+        $cfg = CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('name', '_form_config')->first();
         if ($cfg && $cfg->configuracoes) {
             $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
         }
@@ -102,7 +117,7 @@ class DynamicFields extends Component
     {
         if (empty($this->etapa)) return 1;
 
-        $count = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
+        $count = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('etapa', $this->etapa)
             ->where('tipo', '!=', 'config')
             ->count();
@@ -202,10 +217,18 @@ class DynamicFields extends Component
         }
 
         CampoFormulario::updateOrCreate(
-            ['ciclo_id' => $this->cicloIdAtual, 'name' => '_form_config'],
             [
-                'etapa' => 0, 'ordem' => 0, 'label' => 'Configurações Globais',
-                'tipo' => 'config', 'largura' => 12,
+                $this->getContextColumn() => $this->contextoId, 
+                'name' => '_form_config'
+            ],
+            [
+                'ciclo_id' => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+                'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+                'etapa' => 0, 
+                'ordem' => 0, 
+                'label' => 'Configurações Globais',
+                'tipo' => 'config', 
+                'largura' => 12,
                 'configuracoes' => $this->formSettings
             ]
         );
@@ -224,7 +247,7 @@ class DynamicFields extends Component
                 'required', 
                 'regex:/^[a-z0-9_]+$/',
                 \Illuminate\Validation\Rule::unique('campo_formularios', 'name')
-                    ->where('ciclo_id', $this->cicloIdAtual)
+                    ->where($this->getContextColumn(), $this->contextoId)
                     ->ignore($this->campoId)
             ],
             'tipo' => 'required',
@@ -274,17 +297,18 @@ class DynamicFields extends Component
 
             if ($ordemAntiga != $ordemNova && $campo->etapa == $this->etapa) {
                 if ($ordemNova < $ordemAntiga) {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
+                    CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
                 } else {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
+                    CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
                 }
             }
         } else {
-            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
+            CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
         }
 
         $dadosGerais = [
-            'ciclo_id' => $this->cicloIdAtual, 
+            'ciclo_id' => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+            'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
             'label' => empty($this->label) ? 'Campo Visão' : $this->label, 
@@ -322,7 +346,7 @@ class DynamicFields extends Component
         
         $campo->delete();
         
-        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
+        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
         $this->atualizarProximaOrdem();
         session()->flash('sucesso', 'Campo excluído da estrutura com sucesso.');
     }
@@ -330,7 +354,7 @@ class DynamicFields extends Component
     public function render()
     {
         // Puxamos apenas os blocos reais (ignora configurações globais)
-        $camposCadastrados = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
+        $camposCadastrados = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('tipo', '!=', 'config')
             ->orderBy('etapa')
             ->orderBy('ordem')
