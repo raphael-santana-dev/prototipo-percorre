@@ -3,6 +3,8 @@
 namespace App\Modules\Period\UI\Livewire;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\Attributes\Computed;
 use App\Models\Ciclo;
 use App\Models\Etapa;
 use App\Models\CampoFormulario;
@@ -10,6 +12,8 @@ use Illuminate\Support\Str;
 
 class DynamicFields extends Component
 {
+    use WithFileUploads;
+
     public Ciclo $ciclo;
     
     // Propriedades Base
@@ -28,13 +32,21 @@ class DynamicFields extends Component
     public $obrigatorio = false;
     public $regras_validacao = '';
     
-    // Condicionais
     public $depende_de = '';
     public $depende_operador = '=';
     public $depende_valor = '';
 
-    // NOVA PROPRIEDADE: Configurações extras em JSON (Matriz, Fundo, Redes Sociais, etc)
     public array $configuracoes = [];
+    public $matriz_linhas = '';
+    public $matriz_colunas = '';
+
+    // Propriedades de Configuração Geral do Formulário (Aba 2)
+    public $bg_image_upload;
+    public array $formSettings = [
+        'bg_image' => null,
+        'bg_color' => '#ffffff',
+        'bg_opacity' => '0.0',
+    ];
 
     public $etapasDisponiveis = [];
     public int $cicloIdAtual;
@@ -51,40 +63,64 @@ class DynamicFields extends Component
             $this->etapa = $this->etapasDisponiveis->first()->numero;
         }
         
+        $this->loadFormSettings();
         $this->atualizarProximaOrdem();
+    }
+
+    // Carrega as configurações globais salvas no campo "fantasma"
+    public function loadFormSettings()
+    {
+        $cfg = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('name', '_form_config')->first();
+        if ($cfg && $cfg->configuracoes) {
+            $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+        }
+    }
+
+    // Define o tipo e subtipo pelos botões visuais da nova interface
+    public function setTipo($tipo, $subtipo = 'text')
+    {
+        $this->tipo = $tipo;
+        $this->subtipo = $subtipo;
+        
+        if (in_array($tipo, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
+             $this->name = 'ui_' . time(); 
+        }
     }
 
     public function updatedLabel($valor)
     {
-        // Só gera o slug automático se for cadastro novo e não for campo de design (html, divider)
         if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social'])) {
             $this->name = Str::slug($valor, '_');
         } elseif (!$this->campoId) {
-            $this->name = 'campo_' . time(); // Campos visuais ganham um name genérico
+            $this->name = 'campo_' . time(); 
         }
     }
 
-    public function updatedTipo($valor)
+    // LIMITADOR INTELIGENTE DE ORDEM (POSIÇÃO)
+    #[Computed]
+    public function limiteOrdem()
     {
-        // Força um subtipo padrão para não dar erro ao trocar de tipo principal
-        if ($valor === 'text') $this->subtipo = 'text';
-        if ($valor === 'html') $this->subtipo = 'p';
-        if ($valor === 'media') $this->subtipo = 'image';
-        
-        if (in_array($valor, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
-             $this->name = 'ui_' . time(); 
+        if (empty($this->etapa)) return 1;
+
+        $count = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
+            ->where('etapa', $this->etapa)
+            ->where('tipo', '!=', 'config')
+            ->count();
+
+        if ($this->campoId) {
+            $campoAtual = CampoFormulario::find($this->campoId);
+            if ($campoAtual && $campoAtual->etapa == $this->etapa) {
+                return $count; // Limite é o total atual se estivermos apenas editando
+            }
         }
+
+        return $count + 1; // Limite é o total + 1 se for novo cadastro ou mudança de etapa
     }
 
     public function atualizarProximaOrdem()
     {
         if (empty($this->etapa)) return;
-
-        $maxOrdem = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
-            ->where('etapa', $this->etapa)
-            ->max('ordem') ?? 0;
-
-        $this->ordem = $maxOrdem + 1;
+        $this->ordem = $this->limiteOrdem();
     }
 
     public function updatedEtapa()
@@ -124,14 +160,12 @@ class DynamicFields extends Component
             $this->opcoes = $campo->opcoes ?? '';
         }
 
-        // CARREGA AS CONFIGURAÇÕES COMPLEXAS
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config;
 
-        // Facilita a edição desmembrando arrays em textos novamente para o Wire:Model
         if ($campo->tipo === 'matriz') {
-            $this->configuracoes['matriz_linhas'] = implode("\n", $config['linhas'] ?? []);
-            $this->configuracoes['matriz_colunas'] = implode(', ', $config['colunas'] ?? []);
+            $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
+            $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
         if ($campo->tipo === 'social') {
             $lines = [];
@@ -147,19 +181,45 @@ class DynamicFields extends Component
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
-            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes'
+            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes','matriz_linhas', 'matriz_colunas'
         ]);
         
         $this->configuracoes = [];
         $this->atualizarProximaOrdem(); 
     }
 
+    // Salva as Configurações Globais (Fundo da Página)
+    public function salvarFormSettings()
+    {
+        $this->validate([
+            'bg_image_upload' => 'nullable|image|max:2048', // Max 2MB
+        ]);
+
+        if ($this->bg_image_upload) {
+            $path = $this->bg_image_upload->store('formularios/bg', 'public');
+            $this->formSettings['bg_image'] = '/storage/' . $path;
+            $this->bg_image_upload = null;
+        }
+
+        CampoFormulario::updateOrCreate(
+            ['ciclo_id' => $this->cicloIdAtual, 'name' => '_form_config'],
+            [
+                'etapa' => 0, 'ordem' => 0, 'label' => 'Configurações Globais',
+                'tipo' => 'config', 'largura' => 12,
+                'configuracoes' => $this->formSettings
+            ]
+        );
+
+        session()->flash('sucesso', 'Configurações globais salvas com sucesso!');
+    }
+
+    // Salva um Campo/Bloco específico
     public function salvar()
     {
         $this->validate([
             'etapa' => 'required',
-            'ordem' => 'required|integer|min:1',
-            'label' => 'nullable', // Permitimos nulo porque um Divider não tem pergunta
+            'ordem' => 'required|integer|min:1|max:' . $this->limiteOrdem(), // VALIDAÇÃO DE LIMITE APLICADA
+            'label' => 'nullable', 
             'name' => [
                 'required', 
                 'regex:/^[a-z0-9_]+$/',
@@ -170,7 +230,8 @@ class DynamicFields extends Component
             'tipo' => 'required',
             'largura' => 'required|integer',
         ], [
-            'name.unique' => 'Já existe um campo com este identificador neste ciclo. Altere a pergunta.'
+            'name.unique' => 'Já existe um campo com este identificador. Altere a pergunta.',
+            'ordem.max' => 'Você não pode pular posições. A posição máxima permitida agora é ' . $this->limiteOrdem() . '.'
         ]);
 
         $arrayOpcoes = null;
@@ -183,13 +244,11 @@ class DynamicFields extends Component
             }
         }
 
-        // PREPARAÇÃO DO JSON DE CONFIGURAÇÕES COMPLEXAS
         $configToSave = $this->configuracoes;
         
         if ($this->tipo === 'matriz') {
-            $configToSave['linhas'] = array_filter(array_map('trim', explode("\n", $this->configuracoes['matriz_linhas'] ?? '')));
-            $configToSave['colunas'] = array_filter(array_map('trim', explode(',', $this->configuracoes['matriz_colunas'] ?? '')));
-            unset($configToSave['matriz_linhas'], $configToSave['matriz_colunas']);
+            $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $this->matriz_linhas))));
+            $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $this->matriz_colunas))));
         }
         
         if ($this->tipo === 'social') {
@@ -205,9 +264,6 @@ class DynamicFields extends Component
             unset($configToSave['social_redes']);
         }
 
-        // =================================================================
-        // LÓGICA DE REORDENAÇÃO (DANÇA DAS CADEIRAS)
-        // =================================================================
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
@@ -215,23 +271,20 @@ class DynamicFields extends Component
 
             if ($ordemAntiga != $ordemNova && $campo->etapa == $this->etapa) {
                 if ($ordemNova < $ordemAntiga) {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
                 } else {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
                 }
             }
         } else {
-            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('ordem', '>=', $this->ordem)->increment('ordem');
+            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
         }
 
-        // =================================================================
-        // PERSISTÊNCIA ROBUSTA 
-        // =================================================================
         $dadosGerais = [
             'ciclo_id' => $this->cicloIdAtual, 
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
-            'label' => empty($this->label) ? 'Campo Visão' : $this->label, // Backup de texto
+            'label' => empty($this->label) ? 'Campo Visão' : $this->label, 
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
@@ -266,14 +319,16 @@ class DynamicFields extends Component
         
         $campo->delete();
         
-        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $etapaExcluida)->where('ordem', '>', $ordemExcluida)->decrement('ordem');
+        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
         $this->atualizarProximaOrdem();
         session()->flash('sucesso', 'Campo excluído da estrutura com sucesso.');
     }
 
     public function render()
     {
+        // Puxamos apenas os blocos reais (ignora configurações globais)
         $camposCadastrados = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
+            ->where('tipo', '!=', 'config')
             ->orderBy('etapa')
             ->orderBy('ordem')
             ->orderBy('id')

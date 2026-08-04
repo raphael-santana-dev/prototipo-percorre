@@ -93,13 +93,13 @@
                     $linhas = $config['linhas'] ?? []; 
                     $colunas = $config['colunas'] ?? []; 
                 @endphp
-                <div class="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                <div class="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm mt-2">
                     <table class="min-w-full text-sm text-left">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th class="p-3 text-gray-500 font-medium"></th>
+                                <th class="p-3 text-gray-500 font-medium w-1/3"></th>
                                 @foreach($colunas as $col)
-                                    <th class="p-3 text-center text-gray-600 font-bold">{{ $col }}</th>
+                                    <th class="p-3 text-center text-gray-600 font-bold border-l border-gray-200">{{ $col }}</th>
                                 @endforeach
                             </tr>
                         </thead>
@@ -108,8 +108,8 @@
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="p-3 font-medium text-gray-800">{{ $linha }}</td>
                                     @foreach($colunas as $col)
-                                        <td class="p-3 text-center">
-                                            <input wire:model.live="respostas.{{ $campo->name }}.{{ $indexLinha }}" type="radio" value="{{ $col }}" class="form-radio text-brand-purple focus:ring-brand-purple">
+                                        <td class="p-3 text-center border-l border-gray-100 bg-white">
+                                            <input wire:model.live="respostas.{{ $campo->name }}.{{ $indexLinha }}" type="radio" value="{{ $col }}" class="w-4 h-4 text-brand-purple focus:ring-brand-purple border-gray-300 cursor-pointer">
                                         </td>
                                     @endforeach
                                 </tr>
