@@ -29,17 +29,14 @@
         {{-- ========================================== --}}
         <div class="lg:col-span-8 space-y-6">
             
-            {{-- SAFELIST DO TAILWIND: Não apague esta div --}}
             <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
             @php
-                // Prepara a visualização do Fundo Global do Formulário
                 $formBgUrl = $bg_image_upload ? $bg_image_upload->temporaryUrl() : ($formSettings['bg_image'] ?? null);
                 $formBgColor = $formSettings['bg_color'] ?? '#ffffff';
                 $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
             @endphp
 
-            <!-- Formulário Visual (Folha de Papel com Fundo Opcional) -->
             <div class="bg-white rounded-xl shadow-md border border-gray-200 min-h-[600px] relative overflow-hidden flex flex-col items-center">
                 
                 @if($formBgUrl)
@@ -49,7 +46,6 @@
 
                 <div class="relative z-10 w-full max-w-4xl p-8 md:p-12">
                     
-                    <!-- Cabeçalho Falso do Formulário -->
                     <div class="mb-10 border-b {{ $formBgUrl ? 'border-white/20' : 'border-gray-100' }} pb-6">
                         <h1 class="text-3xl font-extrabold mb-2 {{ $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-900' }}">Simulador da Inscrição</h1>
                         <p class="{{ $formBgUrl ? 'text-white/80' : 'text-gray-500' }}">Abaixo está a estrutura de como o aluno verá este formulário.</p>
@@ -80,7 +76,6 @@
                                             <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $cfg['bg_color'] ?? '#000' }}; opacity: {{ $cfg['bg_opacity'] ?? '0.5' }};"></div>
                                         @endif
 
-                                        <!-- Toolbar Flutuante -->
                                         <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
                                             <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-indigo-50 hover:text-indigo-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
                                             <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
@@ -125,30 +120,42 @@
                                                 </div>
                                                 
                                             @elseif($c->tipo === 'matriz')
-                                            <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-2 shadow-sm">
-                                                <table class="min-w-full text-xs text-left">
-                                                    <thead class="bg-gray-50 border-b border-gray-200">
-                                                        <tr>
-                                                            <th class="p-2 w-1/3"></th>
-                                                            @foreach($cfg['colunas'] ?? ['Coluna 1', 'Coluna 2'] as $col)
-                                                                <th class="p-2 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
-                                                            @endforeach
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y divide-gray-100">
-                                                        @foreach($cfg['linhas'] ?? ['Exemplo 1', 'Exemplo 2'] as $linha)
+                                                @php
+                                                    $linhasPv = [];
+                                                    $colunasPv = [];
+                                                    // PREVIEW EM TEMPO REAL: Se estiver editando, puxa o que o usuário está digitando agora
+                                                    if ($isActive) {
+                                                        $linhasPv = array_filter(array_map('trim', explode("\n", $matriz_linhas ?? '')));
+                                                        $colunasPv = array_filter(array_map('trim', explode(',', $matriz_colunas ?? '')));
+                                                    }
+                                                    // Fallbacks para caso esteja vazio
+                                                    if (empty($linhasPv)) $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
+                                                    if (empty($colunasPv)) $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
+                                                @endphp
+                                                <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-2 shadow-sm">
+                                                    <table class="min-w-full text-xs text-left">
+                                                        <thead class="bg-gray-50 border-b border-gray-200">
                                                             <tr>
-                                                                <td class="p-2 font-medium text-gray-800">{{ $linha }}</td>
-                                                                @foreach($cfg['colunas'] ?? [1, 2] as $col)
-                                                                    <td class="p-2 text-center border-l border-gray-100">
-                                                                        <div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div>
-                                                                    </td>
+                                                                <th class="p-2 w-1/3"></th>
+                                                                @foreach($colunasPv as $col)
+                                                                    <th class="p-2 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
                                                                 @endforeach
                                                             </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-gray-100">
+                                                            @foreach($linhasPv as $linha)
+                                                                <tr>
+                                                                    <td class="p-2 font-medium text-gray-800">{{ $linha }}</td>
+                                                                    @foreach($colunasPv as $col)
+                                                                        <td class="p-2 text-center border-l border-gray-100">
+                                                                            <div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div>
+                                                                        </td>
+                                                                    @endforeach
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
 
                                             @elseif($c->tipo === 'html')
                                                 <div class="{{ $bgStyle || $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">
@@ -227,7 +234,6 @@
         {{-- ========================================== --}}
         <div x-data="{ activeTab: 'field' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
             
-            <!-- Controle de Abas (Tabs) -->
             <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
                 <button type="button" @click="activeTab = 'field'" :class="activeTab === 'field' ? 'border-indigo-600 text-indigo-700 bg-white shadow-[0_2px_0_0_#4f46e5]' : 'border-transparent text-gray-500 hover:text-gray-700'" class="flex-1 py-3.5 text-xs font-bold border-b-2 text-center transition tracking-wide uppercase flex flex-col items-center gap-1">
                     <i class="ph-fill ph-textbox text-lg"></i> Bloco
@@ -239,8 +245,10 @@
 
             <!-- ==================== ABA 1: CONFIG DO BLOCO ==================== -->
             <div x-show="activeTab === 'field'" class="flex-1 flex flex-col overflow-hidden">
-                <div class="p-5 overflow-y-auto flex-1 custom-scrollbar">
-                    <form wire:submit.prevent="salvar" class="space-y-5">
+                
+                {{-- MUDANÇA CRUCIAL: O <form> agora abraça todo o painel, incluindo o botão Salvar --}}
+                <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-5">
                         
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold text-gray-800">{{ $campoId ? 'Editar Propriedades' : 'Inserir Novo Elemento' }}</h3>
@@ -258,7 +266,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" placeholder="Ordem" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700 text-center">
+                                    <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700 text-center">
                                 </div>
                             </div>
                             @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
@@ -266,13 +274,11 @@
 
                         <hr class="border-gray-100">
 
-                        <!-- GRID DE BOTÕES: MÓDULO PRINCIPAL -->
                         <div>
                             <label class="block text-xs font-bold text-gray-800 mb-3">Escolha o Tipo de Bloco <span class="text-red-500">*</span></label>
                             
                             <div class="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                 
-                                <!-- Categoria 1: Inputs -->
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
                                     <div class="grid grid-cols-2 gap-2">
@@ -287,7 +293,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Categoria 2: Choices -->
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Seleção e Escolhas</p>
                                     <div class="grid grid-cols-2 gap-2">
@@ -314,7 +319,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Categoria 3: Estrutura -->
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Layout e Visual</p>
                                     <div class="grid grid-cols-2 gap-2">
@@ -341,7 +345,6 @@
 
                         <hr class="border-gray-100">
 
-                        {{-- DADOS COMUNS --}}
                         @if($tipo !== 'divider')
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
@@ -369,7 +372,6 @@
                             </div>
                         </div>
 
-                        {{-- CONFIGS ESPECÍFICAS DOS BLOCOS (Igual ao Anterior) --}}
                         @if($tipo === 'text')
                             <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-lg space-y-4">
                                 <div>
@@ -404,17 +406,19 @@
                                 <p class="text-[10px] text-gray-500 mb-1.5">Separe as opções por vírgula.</p>
                                 <textarea wire:model="opcoes" rows="3" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
                             </div>
+                        
+                        {{-- MATRIZ COM WIRE:MODEL.LIVE PARA PREVIEW INSTANTÂNEO --}}
                         @elseif($tipo === 'matriz')
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 mb-1">Itens (Linhas)</label>
                                     <p class="text-[10px] text-gray-500 mb-1.5">Um item por linha (Enter)</p>
-                                    <textarea wire:model="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex:&#10;Camiseta&#10;Horários"></textarea>
+                                    <textarea wire:model.live="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex:&#10;Camiseta&#10;Horários"></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 mb-1">Opções (Colunas)</label>
                                     <p class="text-[10px] text-gray-500 mb-1.5">Separadas por vírgula</p>
-                                    <input type="text" wire:model="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex: Concordo, Não Concordo">
+                                    <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex: Concordo, Não Concordo">
                                 </div>
                             </div>
                         @elseif($tipo === 'html')
@@ -456,7 +460,6 @@
                             </div>
                         @endif
 
-                        {{-- OBRIGATORIEDADE (Exceto visuais) --}}
                         @if(!in_array($tipo, ['html', 'divider', 'media', 'social']))
                             <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition mt-4">
                                 <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
@@ -467,7 +470,6 @@
                             </label>
                         @endif
 
-                        {{-- BACKGROUND DO BLOCO ESPECÍFICO --}}
                         <div x-data="{ openBg: {{ isset($configuracoes['bg_image']) ? 'true' : 'false' }} }" class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
                             <button type="button" @click="openBg = !openBg" class="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-bold text-gray-700">
                                 <span class="flex items-center gap-2"><i class="ph ph-image text-indigo-500 text-lg"></i> Fundo Deste Bloco</span>
@@ -491,7 +493,6 @@
                             </div>
                         </div>
 
-                        {{-- LÓGICA CONDICIONAL --}}
                         <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="mt-4 border border-yellow-200 rounded-lg overflow-hidden">
                             <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-3 bg-yellow-50 hover:bg-yellow-100 transition text-sm font-bold text-yellow-800">
                                 <span class="flex items-center gap-2"><i class="ph-fill ph-git-branch text-yellow-600 text-lg"></i> Regras de Exibição</span>
@@ -526,18 +527,18 @@
                                 @endif
                             </div>
                         </div>
-
-                    </form>
-                </div>
-                
-                <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-3">
-                    @if($campoId)
-                        <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 hover:text-gray-900 transition">Cancelar</button>
-                    @endif
-                    <button type="button" wire:click="salvar" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition flex justify-center items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-lg"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
-                    </button>
-                </div>
+                    </div>
+                    
+                    {{-- BOTÕES DE AÇÃO AGORA FICAM DENTRO DO <FORM> --}}
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-3">
+                        @if($campoId)
+                            <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 hover:text-gray-900 transition">Cancelar</button>
+                        @endif
+                        <button type="submit" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition flex justify-center items-center gap-2">
+                            <i class="ph-bold ph-floppy-disk text-lg"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
+                        </button>
+                    </div>
+                </form>
             </div>
 
             <!-- ==================== ABA 2: CONFIG DO FORMULÁRIO (GERAL) ==================== -->

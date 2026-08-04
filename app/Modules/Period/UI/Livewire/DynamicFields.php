@@ -218,7 +218,7 @@ class DynamicFields extends Component
     {
         $this->validate([
             'etapa' => 'required',
-            'ordem' => 'required|integer|min:1|max:' . $this->limiteOrdem(), // VALIDAÇÃO DE LIMITE APLICADA
+            'ordem' => 'required|integer|min:1|max:' . $this->limiteOrdem(),
             'label' => 'nullable', 
             'name' => [
                 'required', 
@@ -244,11 +244,14 @@ class DynamicFields extends Component
             }
         }
 
-        $configToSave = $this->configuracoes;
+        $configToSave = $this->configuracoes ?? [];
         
         if ($this->tipo === 'matriz') {
-            $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $this->matriz_linhas))));
-            $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $this->matriz_colunas))));
+            $linhasStr = $this->matriz_linhas ?? '';
+            $colunasStr = $this->matriz_colunas ?? '';
+            
+            $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $linhasStr)), fn($val) => $val !== ''));
+            $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $colunasStr)), fn($val) => $val !== ''));
         }
         
         if ($this->tipo === 'social') {

@@ -64,6 +64,7 @@ class Inscricao extends Component
 
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
+                    // A Matriz precisa nascer como Array para que o Livewire separe os Radio Buttons por linha!
                     if (in_array($campo->tipo, ['check', 'matriz'])) {
                         $this->respostas[$campo->name] = [];
                     } else {
