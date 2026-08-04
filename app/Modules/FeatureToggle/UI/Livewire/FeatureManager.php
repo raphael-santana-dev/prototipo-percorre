@@ -27,11 +27,13 @@ class FeatureManager extends Component
     public $modelClass = Feature::class;
     public array $breadcrumbs = [];
 
-    // Campos do Formulário
-    public $module;
-    public $action;
-    public $description;
-    public $is_active = false;
+    // Filtros
+    public $filtro_module = '';
+    public $filtro_keyword = '';
+    public $filtro_status = '';
+
+    // Array para inserção múltipla / edição
+    public array $items = [];
 
     public function mount()
     {
@@ -40,23 +42,50 @@ class FeatureManager extends Component
         $this->permiteGrid = true;
     }
 
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_module', 'filtro_keyword', 'filtro_status'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_module', 'filtro_keyword', 'filtro_status']);
+        $this->resetPage();
+    }
+
     public function abrirModal($id = null)
     {
         $this->resetValidation();
-        $this->reset(['featureId', 'module', 'action', 'description', 'is_active']);
+        $this->reset(['featureId', 'items']);
 
         if ($id) {
             $feature = Feature::findOrFail($id);
             $this->featureId = $feature->id;
             
             $nameParts = explode('.', $feature->name, 2);
-            $this->module = $feature->module;
-            $this->action = $nameParts[1] ?? $feature->name;
-            $this->description = $feature->description;
-            $this->is_active = $feature->is_active;
+            $this->items[0] = [
+                'module' => $feature->module,
+                'action' => $nameParts[1] ?? $feature->name,
+                'description' => $feature->description
+            ];
+        } else {
+            $this->items = [['module' => '', 'action' => '', 'description' => '']];
         }
 
         $this->modalAberto = true;
+    }
+
+    public function addItem()
+    {
+        $this->items[] = ['module' => '', 'action' => '', 'description' => ''];
+    }
+
+    public function removeItem(int $index)
+    {
+        unset($this->items[$index]);
+        $this->items = array_values($this->items);
     }
 
     public function fecharModal()
@@ -68,40 +97,51 @@ class FeatureManager extends Component
     public function salvar(FeatureService $featureService)
     {
         $this->validate([
-            'module' => 'required|string|min:2',
-            'action' => 'required|string|min:2',
-            'description' => 'required|string|max:255',
+            'items.*.module' => 'required|string|min:2',
+            'items.*.action' => 'required|string|min:2',
+            'items.*.description' => 'required|string|max:255',
+        ], [
+            'items.*.module.required' => 'Módulo é obrigatório.',
+            'items.*.action.required' => 'Ação é obrigatória.',
+            'items.*.description.required' => 'Descrição é obrigatória.',
         ]);
 
-        $moduleFinal = strtolower(trim($this->module));
-        $actionFinal = strtolower(trim($this->action));
-        $fullName = $moduleFinal . '.' . $actionFinal;
+        foreach ($this->items as $index => $item) {
+            $moduleFinal = strtolower(trim($item['module']));
+            $actionFinal = strtolower(trim($item['action']));
+            $fullName = $moduleFinal . '.' . $actionFinal;
 
-        if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
-            $this->addError('action', 'Esta feature já está cadastrada no sistema.');
-            return;
-        }
+            if ($this->featureId) {
+                // Modo Edição (Apenas 1 item é processado)
+                if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
+                    $this->addError("items.{$index}.action", 'Esta feature já está cadastrada.');
+                    return;
+                }
 
-        if ($this->featureId) {
-            $feature = Feature::findOrFail($this->featureId);
-            $nomeAntigo = $feature->getOriginal('name');
-            
-            $feature->update([
-                'module' => $moduleFinal,
-                'name' => $fullName,
-                'description' => $this->description,
-            ]);
+                $feature = Feature::findOrFail($this->featureId);
+                $nomeAntigo = $feature->getOriginal('name');
+                
+                $feature->update([
+                    'module' => $moduleFinal,
+                    'name' => $fullName,
+                    'description' => $item['description'],
+                ]);
 
-            // Como o service original não tem update, limpamos os caches manualmente aqui
-            Cache::forget("feature_status_{$nomeAntigo}");
-            Cache::forget("feature_status_{$fullName}");
-        } else {
-            // Usa o service estritamente como manda a arquitetura para criar
-            $featureService->create($moduleFinal, $fullName, $this->description);
+                Cache::forget("feature_status_{$nomeAntigo}");
+                Cache::forget("feature_status_{$fullName}");
+            } else {
+                // Modo Criação Múltipla via Service (DDD)
+                if (Feature::where('name', $fullName)->exists()) {
+                    $this->addError("items.{$index}.action", "A feature {$fullName} já existe.");
+                    continue; 
+                }
+
+                $featureService->create($moduleFinal, $fullName, $item['description']);
+            }
         }
 
         $this->fecharModal();
-        session()->flash('sucesso', 'Feature salva com sucesso!');
+        session()->flash('sucesso', $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
     }
 
     public function excluir($id)
@@ -114,11 +154,6 @@ class FeatureManager extends Component
         session()->flash('sucesso', 'Feature excluída com sucesso.');
     }
 
-    /**
-     * SOBRESCRITA DA TRAIT:
-     * O componente chama toggleStatus pelo frontend, mas aqui nós sequestramos
-     * a chamada para injetar no FeatureService e respeitar o cache do DDD.
-     */
     public function toggleStatus($id)
     {
         $feature = Feature::findOrFail($id);
@@ -144,7 +179,15 @@ class FeatureManager extends Component
 
     public function render()
     {
-        $query = Feature::query();
+        $query = Feature::query()
+            ->when($this->filtro_module, fn($q) => $q->where('module', $this->filtro_module))
+            ->when($this->filtro_status !== '', fn($q) => $q->where('is_active', $this->filtro_status))
+            ->when($this->filtro_keyword, function($q) {
+                $q->where(function($subQ) {
+                    $subQ->where('name', 'like', "%{$this->filtro_keyword}%")
+                         ->orWhere('description', 'like', "%{$this->filtro_keyword}%");
+                });
+            });
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -153,9 +196,11 @@ class FeatureManager extends Component
         }
 
         $features = $query->paginate($this->porPagina);
+        $modulosDisponiveis = Feature::select('module')->distinct()->orderBy('module')->pluck('module');
 
         return view('livewire.feature-toggle.feature-manager', [
             'registros' => $features,
+            'modulosDisponiveis' => $modulosDisponiveis
         ]);
     }
 }
