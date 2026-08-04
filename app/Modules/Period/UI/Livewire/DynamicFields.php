@@ -33,13 +33,14 @@ class DynamicFields extends Component
     public $depende_operador = '=';
     public $depende_valor = '';
 
-    public $etapasDisponiveis = [];
+    // NOVA PROPRIEDADE: Configurações extras em JSON (Matriz, Fundo, Redes Sociais, etc)
+    public array $configuracoes = [];
 
+    public $etapasDisponiveis = [];
     public int $cicloIdAtual;
 
     public function mount(int $id)
     {
-        // 1. Busca o ciclo explicitamente no banco, blindando contra falhas de rota
         $ciclo = Ciclo::findOrFail($id);
         
         $this->ciclo = $ciclo;
@@ -50,18 +51,31 @@ class DynamicFields extends Component
             $this->etapa = $this->etapasDisponiveis->first()->numero;
         }
         
-        // Garante que, ao abrir a página, o campo "Ordem" já sugere o próximo número vazio
         $this->atualizarProximaOrdem();
     }
 
     public function updatedLabel($valor)
     {
-        if (!$this->campoId) {
+        // Só gera o slug automático se for cadastro novo e não for campo de design (html, divider)
+        if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social'])) {
             $this->name = Str::slug($valor, '_');
+        } elseif (!$this->campoId) {
+            $this->name = 'campo_' . time(); // Campos visuais ganham um name genérico
         }
     }
 
-    // Calcula a próxima ordem livre automaticamente com base na Etapa selecionada
+    public function updatedTipo($valor)
+    {
+        // Força um subtipo padrão para não dar erro ao trocar de tipo principal
+        if ($valor === 'text') $this->subtipo = 'text';
+        if ($valor === 'html') $this->subtipo = 'p';
+        if ($valor === 'media') $this->subtipo = 'image';
+        
+        if (in_array($valor, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
+             $this->name = 'ui_' . time(); 
+        }
+    }
+
     public function atualizarProximaOrdem()
     {
         if (empty($this->etapa)) return;
@@ -73,7 +87,6 @@ class DynamicFields extends Component
         $this->ordem = $maxOrdem + 1;
     }
 
-    // Se o utilizador trocar de Etapa no formulário, recalculamos a Ordem sugerida
     public function updatedEtapa()
     {
         if (!$this->campoId) {
@@ -102,15 +115,30 @@ class DynamicFields extends Component
         $this->depende_valor = $campo->depende_valor;
 
         if (is_array($campo->opcoes)) {
-            // Verifica se é uma opção vinda do banco (bd:tabela)
             if (isset($campo->opcoes['origem_bd'])) {
                 $this->opcoes = 'bd:' . $campo->opcoes['origem_bd'];
             } else {
-                // Se for um array de opções normais separadas por vírgula
                 $this->opcoes = implode(', ', $campo->opcoes);
             }
         } else {
             $this->opcoes = $campo->opcoes ?? '';
+        }
+
+        // CARREGA AS CONFIGURAÇÕES COMPLEXAS
+        $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+        $this->configuracoes = $config;
+
+        // Facilita a edição desmembrando arrays em textos novamente para o Wire:Model
+        if ($campo->tipo === 'matriz') {
+            $this->configuracoes['matriz_linhas'] = implode("\n", $config['linhas'] ?? []);
+            $this->configuracoes['matriz_colunas'] = implode(', ', $config['colunas'] ?? []);
+        }
+        if ($campo->tipo === 'social') {
+            $lines = [];
+            foreach($config['redes'] ?? [] as $rede) {
+                $lines[] = $rede['nome'] . '|' . $rede['url'];
+            }
+            $this->configuracoes['social_redes'] = implode("\n", $lines);
         }
     }
 
@@ -119,10 +147,10 @@ class DynamicFields extends Component
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
-            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor'
+            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes'
         ]);
         
-        // Prepara o formulário limpo já com o próximo número de ordem
+        $this->configuracoes = [];
         $this->atualizarProximaOrdem(); 
     }
 
@@ -131,11 +159,10 @@ class DynamicFields extends Component
         $this->validate([
             'etapa' => 'required',
             'ordem' => 'required|integer|min:1',
-            'label' => 'required|min:2',
+            'label' => 'nullable', // Permitimos nulo porque um Divider não tem pergunta
             'name' => [
                 'required', 
                 'regex:/^[a-z0-9_]+$/',
-                // Trava de segurança: Garante que o name seja único apenas dentro deste mesmo Ciclo
                 \Illuminate\Validation\Rule::unique('campo_formularios', 'name')
                     ->where('ciclo_id', $this->cicloIdAtual)
                     ->ignore($this->campoId)
@@ -149,13 +176,33 @@ class DynamicFields extends Component
         $arrayOpcoes = null;
         if (in_array($this->tipo, ['select', 'radio', 'check']) && !empty($this->opcoes)) {
             $opcoesLimpas = trim($this->opcoes);
-            
             if (str_starts_with(strtolower($opcoesLimpas), 'bd:')) {
-                $tabela = trim(substr($opcoesLimpas, 3));
-                $arrayOpcoes = ['origem_bd' => $tabela];
+                $arrayOpcoes = ['origem_bd' => trim(substr($opcoesLimpas, 3))];
             } else {
                 $arrayOpcoes = array_map('trim', explode(',', $this->opcoes));
             }
+        }
+
+        // PREPARAÇÃO DO JSON DE CONFIGURAÇÕES COMPLEXAS
+        $configToSave = $this->configuracoes;
+        
+        if ($this->tipo === 'matriz') {
+            $configToSave['linhas'] = array_filter(array_map('trim', explode("\n", $this->configuracoes['matriz_linhas'] ?? '')));
+            $configToSave['colunas'] = array_filter(array_map('trim', explode(',', $this->configuracoes['matriz_colunas'] ?? '')));
+            unset($configToSave['matriz_linhas'], $configToSave['matriz_colunas']);
+        }
+        
+        if ($this->tipo === 'social') {
+            $redesLines = array_filter(explode("\n", $this->configuracoes['social_redes'] ?? ''));
+            $redes = [];
+            foreach($redesLines as $line) {
+                $parts = explode('|', $line);
+                if(count($parts) >= 2) {
+                    $redes[] = ['nome' => trim($parts[0]), 'url' => trim($parts[1])];
+                }
+            }
+            $configToSave['redes'] = $redes;
+            unset($configToSave['social_redes']);
         }
 
         // =================================================================
@@ -168,48 +215,39 @@ class DynamicFields extends Component
 
             if ($ordemAntiga != $ordemNova && $campo->etapa == $this->etapa) {
                 if ($ordemNova < $ordemAntiga) {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
-                        ->where('etapa', $this->etapa)
-                        ->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])
-                        ->increment('ordem');
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
                 } else {
-                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
-                        ->where('etapa', $this->etapa)
-                        ->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])
-                        ->decrement('ordem');
+                    CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
                 }
             }
         } else {
-            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
-                ->where('etapa', $this->etapa)
-                ->where('ordem', '>=', $this->ordem)
-                ->increment('ordem');
+            CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $this->etapa)->where('ordem', '>=', $this->ordem)->increment('ordem');
         }
 
         // =================================================================
-        // PERSISTÊNCIA ROBUSTA SEPARADA
+        // PERSISTÊNCIA ROBUSTA 
         // =================================================================
         $dadosGerais = [
-            'ciclo_id' => $this->cicloIdAtual, // Agora trava firmemente no ciclo da página
+            'ciclo_id' => $this->cicloIdAtual, 
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
-            'label' => $this->label,
+            'label' => empty($this->label) ? 'Campo Visão' : $this->label, // Backup de texto
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
-            'subtipo' => $this->subtipo,
+            'subtipo' => empty($this->subtipo) ? 'text' : $this->subtipo,
             'tamanho_min' => empty($this->tamanho_min) ? null : $this->tamanho_min,
             'tamanho_max' => empty($this->tamanho_max) ? null : $this->tamanho_max,
             'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
             'opcoes' => $arrayOpcoes,
-            'obrigatorio' => $this->obrigatorio,
+            'configuracoes' => empty($configToSave) ? null : $configToSave,
+            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social']) ? false : $this->obrigatorio,
             'regras_validacao' => $this->regras_validacao,
             'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
             'depende_operador' => $this->depende_operador,
             'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,
         ];
 
-        // Abordagem livre de falhas (evita inserção de id = null)
         if ($this->campoId) {
             CampoFormulario::findOrFail($this->campoId)->update($dadosGerais);
         } else {
@@ -217,7 +255,7 @@ class DynamicFields extends Component
         }
 
         $this->cancelarEdicao(); 
-        session()->flash('sucesso', 'Campo salvo e ordenado com sucesso!');
+        session()->flash('sucesso', 'Campo configurado e ordenado com sucesso!');
     }
 
     public function excluir($id)
@@ -228,19 +266,13 @@ class DynamicFields extends Component
         
         $campo->delete();
         
-        // Puxa os campos de baixo para cima para "tapar o buraco" na listagem visual
-        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
-            ->where('etapa', $etapaExcluida)
-            ->where('ordem', '>', $ordemExcluida)
-            ->decrement('ordem');
-
+        CampoFormulario::where('ciclo_id', $this->cicloIdAtual)->where('etapa', $etapaExcluida)->where('ordem', '>', $ordemExcluida)->decrement('ordem');
         $this->atualizarProximaOrdem();
-        session()->flash('sucesso', 'Campo excluído e lista reordenada com sucesso.');
+        session()->flash('sucesso', 'Campo excluído da estrutura com sucesso.');
     }
 
     public function render()
     {
-        // Agrupa os campos por etapa e ordena corretamente
         $camposCadastrados = CampoFormulario::where('ciclo_id', $this->cicloIdAtual)
             ->orderBy('etapa')
             ->orderBy('ordem')
