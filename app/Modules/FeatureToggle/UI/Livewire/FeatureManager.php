@@ -7,28 +7,74 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\FeatureToggle\Domain\Models\Feature;
 use App\Modules\FeatureToggle\Application\Services\FeatureService;
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
+use Illuminate\Support\Facades\Cache;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Features - Administrativo')]
 class FeatureManager extends Component
 {
-    public bool $showModal = false;
-    public bool $isEditMode = false;
-    public ?int $featureId = null;
+    use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
 
-    // Array para inserção múltipla
+    public $modalAberto = false;
+    public $featureId = null;
+
+    public $modelClass = Feature::class;
+    public array $breadcrumbs = [];
+
+    // Filtros
+    public $filtro_module = '';
+    public $filtro_keyword = '';
+    public $filtro_status = '';
+
+    // Array para inserção múltipla / edição
     public array $items = [];
 
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev'), 403);
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+        $this->permiteGrid = true;
     }
 
-    public function openModal()
+    public function updating($nomePropriedade)
     {
-        $this->resetInputFields();
-        $this->items = [['module' => '', 'action' => '', 'description' => '']];
-        $this->showModal = true;
+        if (in_array($nomePropriedade, ['filtro_module', 'filtro_keyword', 'filtro_status'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_module', 'filtro_keyword', 'filtro_status']);
+        $this->resetPage();
+    }
+
+    public function abrirModal($id = null)
+    {
+        $this->resetValidation();
+        $this->reset(['featureId', 'items']);
+
+        if ($id) {
+            $feature = Feature::findOrFail($id);
+            $this->featureId = $feature->id;
+            
+            $nameParts = explode('.', $feature->name, 2);
+            $this->items[0] = [
+                'module' => $feature->module,
+                'action' => $nameParts[1] ?? $feature->name,
+                'description' => $feature->description
+            ];
+        } else {
+            $this->items = [['module' => '', 'action' => '', 'description' => '']];
+        }
+
+        $this->modalAberto = true;
     }
 
     public function addItem()
@@ -42,96 +88,119 @@ class FeatureManager extends Component
         $this->items = array_values($this->items);
     }
 
-    public function edit(int $id)
+    public function fecharModal()
     {
-        $this->resetInputFields();
-        $feature = Feature::findOrFail($id);
-        
-        $this->featureId = $feature->id;
-        $this->isEditMode = true;
-        
-        $nameParts = explode('.', $feature->name, 2);
-        
-        $this->items[0] = [
-            'module' => $feature->module,
-            'action' => $nameParts[1] ?? $feature->name,
-            'description' => $feature->description
-        ];
-        
-        $this->showModal = true;
+        $this->modalAberto = false;
     }
 
-    public function save()
+    // Injeção de dependência do Service gerenciado pelo Laravel
+    public function salvar(FeatureService $featureService)
     {
         $this->validate([
             'items.*.module' => 'required|string|min:2',
             'items.*.action' => 'required|string|min:2',
             'items.*.description' => 'required|string|max:255',
         ], [
-            'items.*.module.required' => 'O módulo é obrigatório.',
-            'items.*.action.required' => 'A ação é obrigatória.',
+            'items.*.module.required' => 'Módulo é obrigatório.',
+            'items.*.action.required' => 'Ação é obrigatória.',
+            'items.*.description.required' => 'Descrição é obrigatória.',
         ]);
 
         foreach ($this->items as $index => $item) {
-            $module = strtolower(trim($item['module']));
-            $action = strtolower(trim($item['action']));
-            $fullName = $module . '.' . $action;
+            $moduleFinal = strtolower(trim($item['module']));
+            $actionFinal = strtolower(trim($item['action']));
+            $fullName = $moduleFinal . '.' . $actionFinal;
 
-            if ($this->isEditMode && $this->featureId) {
+            if ($this->featureId) {
+                // Modo Edição (Apenas 1 item é processado)
                 if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
-                    $this->addError("items.{$index}.action", 'Esta feature já existe.');
+                    $this->addError("items.{$index}.action", 'Esta feature já está cadastrada.');
                     return;
                 }
+
+                $feature = Feature::findOrFail($this->featureId);
+                $nomeAntigo = $feature->getOriginal('name');
                 
-                Feature::where('id', $this->featureId)->update([
-                    'module' => $module,
+                $feature->update([
+                    'module' => $moduleFinal,
                     'name' => $fullName,
-                    'description' => $item['description']
+                    'description' => $item['description'],
                 ]);
+
+                Cache::forget("feature_status_{$nomeAntigo}");
+                Cache::forget("feature_status_{$fullName}");
             } else {
+                // Modo Criação Múltipla via Service (DDD)
                 if (Feature::where('name', $fullName)->exists()) {
-                    $this->addError("items.{$index}.action", 'A feature '.$fullName.' já existe.');
+                    $this->addError("items.{$index}.action", "A feature {$fullName} já existe.");
                     continue; 
                 }
 
-                Feature::create([
-                    'module' => $module,
-                    'name' => $fullName,
-                    'description' => $item['description'],
-                    'is_active' => false // Nasce desligada por padrão
-                ]);
+                $featureService->create($moduleFinal, $fullName, $item['description']);
             }
         }
 
-        $this->showModal = false;
-        $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
+        $this->fecharModal();
+        session()->flash('sucesso', $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
     }
 
-    // Função mantida para o botão de ligar/desligar na listagem
-    public function toggle(FeatureService $service, string $name, bool $currentStatus) 
+    public function excluir($id)
     {
-        $service->toggle($name, !$currentStatus);
+        $feature = Feature::findOrFail($id);
+        $featureName = $feature->name;
+        $feature->delete();
+        
+        Cache::forget("feature_status_{$featureName}");
+        session()->flash('sucesso', 'Feature excluída com sucesso.');
     }
 
-    public function delete(int $id)
+    public function toggleStatus($id)
     {
-        Feature::findOrFail($id)->delete();
-        session()->flash('success', 'Feature excluída.');
+        $feature = Feature::findOrFail($id);
+        $service = app(FeatureService::class);
+        
+        // Passa a responsabilidade de salvar e limpar cache para o Service
+        $service->toggle($feature->name, !$feature->is_active);
+        
+        $this->dispatch('sucesso', msg: 'Status da feature alterado!');
     }
 
-    private function resetInputFields()
+    public function getHeadersProperty()
     {
-        $this->items = [];
-        $this->isEditMode = false;
-        $this->featureId = null;
-        $this->resetErrorBag();
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'module', 'label' => 'Módulo', 'sortable' => true],
+            ['key' => 'name', 'label' => 'Feature', 'sortable' => true],
+            ['key' => 'description', 'label' => 'Descrição', 'sortable' => true],
+            ['key' => 'is_active', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
     }
 
-    public function render() 
+    public function render()
     {
+        $query = Feature::query()
+            ->when($this->filtro_module, fn($q) => $q->where('module', $this->filtro_module))
+            ->when($this->filtro_status !== '', fn($q) => $q->where('is_active', $this->filtro_status))
+            ->when($this->filtro_keyword, function($q) {
+                $q->where(function($subQ) {
+                    $subQ->where('name', 'like', "%{$this->filtro_keyword}%")
+                         ->orWhere('description', 'like', "%{$this->filtro_keyword}%");
+                });
+            });
+
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('module', 'asc')->orderBy('name', 'asc');
+        }
+
+        $features = $query->paginate($this->porPagina);
+        $modulosDisponiveis = Feature::select('module')->distinct()->orderBy('module')->pluck('module');
+
         return view('livewire.feature-toggle.feature-manager', [
-            'featuresByModule' => Feature::orderBy('module')->orderBy('name')->get()->groupBy('module')
+            'registros' => $features,
+            'modulosDisponiveis' => $modulosDisponiveis
         ]);
     }
 }

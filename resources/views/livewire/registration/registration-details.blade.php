@@ -135,7 +135,7 @@
                         @foreach($inscricao->dados_dinamicos as $chave => $valor)
                             <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                                 <span class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{{ str_replace('_', ' ', $chave) }}</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ empty($valor) ? 'Não respondido' : $valor }}</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ empty($valor) ? 'Não respondido' : (is_array($valor) ? implode(', ', $valor) : $valor) }}</span>
                             </div>
                         @endforeach
                     </div>

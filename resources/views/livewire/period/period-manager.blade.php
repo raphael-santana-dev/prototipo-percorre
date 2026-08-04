@@ -5,6 +5,8 @@
         </div>
     @endif
 
+    <x-breadcrumb :items="$breadcrumbs" />
+
     <div class="flex items-center justify-between mb-6">
         <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
             <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Ciclos (Semestres)
@@ -14,61 +16,103 @@
         </button>
     </div>
 
-    <!-- Tabela -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Nome / Período</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Abertura</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Encerramento</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-center text-gray-500 uppercase dark:text-gray-400">Status</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-right text-gray-500 uppercase dark:text-gray-400">Ações</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-100 dark:bg-gray-800 dark:divide-gray-700">
-                @forelse($ciclos as $ciclo)
-                    <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="font-bold text-gray-900 dark:text-white">{{ $ciclo->nome }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_inicio->format('d/m/Y H:i') }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_fim->format('d/m/Y H:i') }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            @if($ciclo->status)
-                                <span class="inline-flex px-2 text-xs font-bold text-pistache-700 bg-pistache-100 rounded-full uppercase">ATIVO</span>
-                            @else
-                                <span class="inline-flex px-2 text-xs font-bold text-gray-500 bg-gray-200 rounded-full uppercase dark:bg-gray-600 dark:text-gray-300">INATIVO</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
-                                    <i class="text-xl ph ph-arrow-square-out"></i>
-                                </a>
-                                
-                                <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
-                                    <i class="text-xl ph ph-pencil-simple"></i>
-                                </button>
-                                
-                                <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
-                                    <i class="text-xl ph ph-list-dashes"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">Nenhum ciclo cadastrado.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="p-4 bg-white border-t border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-            {{ $ciclos->links() }}
-        </div>
-    </div>
+    @if(isset($metricas))
+        <x-summary-cards :metricas="$metricas" />
+    @endif
+
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
+
+        @forelse ($registros as $ciclo)
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $ciclo->id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="font-bold text-gray-900 dark:text-white">{{ $ciclo->nome }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_inicio->format('d/m/Y H:i') }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_fim->format('d/m/Y H:i') }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-3 py-1 text-xs font-bold text-purpura-700 bg-purpura-100 rounded-full dark:bg-purpura-900/30 dark:text-purpura-400">
+                        {{ $ciclo->inscricoes_count ?? 0 }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+
+                    <div class="text-[10px] mt-1 font-bold {{ $ciclo->status ? 'text-green-600' : 'text-gray-500' }}">
+                        {{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-2">
+                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:hover:text-purpura-400" title="Visualização Rápida">
+                            <i class="text-lg ph ph-dots-three-outline-vertical"></i>
+                        </button>
+                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
+                            <i class="text-xl ph ph-arrow-square-out"></i>
+                        </a>
+                        
+                        <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </button>
+                        
+                        <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
+                            <i class="text-xl ph ph-list-dashes"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                    <p class="text-lg font-semibold">Nenhum ciclo encontrado.</p>
+                    <p class="text-sm">Ajuste os filtros ou crie um novo ciclo.</p>
+                </td>
+            </tr>
+        @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach ( $registros as $ciclo )
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $ciclo->nome }}</div>
+                        <span class="px-2 py-1 text-xs font-bold text-white bg-purpura-500 rounded-full">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        Abertura: {{ $ciclo->data_inicio->format('d/m/Y H:i') }}<br>
+                        Encerramento: {{ $ciclo->data_fim->format('d/m/Y H:i') }}
+                    </div>
+                    <div class="mb-4 text-xs font-bold text-purpura-600 dark:text-purpura-400 flex items-center gap-1">
+                        <i class="ph-fill ph-users"></i> {{ $ciclo->inscricoes_count ?? 0 }} inscrições registradas
+                    </div>
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                        <div class="flex items-center gap-2">
+                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:hover:text-purpura-400" title="Visualização Rápida">
+                                <i class="text-lg ph ph-dots-three-outline-vertical"></i>
+                            </button>
+                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
+                                <i class="text-lg ph ph-arrow-square-out"></i>
+                            </a>
+                            <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                            <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
+                                <i class="text-lg ph ph-list-dashes"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
+
+    </x-table>
 
     <!-- Modal Corrigido com Padrão do Sistema -->
     @if($modalAberto)

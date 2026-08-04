@@ -121,7 +121,11 @@ class RegistrationManager extends Component
         if($inscricao->dados_dinamicos) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
             foreach($inscricao->dados_dinamicos as $chave => $valor) {
-                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valor ?: '-').'</span></div>';
+                
+                // MUDANÇA AQUI: Se for array (checkbox), junta com vírgula e espaço. Se não, mantém o valor.
+                $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
+                
+                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
             }
             $detalhesDinamicos .= '</div>';
         } else {
