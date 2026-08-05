@@ -43,7 +43,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
     Route::get('/ciclos/{id}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show');
     Route::get('/ciclos/{id}/crm', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm');
-
+    Route::get('/ciclos/{id}/regras', \App\Modules\Period\UI\Livewire\RegrasManager::class)->name('ciclos.regras');
+    
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas');
     Route::get('/cursos', \App\Modules\Curso\UI\Livewire\CursoManager::class)->name('cursos.index');
     Route::get('/cursos/{id}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show');

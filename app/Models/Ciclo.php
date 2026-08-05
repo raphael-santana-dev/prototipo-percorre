@@ -13,7 +13,8 @@ class Ciclo extends Model
     protected $casts = [
         'data_inicio' => 'datetime',
         'data_fim' => 'datetime',
-        'status' => 'boolean'
+        'status' => 'boolean',
+        'regras_pontuacao' => 'array',
     ];
 
     public function inscricoes()
@@ -34,7 +35,7 @@ class Ciclo extends Model
     public function statusPipeline()
     {
         return $this->belongsToMany(StatusInscricao::class, 'ciclo_status_inscricao')
-                    ->withPivot('ordem')
-                    ->orderBy('pivot_ordem', 'asc');
+            ->withPivot('ordem')
+            ->orderBy('pivot_ordem', 'asc');
     }
 }
