@@ -22,6 +22,11 @@ class StatusInscricao extends Model
         });
     }
 
+    public function ciclos()
+    {
+        return $this->belongsToMany(Ciclo::class, 'ciclo_status_inscricao');
+    }
+
     public static function gerarCorSegura()
     {
         $coresSeguras = [

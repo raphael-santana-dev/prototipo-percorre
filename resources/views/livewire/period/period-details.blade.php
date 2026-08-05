@@ -11,11 +11,18 @@
         iconColor="text-emerald-500">
         
         <!-- Slot da direita (O que vai ao lado do título) -->
-        <div class="text-right mr-4 hidden sm:block">
-            <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider">Período de Inscrição</p>
-            <p class="text-xs font-bold text-gray-700 dark:text-gray-300">
-                {{ \Carbon\Carbon::parse($ciclo->data_inicio)->format('d/m/Y') }} até {{ \Carbon\Carbon::parse($ciclo->data_fim)->format('d/m/Y') }}
-            </p>
+        <div class="text-right mr-4 flex items-center gap-3">
+            <!-- Botão de Acesso ao CRM (NOVO) -->
+            <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition">
+                <i class="ph-fill ph-kanban"></i> Abrir Funil CRM
+            </a>
+            
+            <div class="hidden sm:block text-right">
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider">Inscrições</p>
+                <p class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    {{ \Carbon\Carbon::parse($ciclo->data_inicio)->format('d/m/y') }} a {{ \Carbon\Carbon::parse($ciclo->data_fim)->format('d/m/y') }}
+                </p>
+            </div>
         </div>
         
         @if($ciclo->status)

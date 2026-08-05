@@ -185,6 +185,23 @@
                             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Apenas os cursos marcados acima aparecerão no formulário público de inscrição deste semestre.</p>
                         </div>
 
+                        <!-- Seleção de Status do CRM -->
+                        <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700 mb-4">
+                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                <i class="ph ph-funnel text-purpura-500"></i> Funil de Status (CRM)
+                            </label>
+                            <div class="grid grid-cols-1 gap-2 p-3 border border-gray-200 rounded-lg sm:grid-cols-2 bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-48 overflow-y-auto">
+                                @forelse($statusDisponiveis as $st)
+                                    <label class="flex items-center gap-2 p-2 transition-colors border border-transparent rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
+                                        <input type="checkbox" wire:model="statusSelecionados" value="{{ $st->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
+                                        <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300">{{ $st->nome }}</span>
+                                    </label>
+                                @empty
+                                    <p class="text-sm text-gray-500">Nenhum status cadastrado.</p>
+                                @endforelse
+                            </div>
+                        </div>
+
                         <div class="flex items-center pt-2">
                             <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                             <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300">

@@ -30,4 +30,11 @@ class Ciclo extends Model
     {
         return $this->belongsToMany(Curso::class, 'ciclo_curso');
     }
+
+    public function statusPipeline()
+    {
+        return $this->belongsToMany(StatusInscricao::class, 'ciclo_status_inscricao')
+                    ->withPivot('ordem')
+                    ->orderBy('pivot_ordem', 'asc');
+    }
 }
