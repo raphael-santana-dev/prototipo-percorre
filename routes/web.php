@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
 
     // ROTA PÚBLICA PARA RESPONDER:
     Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)->name('formularios.publico');
+    Route::get('/formularios/{id}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show');
+    Route::get('/formularios/respostas/{id}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show');
 });
 
 // ==========================================

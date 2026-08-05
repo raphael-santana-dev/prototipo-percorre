@@ -39,6 +39,9 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center justify-end gap-2">
+                        <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Acessar Link">
+                            <i class="text-lg ph ph-link"></i>
+                        </a>
                         <a href="{{ route('formularios.publico', $form->slug) }}" target="_blank" class="p-2 text-blue-600 transition-colors bg-blue-50 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
                             <i class="text-xl ph ph-link"></i>
                         </a>
@@ -76,6 +79,9 @@
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
                         <div class="flex items-center gap-1">
+                            <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Acessar Link">
+                                <i class="text-lg ph ph-link"></i>
+                            </a>
                             <a href="{{ route('formularios.publico', $form->slug) }}" target="_blank" class="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Acessar Link">
                                 <i class="text-lg ph ph-link"></i>
                             </a>
