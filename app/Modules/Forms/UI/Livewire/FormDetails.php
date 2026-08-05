@@ -61,15 +61,15 @@ class FormDetails extends Component
                 ];
             }
         } else {
+            // Colunas exclusivas do Modo Resumo
             $headers[] = ['key' => 'etapa_parada', 'label' => 'Progresso', 'sortable' => true];
+            $headers[] = [
+                'key' => 'acoes', 
+                'label' => 'Ações', 
+                'sortable' => false, 
+                'class' => 'text-right sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-20'
+            ];
         }
-
-        $headers[] = [
-            'key' => 'acoes', 
-            'label' => 'Ações', 
-            'sortable' => false, 
-            'class' => 'text-right sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-20'
-        ];
 
         return $headers;
     }

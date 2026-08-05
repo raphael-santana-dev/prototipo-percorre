@@ -112,18 +112,19 @@
                                 <i class="ph-fill ph-check-circle"></i> Respondido até Etapa {{ $resp->etapa_parada }}
                             </span>
                         </td>
-                    @endif
 
-                    {{-- Coluna FIXA nas Ações --}}
-                    <td class="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white group-hover:bg-gray-50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-10">
-                        <a href="{{ route('formularios.respostas.show', $resp->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
-                            <i class="ph-bold ph-file-text text-lg"></i> Ler Completo
-                        </a>
-                    </td>
+                        {{-- Coluna FIXA nas Ações AGORA EXCLUSIVA DO MODO RESUMO --}}
+                        <td class="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white group-hover:bg-gray-50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-10">
+                            <a href="{{ route('formularios.respostas.show', $resp->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
+                                <i class="ph-bold ph-file-text text-lg"></i> Ler Completo
+                            </a>
+                        </td>
+                    @endif
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $tipoVisao === 'tabela' ? count($campos) + 3 : 4 }}" class="px-6 py-12 text-center text-gray-500">
+                    {{-- Ajustamos o colspan para "count($campos) + 2" no modo tabela, pois a ação não existe mais --}}
+                    <td colspan="{{ $tipoVisao === 'tabela' ? count($campos) + 2 : 4 }}" class="px-6 py-12 text-center text-gray-500">
                         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
                             <i class="ph ph-tray text-3xl text-gray-400"></i>
                         </div>
