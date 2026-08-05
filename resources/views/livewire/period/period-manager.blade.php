@@ -62,7 +62,7 @@
                             <i class="text-xl ph ph-pencil-simple"></i>
                         </button>
                         
-                        <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
+                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
                             <i class="text-xl ph ph-list-dashes"></i>
                         </a>
                     </div>
@@ -103,7 +103,7 @@
                             <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
-                            <a href="{{ route('ciclos.campos', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
+                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
                                 <i class="text-lg ph ph-list-dashes"></i>
                             </a>
                         </div>

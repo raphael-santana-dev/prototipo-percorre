@@ -119,6 +119,10 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.library', StudentLibrary::class);
         Livewire::component('student.profile-manager', \App\Modules\Student\UI\Livewire\ProfileManager::class);
 
+        Livewire::component('forms.form-manager', \App\Modules\Forms\UI\Livewire\FormManager::class);
+        Livewire::component('forms.formulario', \App\Modules\Website\UI\Livewire\FormularioPublico::class);
+        Livewire::component('forms.form-details', \App\Modules\Forms\UI\Livewire\FormDetails::class);
+
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
