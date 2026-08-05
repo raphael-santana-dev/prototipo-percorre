@@ -16,13 +16,12 @@ class KanbanBoard extends Component
     public array $selecionados = []; 
     public $statusDestinoLote = '';
 
-    public function mount(int $cicloId)
+    // CORREÇÃO: O parâmetro deve se chamar $id para dar "match" com a Route::get('/ciclos/{id}/crm')
+    public function mount(int $id)
     {
-        // Carrega o ciclo com as colunas na ordem correta
-        $this->ciclo = Ciclo::with('statusPipeline')->findOrFail($cicloId);
+        $this->ciclo = Ciclo::with('statusPipeline')->findOrFail($id);
     }
 
-    // Gatilho silencioso acionado pelo AlpineJS (Arrastar e Soltar)
     public function atualizarStatus($inscricaoId, $novoStatusId)
     {
         Inscricao::where('ciclo_id', $this->ciclo->id)
@@ -30,7 +29,6 @@ class KanbanBoard extends Component
             ->update(['status_inscricao_id' => $novoStatusId]);
     }
 
-    // Ação em Lote (Checkboxes)
     public function moverLote()
     {
         $this->validate([
@@ -48,7 +46,6 @@ class KanbanBoard extends Component
 
     public function render()
     {
-        // Pega as inscrições e agrupa pelo ID do status para popularmos as colunas
         $inscricoesGrupadas = Inscricao::where('ciclo_id', $this->ciclo->id)
             ->orderBy('updated_at', 'desc')
             ->get()

@@ -1,11 +1,11 @@
 <div class="p-6 h-[calc(100vh-80px)] flex flex-col font-sans relative">
 
     <style>
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 8px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
-</style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
+    </style>
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
