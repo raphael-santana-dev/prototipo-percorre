@@ -30,7 +30,7 @@
         :ordenacaoDirecao="$ordenacaoDirecao">
 
         @forelse($registros as $etapa)
-            <tr class="bg-white border-b hover:bg-gray-100">
+            <tr class="bg-white hover:bg-gray-100">
                 <td class="px-6 py-4 font-medium text-gray-900">{{ $etapa->id }}</td>
                 <td class="px-6 py-4">{{ $etapa->numero }}</td>
                 <td class="px-6 py-4">{{ $etapa->nome }}</td>
