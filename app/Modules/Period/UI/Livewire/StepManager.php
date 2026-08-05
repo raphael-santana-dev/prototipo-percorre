@@ -11,13 +11,12 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
-use Illuminate\Support\Str;
 use App\Helpers\BreadcrumbHelper;
 
 class StepManager extends Component 
 {
-    use WithPagination; // Habilita a paginação sem recarregar a página
-    use ComPadraoListagem; // Traz a ordenação e os registos por página
+    use WithPagination;
+    use ComPadraoListagem;
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -32,8 +31,8 @@ class StepManager extends Component
 
     public function mount() 
     {
-        $this->breadcrumbs = BreadcrumbHelper::generate();
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
@@ -56,7 +55,7 @@ class StepManager extends Component
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'numero', 'label' => 'Ordem', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Nome', 'sortable' => true],
-            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'], // Coluna para ações
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
 
