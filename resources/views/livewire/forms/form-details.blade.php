@@ -22,6 +22,7 @@
         </div>
     </div>
 
+    <!-- CARDS DE INFORMAÇÃO -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-2xl">
@@ -29,7 +30,7 @@
             </div>
             <div>
                 <p class="text-sm font-bold text-gray-500 uppercase">Total de Respostas</p>
-                <h3 class="text-2xl font-extrabold text-gray-900">{{ $formulario->respostas_count }}</h3>
+                <h3 class="text-2xl font-extrabold text-gray-900">{{ $totalRespostas }}</h3>
             </div>
         </div>
         
@@ -54,126 +55,92 @@
         </div>
     </div>
 
-    <!-- Tabela de Respostas (Com Alternância) -->
-    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+    <!-- HEADER DA TABELA + BOTÃO TOGGLE -->
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+        <h3 class="font-bold text-gray-800 text-lg">Respostas Recebidas</h3>
         
-        <!-- Header da Tabela com o Toggle (Botões de Alternância) -->
-        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center flex-wrap gap-4">
-            <h3 class="font-bold text-gray-800">Respostas Recebidas</h3>
-            
-            <div class="flex bg-gray-200/80 p-1 rounded-lg">
-                <button wire:click="$set('modoExibicao', 'resumo')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors {{ $modoExibicao === 'resumo' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
-                    <i class="ph-bold ph-list-dashes text-lg"></i> Resumida
-                </button>
-                <button wire:click="$set('modoExibicao', 'tabela')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors {{ $modoExibicao === 'tabela' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
-                    <i class="ph-bold ph-table text-lg"></i> Planilha (Perguntas)
-                </button>
-            </div>
+        <div class="flex bg-gray-200/80 p-1 rounded-lg">
+            <button wire:click="$set('tipoVisao', 'resumo')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors {{ $tipoVisao === 'resumo' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                <i class="ph-bold ph-list-dashes text-lg"></i> Resumida
+            </button>
+            <button wire:click="$set('tipoVisao', 'tabela')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-colors {{ $tipoVisao === 'tabela' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                <i class="ph-bold ph-table text-lg"></i> Planilha (Perguntas)
+            </button>
         </div>
-        
-        <div class="overflow-x-auto custom-scrollbar relative">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-white">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Protocolo</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Data do Envio</th>
-                        
-                        {{-- MODO PLANILHA: Cabeçalho com todas as perguntas --}}
-                        @if($modoExibicao === 'tabela')
-                            @foreach($campos as $campo)
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap" title="{{ $campo->label }}">
-                                    {{ Str::limit($campo->label, 30) }}
-                                </th>
-                            @endforeach
-                        @else
-                            {{-- MODO RESUMO: Cabeçalho com status geral --}}
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status do Preenchimento</th>
-                        @endif
-                        
-                        {{-- A última coluna fica fixada na direita usando sticky --}}
-                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
-                    @forelse($respostas as $resp)
-                        @php
-                            // Prepara o array de respostas para ser lido nas colunas
-                            $respostasSalvas = is_string($resp->respostas) ? json_decode($resp->respostas, true) : ($resp->respostas ?? []);
-                        @endphp
-                        
-                        <tr class="hover:bg-gray-50 transition-colors group">
-                            
-                            {{-- Colunas Básicas --}}
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2.5 py-1 text-xs font-mono font-bold bg-gray-100 text-gray-600 rounded">#{{ str_pad($resp->id, 5, '0', STR_PAD_LEFT) }}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                                {{ $resp->created_at->format('d/m/Y \à\s H:i') }}
-                            </td>
-                            
-                            {{-- MODO PLANILHA: Colunas preenchidas com as respostas --}}
-                            @if($modoExibicao === 'tabela')
-                                @foreach($campos as $campo)
-                                    @php
-                                        // Decodifica a resposta. Se for array (Checkboxes/Matriz), transforma em texto separado por barra
-                                        $val = $respostasSalvas[$campo->name] ?? null;
-                                        if(is_array($val)) {
-                                            $valStr = implode(' | ', $val);
-                                        } else {
-                                            $valStr = (string) $val;
-                                        }
-                                        // Tratamento para não ficar em branco
-                                        $valStr = empty(trim($valStr)) ? '-' : $valStr;
-                                    @endphp
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-[250px] truncate" title="{{ $valStr }}">
-                                        {{ $valStr }}
-                                    </td>
-                                @endforeach
+    </div>
 
-                            {{-- MODO RESUMO: Badge com status da etapa --}}
-                            @else
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                                        <i class="ph-fill ph-check-circle"></i> Respondido até Etapa {{ $resp->etapa_parada }}
-                                    </span>
-                                </td>
-                            @endif
-                            
-                            {{-- Ação "Ler Resposta" fixa na direita para não se perder na rolagem --}}
-                            <td class="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white group-hover:bg-gray-50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
-                                <a href="{{ route('formularios.respostas.show', $resp->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
-                                    <i class="ph-bold ph-file-text text-lg"></i> Ler Completo
-                                </a>
+    <!-- TABELA COMPONENTE -->
+    <div class="custom-scrollbar {{ $tipoVisao === 'tabela' ? 'overflow-x-auto' : '' }}">
+        <x-table
+            :headers="$this->headers"
+            :registros="$respostas"
+            :ordenacaoCampo="$ordenacaoCampo"
+            :ordenacaoDirecao="$ordenacaoDirecao"
+            :permiteGrid="false">
+
+            @forelse($respostas as $resp)
+                @php
+                    $respostasSalvas = is_string($resp->respostas) ? json_decode($resp->respostas, true) : ($resp->respostas ?? []);
+                @endphp
+                
+                <tr class="hover:bg-gray-50 transition-colors group">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-xs font-mono font-bold bg-gray-100 text-gray-600 rounded">#{{ str_pad($resp->id, 5, '0', STR_PAD_LEFT) }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                        {{ $resp->created_at->format('d/m/Y \à\s H:i') }}
+                    </td>
+                    
+                    @if($tipoVisao === 'tabela')
+                        @foreach($campos as $campo)
+                            @php
+                                $val = $respostasSalvas[$campo->name] ?? null;
+                                if(is_array($val)) {
+                                    $valStr = implode(' | ', $val);
+                                } else {
+                                    $valStr = (string) $val;
+                                }
+                                $valStr = empty(trim($valStr)) ? '-' : $valStr;
+                            @endphp
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-[250px] truncate" title="{{ $valStr }}">
+                                {{ $valStr }}
                             </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ $modoExibicao === 'tabela' ? count($campos) + 3 : 4 }}" class="px-6 py-12 text-center text-gray-500">
-                                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
-                                    <i class="ph ph-tray text-3xl text-gray-400"></i>
-                                </div>
-                                <p class="text-lg font-bold text-gray-900 mb-1">Caixa de entrada vazia</p>
-                                <p class="text-sm">Compartilhe o link do formulário para começar a receber respostas.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        
-        @if($respostas->hasPages())
-            <div class="px-6 py-4 border-t border-gray-200 bg-white">
-                {{ $respostas->links() }}
-            </div>
-        @endif
+                        @endforeach
+                    @else
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                                <i class="ph-fill ph-check-circle"></i> Respondido até Etapa {{ $resp->etapa_parada }}
+                            </span>
+                        </td>
+                    @endif
+
+                    {{-- Coluna FIXA nas Ações --}}
+                    <td class="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white group-hover:bg-gray-50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-10">
+                        <a href="{{ route('formularios.respostas.show', $resp->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
+                            <i class="ph-bold ph-file-text text-lg"></i> Ler Completo
+                        </a>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="{{ $tipoVisao === 'tabela' ? count($campos) + 3 : 4 }}" class="px-6 py-12 text-center text-gray-500">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
+                            <i class="ph ph-tray text-3xl text-gray-400"></i>
+                        </div>
+                        <p class="text-lg font-bold text-gray-900 mb-1">Caixa de entrada vazia</p>
+                        <p class="text-sm">Compartilhe o link do formulário para começar a receber respostas.</p>
+                    </td>
+                </tr>
+            @endforelse
+        </x-table>
     </div>
 
     <style>
-        /* Estilo sutil da barra de rolagem horizontal para o Modo Planilha */
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f9fafb; border-top: 1px solid #e5e7eb; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 10px; }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #9ca3af; }
-    </style>
+    /* Suaviza o Scrollbar para o modo planilha */
+    .custom-scrollbar::-webkit-scrollbar { height: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f9fafb; border-top: 1px solid #e5e7eb; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 10px; }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #9ca3af; }
+</style>
 </div>
 
