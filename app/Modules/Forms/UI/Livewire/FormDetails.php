@@ -8,6 +8,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
+use App\Models\CampoFormulario;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes do Formulário')]
@@ -17,6 +18,9 @@ class FormDetails extends Component
 
     public Formulario $formulario;
     public $search = '';
+    
+    // Variável para alternar entre "resumo" e "tabela"
+    public $modoExibicao = 'resumo'; 
 
     public function mount($id)
     {
@@ -30,17 +34,24 @@ class FormDetails extends Component
 
     public function render()
     {
+        // 1. Busca as respostas paginadas
         $respostas = RespostaFormulario::where('formulario_id', $this->formulario->id)
             ->when($this->search, function ($query) {
-                // Se tivesse um campo de nome na resposta, poderiamos buscar aqui.
-                // Como as respostas estão em JSON, a busca pode ser por ID no banco relacional
                 $query->where('id', 'like', "%{$this->search}%");
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // 2. Busca todas as perguntas estruturais do formulário para formar as colunas da tabela
+        $campos = CampoFormulario::where('formulario_id', $this->formulario->id)
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
         return view('livewire.forms.form-details', [
-            'respostas' => $respostas
+            'respostas' => $respostas,
+            'campos'    => $campos
         ]);
     }
 }
