@@ -43,10 +43,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
-                                <button wire:click="edit({{ $status->id }})" class="p-2 text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50" title="Editar">
+                                <button wire:click="edit({{ $status->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                     <i class="text-xl ph ph-pencil-simple"></i>
                                 </button>
-                                <button wire:click="delete({{ $status->id }})" class="p-2 text-red-700 transition-colors bg-red-100 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
+                                <button wire:click="delete({{ $status->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
                                     <i class="text-xl ph ph-trash"></i>
                                 </button>
                             </div>
