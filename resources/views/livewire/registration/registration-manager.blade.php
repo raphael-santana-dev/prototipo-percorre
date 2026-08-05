@@ -155,7 +155,7 @@
                         <i class="text-xl ph ph-info"></i>
                     </button>
 
-                    <a href="#" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
                         <i class="text-xl ph ph-eye"></i>
                     </a>
 

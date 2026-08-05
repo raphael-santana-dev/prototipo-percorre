@@ -192,57 +192,6 @@ class Inscricao extends Component
         }
     }
 
-    // Método de Pontuação resgatado do sistema antigo
-    // private function calcularPontuacao() { 
-    //     $total = 0;
-    //     $detalhes = [];
-    //     $regras = RegraPontuacao::where('ciclo_id', $this->cicloAtivoId)->get();
-
-    //     foreach ($regras as $regra) {
-    //         $campo = $regra->campo_name;
-    //         $valorResposta = $this->respostas[$campo] ?? null;
-    //         $pontuou = false;
-
-    //         if ($valorResposta !== null && $valorResposta !== '') {
-    //             $valoresEsperados = is_array($regra->valor_esperado) ? $regra->valor_esperado : [$regra->valor_esperado];
-    //             $valorAlvo = $valoresEsperados[0] ?? null;
-
-    //             switch ($regra->operador) {
-    //                 case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
-    //                 case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
-    //                 case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
-    //                 case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
-    //                 case 'between':
-    //                     $min = (float)($valoresEsperados[0] ?? 0);
-    //                     $max = (float)($valoresEsperados[1] ?? $min);
-    //                     $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
-    //                     break;
-    //                 case 'in':
-    //                     $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
-    //                     $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
-    //                     break;
-    //             }
-    //         }
-
-    //         if ($pontuou) {
-    //             $total += $regra->pontos;
-    //             $detalhes[$campo] = [
-    //                 'resposta_dada' => $valorResposta,
-    //                 'pontos_ganhos' => $regra->pontos,
-    //                 'condicao' => "{$regra->operador} " . implode(', ', $valoresEsperados)
-    //             ];
-    //         }
-    //     }
-
-    //     return [
-    //         'total' => $total,
-    //         'detalhes' => json_encode([
-    //             'auditoria_detalhada' => $detalhes,
-    //             'motivo_auditoria' => "Candidato avaliado pelo Motor Dinâmico. Total: {$total} pontos."
-    //         ], JSON_UNESCAPED_UNICODE)
-    //     ];
-    // }
-
     private function salvarProgresso($statusForcado = null)
     {
         $nomeStatus = 'Incompleto'; 
@@ -261,25 +210,29 @@ class Inscricao extends Component
             'curso_id' => $this->curso,
             'possui_deficiencia' => $this->possui_deficiencia,
             'natureza_deficiencia' => $this->natureza_deficiencia,
-            'dados_dinamicos' => !empty($this->respostas) ? $this->respostas : null,
+            'dados_dinamicos' => $this->respostas, 
         ];
 
+        // SE FOR A ÚLTIMA ETAPA, CALCULA OS PONTOS!
         if ($this->etapaAtual === $this->totalEtapas && !$statusForcado) {
-            $nomeStatus = 'Pendente';
+            $nomeStatus = 'Pendente'; // Status de finalização
             
-            // $pontuacao = $this->calcularPontuacao();
-            // $dados['pontuacao_total'] = $pontuacao['total'];
-            // $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
+            $pontuacao = $this->calcularPontuacaoAutomatica();
+            $dados['pontuacao_total'] = $pontuacao['total'];
+            $dados['pontuacao_detalhes'] = $pontuacao['detalhes']; // O Laravel fará o cast automático para JSON
             
         } elseif ($statusForcado) {
             $nomeStatus = ucfirst($statusForcado); 
         }
 
-        $statusDb = StatusInscricao::where('nome', $nomeStatus)->first();
+        // Busca o ID do Status no banco (Padrão 1 = Pendente)
+        $statusDb = \App\Models\StatusInscricao::where('nome', $nomeStatus)->first();
         $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
 
-        $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
-        if (!$this->inscricaoId) $this->inscricaoId = $inscricao->id;
+        $inscricao = \App\Models\Inscricao::updateOrCreate(['id' => $this->inscricaoId], $dados);
+        if (!$this->inscricaoId) {
+            $this->inscricaoId = $inscricao->id;
+        }
     }
 
     public function restaurarDeDadosSalvos()
@@ -441,6 +394,90 @@ class Inscricao extends Component
                 $this->turno = array_key_first($this->turnosDisponiveis);
             }
         }
+    }
+
+    private function calcularPontuacaoAutomatica() 
+    {
+        $total = 0;
+        $detalhes = ['auditoria_detalhada' => []];
+        
+        // Puxa as regras do JSON armazenado no Ciclo Ativo
+        $regras = $this->cicloAtivo->regras_pontuacao ?? [];
+        if (is_string($regras)) {
+            $regras = json_decode($regras, true) ?? [];
+        }
+
+        if (empty($regras)) {
+            return ['total' => 0, 'detalhes' => null];
+        }
+
+        foreach ($regras as $regra) {
+            $campo = $regra['campo'];
+            $valorResposta = null;
+
+            // 1. Onde está a resposta? (Pode ser fixa, calculada ou dinâmica)
+            if ($campo === 'idade' || !empty($this->data_nascimento)) {
+                $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
+            } elseif (property_exists($this, $campo)) {
+                $valorResposta = $this->$campo;
+            } elseif (isset($this->respostas[$campo])) {
+                $valorResposta = $this->respostas[$campo];
+            }
+
+            $pontuou = false;
+            
+            // 2. Realiza a Validação Matemática
+            if ($valorResposta !== null && $valorResposta !== '') {
+                $valorAlvoStr = $regra['valor'];
+                
+                if (in_array($regra['operador'], ['between', 'in'])) {
+                    $valoresEsperados = array_map('trim', explode(',', $valorAlvoStr));
+                } else {
+                    $valoresEsperados = [trim($valorAlvoStr)];
+                }
+                
+                $valorAlvo = $valoresEsperados[0] ?? null;
+
+                switch ($regra['operador']) {
+                    case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+                    case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+                    case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+                    case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+                    case 'between':
+                        $min = (float)($valoresEsperados[0] ?? 0);
+                        $max = (float)($valoresEsperados[1] ?? $min);
+                        $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
+                        break;
+                    case 'in':
+                        $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
+                        $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+                        break;
+                }
+            }
+
+            // 3. Registra os pontos e a auditoria caso a regra seja atendida
+            if ($pontuou) {
+                $total += (int) $regra['pontos'];
+                // Usamos [] para permitir que o mesmo campo ganhe pontos por regras diferentes
+                $detalhes['auditoria_detalhada'][] = [
+                    'campo_avaliado' => $campo,
+                    'resposta_dada' => $valorResposta,
+                    'pontos_ganhos' => (int) $regra['pontos'],
+                    'condicao' => "{$regra['operador']} " . implode(', ', $valoresEsperados ?? [])
+                ];
+            }
+        }
+
+        if ($total > 0) {
+            $detalhes['motivo_auditoria'] = "Avaliação automática concluída. Total: {$total} pontos em " . count($detalhes['auditoria_detalhada']) . " regras atingidas.";
+        } else {
+            $detalhes = null; // Não salva JSON à toa se não pontuou nada
+        }
+
+        return [
+            'total' => $total,
+            'detalhes' => $detalhes
+        ];
     }
 
     public function render()
