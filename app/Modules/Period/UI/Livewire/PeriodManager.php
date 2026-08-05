@@ -7,6 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Ciclo;
 use App\Models\Curso; // Importação necessária
+use App\Models\StatusInscricao;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
@@ -34,6 +35,7 @@ class PeriodManager extends Component
     
     // Novo array para guardar os cursos marcados no modal
     public array $cursosSelecionados = []; 
+    public array $statusSelecionados = [];
     
     public function mount()
     {
@@ -120,10 +122,10 @@ class PeriodManager extends Component
     {
         $this->resetValidation();
         // Reseta também o array de cursos ao abrir o modal
-        $this->reset(['cicloId', 'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'cursosSelecionados']);
+        $this->reset(['cicloId', 'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'cursosSelecionados', 'statusSelecionados']);
 
         if ($id) {
-            $ciclo = Ciclo::with('cursos')->findOrFail($id);
+            $ciclo = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
             $this->cicloId = $ciclo->id;
             $this->nome = $ciclo->nome;
             $this->ano = $ciclo->ano;
@@ -134,6 +136,7 @@ class PeriodManager extends Component
             
             // Povoa os checkboxes com os IDs dos cursos já vinculados
             $this->cursosSelecionados = $ciclo->cursos->pluck('id')->toArray();
+            $this->statusSelecionados = $ciclo->statusPipeline->pluck('id')->toArray();
         } else {
             $this->ano = date('Y');
             $this->semestre = date('n') <= 6 ? 1 : 2;
@@ -176,6 +179,13 @@ class PeriodManager extends Component
         // MÁGICA: Sincroniza a tabela pivô 'ciclo_curso' automaticamente
         $cicloSalvo->cursos()->sync($this->cursosSelecionados);
 
+        // Salva os status definindo a ordem baseada no array
+        $syncStatus = [];
+        foreach ($this->statusSelecionados as $index => $statusId) {
+            $syncStatus[$statusId] = ['ordem' => $index + 1];
+        }
+        $cicloSalvo->statusPipeline()->sync($syncStatus);
+
         $this->fecharModal();
         session()->flash('sucesso', 'Ciclo salvo com sucesso!');
     }
@@ -199,6 +209,7 @@ class PeriodManager extends Component
         
         // Busca os cursos ativos para exibir no modal
         $cursosDisponiveis = Curso::where('status', 'Ativo')->orderBy('nome')->get();
+        $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -210,7 +221,8 @@ class PeriodManager extends Component
 
         return view('livewire.period.period-manager', [
             'registros' => $ciclos,
-            'cursosDisponiveis' => $cursosDisponiveis
+            'cursosDisponiveis' => $cursosDisponiveis,
+            'statusDisponiveis' => $statusDisponiveis
         ]);
     }
 }
