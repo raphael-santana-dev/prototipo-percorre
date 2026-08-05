@@ -171,6 +171,22 @@
                         </i>
                     @endfor
                 </div>
+            {{-- INTEGRAÇÃO SISTEMA (Unidade, Curso, Turno) --}}
+            @elseif($campo->tipo === 'system')
+                @php
+                    $opcoesSistema = [];
+                    // Resgata o Array correto usando isset para não quebrar no Inscrição padrão
+                    if ($campo->subtipo === 'unidade' && isset($unidadesDisponiveis)) $opcoesSistema = $unidadesDisponiveis;
+                    elseif ($campo->subtipo === 'curso' && isset($cursosDisponiveis)) $opcoesSistema = $cursosDisponiveis;
+                    elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema = $turnosDisponiveis;
+                @endphp
+                
+                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border border-brand-border px-3 py-2 focus:ring-brand-purple focus:border-brand-purple bg-white text-gray-900 @error('respostas.'.$campo->name) border-red-500 @enderror">
+                    <option value="">Selecione...</option>
+                    @foreach($opcoesSistema as $id => $nome)
+                        <option value="{{ $id }}">{{ $nome }}</option>
+                    @endforeach
+                </select>
 
             {{-- 10. TEXT & PICKERS (Input padrão estendido) --}}
             @else

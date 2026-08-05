@@ -118,6 +118,10 @@
                                                         <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
                                                     </div>
                                                 </div>
+                                            @elseif($c->tipo === 'system')
+                                                <div class="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
+                                                    <span class="flex items-center gap-2"><i class="ph ph-database text-indigo-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                </div>
                                                 
                                             @elseif($c->tipo === 'matriz')
                                                 @php
@@ -340,6 +344,26 @@
                                         </button>
                                     </div>
                                 </div>
+
+                                @if($contextoTipo === 'formulario')
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500' : 'border-gray-200 hover:border-indigo-300 text-gray-700' }}">
+                                                <i class="ph ph-buildings text-xl {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-indigo-500' : 'text-gray-400' }}"></i>
+                                                <span class="text-xs font-bold">Unidades Ativas</span>
+                                            </button>
+                                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500' : 'border-gray-200 hover:border-indigo-300 text-gray-700' }}">
+                                                <i class="ph ph-graduation-cap text-xl {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-indigo-500' : 'text-gray-400' }}"></i>
+                                                <span class="text-xs font-bold">Cursos Ativos</span>
+                                            </button>
+                                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500' : 'border-gray-200 hover:border-indigo-300 text-gray-700' }}">
+                                                <i class="ph ph-clock text-xl {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-indigo-500' : 'text-gray-400' }}"></i>
+                                                <span class="text-xs font-bold">Turnos Ativos</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -420,6 +444,16 @@
                                     <p class="text-[10px] text-gray-500 mb-1.5">Separadas por vírgula</p>
                                     <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex: Concordo, Não Concordo">
                                 </div>
+                            </div>
+                        @elseif($tipo === 'system')
+                            <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-3">
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" wire:model="configuracoes.aplicar_regras" class="h-4 w-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm text-indigo-900 font-bold">Aplicar Regras de Cascata (Dependência)</span>
+                                        <span class="text-[10px] text-indigo-700 leading-tight mt-1">O Curso listará apenas opções da Unidade selecionada, e o Turno do Curso. Se desmarcado, listará todos os ativos do banco de dados.</span>
+                                    </div>
+                                </label>
                             </div>
                         @elseif($tipo === 'html')
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
