@@ -1,9 +1,11 @@
-<div class="p-6 mx-auto font-sans max-w-7xl">
-    @if (session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500">
-            <i class="text-lg ph ph-check-circle"></i> {{ session('success') }}
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
+    @if (session()->has('sucesso'))
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium">
+            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
         </div>
     @endif
+
+    <x-breadcrumb :items="$breadcrumbs" />
 
     <div class="flex items-center justify-between mb-6">
         <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -14,71 +16,111 @@
         </button>
     </div>
 
-    <!-- Tabela de Listagem -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Nome do Curso</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-center text-gray-500 uppercase dark:text-gray-400">Regras de Idade</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-center text-gray-500 uppercase dark:text-gray-400">Status</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-right text-gray-500 uppercase dark:text-gray-400">Ações</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-100 dark:bg-gray-800 dark:divide-gray-700">
-                @forelse($cursos as $curso)
-                    <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="font-bold text-gray-900 dark:text-white">{{ $curso->nome }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">Slug: {{ $curso->slug }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-300">
-                            @if($curso->min_idade || $curso->max_idade)
-                                {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
-                            @else
-                                <span class="text-gray-400">Livre</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            @if($curso->status === 'Ativo')
-                                <span class="inline-flex px-2 text-xs font-bold text-pistache-700 bg-pistache-100 rounded-full uppercase border border-pistache-200">Ativo</span>
-                            @else
-                                <span class="inline-flex px-2 text-xs font-bold text-red-700 bg-red-100 rounded-full uppercase border border-red-200">Inativo</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-2">
-                                <!-- Botão de Quick View -->
-                                <button wire:click="showQuickView({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                                    <i class="text-xl ph ph-info"></i>
-                                </button>
-                                
-                                <!-- Botão de Full View -->
-                                <a href="{{ route('cursos.show', $curso->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                                    <i class="text-xl ph ph-eye"></i>
-                                </a>
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
 
-                                <!-- Editar e Excluir -->
-                                <button wire:click="edit({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                                    <i class="text-xl ph ph-pencil-simple"></i>
-                                </button>
-                                <button wire:click="delete({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
-                                    <i class="text-xl ph ph-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">Nenhum curso cadastrado.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="p-4 bg-white border-t border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-          
-        </div>
-    </div>
+        @forelse ($registros as $curso)
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="font-bold text-gray-900 dark:text-white">{{ $curso->nome }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Slug: {{ $curso->slug }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-300">
+                    @if($curso->min_idade || $curso->max_idade)
+                        {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
+                    @else
+                        <span class="text-gray-400">Livre</span>
+                    @endif
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
+                    <div class="text-[10px] mt-1 font-bold {{ $curso->status ? 'text-green-600' : 'text-gray-500' }}">
+                        {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-2">
+                        <!-- Botão de Quick View -->
+                        <button wire:click="showQuickView({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <i class="text-xl ph ph-info"></i>
+                        </button>
+                        
+                        <!-- Botão de Full View -->
+                        <a href="{{ route('cursos.show', $curso->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                            <i class="text-xl ph ph-eye"></i>
+                        </a>
+
+                        <!-- Editar e Excluir -->
+                        <button wire:click="edit({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </button>
+                        <button wire:click="delete({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                    <p class="text-lg font-semibold">Nenhum formulário encontrado.</p>
+                    <p class="text-sm">Crie seu primeiro formulário customizado agora mesmo.</p>
+                </td>
+            </tr>
+        @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach ( $registros as $curso )
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm font-bold text-gray-900 dark:text-white truncate pr-2">{{ $curso->nome }}</div>
+                        <span class="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">#{{ $curso->id }}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 min-h-[32px]">
+                        @if($curso->min_idade || $curso->max_idade)
+                            {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
+                        @else
+                            <span class="text-gray-400">Livre</span>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                        <span>Aceita fora do Estado?</span>
+                        @if($curso->permite_estado_diferente)
+                            <i class="text-xl ph-fill ph-check-circle text-pistache-500"></i>
+                        @else
+                            <i class="text-xl ph-fill ph-x-circle text-red-500"></i>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
+                        <div class="flex items-center gap-1">
+                            <a href="{{ route('formularios.show', $curso->id) }}" target="_blank" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
+                                <i class="text-xl ph ph-eye"></i>
+                            </a>
+                            <a href="{{ route('formularios.publico', $curso->slug) }}" target="_blank" class="p-2 text-gray-400 transition-colors hover:text-blue-500 rounded-lg dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
+                                <i class="text-xl ph ph-arrow-square-in"></i>
+                            </a>
+                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $curso->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                                <i class="text-xl ph ph-list-dashes"></i>
+                            </a>
+                            <button wire:click="abrirModal({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 dark:hover:bg-gray-600" title="Editar Informações">
+                                <i class="text-xl ph ph-pencil-simple"></i>
+                            </button>
+                            <button wire:click="excluir({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
+        
+    </x-table>
 
     <!-- Modal Integrado -->
     @if($showModal)
@@ -182,4 +224,13 @@
             </div>
         </div>
     @endif
+
+    {{-- TOAST SYSTEM --}}
+    <div x-data="{ show: false, msg: '' }" 
+        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
+        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
+        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
+        <i class="text-2xl ph ph-check-circle text-white"></i>
+        <span x-text="msg"></span>
+    </div>
 </div>
