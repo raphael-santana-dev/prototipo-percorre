@@ -52,11 +52,11 @@
                             <div class="flex items-center justify-end gap-2">
                                 <!-- Botão que aciona o Drawer via Livewire Dispatch -->
                                 <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                                    <i class="text-xl ph ph-identification-card"></i>
+                                    <i class="text-xl ph ph-info"></i>
                                 </button>
 
                                 <a href="{{ route('students.show', $student->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                                    <i class="text-xl ph ph-user-focus"></i>
+                                    <i class="text-xl ph ph-eye"></i>
                                 </a>
                                 
                                 @can('estudante.editar')

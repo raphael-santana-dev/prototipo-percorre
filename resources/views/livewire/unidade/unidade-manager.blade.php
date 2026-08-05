@@ -45,17 +45,21 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
                                 <!-- Botão de Quick View (Painel Lateral) -->
-                                <button wire:click="showQuickView({{ $unidade->id }})" class="p-2 text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="Visualização Rápida">
-                                    <i class="text-xl ph ph-eye"></i>
+                                <button wire:click="showQuickView({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                    <i class="text-xl ph ph-info"></i>
                                 </button>
                                 
                                 <!-- Botão de Full View (Página Completa) -->
-                                <a href="{{ route('unidades.show', $unidade->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Página Completa">
-                                    <i class="text-xl ph ph-arrow-square-out"></i>
+                                <a href="{{ route('unidades.show', $unidade->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                    <i class="text-xl ph ph-eye"></i>
                                 </a>
 
-                                <button wire:click="edit({{ $unidade->id }})" class="p-2 text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50" title="Editar">
+                                <button wire:click="edit({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                     <i class="text-xl ph ph-pencil-simple"></i>
+                                </button>
+
+                                <button wire:click="delete({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
+                                    <i class="text-xl ph ph-trash"></i>
                                 </button>
                             </div>
                         </td>

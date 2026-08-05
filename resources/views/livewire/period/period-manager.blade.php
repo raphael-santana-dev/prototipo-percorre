@@ -51,11 +51,11 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center justify-end gap-2">
-                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:hover:text-purpura-400" title="Visualização Rápida">
-                            <i class="text-lg ph ph-dots-three-outline-vertical"></i>
+                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <i class="text-xl ph ph-info"></i>
                         </button>
-                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
-                            <i class="text-xl ph ph-arrow-square-out"></i>
+                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
+                            <i class="text-xl ph ph-eye"></i>
                         </a>
                         
                         <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
@@ -65,6 +65,10 @@
                         <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
                             <i class="text-xl ph ph-list-dashes"></i>
                         </a>
+
+                        <button wire:click="delete({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -94,18 +98,24 @@
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
                         <div class="flex items-center gap-2">
-                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600 dark:hover:text-purpura-400" title="Visualização Rápida">
-                                <i class="text-lg ph ph-dots-three-outline-vertical"></i>
+                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <i class="text-xl ph ph-info"></i>
                             </button>
-                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-purpura-700 transition-colors bg-purpura-100 rounded-lg hover:bg-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50" title="Ver Detalhes e Inscrições">
-                                <i class="text-lg ph ph-arrow-square-out"></i>
+                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
+                                <i class="text-xl ph ph-eye"></i>
                             </a>
+                            
                             <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
-                                <i class="text-lg ph ph-pencil-simple"></i>
+                                <i class="text-xl ph ph-pencil-simple"></i>
                             </button>
+                            
                             <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
-                                <i class="text-lg ph ph-list-dashes"></i>
+                                <i class="text-xl ph ph-list-dashes"></i>
                             </a>
+
+                            <button wire:click="delete({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -57,17 +57,17 @@
                         
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
-                                <button wire:click="showQuickDetails({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50">
-                                    <i class="text-xl ph ph-eye"></i>
+                                <button wire:click="showQuickDetails({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                    <i class="text-xl ph ph-info"></i>
                                 </button>
-                                <a href="{{ route('users.show', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50">
-                                    <i class="text-xl ph ph-user-focus"></i>
+                                <a href="{{ route('users.show', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600">
+                                    <i class="text-xl ph ph-eye"></i>
                                 </a>
-                                <button wire:click="edit({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50">
+                                <button wire:click="edit({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário">
                                     <i class="text-xl ph ph-pencil-simple"></i>
                                 </button>
                                 @if($user->id !== auth()->id() && !$user->hasRole('dev'))
-                                    <button wire:click="delete({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
+                                    <button wire:click="delete({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Usuário" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
                                         <i class="text-xl ph ph-trash"></i>
                                     </button>
                                 @endif

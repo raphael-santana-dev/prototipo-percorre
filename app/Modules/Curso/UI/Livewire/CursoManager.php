@@ -6,14 +6,17 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\Curso\Application\Services\CursoService;
-use Illuminate\Support\Str;
 use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
+use App\Models\Curso;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Cursos - Administrativo')]
 class CursoManager extends Component
 {
-    use WithPagination;
+    use WithPagination, ComPadraoListagem, WithToggleStatus;
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -28,10 +31,15 @@ class CursoManager extends Component
     public array $unidadesSelecionadas = [];
     public array $turnosSelecionados = [];
 
+    public $modelClass = Curso::class;
+    public array $breadcrumbs = [];
+
     public function mount() 
-    { 
-        // Supondo que você use esse padrão de permissão
-        abort_if(!auth()->user()->can('curso.listar'), 403); 
+    {
+        abort_if(!auth()->user()->can('curso.listar'), 403);
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+        $this->permiteGrid = true;
     }
 
     public function openModal() 
@@ -134,12 +142,34 @@ class CursoManager extends Component
         ]);
     }
 
+    public function getHeadersProperty() {
+        return [
+            ['key' => 'id', 'label' => 'Nome do Curso', 'sortable' => true],
+            ['key' => 'min_idade', 'label' => 'Regras de Idade', 'sortable' => true],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render(CursoService $service) 
     {
+        // 1. Iniciamos o construtor de consultas
+        $query = \App\Models\Curso::query();
+
+        // 2. Aplicamos a ordenação dinâmica da Trait 'ComPadraoListagem'
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc'); // Ordenação padrão
+        }
+
+        // 3. Paginamos os resultados direto no banco de dados
+        $cursos = $query->paginate($this->porPagina);
+
         return view('livewire.curso.curso-manager', [
-            'cursos' => $service->listarTodos(),
+            'registros' => $cursos,
             'unidadesDisponiveis' => \App\Modules\Unidade\Domain\Models\Unidade::where('status', 'Ativa')->orderBy('nome')->get(),
-            'turnosDisponiveis' => \App\Modules\Turno\Domain\Models\Turno::orderBy('id')->get() // Assumindo que a Model Turno existe
+            'turnosDisponiveis' => \App\Modules\Turno\Domain\Models\Turno::orderBy('id')->get()
         ]);
     }
 }
