@@ -3,10 +3,11 @@
 namespace App\Modules\ACL\Domain\Models;
 
 use Spatie\Permission\Models\Permission as SpatiePermission;
+use App\Traits\RegistraAuditoria;
 
 class Permission extends SpatiePermission
 {
-    // Liberamos o preenchimento em massa para as nossas novas colunas
+    use RegistraAuditoria;
     protected $fillable = [
         'name',
         'guard_name',

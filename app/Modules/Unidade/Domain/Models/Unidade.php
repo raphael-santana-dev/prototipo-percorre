@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\User;
-use App\Models\Curso; // Adicione o Model de Curso
+use App\Models\Curso;
+use App\Traits\RegistraAuditoria;
 
 class Unidade extends Model
 {
     use HasFactory, SoftDeletes;
+    use RegistraAuditoria;
 
-    // Campos alinhados com a Migration Consolidada
     protected $fillable = [
         'nome', 'slug', 'status', 'data_inauguracao', 'endereco', 'email', 'telefone', 'foto_path',
         'cep', 'estado', 'cidade', 'bairro', 'logradouro', 'numero', 'complemento' // <- Adicionados

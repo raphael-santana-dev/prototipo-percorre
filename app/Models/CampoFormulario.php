@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class CampoFormulario extends Model
 {
+    use RegistraAuditoria;
     protected $fillable = [
         'ciclo_id', 'formulario_id', 'etapa', 'ordem', 'label', 'name', 'tipo', 'largura', 
         'subtipo', 'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 

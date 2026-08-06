@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\FiltraPorVinculo;
+use App\Traits\RegistraAuditoria;
 
 class Inscricao extends Model
 {
     use SoftDeletes;
     use FiltraPorVinculo;
+    use RegistraAuditoria;
 
     public $moduloPermissao = 'inscricoes';
     

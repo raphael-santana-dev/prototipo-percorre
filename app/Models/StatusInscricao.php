@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class StatusInscricao extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'status_inscricoes'; // Define a tabela explicitamente
     
     protected $fillable = [

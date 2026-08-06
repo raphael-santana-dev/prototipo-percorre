@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class Ciclo extends Model
 {
+    use RegistraAuditoria;
     protected $fillable = [
         'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'regras_pontuacao'
     ];

@@ -7,10 +7,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\FiltraPorVinculo;
 
+use App\Traits\RegistraAuditoria;
 
 class Student extends Authenticatable
 {
     use HasFactory, Notifiable, FiltraPorVinculo;
+    use RegistraAuditoria;
 
     public $moduloPermissao = 'students';
 

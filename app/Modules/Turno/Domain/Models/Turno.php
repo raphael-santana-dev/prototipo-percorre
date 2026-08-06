@@ -3,9 +3,11 @@
 namespace App\Modules\Turno\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class Turno extends Model
 {
+    use RegistraAuditoria;
     protected $fillable = [
         'nome',
         'horario_inicio',
