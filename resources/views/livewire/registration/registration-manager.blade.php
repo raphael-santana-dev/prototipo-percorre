@@ -29,6 +29,7 @@
         </button>
     </div>
 
+    
     @if(isset($metricas))
         <x-summary-cards :metricas="$metricas" />
     @endif
@@ -347,7 +348,9 @@
     </div>
     @endif
 
-    <x-fab :actions="$this->fabActions" />
+    <x-fab :actions="$this->fabActions"
+    main-color="bg-gray-800 hover:bg-black" 
+    sub-btn-bg="bg-indigo-50 hover:bg-indigo-100" />
 
     {{-- TOAST --}}
     <div x-data="{ show: false, msg: '' }" 

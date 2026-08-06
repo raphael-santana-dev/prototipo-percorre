@@ -187,13 +187,17 @@ class RegistrationManager extends Component
         return [
             [
                 'label' => 'Alterar em Lote',
-                'icon' => 'ph-check-square-offset',
-                'wire_click' => 'abrirModalLote' // Dispara o método do seu Livewire!
+                'icon' => 'ph ph-check-square-offset',
+                'wire_click' => 'abrirModalLote',
+                'bg_color' => 'bg-green-500 hover:bg-green-600',
+                'icon_color' => 'text-white'
             ],
             [
                 'label' => 'Recalcular Tudo',
-                'icon' => 'ph-calculator',
-                'wire_click' => 'recalcularScoresGlobais'
+                'icon' => 'ph ph-calculator',
+                'wire_click' => 'recalcularScoresGlobais',
+                'bg_color' => 'bg-green-500 hover:bg-green-600',
+                'icon_color' => 'text-black'
             ]
         ];
     }
