@@ -38,7 +38,7 @@ class FeatureService
     {
         $feature = Feature::firstOrCreate(
             ['name' => strtolower($name)],
-            ['module' => strtolower($module), 'description' => $description, 'is_active' => false]
+            ['module' => strtolower($module), 'description' => $description, 'is_active' => false, 'slug' => $slug]
         );
 
         Cache::forget("feature_status_{$feature->name}");

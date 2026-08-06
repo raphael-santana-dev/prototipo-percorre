@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use App\Modules\Student\Domain\Models\Student;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Estudantes - Administrativo')]
@@ -79,6 +80,7 @@ class StudentManager extends Component
             'email' => strtolower($this->email),
             'is_active' => $this->is_active,
             'unidade_id' => $this->unidade_id,
+            'slug' => Str::slug($this->name),
         ];
 
         if (!empty($this->password)) {

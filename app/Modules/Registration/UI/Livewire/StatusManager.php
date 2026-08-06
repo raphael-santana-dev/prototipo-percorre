@@ -59,6 +59,7 @@ class StatusManager extends Component
 
         $data = [
             'nome' => $this->nome,
+            'slug' => Str::slug($this->nome),
             'descricao' => $this->descricao,
             'cor' => $this->cor,
         ];

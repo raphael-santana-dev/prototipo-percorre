@@ -173,6 +173,7 @@ class PeriodManager extends Component
                 'data_inicio' => $this->data_inicio,
                 'data_fim' => $this->data_fim,
                 'status' => $this->status,
+                'slug' => \Str::slug($nomeFinal)
             ]
         );
 

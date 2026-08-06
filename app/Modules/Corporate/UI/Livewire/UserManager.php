@@ -12,6 +12,8 @@ use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Models\Curso;
 use App\Modules\Turno\Domain\Models\Turno;
 
+use Illuminate\Support\Str;
+
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Usuários - Administrativo')]
 class UserManager extends Component
@@ -115,6 +117,7 @@ class UserManager extends Component
         $data = [
             'name' => $this->name,
             'email' => strtolower($this->email),
+            'slug' => Str::slug($this->name),
         ];
 
         if (!empty($this->password)) {

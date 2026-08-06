@@ -173,20 +173,7 @@ class Inscricao extends Component
 
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
-        } else {
-            // $senhaProvisoria = Str::random(8);
-            // $usuarioAluno = User::firstOrCreate(
-            //     ['email' => $this->email],
-            //     ['name' => $this->nome, 'password' => Hash::make($senhaProvisoria), 'precisa_trocar_senha' => true]
-            // );
-
-            // if ($usuarioAluno->wasRecentlyCreated) {
-            //     $usuarioAluno->assignRole('aluno');
-            //     \Illuminate\Support\Facades\Mail::to($usuarioAluno->email)
-            //         ->send(new \App\Mail\BoasVindasAluno($usuarioAluno, $senhaProvisoria));
-            // }
-            // InscricaoModel::where('id', $this->inscricaoId)->update(['usuario_id' => $usuarioAluno->id]);
-            
+        } else {            
             $this->etapaAtual = 99; 
             $this->dispatch('inscricao-concluida');
         }
@@ -220,6 +207,7 @@ class Inscricao extends Component
             'natureza_deficiencia' => $this->natureza_deficiencia,
             'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
             'dados_dinamicos' => $this->respostas, 
+            'slug' => \Illuminate\Support\Str::slug($this->nome),
         ];
 
         // 1. Define o Status correto

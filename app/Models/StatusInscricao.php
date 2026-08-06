@@ -11,7 +11,7 @@ class StatusInscricao extends Model
     protected $table = 'status_inscricoes'; // Define a tabela explicitamente
     
     protected $fillable = [
-        'nome', 'descricao', 'cor'
+        'nome', 'descricao', 'cor', 'slug', 'status'
     ];
 
     // Mágica do Laravel: Intercepta a criação no banco

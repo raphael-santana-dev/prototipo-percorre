@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\Turno\Application\Services\TurnoService;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Turnos - Administrativo')]
@@ -54,6 +55,7 @@ class TurnoManager extends Component
 
         $dados = [
             'nome' => $this->nome,
+            'slug' => Str::slug($this->nome),
             'horario_inicio' => $this->horario_inicio,
             'horario_fim' => $this->horario_fim,
         ];

@@ -12,6 +12,7 @@ class Turno extends Model
         'nome',
         'horario_inicio',
         'horario_fim',
+        'slug'
     ];
 
     // Opcional: formatação automática para as views futuramente
