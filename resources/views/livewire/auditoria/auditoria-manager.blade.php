@@ -32,6 +32,11 @@
                     {{ $log->tabela_alterada }}
                     @if($log->registro_id) <span class="text-gray-400">#{{ $log->registro_id }}</span> @endif
                 </td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <button wire:click="showQuickView({{ $log->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes do Log">
+                        <i class="text-xl ph ph-info"></i>
+                    </button>
+                </td>
             </tr>
         @empty
             <tr>
