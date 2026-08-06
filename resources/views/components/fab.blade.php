@@ -41,6 +41,7 @@
                 @elseif(isset($action['wire_click']))
                     <button type="button" 
                             wire:click="{{ $action['wire_click'] }}" 
+                            @if(!empty($action['confirm'])) wire:confirm="{{ $action['confirm'] }}" @endif
                             @click="open = false" 
                             class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
                         <i class="{{ $action['icon'] }} text-lg"></i>

@@ -190,14 +190,15 @@ class RegistrationManager extends Component
                 'icon' => 'ph ph-check-square-offset',
                 'wire_click' => 'abrirModalLote',
                 'bg_color' => 'bg-green-500 hover:bg-green-600',
-                'icon_color' => 'text-white'
+                'icon_color' => 'text-black'
             ],
             [
                 'label' => 'Recalcular Tudo',
                 'icon' => 'ph ph-calculator',
                 'wire_click' => 'recalcularScoresGlobais',
                 'bg_color' => 'bg-green-500 hover:bg-green-600',
-                'icon_color' => 'text-black'
+                'icon_color' => 'text-black',
+                'confirm' => 'Processar TODAS as inscrições de TODOS os ciclos ativos? Isso pode levar alguns segundos.'
             ]
         ];
     }
