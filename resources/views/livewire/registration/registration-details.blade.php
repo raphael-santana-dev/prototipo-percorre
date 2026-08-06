@@ -1,187 +1,214 @@
-<div class="p-6 mx-auto font-sans max-w-7xl space-y-6">
-    <div class="flex items-center gap-4 mb-4">
-        <a href="{{ route('inscricoes.index') }}" class="p-2 text-gray-500 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
-            <i class="text-xl ph ph-arrow-left"></i>
-        </a>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            Detalhes da Inscrição #{{ $inscricao->id }}
-        </h2>
-    </div>
+<div class="p-6 max-w-7xl mx-auto font-sans">
+    
+    @if (session()->has('sucesso'))
+        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 font-bold rounded-lg shadow-sm flex items-center gap-2">
+            <i class="ph-fill ph-check-circle text-xl"></i> {{ session('sucesso') }}
+        </div>
+    @endif
 
-    <!-- 1. CABEÇALHO (Master Card) -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 relative">
-        <div class="absolute top-0 w-full h-32 bg-gradient-to-r from-purpura-600 to-indigo-600"></div>
+    {{-- CABEÇALHO E MUDANÇA DE STATUS --}}
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <a href="{{ route('inscricoes.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 transition font-bold mb-1 flex items-center gap-1">
+                <i class="ph ph-arrow-left"></i> Voltar para a Listagem
+            </a>
+            <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-3 mt-1">
+                Ficha do Candidato
+                
+                @php
+                    $nomeStatusAtual = strtolower(\App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Pendente');
+                    $corBg = match($nomeStatusAtual) {
+                        'aprovado' => 'bg-green-100 text-green-800 border-green-200',
+                        'reprovado' => 'bg-red-100 text-red-800 border-red-200',
+                        'lead' => 'bg-blue-100 text-blue-800 border-blue-200',
+                        'incompleto' => 'bg-gray-100 text-gray-800 border-gray-200',
+                        default => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                    };
+                @endphp
+                <span class="{{ $corBg }} border text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {{ \App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Sem Status' }}
+                </span>
+            </h2>
+            <p class="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                <i class="ph ph-clock"></i> Inscrição iniciada em {{ $inscricao->created_at->format('d/m/Y \à\s H:i') }}
+            </p>
+        </div>
         
-        <div class="relative px-6 pt-24 pb-6 sm:px-8">
-            <div class="flex flex-col md:flex-row items-end md:items-center gap-6">
-                
-                <div class="flex items-center justify-center w-24 h-24 bg-white border-4 border-white rounded-2xl shadow-lg dark:bg-gray-900 dark:border-gray-800 shrink-0">
-                    <i class="text-4xl ph ph-user-focus text-purpura-500"></i>
-                </div>
-                
-                <div class="flex-1 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ $inscricao->nome }}</h1>
-                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                            <i class="ph ph-identification-card"></i> {{ $inscricao->cpf }} &nbsp;•&nbsp; 
-                            <i class="ph ph-envelope-simple"></i> {{ $inscricao->email }}
-                        </p>
-                    </div>
-                    
-                    <!-- Box de Alteração de Status -->
-                    <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700 flex flex-col gap-2 min-w-[250px]">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Status Atual</span>
-                            <span class="px-2.5 py-1 text-xs font-bold rounded-md uppercase 
-                                @if($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Aprovado') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                                @elseif($inscricao->statusInscricao && $inscricao->statusInscricao->nome === 'Reprovado') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                                @else bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 @endif">
-                                {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                            </span>
-                        </div>
-                        <div class="border-t border-gray-200 dark:border-gray-600 my-1"></div>
-                        <div class="flex flex-wrap gap-1 mt-1 justify-end">
-                            @foreach($statusInscricoesDb as $status)
-                                @if($status->id !== $inscricao->status_inscricao_id)
-                                    <button wire:click="alterarStatus({{ $status->id }})" class="px-2 py-1 text-[10px] font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-purpura-50 hover:text-purpura-600 hover:border-purpura-300 transition-colors dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:text-purpura-400">
-                                        {{ $status->nome }}
-                                    </button>
-                                @endif
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+        {{-- CONTROLE DE STATUS COM APROVAÇÃO --}}
+        <div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+            <label class="text-sm font-bold text-gray-700">Mover para:</label>
+            <select wire:model="status_selecionado" class="border-gray-300 rounded-md text-sm font-medium focus:ring-brand-purple focus:border-brand-purple py-2 bg-gray-50">
+                @foreach($todosStatus as $status)
+                    <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                @endforeach
+            </select>
+            <button wire:click="atualizarStatus" class="px-5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-sm rounded-lg shadow-sm transition flex items-center gap-2">
+                <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
         </div>
     </div>
 
-    <!-- 2. GRID DE INFORMAÇÕES -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Coluna Esquerda (Dados Pessoais e Endereço) -->
-        <div class="lg:col-span-1 space-y-6">
-            
-            <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 dark:bg-gray-800 dark:border-gray-700">
-                <h3 class="font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-100 pb-2 dark:border-gray-700 flex items-center gap-2">
-                    <i class="ph ph-identification-badge text-indigo-500"></i> Dados Pessoais
-                </h3>
-                <ul class="space-y-3">
-                    <li class="flex flex-col">
-                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Idade / Nascimento</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ \Carbon\Carbon::parse($inscricao->data_nascimento)->age }} anos ({{ \Carbon\Carbon::parse($inscricao->data_nascimento)->format('d/m/Y') }})</span>
-                    </li>
-                    <li class="flex flex-col">
-                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Celular</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ $inscricao->celular ?: 'Não informado' }}</span>
-                    </li>
-                    <li class="flex flex-col">
-                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Nome Social</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ $inscricao->possui_nome_social === 'sim' ? $inscricao->nome_social : 'Não possui' }}</span>
-                    </li>
-                    <li class="flex flex-col">
-                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Pessoa com Deficiência (PcD)</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ $inscricao->possui_deficiencia === 'sim' ? $inscricao->natureza_deficiencia : 'Não' }}</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 dark:bg-gray-800 dark:border-gray-700">
-                <h3 class="font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-100 pb-2 dark:border-gray-700 flex items-center gap-2">
-                    <i class="ph ph-map-pin text-ponkan-500"></i> Endereço
-                </h3>
-                <div class="text-sm font-medium text-gray-900 dark:text-gray-200 leading-relaxed">
-                    {{ $inscricao->logradouro ?: 'Rua não informada' }}, {{ $inscricao->numero ?: 'S/N' }}<br>
-                    @if($inscricao->complemento) {{ $inscricao->complemento }}<br> @endif
-                    {{ $inscricao->bairro ?: 'Bairro não informado' }}<br>
-                    {{ $inscricao->cidade ?: 'Cidade' }} - {{ $inscricao->estado ?: 'UF' }}<br>
-                    CEP: {{ $inscricao->cep ?: '00000-000' }}
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Coluna Direita (Interesse, Campos Dinâmicos e Auditoria) -->
+        {{-- COLUNA PRINCIPAL --}}
         <div class="lg:col-span-2 space-y-6">
             
-            <!-- Interesse Acadêmico -->
-            <div class="bg-blue-50 border border-blue-100 shadow-sm rounded-xl p-6 dark:bg-blue-900/20 dark:border-blue-800">
-                <h3 class="font-bold text-blue-900 dark:text-blue-300 mb-4 border-b border-blue-200 pb-2 dark:border-blue-800 flex items-center gap-2">
-                    <i class="ph ph-student text-blue-500"></i> Interesse Acadêmico
+            {{-- DADOS PESSOAIS --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 class="text-lg font-extrabold text-gray-900 border-b border-gray-100 pb-3 mb-5 flex items-center gap-2">
+                    <i class="ph-fill ph-user-circle text-purpura-500 text-xl"></i> Dados Pessoais
                 </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <span class="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">Processo / Ciclo</span>
-                        <p class="text-sm font-bold text-blue-900 dark:text-blue-200">{{ $inscricao->ciclo->nome ?? '-' }}</p>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">Nome Completo</p>
+                        <p class="text-gray-900 font-bold text-base mt-1">{{ $inscricao->nome }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">Curso e Turno</span>
-                        <p class="text-sm font-bold text-blue-900 dark:text-blue-200">{{ $inscricao->curso->nome ?? '-' }} ({{ $inscricao->turno->nome ?? '-' }})</p>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">Nome Social</p>
+                        <p class="text-gray-900 font-medium text-base mt-1">{{ $inscricao->nome_social ?: 'Não possui' }}</p>
                     </div>
                     <div>
-                        <span class="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">Unidade Base</span>
-                        <p class="text-sm font-bold text-blue-900 dark:text-blue-200">{{ $inscricao->unidade->nome ?? '-' }}</p>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">CPF</p>
+                        <p class="text-gray-900 font-medium text-base mt-1">{{ $inscricao->cpf }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">Data de Nascimento</p>
+                        <p class="text-gray-900 font-medium text-base mt-1">
+                            {{ $inscricao->data_nascimento ? \Carbon\Carbon::parse($inscricao->data_nascimento)->format('d/m/Y') : 'Não informada' }} 
+                            @if($inscricao->data_nascimento)
+                                <span class="text-purpura-600 font-bold text-sm ml-1">({{ \Carbon\Carbon::parse($inscricao->data_nascimento)->age }} anos)</span>
+                            @endif
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">E-mail de Contato</p>
+                        <p class="text-gray-900 font-medium text-base mt-1">{{ $inscricao->email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">Celular</p>
+                        <p class="text-gray-900 font-medium text-base mt-1">{{ $inscricao->celular ?? 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-2 pt-4 border-t border-gray-100 flex items-center gap-2">
+                        <p class="text-[11px] text-gray-400 uppercase font-bold tracking-wider">PcD (Deficiência):</p>
+                        @if($inscricao->possui_deficiencia === 'sim')
+                            <p class="text-gray-900 font-bold text-sm bg-red-50 px-3 py-1 rounded text-red-700">Sim - {{ $inscricao->natureza_deficiencia }}</p>
+                        @else
+                            <p class="text-gray-900 font-medium text-sm bg-gray-100 px-3 py-1 rounded">Não</p>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- Dados Dinâmicos -->
-            @if($inscricao->dados_dinamicos && count($inscricao->dados_dinamicos) > 0)
-                <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 dark:bg-gray-800 dark:border-gray-700">
-                    <h3 class="font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-100 pb-2 dark:border-gray-700 flex items-center gap-2">
-                        <i class="ph ph-list-dashes text-emerald-500"></i> Respostas do Formulário
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @foreach($inscricao->dados_dinamicos as $chave => $valor)
-                            <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                <span class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{{ str_replace('_', ' ', $chave) }}</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ empty($valor) ? 'Não respondido' : (is_array($valor) ? implode(', ', $valor) : $valor) }}</span>
+            {{-- DADOS DINÂMICOS (RESPOSTAS DO FORMULÁRIO) --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 class="text-lg font-extrabold text-gray-900 border-b border-gray-100 pb-3 mb-5 flex items-center gap-2">
+                    <i class="ph-fill ph-list-dashes text-purpura-500 text-xl"></i> Informações Complementares
+                </h3>
+                
+                @php
+                    $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+                @endphp
+
+                @if(is_array($dinamicos) && count($dinamicos) > 0)
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($dinamicos as $chave => $valor)
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors">
+                                <span class="text-[10px] text-purpura-600 uppercase font-bold tracking-wider">{{ str_replace('_', ' ', $chave) }}</span>
+                                <p class="text-sm font-bold text-gray-900 mt-1 break-words">
+                                    {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
+                                </p>
                             </div>
                         @endforeach
                     </div>
-                </div>
-            @endif
+                @else
+                    <div class="p-6 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
+                        <p class="text-gray-500 text-sm font-medium">Nenhum dado dinâmico complementar registrado.</p>
+                    </div>
+                @endif
+            </div>
 
-            <!-- Auditoria de Pontuação -->
-            @if($inscricao->pontuacao_detalhes)
-                @php $detalhes = json_decode($inscricao->pontuacao_detalhes, true); @endphp
+        </div>
+
+        {{-- COLUNA LATERAL (Pontuação e Vínculos) --}}
+        <div class="space-y-6">
+            
+            {{-- INTERESSE ACADÊMICO --}}
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl shadow-sm border border-indigo-100">
+                <h3 class="text-lg font-extrabold text-indigo-900 border-b border-indigo-200/50 pb-3 mb-5">Interesse Acadêmico</h3>
                 
-                <div class="bg-white border border-gray-100 shadow-sm rounded-xl p-6 dark:bg-gray-800 dark:border-gray-700">
-                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2 dark:border-gray-700">
-                        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <i class="ph ph-chart-bar text-amber-500"></i> Auditoria de Pontuação
-                        </h3>
-                        <span class="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-sm dark:bg-amber-900/30 dark:text-amber-400">
-                            Total: {{ $inscricao->pontuacao_total }} pts
+                <div class="space-y-5">
+                    <div>
+                        <p class="text-[10px] text-indigo-500 uppercase font-bold tracking-wider">Ciclo Vinculado</p>
+                        <p class="text-indigo-900 font-bold bg-white/60 px-3 py-1.5 rounded-md text-sm mt-1 border border-indigo-100/50 shadow-sm inline-block">
+                            {{ $inscricao->ciclo->nome ?? 'Legado' }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-500 uppercase font-bold tracking-wider">Unidade</p>
+                        <p class="text-indigo-900 font-bold text-base mt-1">{{ $inscricao->unidade->nome ?? 'Não informada' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-500 uppercase font-bold tracking-wider">Curso</p>
+                        <p class="text-indigo-900 font-bold text-base mt-1">{{ $inscricao->curso->nome ?? 'Não informado' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-500 uppercase font-bold tracking-wider">Turno</p>
+                        <p class="text-indigo-900 font-bold text-base mt-1">{{ $inscricao->turno->nome ?? 'Não informado' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- AUDITORIA DA PONTUAÇÃO --}}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-400 rounded-bl-full -z-0 opacity-10"></div>
+                
+                <div class="flex justify-between items-start border-b border-gray-100 pb-3 mb-5 relative z-10">
+                    <h3 class="text-lg font-extrabold text-gray-900">Score Rating</h3>
+                    <div class="text-center">
+                        <span class="bg-gray-900 text-yellow-400 font-extrabold text-xl px-4 py-1.5 rounded-lg shadow-sm border border-gray-800">
+                            {{ $inscricao->pontuacao_total ?? 0 }} <span class="text-xs text-gray-400">pts</span>
                         </span>
                     </div>
-
+                </div>
+                
+                @if($inscricao->pontuacao_detalhes)
+                    @php
+                        $detalhes = is_string($inscricao->pontuacao_detalhes) ? json_decode($inscricao->pontuacao_detalhes, true) : $inscricao->pontuacao_detalhes;
+                    @endphp
+                    
                     @if(isset($detalhes['auditoria_detalhada']) && count($detalhes['auditoria_detalhada']) > 0)
-                        <div class="space-y-3">
-                            @foreach($detalhes['auditoria_detalhada'] as $campo => $info)
-                                <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                                    <div>
-                                        <span class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase">{{ str_replace('_', ' ', $campo) }}</span>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Resposta: <b class="dark:text-gray-300">{{ $info['resposta_dada'] }}</b> &nbsp;|&nbsp; Regra atingida: {{ $info['condicao'] }}
-                                        </p>
+                        <div class="space-y-3 mb-4">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Regras Atingidas:</p>
+                            @foreach($detalhes['auditoria_detalhada'] as $info)
+                                <div class="bg-white border border-gray-200 shadow-sm px-3 py-2.5 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors">
+                                    <div class="max-w-[180px]">
+                                        <span class="text-[10px] font-bold text-gray-900 uppercase truncate block">{{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Campo') }}</span>
+                                        <p class="text-xs text-gray-500 mt-0.5 truncate" title="{{ $info['resposta_dada'] ?? '-' }}">Resp: <b>{{ $info['resposta_dada'] ?? '-' }}</b></p>
                                     </div>
-                                    <b class="text-emerald-600 dark:text-emerald-400 text-lg">+{{ $info['pontos_ganhos'] }}</b>
+                                    <span class="text-green-700 font-extrabold bg-green-50 px-2.5 py-1 rounded-md text-xs border border-green-200 shrink-0">
+                                        +{{ $info['pontos_ganhos'] ?? 0 }}
+                                    </span>
                                 </div>
                             @endforeach
                         </div>
-                    @else
-                        <p class="text-sm text-gray-500 text-center py-4">O candidato não pontuou em nenhuma regra configurada neste ciclo.</p>
                     @endif
-                </div>
-            @endif
+                    
+                    @if(isset($detalhes['motivo_auditoria']))
+                        <div class="bg-gray-900 rounded-lg p-3 text-[11px] font-mono text-green-400 leading-tight border border-gray-800 mt-4">
+                            <span class="text-gray-500">&gt;_ sys.log:</span><br>
+                            {{ $detalhes['motivo_auditoria'] }}
+                        </div>
+                    @endif
+                @else
+                    <div class="p-4 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
+                        <i class="ph-fill ph-calculator text-2xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500 text-sm font-medium leading-snug">Nenhuma pontuação vinculada.<br>O sistema não identificou regras ativas na data desta inscrição.</p>
+                    </div>
+                @endif
+            </div>
 
         </div>
-    </div>
-    
-    {{-- TOAST PARA A TELA DE DETALHES --}}
-    <div x-data="{ show: false, msg: '' }" @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500)" x-show="show" x-cloak class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold">
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
     </div>
 </div>

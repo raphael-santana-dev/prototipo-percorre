@@ -193,9 +193,159 @@ class RegistrationManager extends Component
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
+            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'], // COLUNA ADICIONADA
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
+    }
+
+    public function recalcularScoresGlobais()
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        
+        $atualizados = 0;
+        
+        // Pega APENAS os ciclos ATIVOS que têm regras definidas
+        $ciclos = \App\Models\Ciclo::where('status', true)
+                    ->whereNotNull('regras_pontuacao')
+                    ->get();
+        
+        foreach ($ciclos as $ciclo) {
+            $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
+            if (empty($regras)) continue;
+
+            // Varre as inscrições desse ciclo de 100 em 100 (alta performance)
+            $ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
+                foreach ($inscricoes as $inscricao) {
+                    $total = 0;
+                    $detalhes = ['auditoria_detalhada' => []];
+                    $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+
+                    foreach ($regras as $regra) {
+                        $campo = trim($regra['campo'] ?? '');
+                        $operador = trim($regra['operador'] ?? '=');
+                        $pontos = (int) ($regra['pontos'] ?? 0);
+                        $valorResposta = null;
+
+                        if ($campo === 'idade' && $inscricao->data_nascimento) {
+                            $valorResposta = \Carbon\Carbon::parse($inscricao->data_nascimento)->age;
+                        } elseif (in_array($campo, ['estado', 'cidade', 'curso_id', 'turno_id', 'possui_deficiencia'])) {
+                            $valorResposta = $inscricao->$campo;
+                        } elseif (isset($respostas[$campo])) {
+                            $valorResposta = $respostas[$campo];
+                        }
+
+                        if ($valorResposta !== null && $valorResposta !== '') {
+                            $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
+                            $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
+                            $valorAlvo = $valoresEsperados[0] ?? null;
+                            $pontuou = false;
+
+                            switch ($operador) {
+                                case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+                                case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+                                case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+                                case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+                                case 'between': $pontuou = ((float)$valorResposta >= (float)($valoresEsperados[0] ?? 0) && (float)$valorResposta <= (float)($valoresEsperados[1] ?? 0)); break;
+                                case 'in': $pontuou = in_array(strtolower(trim((string)$valorResposta)), array_map('strtolower', $valoresEsperados)); break;
+                            }
+
+                            if ($pontuou) {
+                                $total += $pontos;
+                                $detalhes['auditoria_detalhada'][] = [
+                                    'campo_avaliado' => $campo, 'resposta_dada' => $valorResposta,
+                                    'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
+                                ];
+                            }
+                        }
+                    }
+
+                    $inscricao->update([
+                        'pontuacao_total' => $total,
+                        'pontuacao_detalhes' => $total > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global. Total: {$total} pts."]) : null
+                    ]);
+                    $atualizados++;
+                }
+            });
+        }
+        
+        session()->flash('sucesso', "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
+    }
+
+    public function gerarRankingGlobal()
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        // Pega APENAS os ciclos ATIVOS
+        $ciclos = \App\Models\Ciclo::where('status', true)
+                    ->whereNotNull('regras_pontuacao')
+                    ->get();
+                    
+        $totalGeral = 0;
+
+        foreach ($ciclos as $ciclo) {
+            // 1. Zera todos os 4 rankings APENAS deste ciclo específico
+            \App\Models\Inscricao::where('ciclo_id', $ciclo->id)
+                ->update([
+                    'posicao_ranking' => null, 
+                    'posicao_ranking_geral' => null,
+                    'posicao_ranking_unidade' => null,
+                    'posicao_ranking_curso' => null,
+                ]);
+
+            // 2. Busca e ordena as inscrições (Maior Nota -> Inscrição mais antiga)
+            $inscricoes = $ciclo->inscricoes()
+                ->orderBy('pontuacao_total', 'desc')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // ==========================================
+            // RANKING 1: GERAL DO CICLO
+            // ==========================================
+            foreach ($inscricoes as $index => $inscricao) {
+                $inscricao->update(['posicao_ranking_geral' => $index + 1]);
+                $totalGeral++;
+            }
+
+            // ==========================================
+            // RANKING 2: POR UNIDADE
+            // ==========================================
+            $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
+            foreach ($agrupadoUnidade as $grupo) {
+                $pos = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking_unidade' => $pos++]);
+                }
+            }
+
+            // ==========================================
+            // RANKING 3: POR UNIDADE + CURSO
+            // ==========================================
+            $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) {
+                return $item->unidade_id . '-' . $item->curso_id;
+            });
+            foreach ($agrupadoCurso as $grupo) {
+                $pos = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking_curso' => $pos++]);
+                }
+            }
+
+            // ==========================================
+            // RANKING 4: TURMA (UNIDADE + CURSO + TURNO)
+            // ==========================================
+            $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) {
+                return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
+            });
+            foreach ($agrupadoTurma as $grupo) {
+                $pos = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking' => $pos++]);
+                }
+            }
+        }
+
+        session()->flash('sucesso', "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
     }
 
     public function render()

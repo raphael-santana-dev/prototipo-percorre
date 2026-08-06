@@ -66,6 +66,10 @@
                             <i class="text-xl ph ph-list-dashes"></i>
                         </a>
 
+                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-2 text-yellow-600 transition-colors bg-yellow-50 rounded-lg hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50" title="Regras de Pontuação">
+                                <i class="text-xl ph ph-star"></i>
+                            </a>
+
                         <button wire:click="delete({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">
                             <i class="text-xl ph ph-trash"></i>
                         </button>
@@ -111,6 +115,10 @@
                             
                             <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
                                 <i class="text-xl ph ph-list-dashes"></i>
+                            </a>
+
+                            <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-2 text-yellow-600 transition-colors bg-yellow-50 rounded-lg hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50" title="Regras de Pontuação">
+                                <i class="text-xl ph ph-star"></i>
                             </a>
 
                             <button wire:click="delete({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">

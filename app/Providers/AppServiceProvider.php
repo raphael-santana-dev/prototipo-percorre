@@ -105,6 +105,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('registration.registration-manager', \App\Modules\Registration\UI\Livewire\RegistrationManager::class);
         Livewire::component('registration.status-manager', \App\Modules\Registration\UI\Livewire\StatusManager::class); // <- NOVO
         Livewire::component('registration.registration-details', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class);
+        Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
+        Livewire::component('period.regras-manager', \App\Modules\Period\UI\Livewire\RegrasManager::class);
 
         // Website e Alunos
         Livewire::component('website.home', \App\Modules\Website\UI\Livewire\Home::class);

@@ -192,57 +192,6 @@ class Inscricao extends Component
         }
     }
 
-    // Método de Pontuação resgatado do sistema antigo
-    // private function calcularPontuacao() { 
-    //     $total = 0;
-    //     $detalhes = [];
-    //     $regras = RegraPontuacao::where('ciclo_id', $this->cicloAtivoId)->get();
-
-    //     foreach ($regras as $regra) {
-    //         $campo = $regra->campo_name;
-    //         $valorResposta = $this->respostas[$campo] ?? null;
-    //         $pontuou = false;
-
-    //         if ($valorResposta !== null && $valorResposta !== '') {
-    //             $valoresEsperados = is_array($regra->valor_esperado) ? $regra->valor_esperado : [$regra->valor_esperado];
-    //             $valorAlvo = $valoresEsperados[0] ?? null;
-
-    //             switch ($regra->operador) {
-    //                 case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
-    //                 case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
-    //                 case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
-    //                 case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
-    //                 case 'between':
-    //                     $min = (float)($valoresEsperados[0] ?? 0);
-    //                     $max = (float)($valoresEsperados[1] ?? $min);
-    //                     $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
-    //                     break;
-    //                 case 'in':
-    //                     $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
-    //                     $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
-    //                     break;
-    //             }
-    //         }
-
-    //         if ($pontuou) {
-    //             $total += $regra->pontos;
-    //             $detalhes[$campo] = [
-    //                 'resposta_dada' => $valorResposta,
-    //                 'pontos_ganhos' => $regra->pontos,
-    //                 'condicao' => "{$regra->operador} " . implode(', ', $valoresEsperados)
-    //             ];
-    //         }
-    //     }
-
-    //     return [
-    //         'total' => $total,
-    //         'detalhes' => json_encode([
-    //             'auditoria_detalhada' => $detalhes,
-    //             'motivo_auditoria' => "Candidato avaliado pelo Motor Dinâmico. Total: {$total} pontos."
-    //         ], JSON_UNESCAPED_UNICODE)
-    //     ];
-    // }
-
     private function salvarProgresso($statusForcado = null)
     {
         $nomeStatus = 'Incompleto'; 
@@ -255,31 +204,46 @@ class Inscricao extends Component
             'nome_social' => $this->nome_social,
             'cpf' => $this->cpf,
             'email' => $this->email,
+            'celular' => $this->celular,
             'data_nascimento' => $this->data_nascimento,
+            'cep' => $this->cep,
+            'logradouro' => $this->logradouro,
+            'numero' => $this->numero,
+            'complemento' => $this->complemento,
+            'bairro' => $this->bairro,
+            'cidade' => $this->cidade,
+            'estado' => $this->estado,
             'unidade_id' => $this->unidade,
             'turno_id' => $this->turno,
             'curso_id' => $this->curso,
             'possui_deficiencia' => $this->possui_deficiencia,
             'natureza_deficiencia' => $this->natureza_deficiencia,
-            'dados_dinamicos' => !empty($this->respostas) ? $this->respostas : null,
+            'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
+            'dados_dinamicos' => $this->respostas, 
         ];
 
-        if ($this->etapaAtual === $this->totalEtapas && !$statusForcado) {
-            $nomeStatus = 'Pendente';
-            
-            // $pontuacao = $this->calcularPontuacao();
-            // $dados['pontuacao_total'] = $pontuacao['total'];
-            // $dados['pontuacao_detalhes'] = $pontuacao['detalhes'];
-            
-        } elseif ($statusForcado) {
+        // 1. Define o Status correto
+        if ($statusForcado) {
             $nomeStatus = ucfirst($statusForcado); 
+        } elseif ($this->etapaAtual === $this->totalEtapas) {
+            $nomeStatus = 'Pendente'; 
         }
 
-        $statusDb = StatusInscricao::where('nome', $nomeStatus)->first();
+        // 2. CALCULA OS PONTOS (Seja finalização normal OU indo para a Lista de Espera)
+        if ($this->etapaAtual === $this->totalEtapas || $statusForcado === 'Lead') {
+            $pontuacao = $this->calcularPontuacaoAutomatica();
+            $dados['pontuacao_total'] = $pontuacao['total'];
+            $dados['pontuacao_detalhes'] = $pontuacao['detalhes']; 
+        }
+
+        // 3. Salva no banco de dados
+        $statusDb = \App\Models\StatusInscricao::where('nome', $nomeStatus)->first();
         $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
 
-        $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
-        if (!$this->inscricaoId) $this->inscricaoId = $inscricao->id;
+        $inscricao = \App\Models\Inscricao::updateOrCreate(['id' => $this->inscricaoId], $dados);
+        if (!$this->inscricaoId) {
+            $this->inscricaoId = $inscricao->id;
+        }
     }
 
     public function restaurarDeDadosSalvos()
@@ -441,6 +405,97 @@ class Inscricao extends Component
                 $this->turno = array_key_first($this->turnosDisponiveis);
             }
         }
+    }
+
+    private function calcularPontuacaoAutomatica() 
+    {
+        $total = 0;
+        $detalhes = ['auditoria_detalhada' => []];
+        
+        $ciclo = \App\Models\Ciclo::find($this->cicloAtivoId);
+        $regras = $ciclo ? $ciclo->regras_pontuacao : [];
+
+        // Proteção contra duplos encondings do PostgreSQL
+        if (is_string($regras)) {
+            $regras = json_decode($regras, true) ?? [];
+        }
+        if (is_string($regras)) { 
+            $regras = json_decode($regras, true) ?? [];
+        }
+
+        if (empty($regras) || !is_array($regras)) {
+            return ['total' => 0, 'detalhes' => null];
+        }
+
+        foreach ($regras as $regra) {
+            $campo = trim($regra['campo'] ?? '');
+            $operador = trim($regra['operador'] ?? '=');
+            $pontos = (int) ($regra['pontos'] ?? 0);
+            $valorResposta = null;
+
+            // MAPEAMENTO BLINDADO: Resolve o conflito de nomes entre as Regras e as Variáveis da Tela
+            if ($campo === 'idade' && !empty($this->data_nascimento)) {
+                $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
+            } elseif ($campo === 'curso_id') {
+                $valorResposta = $this->curso;
+            } elseif ($campo === 'turno_id') {
+                $valorResposta = $this->turno;
+            } elseif ($campo === 'unidade_id') {
+                $valorResposta = $this->unidade;
+            } elseif (property_exists($this, $campo)) {
+                $valorResposta = $this->$campo;
+            } elseif (isset($this->respostas[$campo])) {
+                $valorResposta = $this->respostas[$campo];
+            }
+
+            // Realiza a lógica matemática
+            if ($valorResposta !== null && $valorResposta !== '') {
+                $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
+                
+                if (in_array($operador, ['between', 'in'])) {
+                    $valoresEsperados = array_map('trim', explode(',', $valorAlvoStr));
+                } else {
+                    $valoresEsperados = [$valorAlvoStr];
+                }
+                
+                $valorAlvo = $valoresEsperados[0] ?? null;
+                $pontuou = false;
+
+                switch ($operador) {
+                    case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+                    case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+                    case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+                    case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+                    case 'between':
+                        $min = (float)($valoresEsperados[0] ?? 0);
+                        $max = (float)($valoresEsperados[1] ?? $min);
+                        $pontuou = ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
+                        break;
+                    case 'in':
+                        $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
+                        $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+                        break;
+                }
+
+                if ($pontuou) {
+                    $total += $pontos;
+                    $detalhes['auditoria_detalhada'][] = [
+                        'campo_avaliado' => $campo,
+                        'resposta_dada' => $valorResposta,
+                        'pontos_ganhos' => $pontos,
+                        'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
+                    ];
+                }
+            }
+        }
+
+        if ($total > 0) {
+            $detalhes['motivo_auditoria'] = "Avaliação automática (Formulário). Total: {$total} pts.";
+        } else {
+            $detalhes = null; 
+        }
+
+        return ['total' => $total, 'detalhes' => $detalhes];
     }
 
     public function render()
