@@ -163,17 +163,35 @@
                     Passo {{ $inscricao->etapa_atual }}
                 </td>
 
-                <td class="px-4 py-2.5 text-center">
+                {{-- NOVA COLUNA: SCORE E RANKING MULTIPLO --}}
+                <td class="px-4 py-2.5 text-center align-top">
                     <span class="px-2 py-1 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50' }} rounded-full inline-block mb-1">
                         {{ $inscricao->pontuacao_total ?? 0 }} pts
                     </span>
                     
                     @if($inscricao->posicao_ranking_geral)
-                        <div class="mt-1 flex flex-col gap-1 items-center">
-                            <span class="text-[10px] font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600" title="Ranking Geral do Ciclo">
-                                Geral: {{ $inscricao->posicao_ranking_geral }}º
+                        <div class="mt-1 grid grid-cols-1 gap-1 text-[9px] font-bold w-max mx-auto text-left">
+                            
+                            <!-- 1. Geral -->
+                            <span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                <span class="text-gray-400">GERAL:</span> {{ $inscricao->posicao_ranking_geral }}º
                             </span>
                             
+                            <!-- 2. Unidade -->
+                            @if($inscricao->posicao_ranking_unidade)
+                                <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                                    <span class="opacity-50">UNID:</span> {{ $inscricao->posicao_ranking_unidade }}º
+                                </span>
+                            @endif
+
+                            <!-- 3. Curso -->
+                            @if($inscricao->posicao_ranking_curso)
+                                <span class="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+                                    <span class="opacity-50">CURSO:</span> {{ $inscricao->posicao_ranking_curso }}º
+                                </span>
+                            @endif
+                            
+                            <!-- 4. Turma (Unidade + Curso + Turno) -->
                             @if($inscricao->posicao_ranking)
                                 @php
                                     $corRanking = match($inscricao->posicao_ranking) {
@@ -183,9 +201,9 @@
                                         default => 'bg-indigo-50 text-indigo-700 border-indigo-200',
                                     };
                                 @endphp
-                                <span class="text-[10px] font-extrabold {{ $corRanking }} px-2 py-0.5 rounded border shadow-sm flex items-center justify-center gap-1 w-max mx-auto" title="Concorrência: Curso/Unidade/Turno">
-                                    @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal text-sm"></i> @endif
-                                    Turma: {{ $inscricao->posicao_ranking }}º
+                                <span class="{{ $corRanking }} px-1.5 py-0.5 rounded border shadow-sm flex items-center gap-1">
+                                    @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal"></i> @endif
+                                    <span class="opacity-50">TURMA:</span> {{ $inscricao->posicao_ranking }}º
                                 </span>
                             @endif
                         </div>

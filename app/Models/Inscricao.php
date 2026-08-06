@@ -45,6 +45,8 @@ class Inscricao extends Model
         'unidade_id',
         'status_inscricao_id',
         'posicao_ranking_geral',
+        'posicao_ranking_unidade',
+        'posicao_ranking_curso',
     ];
 
     protected $casts = [

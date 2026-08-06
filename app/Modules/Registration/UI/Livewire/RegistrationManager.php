@@ -284,37 +284,68 @@ class RegistrationManager extends Component
         $totalGeral = 0;
 
         foreach ($ciclos as $ciclo) {
-            // 1. Zera todos os rankings APENAS deste ciclo específico
+            // 1. Zera todos os 4 rankings APENAS deste ciclo específico
             \App\Models\Inscricao::where('ciclo_id', $ciclo->id)
-                ->update(['posicao_ranking' => null, 'posicao_ranking_geral' => null]);
+                ->update([
+                    'posicao_ranking' => null, 
+                    'posicao_ranking_geral' => null,
+                    'posicao_ranking_unidade' => null,
+                    'posicao_ranking_curso' => null,
+                ]);
 
-            // 2. Busca e ordena as inscrições APENAS deste ciclo
+            // 2. Busca e ordena as inscrições (Maior Nota -> Inscrição mais antiga)
             $inscricoes = $ciclo->inscricoes()
                 ->orderBy('pontuacao_total', 'desc')
                 ->orderBy('created_at', 'asc')
                 ->get();
 
-            // 3. Ranking Geral Isolado do Ciclo (1 ao Último)
+            // ==========================================
+            // RANKING 1: GERAL DO CICLO
+            // ==========================================
             foreach ($inscricoes as $index => $inscricao) {
                 $inscricao->update(['posicao_ranking_geral' => $index + 1]);
                 $totalGeral++;
             }
 
-            // 4. Ranking Específico (Curso/Unidade/Turno) Isolado do Ciclo
-            $candidatosAgrupados = $inscricoes->whereNotNull('curso_id')->whereNotNull('unidade_id')->groupBy(function($item) {
+            // ==========================================
+            // RANKING 2: POR UNIDADE
+            // ==========================================
+            $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
+            foreach ($agrupadoUnidade as $grupo) {
+                $pos = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking_unidade' => $pos++]);
+                }
+            }
+
+            // ==========================================
+            // RANKING 3: POR UNIDADE + CURSO
+            // ==========================================
+            $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) {
+                return $item->unidade_id . '-' . $item->curso_id;
+            });
+            foreach ($agrupadoCurso as $grupo) {
+                $pos = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking_curso' => $pos++]);
+                }
+            }
+
+            // ==========================================
+            // RANKING 4: TURMA (UNIDADE + CURSO + TURNO)
+            // ==========================================
+            $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) {
                 return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
             });
-
-            foreach ($candidatosAgrupados as $grupo) {
-                $posicao = 1;
+            foreach ($agrupadoTurma as $grupo) {
+                $pos = 1;
                 foreach ($grupo as $inscricao) {
-                    $inscricao->update(['posicao_ranking' => $posicao]);
-                    $posicao++;
+                    $inscricao->update(['posicao_ranking' => $pos++]);
                 }
             }
         }
 
-        session()->flash('sucesso', "Ranking Duplo gerado! {$totalGeral} inscrições foram classificadas dentro de seus respectivos ciclos ativos.");
+        session()->flash('sucesso', "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
     }
 
     public function render()
