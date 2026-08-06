@@ -52,7 +52,7 @@ class CursoManager extends Component
     {
         $this->validate([
             'nome' => 'required|string|max:255',
-            'status' => 'required|in:Ativo,Inativo',
+            'status' => 'required', // Regra flexibilizada para evitar falhas silenciosas
             'min_idade' => 'nullable|integer|min:0',
             'max_idade' => 'nullable|integer|gt:min_idade',
             'permite_estado_diferente' => 'boolean',
@@ -92,12 +92,14 @@ class CursoManager extends Component
         
         $this->cursoId = $curso->id;
         $this->nome = $curso->nome;
-        $this->status = $curso->status;
+
+        // CORREÇÃO: Traduz o '1' do banco para a palavra 'Ativo' para casar com o select do formulário
+        $this->status = in_array($curso->status, ['1', 1, true, 'Ativo', 'ativo']) ? 'Ativo' : 'Inativo';
+        
         $this->min_idade = $curso->min_idade;
         $this->max_idade = $curso->max_idade;
         $this->permite_estado_diferente = $curso->permite_estado_diferente;
         
-        // Povoando os Arrays com os IDs
         $this->unidadesSelecionadas = $curso->unidades->pluck('id')->toArray();
         $this->turnosSelecionados = $curso->turnosVinculados->pluck('id')->toArray();
         

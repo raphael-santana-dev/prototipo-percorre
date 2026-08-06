@@ -323,23 +323,37 @@ class Inscricao extends Component
 
         if (!$this->estado || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
         
-        // 1. Busca os cursos do Estado que atendem a idade e ESTÃO VINCULADOS AO CICLO ATUAL
-        $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+        // 1. Busca os cursos vinculados ao Ciclo e que atendem a idade
+        $cursosValidos = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])
             ->whereHas('ciclos', function($q) {
                 $q->where('ciclos.id', $this->cicloAtivoId);
             })
-            ->where('min_idade', '<=', $idade)
+            // Correção PostgreSQL: Protege contra campos nulos e adiciona a validação de Idade Máxima
+            ->where(function($q) use ($idade) {
+                $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade);
+            })
+            ->where(function($q) use ($idade) {
+                $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade);
+            })
             ->with(['unidades' => function($q) {
-                $q->where('estado', $this->estado)->whereIn('status', ['Ativa', '1', true]);
+                // Traz todas as unidades ativas para validarmos a regra geográfica dinamicamente
+                $q->whereIn('status', ['Ativa', 'ativa', '1', 1, true]);
             }])
             ->get();
 
-        // 2. Extrai e remove as duplicadas das Unidades que possuem esses cursos
         $unidadesDisponiveisList = collect();
+        
         foreach($cursosValidos as $curso) {
             foreach($curso->unidades as $unidade) {
+                
+                // REGRA DE ESTADO (permite_estado_diferente)
+                // Se o curso for restrito, a unidade precisa estar no mesmo estado do candidato.
+                if (!$curso->permite_estado_diferente && $unidade->estado !== $this->estado) {
+                    continue;
+                }
+
                 $unidadesDisponiveisList->put($unidade->id, $unidade->nome);
             }
         }
@@ -367,20 +381,33 @@ class Inscricao extends Component
 
         if (!$unidadeId || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
 
-        $cursosDb = Curso::query()
-            ->whereIn('status', ['Ativo', 'ativo', '1', true])
+        $cursosDb = \App\Models\Curso::query()
+            ->whereIn('status', ['Ativo', 'ativo', '1', 1, true])
             ->whereHas('ciclos', function($q) {
                 $q->where('ciclos.id', $this->cicloAtivoId);
             })
             ->whereHas('unidades', function ($q) use ($unidadeId) {
                 $q->where('unidades.id', $unidadeId);
             })
-            ->where('min_idade', '<=', $idade)
+            ->where(function($q) use ($idade) {
+                $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade);
+            })
+            ->where(function($q) use ($idade) {
+                $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade);
+            })
             ->get();
 
-        $this->cursosDisponiveis = $cursosDb->pluck('nome', 'id')->toArray();
+        $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
+
+        foreach ($cursosDb as $curso) {
+            // Reaplica a validação geográfica do curso selecionado
+            if (!$curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) {
+                continue;
+            }
+            $this->cursosDisponiveis[$curso->id] = $curso->nome;
+        }
 
         // Auto-select se houver apenas 1 Curso
         if (count($this->cursosDisponiveis) === 1) {

@@ -159,7 +159,7 @@ class UnidadeManager extends Component
     {
         return view('livewire.unidade.unidade-manager', [
             'unidades' => $service->listarTodos(),
-            'cursosDisponiveis' => \App\Models\Curso::where('status', 'Ativo')->orderBy('nome')->get() // Traz os cursos para o form
+            'cursosDisponiveis' => \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get() 
         ]);
     }
 }
