@@ -347,6 +347,8 @@
     </div>
     @endif
 
+    <x-fab :actions="$this->fabActions" />
+
     {{-- TOAST --}}
     <div x-data="{ show: false, msg: '' }" 
         @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"

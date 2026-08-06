@@ -182,6 +182,22 @@ class RegistrationManager extends Component
         $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
     }
 
+    public function getFabActionsProperty()
+    {
+        return [
+            [
+                'label' => 'Alterar em Lote',
+                'icon' => 'ph-check-square-offset',
+                'wire_click' => 'abrirModalLote' // Dispara o método do seu Livewire!
+            ],
+            [
+                'label' => 'Recalcular Tudo',
+                'icon' => 'ph-calculator',
+                'wire_click' => 'recalcularScoresGlobais'
+            ]
+        ];
+    }
+
     public function alterarStatusLoteRapido($statusId)
     {
         if (count($this->selecionadas) === 0) return;
