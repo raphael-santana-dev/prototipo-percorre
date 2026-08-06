@@ -299,7 +299,7 @@ class RegistrationManager extends Component
             });
         }
         
-        session()->flash('sucesso', "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
+        $this->dispatch('sucesso', msg: "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
     }
 
     public function gerarRankingGlobal()
@@ -375,7 +375,7 @@ class RegistrationManager extends Component
             }
         }
 
-        session()->flash('sucesso', "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
+        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
     }
 
     /**
