@@ -87,8 +87,9 @@ class RegistrationManager extends Component
     {
         $inscricao = Inscricao::find($id);
         if ($inscricao) {
-            $inscricao->status_inscricao_id = $status;
-            $inscricao->save();
+            
+            // Passa a inscrição como um array para o Helper processar
+            $this->aplicarMudancaDeStatus([$inscricao], $status);
             
             $this->dispatch('sucesso', msg: 'Status do candidato atualizado!');
             
@@ -171,7 +172,11 @@ class RegistrationManager extends Component
     public function salvarStatusEmLote()
     {
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
-        Inscricao::whereIn('id', $this->selecionadas)->update(['status_inscricao_id' => $this->novoStatusId]);
+        
+        // Pega as inscrições e envia para o Helper processar as aprovações individualmente
+        $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
+        $this->aplicarMudancaDeStatus($inscricoes, $this->novoStatusId);
+        
         $this->modalLoteAberto = false;
         $this->desmarcarTodas(); 
         $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
@@ -180,7 +185,11 @@ class RegistrationManager extends Component
     public function alterarStatusLoteRapido($statusId)
     {
         if (count($this->selecionadas) === 0) return;
-        Inscricao::whereIn('id', $this->selecionadas)->update(['status_inscricao_id' => $statusId]);
+        
+        // Pega as inscrições e envia para o Helper processar as aprovações individualmente
+        $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
+        $this->aplicarMudancaDeStatus($inscricoes, $statusId);
+        
         $this->desmarcarTodas();
         $this->dispatch('sucesso', msg: 'Status alterado rapidamente com sucesso!');
     }
@@ -346,6 +355,37 @@ class RegistrationManager extends Component
         }
 
         session()->flash('sucesso', "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
+    }
+
+    /**
+     * Helper responsável por processar a mudança de status
+     * e criar o Estudante caso seja uma aprovação.
+     */
+    private function aplicarMudancaDeStatus($inscricoes, $statusId)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        if (!$statusNovo) return;
+
+        $isAprovacao = strtolower($statusNovo->nome) === 'aprovado';
+
+        foreach ($inscricoes as $inscricao) {
+            // REGRA DE NEGÓCIO: Criação do Estudante
+            if ($isAprovacao && !$inscricao->student_id) {
+                $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
+                    ['email' => $inscricao->email],
+                    [
+                        'name' => $inscricao->nome,
+                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
+                        'is_active' => true,
+                    ]
+                );
+                $inscricao->student_id = $estudante->id;
+            }
+            
+            // Atualiza o status e salva a inscrição
+            $inscricao->status_inscricao_id = $statusId;
+            $inscricao->save();
+        }
     }
 
     public function render()
