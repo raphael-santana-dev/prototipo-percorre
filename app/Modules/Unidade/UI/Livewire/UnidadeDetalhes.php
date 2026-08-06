@@ -24,7 +24,7 @@ class UnidadeDetalhes extends Component
         $this->unidade = $service->buscarPorId($id);
         
         // Carrega as relações (Eager Loading) para a View (Quick View e Detalhes)
-        $this->unidade->load(['usuarios', 'cursos']);
+        $this->unidade->load(['cursos']);
     }
 
     public function render()

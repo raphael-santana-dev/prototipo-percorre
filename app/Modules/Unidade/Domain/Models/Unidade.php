@@ -18,10 +18,9 @@ class Unidade extends Model
         'cep', 'estado', 'cidade', 'bairro', 'logradouro', 'numero', 'complemento' // <- Adicionados
     ];
     
-    // Relação existente (Usuários da Unidade)
     public function usuarios()
     {
-        return $this->hasMany(User::class, 'unidade_id');
+        return $this->belongsToMany(User::class, 'unidade_user');
     }
 
     // NOVA Relação (Cursos ministrados na Unidade)
