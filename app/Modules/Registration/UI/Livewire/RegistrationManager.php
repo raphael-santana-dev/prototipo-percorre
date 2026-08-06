@@ -182,6 +182,27 @@ class RegistrationManager extends Component
         $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
     }
 
+    public function getFabActionsProperty()
+    {
+        return [
+            [
+                'label' => 'Alterar em Lote',
+                'icon' => 'ph ph-check-square-offset',
+                'wire_click' => 'abrirModalLote',
+                'bg_color' => 'bg-green-500 hover:bg-green-600',
+                'icon_color' => 'text-black'
+            ],
+            [
+                'label' => 'Recalcular Tudo',
+                'icon' => 'ph ph-calculator',
+                'wire_click' => 'recalcularScoresGlobais',
+                'bg_color' => 'bg-green-500 hover:bg-green-600',
+                'icon_color' => 'text-black',
+                'confirm' => 'Processar TODAS as inscrições de TODOS os ciclos ativos? Isso pode levar alguns segundos.'
+            ]
+        ];
+    }
+
     public function alterarStatusLoteRapido($statusId)
     {
         if (count($this->selecionadas) === 0) return;
@@ -278,7 +299,7 @@ class RegistrationManager extends Component
             });
         }
         
-        session()->flash('sucesso', "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
+        $this->dispatch('sucesso', msg: "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
     }
 
     public function gerarRankingGlobal()
@@ -354,7 +375,7 @@ class RegistrationManager extends Component
             }
         }
 
-        session()->flash('sucesso', "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
+        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
     }
 
     /**
