@@ -9,6 +9,26 @@
         </span>
     </div>
 
+    <div class="flex items-center gap-2 w-full md:w-auto">
+        <button wire:click="recalcularScoresGlobais" 
+                wire:confirm="Processar TODAS as inscrições de TODOS os ciclos? Isso pode levar alguns segundos."
+                wire:loading.attr="disabled"
+                class="flex items-center justify-center px-4 py-2 gap-2 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 text-yellow-700 font-bold rounded-lg transition shadow-sm disabled:opacity-50">
+            <i wire:loading.remove wire:target="recalcularScoresGlobais" class="ph-bold ph-calculator text-lg"></i>
+            <i wire:loading wire:target="recalcularScoresGlobais" class="ph-bold ph-spinner animate-spin text-lg"></i>
+            <span class="text-sm">Recalcular Scores</span>
+        </button>
+
+        <button wire:click="gerarRankingGlobal" 
+                wire:confirm="Gerar ranking (Geral e por Turma) para TODOS os ciclos baseados nas notas atuais?"
+                wire:loading.attr="disabled"
+                class="flex items-center justify-center px-4 py-2 gap-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold rounded-lg transition shadow-sm disabled:opacity-50">
+            <i wire:loading.remove wire:target="gerarRankingGlobal" class="ph-bold ph-medal text-lg"></i>
+            <i wire:loading wire:target="gerarRankingGlobal" class="ph-bold ph-spinner animate-spin text-lg"></i>
+            <span class="text-sm">Gerar Rankings</span>
+        </button>
+    </div>
+
     @if(isset($metricas))
         <x-summary-cards :metricas="$metricas" />
     @endif
@@ -142,6 +162,35 @@
                 <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400">
                     Passo {{ $inscricao->etapa_atual }}
                 </td>
+
+                <td class="px-4 py-2.5 text-center">
+                    <span class="px-2 py-1 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50' }} rounded-full inline-block mb-1">
+                        {{ $inscricao->pontuacao_total ?? 0 }} pts
+                    </span>
+                    
+                    @if($inscricao->posicao_ranking_geral)
+                        <div class="mt-1 flex flex-col gap-1 items-center">
+                            <span class="text-[10px] font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600" title="Ranking Geral do Ciclo">
+                                Geral: {{ $inscricao->posicao_ranking_geral }}º
+                            </span>
+                            
+                            @if($inscricao->posicao_ranking)
+                                @php
+                                    $corRanking = match($inscricao->posicao_ranking) {
+                                        1 => 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                                        2 => 'bg-gray-200 text-gray-700 border-gray-300',      
+                                        3 => 'bg-orange-100 text-orange-800 border-orange-300', 
+                                        default => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                    };
+                                @endphp
+                                <span class="text-[10px] font-extrabold {{ $corRanking }} px-2 py-0.5 rounded border shadow-sm flex items-center justify-center gap-1 w-max mx-auto" title="Concorrência: Curso/Unidade/Turno">
+                                    @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal text-sm"></i> @endif
+                                    Turma: {{ $inscricao->posicao_ranking }}º
+                                </span>
+                            @endif
+                        </div>
+                    @endif
+                </td>
                 
                 <td class="px-4 py-2.5">
                     @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
@@ -220,8 +269,16 @@
                             <i class="text-sm ph ph-graduation-cap"></i>
                             <span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span>
                         </div>
-                        <div class="text-xs font-bold text-gray-600 dark:text-gray-300">
-                            {{ $inscricao->pontuacao_total }} pts
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="text-xs font-bold text-gray-600 dark:text-gray-300">
+                                {{ $inscricao->pontuacao_total ?? 0 }} pts
+                            </div>
+                            @if($inscricao->posicao_ranking_geral)
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[9px] font-bold bg-gray-100 px-1.5 py-0.5 rounded border">G: {{ $inscricao->posicao_ranking_geral }}º</span>
+                                    <span class="text-[9px] font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border">T: {{ $inscricao->posicao_ranking }}º</span>
+                                </div>
+                            @endif
                         </div>
                     </div>
 

@@ -193,9 +193,122 @@ class RegistrationManager extends Component
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
+            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'], // COLUNA ADICIONADA
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
+    }
+
+    public function recalcularScoresGlobais()
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        
+        $atualizados = 0;
+        
+        // Pega todos os ciclos que têm regras definidas
+        $ciclos = \App\Models\Ciclo::whereNotNull('regras_pontuacao')->get();
+        
+        foreach ($ciclos as $ciclo) {
+            $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
+            if (empty($regras)) continue;
+
+            // Varre as inscrições desse ciclo de 100 em 100 (alta performance)
+            $ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
+                foreach ($inscricoes as $inscricao) {
+                    $total = 0;
+                    $detalhes = ['auditoria_detalhada' => []];
+                    $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+
+                    foreach ($regras as $regra) {
+                        $campo = trim($regra['campo'] ?? '');
+                        $operador = trim($regra['operador'] ?? '=');
+                        $pontos = (int) ($regra['pontos'] ?? 0);
+                        $valorResposta = null;
+
+                        if ($campo === 'idade' && $inscricao->data_nascimento) {
+                            $valorResposta = \Carbon\Carbon::parse($inscricao->data_nascimento)->age;
+                        } elseif (in_array($campo, ['estado', 'cidade', 'curso_id', 'turno_id', 'possui_deficiencia'])) {
+                            $valorResposta = $inscricao->$campo;
+                        } elseif (isset($respostas[$campo])) {
+                            $valorResposta = $respostas[$campo];
+                        }
+
+                        if ($valorResposta !== null && $valorResposta !== '') {
+                            $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
+                            $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
+                            $valorAlvo = $valoresEsperados[0] ?? null;
+                            $pontuou = false;
+
+                            switch ($operador) {
+                                case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
+                                case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
+                                case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
+                                case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
+                                case 'between': $pontuou = ((float)$valorResposta >= (float)($valoresEsperados[0] ?? 0) && (float)$valorResposta <= (float)($valoresEsperados[1] ?? 0)); break;
+                                case 'in': $pontuou = in_array(strtolower(trim((string)$valorResposta)), array_map('strtolower', $valoresEsperados)); break;
+                            }
+
+                            if ($pontuou) {
+                                $total += $pontos;
+                                $detalhes['auditoria_detalhada'][] = [
+                                    'campo_avaliado' => $campo, 'resposta_dada' => $valorResposta,
+                                    'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
+                                ];
+                            }
+                        }
+                    }
+
+                    $inscricao->update([
+                        'pontuacao_total' => $total,
+                        'pontuacao_detalhes' => $total > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global. Total: {$total} pts."]) : null
+                    ]);
+                    $atualizados++;
+                }
+            });
+        }
+        
+        session()->flash('sucesso', "Recálculo Global finalizado! {$atualizados} inscrições atualizadas.");
+    }
+
+    public function gerarRankingGlobal()
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        $ciclos = \App\Models\Ciclo::whereNotNull('regras_pontuacao')->get();
+        $totalGeral = 0;
+
+        foreach ($ciclos as $ciclo) {
+            // 1. Zera todos os rankings do ciclo atual
+            \App\Models\Inscricao::where('ciclo_id', $ciclo->id)
+                ->update(['posicao_ranking' => null, 'posicao_ranking_geral' => null]);
+
+            // 2. Busca e ordena as inscrições do ciclo
+            $inscricoes = $ciclo->inscricoes()
+                ->orderBy('pontuacao_total', 'desc')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // 3. Ranking Geral
+            foreach ($inscricoes as $index => $inscricao) {
+                $inscricao->update(['posicao_ranking_geral' => $index + 1]);
+                $totalGeral++;
+            }
+
+            // 4. Ranking Específico (Concorrência)
+            $candidatosAgrupados = $inscricoes->whereNotNull('curso_id')->whereNotNull('unidade_id')->groupBy(function($item) {
+                return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
+            });
+
+            foreach ($candidatosAgrupados as $grupo) {
+                $posicao = 1;
+                foreach ($grupo as $inscricao) {
+                    $inscricao->update(['posicao_ranking' => $posicao]);
+                    $posicao++;
+                }
+            }
+        }
+
+        session()->flash('sucesso', "Ranking Duplo gerado globalmente! {$totalGeral} inscrições foram classificadas em seus respectivos ciclos.");
     }
 
     public function render()

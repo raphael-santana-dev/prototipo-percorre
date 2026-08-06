@@ -135,6 +135,44 @@ class PeriodDetails extends Component
         session()->flash('sucesso', "Recálculo finalizado! {$atualizados} inscrições tiveram seus scores atualizados.");
     }
 
+    public function gerarRanking()
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        // 1. Zera todos os rankings deste ciclo
+        \App\Models\Inscricao::where('ciclo_id', $this->ciclo->id)
+            ->update(['posicao_ranking' => null, 'posicao_ranking_geral' => null]);
+
+        // 2. Busca todos ordenados pela maior nota e data de inscrição (desempate)
+        $inscricoes = $this->ciclo->inscricoes()
+            ->orderBy('pontuacao_total', 'desc')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $totalGeral = 0;
+
+        // 3. GERA O RANKING GERAL (Todos contra todos)
+        foreach ($inscricoes as $index => $inscricao) {
+            $inscricao->update(['posicao_ranking_geral' => $index + 1]);
+            $totalGeral++;
+        }
+
+        // 4. GERA O RANKING POR CURSO/CONCORRÊNCIA (Apenas quem já escolheu curso)
+        $candidatosAgrupados = $inscricoes->whereNotNull('curso_id')->whereNotNull('unidade_id')->groupBy(function($item) {
+            return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
+        });
+
+        foreach ($candidatosAgrupados as $grupo) {
+            $posicao = 1;
+            foreach ($grupo as $inscricao) {
+                $inscricao->update(['posicao_ranking' => $posicao]);
+                $posicao++;
+            }
+        }
+
+        session()->flash('sucesso', "Ranking Duplo gerado! {$totalGeral} candidatos classificados no Geral e categorizados por Concorrência.");
+    }
+
     public function render()
     {
         // Busca as inscrições deste ciclo com filtros
