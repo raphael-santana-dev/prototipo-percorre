@@ -205,8 +205,10 @@ class RegistrationManager extends Component
         
         $atualizados = 0;
         
-        // Pega todos os ciclos que têm regras definidas
-        $ciclos = \App\Models\Ciclo::whereNotNull('regras_pontuacao')->get();
+        // Pega APENAS os ciclos ATIVOS que têm regras definidas
+        $ciclos = \App\Models\Ciclo::where('status', true)
+                    ->whereNotNull('regras_pontuacao')
+                    ->get();
         
         foreach ($ciclos as $ciclo) {
             $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
@@ -267,34 +269,38 @@ class RegistrationManager extends Component
             });
         }
         
-        session()->flash('sucesso', "Recálculo Global finalizado! {$atualizados} inscrições atualizadas.");
+        session()->flash('sucesso', "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
     }
 
     public function gerarRankingGlobal()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
 
-        $ciclos = \App\Models\Ciclo::whereNotNull('regras_pontuacao')->get();
+        // Pega APENAS os ciclos ATIVOS
+        $ciclos = \App\Models\Ciclo::where('status', true)
+                    ->whereNotNull('regras_pontuacao')
+                    ->get();
+                    
         $totalGeral = 0;
 
         foreach ($ciclos as $ciclo) {
-            // 1. Zera todos os rankings do ciclo atual
+            // 1. Zera todos os rankings APENAS deste ciclo específico
             \App\Models\Inscricao::where('ciclo_id', $ciclo->id)
                 ->update(['posicao_ranking' => null, 'posicao_ranking_geral' => null]);
 
-            // 2. Busca e ordena as inscrições do ciclo
+            // 2. Busca e ordena as inscrições APENAS deste ciclo
             $inscricoes = $ciclo->inscricoes()
                 ->orderBy('pontuacao_total', 'desc')
                 ->orderBy('created_at', 'asc')
                 ->get();
 
-            // 3. Ranking Geral
+            // 3. Ranking Geral Isolado do Ciclo (1 ao Último)
             foreach ($inscricoes as $index => $inscricao) {
                 $inscricao->update(['posicao_ranking_geral' => $index + 1]);
                 $totalGeral++;
             }
 
-            // 4. Ranking Específico (Concorrência)
+            // 4. Ranking Específico (Curso/Unidade/Turno) Isolado do Ciclo
             $candidatosAgrupados = $inscricoes->whereNotNull('curso_id')->whereNotNull('unidade_id')->groupBy(function($item) {
                 return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
             });
@@ -308,7 +314,7 @@ class RegistrationManager extends Component
             }
         }
 
-        session()->flash('sucesso', "Ranking Duplo gerado globalmente! {$totalGeral} inscrições foram classificadas em seus respectivos ciclos.");
+        session()->flash('sucesso', "Ranking Duplo gerado! {$totalGeral} inscrições foram classificadas dentro de seus respectivos ciclos ativos.");
     }
 
     public function render()
