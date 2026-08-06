@@ -35,27 +35,18 @@ class RegistrationDetails extends Component
         // REGRA DE NEGÓCIO: Criação do Estudante na Aprovação
         if (strtolower($statusNovo->nome) === 'aprovado' && !$this->inscricao->student_id) {
             
-            // Busca ou Cria o estudante usando o CPF como chave única
-            $estudante = Student::firstOrCreate(
-                ['cpf' => $this->inscricao->cpf],
+            // Busca ou Cria o estudante mapeando estritamente para as colunas da sua Migration
+            $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
+                ['email' => $this->inscricao->email], // Chave de busca segura
                 [
-                    'nome' => $this->inscricao->nome,
-                    'email' => $this->inscricao->email,
-                    'celular' => $this->inscricao->celular,
-                    'data_nascimento' => $this->inscricao->data_nascimento,
-                    'cep' => $this->inscricao->cep,
-                    'logradouro' => $this->inscricao->logradouro,
-                    'numero' => $this->inscricao->numero,
-                    'bairro' => $this->inscricao->bairro,
-                    'cidade' => $this->inscricao->cidade,
-                    'estado' => $this->inscricao->estado,
+                    'name' => $this->inscricao->nome, // MAPEADO: 'nome' da Inscrição para 'name' do Student
+                    'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // Senha obrigatória gerada aleatoriamente
+                    'is_active' => true,
                 ]
             );
 
             // Vincula o Estudante criado à inscrição
             $this->inscricao->student_id = $estudante->id;
-            
-            // DICA: Aqui você também pode chamar o envio de E-mail de "Parabéns, você foi aprovado!"
         }
 
         // Atualiza e salva a inscrição

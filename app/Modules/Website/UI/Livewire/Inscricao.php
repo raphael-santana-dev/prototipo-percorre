@@ -204,28 +204,39 @@ class Inscricao extends Component
             'nome_social' => $this->nome_social,
             'cpf' => $this->cpf,
             'email' => $this->email,
+            'celular' => $this->celular,
             'data_nascimento' => $this->data_nascimento,
+            'cep' => $this->cep,
+            'logradouro' => $this->logradouro,
+            'numero' => $this->numero,
+            'complemento' => $this->complemento,
+            'bairro' => $this->bairro,
+            'cidade' => $this->cidade,
+            'estado' => $this->estado,
             'unidade_id' => $this->unidade,
             'turno_id' => $this->turno,
             'curso_id' => $this->curso,
             'possui_deficiencia' => $this->possui_deficiencia,
             'natureza_deficiencia' => $this->natureza_deficiencia,
+            'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
             'dados_dinamicos' => $this->respostas, 
         ];
 
-        // SE FOR A ÚLTIMA ETAPA, CALCULA OS PONTOS!
-        if ($this->etapaAtual === $this->totalEtapas && !$statusForcado) {
-            $nomeStatus = 'Pendente'; // Status de finalização
-            
-            $pontuacao = $this->calcularPontuacaoAutomatica();
-            $dados['pontuacao_total'] = $pontuacao['total'];
-            $dados['pontuacao_detalhes'] = $pontuacao['detalhes']; // O Laravel fará o cast automático para JSON
-            
-        } elseif ($statusForcado) {
+        // 1. Define o Status correto
+        if ($statusForcado) {
             $nomeStatus = ucfirst($statusForcado); 
+        } elseif ($this->etapaAtual === $this->totalEtapas) {
+            $nomeStatus = 'Pendente'; 
         }
 
-        // Busca o ID do Status no banco (Padrão 1 = Pendente)
+        // 2. CALCULA OS PONTOS (Seja finalização normal OU indo para a Lista de Espera)
+        if ($this->etapaAtual === $this->totalEtapas || $statusForcado === 'Lead') {
+            $pontuacao = $this->calcularPontuacaoAutomatica();
+            $dados['pontuacao_total'] = $pontuacao['total'];
+            $dados['pontuacao_detalhes'] = $pontuacao['detalhes']; 
+        }
+
+        // 3. Salva no banco de dados
         $statusDb = \App\Models\StatusInscricao::where('nome', $nomeStatus)->first();
         $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
 
@@ -401,44 +412,56 @@ class Inscricao extends Component
         $total = 0;
         $detalhes = ['auditoria_detalhada' => []];
         
-        // Puxa as regras do JSON armazenado no Ciclo Ativo
-        $regras = $this->cicloAtivo->regras_pontuacao ?? [];
+        $ciclo = \App\Models\Ciclo::find($this->cicloAtivoId);
+        $regras = $ciclo ? $ciclo->regras_pontuacao : [];
+
+        // Proteção contra duplos encondings do PostgreSQL
         if (is_string($regras)) {
             $regras = json_decode($regras, true) ?? [];
         }
+        if (is_string($regras)) { 
+            $regras = json_decode($regras, true) ?? [];
+        }
 
-        if (empty($regras)) {
+        if (empty($regras) || !is_array($regras)) {
             return ['total' => 0, 'detalhes' => null];
         }
 
         foreach ($regras as $regra) {
-            $campo = $regra['campo'];
+            $campo = trim($regra['campo'] ?? '');
+            $operador = trim($regra['operador'] ?? '=');
+            $pontos = (int) ($regra['pontos'] ?? 0);
             $valorResposta = null;
 
-            // 1. Onde está a resposta? (Pode ser fixa, calculada ou dinâmica)
-            if ($campo === 'idade' || !empty($this->data_nascimento)) {
+            // MAPEAMENTO BLINDADO: Resolve o conflito de nomes entre as Regras e as Variáveis da Tela
+            if ($campo === 'idade' && !empty($this->data_nascimento)) {
                 $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
+            } elseif ($campo === 'curso_id') {
+                $valorResposta = $this->curso;
+            } elseif ($campo === 'turno_id') {
+                $valorResposta = $this->turno;
+            } elseif ($campo === 'unidade_id') {
+                $valorResposta = $this->unidade;
             } elseif (property_exists($this, $campo)) {
                 $valorResposta = $this->$campo;
             } elseif (isset($this->respostas[$campo])) {
                 $valorResposta = $this->respostas[$campo];
             }
 
-            $pontuou = false;
-            
-            // 2. Realiza a Validação Matemática
+            // Realiza a lógica matemática
             if ($valorResposta !== null && $valorResposta !== '') {
-                $valorAlvoStr = $regra['valor'];
+                $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
                 
-                if (in_array($regra['operador'], ['between', 'in'])) {
+                if (in_array($operador, ['between', 'in'])) {
                     $valoresEsperados = array_map('trim', explode(',', $valorAlvoStr));
                 } else {
-                    $valoresEsperados = [trim($valorAlvoStr)];
+                    $valoresEsperados = [$valorAlvoStr];
                 }
                 
                 $valorAlvo = $valoresEsperados[0] ?? null;
+                $pontuou = false;
 
-                switch ($regra['operador']) {
+                switch ($operador) {
                     case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
                     case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
                     case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
@@ -453,31 +476,26 @@ class Inscricao extends Component
                         $pontuou = in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
                         break;
                 }
-            }
 
-            // 3. Registra os pontos e a auditoria caso a regra seja atendida
-            if ($pontuou) {
-                $total += (int) $regra['pontos'];
-                // Usamos [] para permitir que o mesmo campo ganhe pontos por regras diferentes
-                $detalhes['auditoria_detalhada'][] = [
-                    'campo_avaliado' => $campo,
-                    'resposta_dada' => $valorResposta,
-                    'pontos_ganhos' => (int) $regra['pontos'],
-                    'condicao' => "{$regra['operador']} " . implode(', ', $valoresEsperados ?? [])
-                ];
+                if ($pontuou) {
+                    $total += $pontos;
+                    $detalhes['auditoria_detalhada'][] = [
+                        'campo_avaliado' => $campo,
+                        'resposta_dada' => $valorResposta,
+                        'pontos_ganhos' => $pontos,
+                        'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
+                    ];
+                }
             }
         }
 
         if ($total > 0) {
-            $detalhes['motivo_auditoria'] = "Avaliação automática concluída. Total: {$total} pontos em " . count($detalhes['auditoria_detalhada']) . " regras atingidas.";
+            $detalhes['motivo_auditoria'] = "Avaliação automática (Formulário). Total: {$total} pts.";
         } else {
-            $detalhes = null; // Não salva JSON à toa se não pontuou nada
+            $detalhes = null; 
         }
 
-        return [
-            'total' => $total,
-            'detalhes' => $detalhes
-        ];
+        return ['total' => $total, 'detalhes' => $detalhes];
     }
 
     public function render()

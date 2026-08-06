@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('inscricoes', function (Blueprint $table) {
-            // Altera a coluna para o tipo JSON (ou Text) para suportar a auditoria longa
-            $table->json('pontuacao_detalhes')->nullable()->change();
+            // Alteramos para 'text', o Postgres converte automaticamente e resolve o limite de caracteres!
+            $table->text('pontuacao_detalhes')->nullable()->change();
         });
     }
 
