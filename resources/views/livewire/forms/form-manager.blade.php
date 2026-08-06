@@ -42,7 +42,7 @@
                         <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
                             <i class="text-xl ph ph-eye"></i>
                         </a>
-                        <a href="{{ route('formularios.publico', $form->slug) }}" target="_blank" class="p-2 text-gray-400 transition-colors  rounded-lg hover:text-blue-500 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
+                        <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-2 text-gray-400 transition-colors  rounded-lg hover:text-blue-500 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
                             <i class="text-xl ph ph-arrow-square-in"></i>
                         </a>
                         <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
@@ -82,7 +82,7 @@
                             <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
                                 <i class="text-xl ph ph-eye"></i>
                             </a>
-                            <a href="{{ route('formularios.publico', $form->slug) }}" target="_blank" class="p-2 text-gray-400 transition-colors hover:text-blue-500 rounded-lg dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
+                            <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-2 text-gray-400 transition-colors hover:text-blue-500 rounded-lg dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
                                 <i class="text-xl ph ph-arrow-square-in"></i>
                             </a>
                             <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
