@@ -43,7 +43,7 @@ class PeriodDetails extends Component
 
     public bool $unicoAtivo = true;
 
-    public function mount($id)
+    public function mount($id, ?string $slug = null)
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->ciclo = Ciclo::with('cursos')->findOrFail($id);

@@ -66,7 +66,7 @@
                             <i class="text-xl ph ph-list-dashes"></i>
                         </a>
 
-                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-2 text-yellow-600 transition-colors bg-yellow-50 rounded-lg hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50" title="Regras de Pontuação">
+                        <a href="{{ route('ciclos.regras', ['id' => $ciclo->id, 'slug' => $ciclo->slug]) }}" class="p-2 text-yellow-600 transition-colors bg-yellow-50 rounded-lg hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50" title="Regras de Pontuação">
                                 <i class="text-xl ph ph-star"></i>
                             </a>
 
