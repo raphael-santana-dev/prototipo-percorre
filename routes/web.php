@@ -25,7 +25,7 @@ Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->nam
 Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 // Rota pública de respostas de formulários
-Route::get('/f/{id}/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
+Route::get('/f/{id}/{slug?}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
     ->name('formularios.publico')
     ->where('id', '[0-9]+');
 
