@@ -7,20 +7,31 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Spatie\Permission\Models\Role;
 
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Roles - Administrativo')]
 class RoleManager extends Component
 {
+    use WithPagination;
+    use ComPadraoListagem;
+
     public bool $showModal = false;
     public bool $isEditMode = false;
     public ?int $roleId = null;
 
-    // Array para inserção múltipla, contendo apenas o 'name'
     public array $items = [];
+
+    public string $modelClass = Role::class;
+    public array $breadcrumbs = [];
 
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev'), 403);
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+        $this->permiteGrid = true;
     }
 
     public function openModal()
@@ -112,10 +123,28 @@ class RoleManager extends Component
         $this->resetErrorBag();
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'name', 'label' => 'Nome do Grupo', 'sortable' => true],
+            ['key' => 'users_count', 'label' => 'Usuários Vinculados', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render()
     {
+        $query = Role::query()->withCount('users');
+        
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
         return view('livewire.acl.role-manager', [
-            'roles' => Role::withCount('users')->orderBy('name')->get()
+            'registros' => $query->paginate($this->porPagina)
         ]);
     }
 }

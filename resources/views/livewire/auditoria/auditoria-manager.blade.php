@@ -6,8 +6,13 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Rastreabilidade completa de alterações no banco de dados e acessos.</p>
     </div>
 
-    {{-- TABELA PADRONIZADA LIMPA --}}
-    <x-table :headers="$this->headers" :registros="$registros">
+    <x-table 
+        :headers="$this->headers" 
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
         @forelse($registros as $log)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $log->id }}</td>
@@ -45,5 +50,32 @@
                 </td>
             </tr>
         @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach($registros as $log)
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-start justify-between mb-2">
+                        <span class="px-2 py-0.5 text-[9px] font-bold rounded-full uppercase
+                            @if($log->acao === 'criacao') bg-green-100 text-green-800
+                            @elseif($log->acao === 'atualizacao') bg-blue-100 text-blue-800
+                            @elseif($log->acao === 'exclusao') bg-red-100 text-red-800
+                            @else bg-gray-100 text-gray-800 @endif">
+                            {{ $log->acao }}
+                        </span>
+                        <span class="text-[10px] text-gray-400">#{{ $log->id }}</span>
+                    </div>
+                    
+                    <div class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $log->tabela_alterada }}</div>
+                    <div class="text-[10px] text-gray-500 mb-3">{{ $log->created_at->format('d/m/Y H:i') }}</div>
+                    
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div class="text-[10px] font-medium text-gray-500 truncate max-w-[120px]">
+                            <i class="ph-fill ph-user text-gray-400"></i> {{ $log->usuario_nome ?? 'Sistema' }}
+                        </div>
+                        <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded-lg dark:hover:bg-gray-600"><i class="text-lg ph ph-info"></i></button>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
     </x-table>
 </div>
