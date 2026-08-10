@@ -6,13 +6,19 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\StatusInscricao;
+
 use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
 
 #[Layout('components.layouts.app')]
 #[Title('Status de Inscrição - Administrativo')]
 class StatusManager extends Component
 {
     use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
 
     public bool $showModal = false;
     public bool $isEditMode = false;
@@ -23,9 +29,15 @@ class StatusManager extends Component
 
     public string $cor = '#9CA3AF';
 
+    public $modelClass = StatusInscricao::class;
+
+    public array $breadcrumbs = [];
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
@@ -91,10 +103,31 @@ class StatusManager extends Component
         $this->resetErrorBag();
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'nome', 'label' => 'Nome do Status', 'sortable' => true],
+            ['key' => 'descricao', 'label' => 'Descrição', 'sortable' => true],
+            ['key' => 'cor', 'label' => 'Cor', 'sortable' => false],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render()
     {
+        $query = StatusInscricao::query();
+
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+        
+        $statusInscricao = $query->paginate($this->porPagina);
+
         return view('livewire.registration.status-manager', [
-            'statuses' => StatusInscricao::orderBy('id')->paginate(10)
+            'registros' => $statusInscricao
         ]);
     }
 }
