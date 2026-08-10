@@ -58,41 +58,50 @@
         :modoExibicao="$modoExibicao">
 
         @forelse ($registros as $feature)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $feature->id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2.5 py-1 text-[10px] font-bold rounded bg-gray-100 text-gray-700 uppercase dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                
+                {{-- Padding reduzido para px-4 py-2.5 --}}
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    #{{ $feature->id }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-gray-100 text-gray-600 uppercase tracking-wider border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600">
                         {{ $feature->module }}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="font-bold text-gray-900 dark:text-white">{{ $feature->name }}</div>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="font-bold text-sm text-gray-800 dark:text-white">{{ $feature->name }}</div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ $feature->description }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
-                    
-                    <div class="text-[10px] mt-1 font-bold {{ $feature->is_active ? 'text-green-600' : 'text-gray-500' }}">
-                        {{ $feature->is_active ? 'ATIVO' : 'INATIVO' }}
+                
+                <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                    {{ $feature->description }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                        <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
+                        <span class="text-[10px] font-bold {{ $feature->is_active ? 'text-green-600' : 'text-gray-400' }}">
+                            {{ $feature->is_active ? 'ATIVO' : 'INATIVO' }}
+                        </span>
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-2">
-                        <button wire:click="abrirModal({{ $feature->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Feature">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
-                        <button wire:click="excluir({{ $feature->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Feature" onclick="confirm('Excluir esta feature permanentemente?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
+                        <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                    <p class="text-lg font-semibold">Nenhuma feature encontrada.</p>
-                    <p class="text-sm">Cadastre uma nova feature ou altere os filtros.</p>
-                </td>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">Nenhuma feature encontrada.</td>
             </tr>
         @endforelse
 
