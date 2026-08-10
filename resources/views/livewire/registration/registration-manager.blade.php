@@ -1,82 +1,78 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
-    <x-breadcrumb :items="$breadcrumbs" />
+<div class="p-6 mx-auto font-sans relative max-w-7xl">
     
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Inscrições</h2>
-
-        <span class="bg-purple-100 text-purple-800 text-sm font-semibold px-4 py-2 rounded-full border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
-            Visão Global (Administrador)
-        </span>
-    </div>
-    
-    @if(isset($metricas))
-        <x-summary-cards :metricas="$metricas" />
-    @endif
-
-    {{-- BLOCO DE FILTROS COM GRID --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+    {{-- A mágica acontece aqui: Todo o topo em um único componente --}}
+    <x-page-header 
+        title="Inscrições" 
+        icon="ph ph-clipboard-text"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
         
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar Candidato
-            </label>
-            <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-        </div>
+        {{-- Opcional: Se a tela tiver botão de Nova Inscrição, seria aqui --}}
+        {{-- <x-slot name="actions">
+            <button class="...">Novo</button>
+        </x-slot> --}}
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-tag text-purpura-500"></i> Status
-            </label>
-            <select wire:model.live="filtroStatus" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Status</option>
-                @foreach($statusInscricoesDb as $status) 
-                    <option value="{{ $status->id }}">{{ $status->nome }}</option> 
-                @endforeach
-            </select>
-        </div>
+        {{-- FILTROS: O header renderiza a caixa branca, você só passa o Grid interno --}}
+        <x-slot name="filters" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar Candidato
+                </label>
+                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-calendar-check text-purpura-500"></i> Semestre / Ciclo
-            </label>
-            <select wire:model.live="filtroCiclo" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Semestres</option>
-                @foreach($ciclosDb as $ciclo) 
-                    <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option> 
-                @endforeach
-            </select>
-        </div>
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-tag text-purpura-500"></i> Status
+                </label>
+                <select wire:model.live="filtroStatus" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Status</option>
+                    @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
+                </select>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-buildings text-purpura-500"></i> Unidade
-            </label>
-            <select wire:model.live="filtroUnidade" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todas as Unidades</option>
-                @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
-            </select>
-        </div>
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-calendar-check text-purpura-500"></i> Semestre / Ciclo
+                </label>
+                <select wire:model.live="filtroCiclo" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Semestres</option>
+                    @foreach($ciclosDb as $ciclo) <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option> @endforeach
+                </select>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-clock text-purpura-500"></i> Turno
-            </label>
-            <select wire:model.live="filtroTurno" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Turnos</option>
-                @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
-            </select>
-        </div>
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-buildings text-purpura-500"></i> Unidade
+                </label>
+                <select wire:model.live="filtroUnidade" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todas as Unidades</option>
+                    @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                </select>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
-            </label>
-            <select wire:model.live="filtroCurso" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Cursos</option>
-                @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-            </select>
-        </div>
-    </div>
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-clock text-purpura-500"></i> Turno
+                </label>
+                <select wire:model.live="filtroTurno" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Turnos</option>
+                    @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
+                </label>
+                <select wire:model.live="filtroCurso" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Cursos</option>
+                    @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                </select>
+            </div>
+        </x-slot>
+    </x-page-header>
 
     {{-- BOTÕES DE SELEÇÃO RÁPIDA E BARRA DE LOTE --}}
     <div class="flex justify-end items-center mb-4 gap-2">
