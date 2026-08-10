@@ -1,10 +1,10 @@
 @props([
     'actions' => [],
     'mainIcon' => 'ph-plus',
-    'mainColor' => 'bg-purpura-500 hover:bg-purpura-600', // Cor do botão principal
-    'iconColor' => 'text-white',                          // Cor do ícone principal
-    'subBtnBg' => 'bg-white hover:bg-gray-50',            // Cor de fundo padrão dos sub-botões
-    'subBtnIcon' => 'text-gray-600 hover:text-purpura-600'// Cor do ícone padrão dos sub-botões
+    'mainColor' => 'bg-purpura-500 hover:bg-purpura-600',
+    'iconColor' => 'text-white',
+    'subBtnBg' => 'bg-white hover:bg-gray-50',
+    'subBtnIcon' => 'text-gray-600 hover:text-purpura-600'
 ])
 
 <div x-data="{ open: false }" class="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3" @click.outside="open = false">
@@ -21,14 +21,17 @@
 
         @foreach($actions as $action)
             @php
-                // Se o PHP mandar uma cor específica para a ação, usa ela. Senão, usa a prop padrão.
                 $bgClass = $action['bg_color'] ?? $subBtnBg;
                 $iconClass = $action['icon_color'] ?? $subBtnIcon;
+                
+                $labelVisibility = !empty($action['always_show_label']) 
+                                    ? 'opacity-100' 
+                                    : 'opacity-0 group-hover:opacity-100 transition-opacity duration-200';
             @endphp
 
             <div class="flex items-center gap-3 group">
                 <!-- Tooltip / Label -->
-                <span class="bg-gray-800 text-white text-[11px] uppercase font-bold px-3 py-1.5 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                <span class="bg-gray-800 text-white text-[11px] uppercase font-bold px-3 py-1.5 rounded-lg shadow-sm pointer-events-none {{ $labelVisibility }}">
                     {{ $action['label'] }}
                 </span>
 

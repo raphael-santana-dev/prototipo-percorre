@@ -8,27 +8,6 @@
             Visão Global (Administrador)
         </span>
     </div>
-
-    <div class="flex items-center gap-2 w-full md:w-auto">
-        <button wire:click="recalcularScoresGlobais" 
-                wire:confirm="Processar TODAS as inscrições de TODOS os ciclos? Isso pode levar alguns segundos."
-                wire:loading.attr="disabled"
-                class="flex items-center justify-center px-4 py-2 gap-2 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 text-yellow-700 font-bold rounded-lg transition shadow-sm disabled:opacity-50">
-            <i wire:loading.remove wire:target="recalcularScoresGlobais" class="ph-bold ph-calculator text-lg"></i>
-            <i wire:loading wire:target="recalcularScoresGlobais" class="ph-bold ph-spinner animate-spin text-lg"></i>
-            <span class="text-sm">Recalcular Scores</span>
-        </button>
-
-        <button wire:click="gerarRankingGlobal" 
-                wire:confirm="Gerar ranking (Geral e por Turma) para TODOS os ciclos baseados nas notas atuais?"
-                wire:loading.attr="disabled"
-                class="flex items-center justify-center px-4 py-2 gap-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold rounded-lg transition shadow-sm disabled:opacity-50">
-            <i wire:loading.remove wire:target="gerarRankingGlobal" class="ph-bold ph-medal text-lg"></i>
-            <i wire:loading wire:target="gerarRankingGlobal" class="ph-bold ph-spinner animate-spin text-lg"></i>
-            <span class="text-sm">Gerar Rankings</span>
-        </button>
-    </div>
-
     
     @if(isset($metricas))
         <x-summary-cards :metricas="$metricas" />
