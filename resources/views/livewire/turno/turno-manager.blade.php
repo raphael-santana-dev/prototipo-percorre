@@ -1,58 +1,73 @@
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Gerenciamento de Turnos</h1>
-        @can('turno.criar')
-            <button wire:click="openModal" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                Novo Turno
-            </button>
-        @endcan
-    </div>
-
-    @if (session()->has('success'))
-        <div class="p-4 text-green-700 bg-green-100 border-l-4 border-green-500 rounded-md">{{ session('success') }}</div>
+<div class="p-6 max-w-7xl mx-auto font-sans">
+    @if (session()->has('sucesso'))
+        <div class="flex items-center gap-2 p-4 mb-4 rounded-md text-pistache-100 bg-pistache-500">
+            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
+        </div>
     @endif
 
-    <!-- Tabela de Listagem -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Nome</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Início</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Fim</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Ações</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($turnos as $turno)
-                    <tr>
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ $turno->nome }}</td>
-                        <td class="px-6 py-4 text-gray-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($turno->horario_inicio)->format('H:i') }}</td>
-                        <td class="px-6 py-4 text-gray-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($turno->horario_fim)->format('H:i') }}</td>
-                        <td class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                            @can('turno.editar')
-                                <button wire:click="edit({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50">
-                                    <i class="text-xl ph ph-pencil-simple"></i>
-                                </button>
-                            @endcan
-                            
-                            @can('turno.excluir')
-                                <button wire:click="delete({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()">
-                                    <i class="text-xl ph ph-trash"></i>
-                                </button>
-                            @endcan
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">Nenhum turno cadastrado.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <x-breadcrumb :items="$breadcrumbs" />
+
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
+            <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Turnos
+        </h2>
+        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+            <i class="ph ph-plus text-lg"></i> Novo Turno
+        </button>
     </div>
 
-    <!-- Modal (Controlado pela variável $showModal do Livewire) -->
+    @if(isset($metricas))
+        <x-summary-cards :metricas="$metricas" />
+    @endif
+
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
+
+        @forelse ($registros as $turno)
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ $turno->id }}</td>
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ $turno->nome }}</td>
+                <td class="px-6 py-4 text-gray-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($turno->horario_inicio)->format('H:i') }}</td>
+                <td class="px-6 py-4 text-gray-500 whitespace-nowrap">{{ \Carbon\Carbon::parse($turno->horario_fim)->format('H:i') }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <x-toggle :status="$turno->status" action="toggleStatus({{ $turno->id }})" />
+
+                    <div class="text-[10px] mt-1 font-bold {{ $turno->status ? 'text-green-600' : 'text-gray-500' }}">
+                        {{ $turno->status ? 'ATIVO' : 'INATIVO' }}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-2">
+                        @can('turno.editar')
+                            <button wire:click="edit({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50">
+                                <i class="text-xl ph ph-pencil-simple"></i>
+                            </button>
+                        @endcan
+                        
+                        @can('turno.excluir')
+                            <button wire:click="delete({{ $turno->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
+                        @endcan
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                    <p class="text-lg font-semibold">Nenhum turno encontrado.</p>
+                    <p class="text-sm">Ajuste os filtros ou crie um novo turno.</p>
+                </td>
+            </tr>
+        @endforelse
+    </x-table>
+
+    <!-- Modal Corrigido com Padrão do Sistema -->
     @if($showModal)
         <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
