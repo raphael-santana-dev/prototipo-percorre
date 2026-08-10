@@ -121,7 +121,7 @@ class TurnoManager extends Component
         $this->resetErrorBag();
     }
 
-     public function getHeadersProperty()
+    public function getHeadersProperty()
     {
         return [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],

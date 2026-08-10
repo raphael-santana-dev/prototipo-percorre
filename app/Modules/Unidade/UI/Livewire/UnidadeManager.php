@@ -6,15 +6,22 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\Unidade\Application\Services\UnidadeService;
-use Livewire\WithPagination;
+use App\Modules\Unidade\Domain\Models\Unidade;
 use Illuminate\Support\Str;
+
 use App\Traits\WithCepConsulta;
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Unidades - Percorre')]
 class UnidadeManager extends Component
 {
     use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
     use WithCepConsulta;
 
     public bool $showModal = false;
@@ -32,11 +39,20 @@ class UnidadeManager extends Component
 
     public array $cursosSelecionados = [];
 
+     public $modelClass = Ciclo::class;
+
+    public array $breadcrumbs = [];
+
+
     public function mount() 
     { 
         // Mantivemos a sua trava de segurança original
         // abort_if(!auth()->user()->can('unidade.listar'), 403); 
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+
+        $this->permiteGrid = true;
     }
 
     public function openModal() 
@@ -155,10 +171,45 @@ class UnidadeManager extends Component
         ]);
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'nome', 'label' => 'Unidade', 'sortable' => true],
+            ['key' => 'telefone', 'label' => 'Contato', 'sortable' => false],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
+    public function toggleStatus($id)
+    {
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        
+        $unidade = \App\Modules\Unidade\Domain\Models\Unidade::findOrFail($id);
+        
+        $unidade->update([
+            'status' => $unidade->status === 'Ativa' ? 'Inativa' : 'Ativa'
+        ]);
+
+        $this->dispatch('sucesso', msg: 'Status da unidade atualizado!');
+    }
+
     public function render(UnidadeService $service) 
     {
+        // 1. LEITURA NO LIVEWIRE (CQRS): Consulta direta para permitir paginação nativa
+        $query = Unidade::query();
+
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('nome', 'asc');
+        }
+
+        $unidades = $query->paginate($this->porPagina);
+
         return view('livewire.unidade.unidade-manager', [
-            'unidades' => $service->listarTodos(),
+            'registros' => $unidades, // Passa os registros paginados para a view
             'cursosDisponiveis' => \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get() 
         ]);
     }
