@@ -96,7 +96,8 @@
                         <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $student->email }}</div>
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <x-toggle :status="$student->status" action="toggleStatus({{ $student->id }})" />
+                        <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                    
                         <div class="flex items-center gap-2">
                             <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
                                 <i class="text-xl ph ph-info"></i>
