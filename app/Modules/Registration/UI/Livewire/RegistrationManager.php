@@ -189,6 +189,7 @@ class RegistrationManager extends Component
                 'label' => 'Alterar em Lote',
                 'icon' => 'ph ph-check-square-offset',
                 'wire_click' => 'abrirModalLote',
+                'always_show_label' => true,
                 'bg_color' => 'bg-green-500 hover:bg-green-600',
                 'icon_color' => 'text-black'
             ],
@@ -196,6 +197,7 @@ class RegistrationManager extends Component
                 'label' => 'Recalcular Tudo',
                 'icon' => 'ph ph-calculator',
                 'wire_click' => 'recalcularScoresGlobais',
+                'always_show_label' => true,
                 'bg_color' => 'bg-green-500 hover:bg-green-600',
                 'icon_color' => 'text-black',
                 'confirm' => 'Processar TODAS as inscrições de TODOS os ciclos ativos? Isso pode levar alguns segundos.'

@@ -6,11 +6,23 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\Turno\Application\Services\TurnoService;
+use Illuminate\Support\Str;
+
+use App\Modules\Turno\Domain\Models\Turno;
+
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Turnos - Administrativo')]
 class TurnoManager extends Component
 {
+    use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
+
     public bool $showModal = false;
     public bool $isEditMode = false;
     
@@ -19,10 +31,15 @@ class TurnoManager extends Component
     public string $horario_inicio = '';
     public string $horario_fim = '';
 
+    public $modelClass = Turno::class;
+
+    public array $breadcrumbs = [];
+
     public function mount()
     {
-        // Proteção de Rota - Exige a permissão base para acessar a tela
         abort_if(!auth()->user()->can('turno.listar'), 403, 'Acesso restrito.');
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
@@ -54,6 +71,7 @@ class TurnoManager extends Component
 
         $dados = [
             'nome' => $this->nome,
+            'slug' => Str::slug($this->nome),
             'horario_inicio' => $this->horario_inicio,
             'horario_fim' => $this->horario_fim,
         ];
@@ -103,10 +121,32 @@ class TurnoManager extends Component
         $this->resetErrorBag();
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
+            ['key' => 'horario_inicio', 'label' => 'Início', 'sortable' => true],
+            ['key' => 'horario_fim', 'label' => 'Fim', 'sortable' => true],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render(TurnoService $service)
     {
+        $query = Turno::query();
+
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('nome', 'asc');
+        }
+
+        $turnos = $query->paginate($this->porPagina);
+
         return view('livewire.turno.turno-manager', [
-            'turnos' => $service->listarTodos()
+            'registros' => $turnos,
         ]);
     }
 }

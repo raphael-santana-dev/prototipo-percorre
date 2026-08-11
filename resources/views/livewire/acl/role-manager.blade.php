@@ -1,4 +1,6 @@
 <div class="space-y-6">
+    <x-breadcrumb :items="$breadcrumbs" />
+
     <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2 dark:text-white">
             <i class="ph ph-shield-check text-purpura-500"></i> Roles (Grupos)
@@ -15,53 +17,69 @@
         <div class="p-4 rounded-md text-red-100 bg-red-500"><i class="ph ph-warning"></i> {{ session('error') }}</div>
     @endif
 
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">ID</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Nome do Grupo</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Usuários Vinculados</th>
-                    <th class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Ações</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                @forelse($roles as $role)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-400">#{{ $role->id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-3 py-1 text-sm font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase">
-                                {{ $role->name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $role->users_count }} usuários</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('roles.permissions', $role->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
-                                    <i class="text-xl ph ph-key"></i>
-                                </a>
-                                
-                                @if(!in_array($role->name, ['dev', 'admin']))
-                                    <button wire:click="edit({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
-                                        <i class="text-xl ph ph-pencil-simple"></i>
-                                    </button>
-                                    <button wire:click="delete({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
-                                        <i class="text-xl ph ph-trash"></i>
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Nenhum grupo cadastrado.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
+
+        @forelse($registros as $role)
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-400">#{{ $role->id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-3 py-1 text-sm font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase">
+                        {{ $role->name }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $role->users_count }} usuários</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-2">
+                        <a href="{{ route('roles.permissions', $role->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
+                            <i class="text-xl ph ph-key"></i>
+                        </a>
+                        
+                        @if(!in_array($role->name, ['dev', 'admin']))
+                            <button wire:click="edit({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
+                                <i class="text-xl ph ph-pencil-simple"></i>
+                            </button>
+                            <button wire:click="delete({{ $role->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
+                        @endif
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Nenhum grupo cadastrado.</td></tr>
+        @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach($registros as $role)
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="inline-flex px-3 py-1 text-sm font-bold text-purpura-700 bg-purpura-100 rounded-full uppercase">{{ $role->name }}</span>
+                        <span class="text-[10px] text-gray-400">#{{ $role->id }}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 font-bold flex items-center gap-1">
+                        <i class="ph-fill ph-users"></i> {{ $role->users_count }} usuários
+                    </div>
+                    <div class="flex items-center justify-end mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center gap-1">
+                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-key"></i></a>
+                            @if(!in_array($role->name, ['dev', 'admin']))
+                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-pencil-simple"></i></button>
+                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 dark:hover:bg-gray-600" onclick="confirm('Excluir este grupo?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
+    </x-table>
 
     <!-- Modal de Inserção Múltipla / Edição -->
     @if($showModal)

@@ -1,27 +1,18 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    @if (session()->has('sucesso'))
-        <div class="mb-4 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
-            {{ session('sucesso') }}
-        </div>
-    @endif
+    <x-page-header 
+        title="Etapas" 
+        icon="ph ph-clipboard-text"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
 
-    <x-breadcrumb :items="$breadcrumbs" />
-    
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gry-800">Etapas</h2>
+        <x-slot name="actions">
+            <button class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus"></i> Nova Etapa
+            </button>
+        </x-slot>
 
-        <span class="bg-purple-100 text-purple-800 text-sm font-semibold px-4 py-2 rounded-full border border-purple-200">
-            Visão Global (Administrador)
-        </span>
-
-        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus"></i> Nova Etapa
-        </button>
-    </div>
-
-    @if(isset($metricas))
-        <x-summary-cards :metricas="$metricas" />
-    @endif
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"

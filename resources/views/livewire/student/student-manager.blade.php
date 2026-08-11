@@ -1,8 +1,16 @@
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2 dark:text-white">
-            <i class="ph ph-graduation-cap text-purpura-500"></i> Estudantes
-        </h1>
+<div class="p-6 max-w-7xl mx-auto font-sans">
+    @if (session()->has('sucesso'))
+        <div class="flex items-center gap-2 p-4 mb-4 rounded-md text-pistache-100 bg-pistache-500">
+            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
+        </div>
+    @endif
+
+    <x-breadcrumb :items="$breadcrumbs" />
+
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
+            <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Estudantes
+        </h2>
         @can('estudante.criar')
             <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg bg-purpura-500 hover:bg-purpura-600 shadow-sm">
                 <i class="ph ph-plus"></i> Novo Aluno
@@ -10,79 +18,114 @@
         @endcan
     </div>
 
-    @if (session()->has('success'))
-        <div class="p-4 rounded-md text-pistache-100 bg-pistache-500"><i class="ph ph-check-circle"></i> {{ session('success') }}</div>
+    @if(isset($metricas))
+        <x-summary-cards :metricas="$metricas" />
     @endif
 
-    <!-- Tabela de Estudantes -->
-    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Aluno</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Unidade</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">Status</th>
-                    <th class="px-6 py-3 text-xs font-bold tracking-wider text-right text-gray-500 uppercase dark:text-gray-400">Ações</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-100 dark:bg-gray-800 dark:divide-gray-700">
-                @forelse($students as $student)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $student->name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ $student->email }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @if($student->unidade)
-                                <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                    <i class="ph-fill ph-map-pin text-purpura-500"></i> {{ $student->unidade->nome }}
-                                </div>
-                            @else
-                                <span class="text-sm text-gray-400 italic">Sem Unidade</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @if($student->is_active)
-                                <span class="inline-flex px-2 text-xs font-bold text-pistache-700 bg-pistache-100 rounded-full uppercase">Ativo</span>
-                            @else
-                                <span class="inline-flex px-2 text-xs font-bold text-gray-500 bg-gray-200 rounded-full uppercase">Inativo</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-2">
-                                <!-- Botão que aciona o Drawer via Livewire Dispatch -->
-                                <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                                    <i class="text-xl ph ph-info"></i>
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
+
+        @forelse ($registros as $student)
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $student->id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $student->name }}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $student->email }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    @if($student->unidade)
+                        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            <i class="ph-fill ph-map-pin text-purpura-500"></i> {{ $student->unidade->nome }}
+                        </div>
+                    @else
+                        <span class="text-sm text-gray-400 italic">Sem Unidade</span>
+                    @endif
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                    
+                    <div class="text-[10px] mt-1 font-bold {{ $student->is_active ? 'text-green-600' : 'text-gray-500' }}">
+                        {{ $student->is_active ? 'ATIVO' : 'INATIVO' }}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-2">
+                        <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                            <i class="text-xl ph ph-info"></i>
+                        </button>
+
+                        <a href="{{ route('students.show', $student->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                            <i class="text-xl ph ph-eye"></i>
+                        </a>
+                        
+                        @can('estudante.editar')
+                            <button wire:click="edit({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
+                                <i class="text-xl ph ph-pencil-simple"></i>
+                            </button>
+                        @endcan
+                        
+                        @can('estudante.excluir')
+                            <button wire:click="delete({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
+                        @endcan
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                    <p class="text-lg font-semibold">Nenhum ciclo encontrado.</p>
+                    <p class="text-sm">Ajuste os filtros ou crie um novo ciclo.</p>
+                </td>
+            </tr>
+        @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach ( $registros as $student )
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $student->email }}</div>
+                    </div>
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                    
+                        <div class="flex items-center gap-2">
+                            <button wire:click="showQuickDetails({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                <i class="text-xl ph ph-info"></i>
+                            </button>
+
+                            <a href="{{ route('students.show', $student->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                <i class="text-xl ph ph-eye"></i>
+                            </a>
+                            
+                            @can('estudante.editar')
+                                <button wire:click="edit({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
+                                    <i class="text-xl ph ph-pencil-simple"></i>
                                 </button>
+                            @endcan
+                            
+                            @can('estudante.excluir')
+                                <button wire:click="delete({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
+                                    <i class="text-xl ph ph-trash"></i>
+                                </button>
+                            @endcan
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
 
-                                <a href="{{ route('students.show', $student->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                                    <i class="text-xl ph ph-eye"></i>
-                                </a>
-                                
-                                @can('estudante.editar')
-                                    <button wire:click="edit({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
-                                        <i class="text-xl ph ph-pencil-simple"></i>
-                                    </button>
-                                @endcan
-                                
-                                @can('estudante.excluir')
-                                    <button wire:click="delete({{ $student->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
-                                        <i class="text-xl ph ph-trash"></i>
-                                    </button>
-                                @endcan
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">Nenhum estudante matriculado na sua unidade.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    </x-table>
 
-    <!-- Modal de Cadastro / Edição -->
     @if($showModal)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">

@@ -147,13 +147,16 @@ class AuditoriaManager extends Component
 
     public function render()
     {
-        // Consulta direta, sem filtros e com ordenação fixa (do mais novo para o mais antigo)
-        $logs = AuditoriaLog::with('usuario')
-            ->latest()
-            ->paginate($this->porPagina);
+        $query = AuditoriaLog::query()->with('usuario');
+
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
 
         return view('livewire.auditoria.auditoria-manager', [
-            'registros' => $logs
+            'registros' => $query->paginate($this->porPagina)
         ])->layout('components.layouts.app', ['title' => 'Auditoria de Sistema']);
     }
 }

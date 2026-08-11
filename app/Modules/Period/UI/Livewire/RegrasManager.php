@@ -16,7 +16,7 @@ class RegrasManager extends Component
     public array $regras = []; // Guardará todas as regras ativas na tela
     public array $camposDisponiveis = [];
 
-    public function mount($id)
+    public function mount($id, ?string $slug = null)
     {
         $this->ciclo = Ciclo::findOrFail($id);
         

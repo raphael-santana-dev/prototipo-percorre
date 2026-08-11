@@ -25,9 +25,9 @@ class FormularioPublico extends Component
     // Guardará as configurações globais (Fundo, Cor, Opacidade)
     public array $formSettings = [];
 
-    public function mount($slug)
+    public function mount($id, $slug)
     {
-        $this->formulario = Formulario::with('campos')->where('slug', $slug)->where('status', true)->firstOrFail();
+        $this->formulario = Formulario::with('campos')->where('id', $id)->where('status', true)->firstOrFail();
         $this->camposDinamicos = $this->formulario->campos;
         
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);

@@ -11,11 +11,19 @@ use Illuminate\Support\Facades\Hash;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Models\Curso;
 use App\Modules\Turno\Domain\Models\Turno;
+use Illuminate\Support\Str;
+
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Usuários - Administrativo')]
 class UserManager extends Component
 {
+    use WithPagination;
+    use ComPadraoListagem;
+
     public string $name = '';
     public string $email = '';
     public string $password = '';
@@ -34,9 +42,14 @@ class UserManager extends Component
     public $cursosFiltrados = [];
     public $turnosFiltrados = [];
 
+    public string $modelClass = User::class;
+    public array $breadcrumbs = [];
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+        $this->permiteGrid = true;
     }
 
     public function openModal()
@@ -46,7 +59,6 @@ class UserManager extends Component
         $this->showModal = true;
     }
 
-    // GATILHOS (Roda automaticamente quando a interface muda)
     public function updatedRoleName() { $this->aplicarRegrasCascata(); }
     public function updatedUnidadesSelecionadas() { $this->aplicarRegrasCascata(); }
     public function updatedCursosSelecionados() { $this->aplicarRegrasCascata(); }
@@ -55,7 +67,6 @@ class UserManager extends Component
     {
         if (strtolower($this->roleName) === 'professor') {
             
-            // 1. Filtra Cursos baseados nas Unidades selecionadas
             if (empty($this->unidadesSelecionadas)) {
                 $this->cursosFiltrados = [];
             } else {
@@ -64,11 +75,9 @@ class UserManager extends Component
                 })->whereIn('status', ['Ativo', '1', true])->get();
             }
 
-            // Remove seleções inválidas de Cursos
             $idsCursosValidos = collect($this->cursosFiltrados)->pluck('id')->map(fn($id) => (string) $id)->toArray();
             $this->cursosSelecionados = array_intersect($this->cursosSelecionados, $idsCursosValidos);
 
-            // 2. Filtra Turnos baseados nos Cursos selecionados (Usando o método turnosVinculados)
             if (empty($this->cursosSelecionados)) {
                 $this->turnosFiltrados = [];
             } else {
@@ -82,12 +91,10 @@ class UserManager extends Component
                 $this->turnosFiltrados = $turnosDisponiveis->values()->all();
             }
 
-            // Remove seleções inválidas de Turnos
             $idsTurnosValidos = collect($this->turnosFiltrados)->pluck('id')->map(fn($id) => (string) $id)->toArray();
             $this->turnosSelecionados = array_intersect($this->turnosSelecionados, $idsTurnosValidos);
 
         } else {
-            // Se não for professor, libera tudo
             $this->cursosFiltrados = Curso::whereIn('status', ['Ativo', '1', true])->get();
             $this->turnosFiltrados = Turno::all();
         }
@@ -115,6 +122,7 @@ class UserManager extends Component
         $data = [
             'name' => $this->name,
             'email' => strtolower($this->email),
+            'slug' => Str::slug($this->name),
         ];
 
         if (!empty($this->password)) {
@@ -135,7 +143,6 @@ class UserManager extends Component
 
         $user->syncRoles([$this->roleName]);
         
-        // Mágica do Pivot: Sincroniza os arrays com o banco de dados
         $user->unidades()->sync($this->unidadesSelecionadas);
         $user->cursos()->sync($this->cursosSelecionados);
         $user->turnos()->sync($this->turnosSelecionados);
@@ -155,7 +162,6 @@ class UserManager extends Component
         
         $this->roleName = $user->roles->first()?->name ?? '';
         
-        // Carrega os vínculos nos arrays para os checkboxes
         $this->unidadesSelecionadas = $user->unidades->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->cursosSelecionados = $user->cursos->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->turnosSelecionados = $user->turnos->pluck('id')->map(fn($id) => (string) $id)->toArray();
@@ -220,10 +226,27 @@ class UserManager extends Component
         ]);
     }
 
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'name', 'label' => 'Nome / E-mail', 'sortable' => true],
+            ['key' => 'roles', 'label' => 'Acesso / Unidades', 'sortable' => false],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function render()
     {
+        $query = User::query()->with(['roles', 'unidades']);
+        
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
         return view('livewire.corporate.user-manager', [
-            'users' => User::with(['roles', 'unidades'])->orderBy('name')->get(),
+            'registros' => $query->paginate($this->porPagina),
             'roles' => Role::orderBy('name')->get(),
             'todasUnidades' => Unidade::whereIn('status', ['Ativa', '1', true])->get(), 
         ]);

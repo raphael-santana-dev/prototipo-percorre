@@ -22,6 +22,8 @@ class Student extends Authenticatable
         'password',
         'is_active',
         'unidade_id',
+        'cpf',
+        'slug',
     ];
 
     protected $hidden = [

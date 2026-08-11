@@ -13,7 +13,7 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <a href="{{ route('formularios.publico', $formulario->slug) }}" target="_blank" class="flex items-center gap-2 px-4 py-2 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition rounded-lg font-bold">
+            <a href="{{ route('formularios.publico', ['id' => $formulario->id, 'slug' => $formulario->slug]) }}" target="_blank" class="flex items-center gap-2 px-4 py-2 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition rounded-lg font-bold">
                 <i class="ph ph-link"></i> Abrir Link Público
             </a>
             <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formulario->id]) }}" class="flex items-center gap-2 px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition rounded-lg font-bold">

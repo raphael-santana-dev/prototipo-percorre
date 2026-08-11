@@ -8,6 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use App\Modules\Auth\UI\Livewire\Login;
+use Illuminate\Auth\Events\Login as UserLogin;
 use App\Modules\Dashboard\UI\Livewire\Dashboard;
 use App\Modules\Auth\UI\Livewire\LogoutButton;
 use App\Modules\FeatureToggle\Application\Services\FeatureService;
@@ -42,6 +43,7 @@ use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
 use App\Models\AuditoriaLog;
+use Illuminate\Auth\Events\Logout;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -150,15 +152,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Escuta o evento nativo de Login do Laravel e registra a auditoria
-        Event::listen(function (Login $event) {
+        Event::listen(function (UserLogin $event) {
             $usuario = $event->user;
-
+            
             AuditoriaLog::create([
-                'tabela_alterada' => 'sessao', // Apenas para identificar visualmente
+                'tabela_alterada' => 'users', // Tabela referência
                 'registro_id' => $usuario->id,
                 'acao' => 'login',
                 'informacao_anterior' => null,
-                'nova_informacao' => null, // Poderia ser vazio ou null
+                'nova_informacao' => ['mensagem' => 'Sessão iniciada com sucesso'],
                 'usuario_id' => $usuario->id,
                 'usuario_nome' => $usuario->name,
                 'usuario_role' => method_exists($usuario, 'getRoleNames') ? $usuario->getRoleNames()->first() : 'N/A',
@@ -166,6 +168,27 @@ class AppServiceProvider extends ServiceProvider
                 'ip' => request()->ip(),
                 'navegador' => request()->userAgent(),
             ]);
+        });
+
+        // 2. Escuta o evento de LOGOUT (Manual ou Invalidação)
+        Event::listen(function (Logout $event) {
+            $usuario = $event->user;
+            
+            if ($usuario) {
+                AuditoriaLog::create([
+                    'tabela_alterada' => 'users',
+                    'registro_id' => $usuario->id,
+                    'acao' => 'logout',
+                    'informacao_anterior' => null,
+                    'nova_informacao' => ['mensagem' => 'Sessão encerrada (Manual ou Inatividade)'],
+                    'usuario_id' => $usuario->id,
+                    'usuario_nome' => $usuario->name,
+                    'usuario_role' => method_exists($usuario, 'getRoleNames') ? $usuario->getRoleNames()->first() : 'N/A',
+                    'usuario_login' => $usuario->email,
+                    'ip' => request()->ip(),
+                    'navegador' => request()->userAgent(),
+                ]);
+            }
         });
     }
 }

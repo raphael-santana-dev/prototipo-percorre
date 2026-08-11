@@ -6,7 +6,7 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Ciclo;
-use App\Models\Curso; // Importação necessária
+use App\Models\Curso;
 use App\Models\StatusInscricao;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
@@ -26,14 +26,12 @@ class PeriodManager extends Component
     public $status = false;
     public $cicloId = null;
     
-
     public $modelClass = Ciclo::class;
 
     public array $breadcrumbs = [];
 
     public $nome, $ano, $semestre, $data_inicio, $data_fim;
-    
-    // Novo array para guardar os cursos marcados no modal
+
     public array $cursosSelecionados = []; 
     public array $statusSelecionados = [];
     
@@ -173,6 +171,7 @@ class PeriodManager extends Component
                 'data_inicio' => $this->data_inicio,
                 'data_fim' => $this->data_fim,
                 'status' => $this->status,
+                'slug' => \Str::slug($nomeFinal)
             ]
         );
 

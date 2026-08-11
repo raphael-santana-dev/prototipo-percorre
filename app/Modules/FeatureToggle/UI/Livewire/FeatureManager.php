@@ -124,7 +124,7 @@ class FeatureManager extends Component
                 $feature->update([
                     'module' => $moduleFinal,
                     'name' => $fullName,
-                    'description' => $item['description'],
+                    'description' => $item['description']
                 ]);
 
                 Cache::forget("feature_status_{$nomeAntigo}");
@@ -135,7 +135,7 @@ class FeatureManager extends Component
                     $this->addError("items.{$index}.action", "A feature {$fullName} já existe.");
                     continue; 
                 }
-
+                
                 $featureService->create($moduleFinal, $fullName, $item['description']);
             }
         }

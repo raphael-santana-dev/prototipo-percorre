@@ -8,11 +8,21 @@ use Livewire\Attributes\Title;
 use App\Modules\Student\Domain\Models\Student;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+use Livewire\WithPagination;
+use App\Helpers\BreadcrumbHelper;
+use App\Traits\ComPadraoListagem;
+use App\Traits\WithToggleStatus;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Estudantes - Administrativo')]
 class StudentManager extends Component
 {
+    use WithPagination;
+    use ComPadraoListagem;
+    use WithToggleStatus;
+
     public bool $showModal = false;
     public bool $isEditMode = false;
     public ?int $studentId = null;
@@ -23,10 +33,19 @@ class StudentManager extends Component
     public bool $is_active = true;
     public ?int $unidade_id = null;
 
+    public string $statusColumn = 'is_active';
+    public $modelClass = Student::class;
+
+    public array $breadcrumbs = [];
+
     public function mount()
     {
         // Garante que apenas quem tem a permissão pode acessar a tela
         abort_if(!auth()->user()->can('estudante.listar'), 403, 'Você não tem permissão para listar alunos.');
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+
+        $this->permiteGrid = true;
     }
 
     public function openModal()
@@ -79,6 +98,7 @@ class StudentManager extends Component
             'email' => strtolower($this->email),
             'is_active' => $this->is_active,
             'unidade_id' => $this->unidade_id,
+            'slug' => Str::slug($this->name),
         ];
 
         if (!empty($this->password)) {
@@ -103,7 +123,17 @@ class StudentManager extends Component
         session()->flash('success', 'Estudante excluído com sucesso!');
     }
 
-    // A MÁGICA DO DRAWER REAPROVEITADO
+    public function getHeadersProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'name', 'label' => 'Aluno', 'sortable' => true],
+            ['key' => 'unidade_nome', 'label' => 'Unidade', 'sortable' => true],
+            ['key' => 'is_active', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+        ];
+    }
+
     public function showQuickDetails(int $id)
     {
         $student = Student::with('unidade')->findOrFail($id);
@@ -135,7 +165,6 @@ class StudentManager extends Component
         $this->email = '';
         $this->password = '';
         $this->is_active = true;
-        // Se o usuário logado for de uma unidade, já preenche o campo para ele
         $this->unidade_id = auth()->user()->unidades->first()->id ?? null;
         $this->isEditMode = false;
         $this->resetErrorBag();
@@ -143,8 +172,31 @@ class StudentManager extends Component
 
     public function render()
     {
+        $query = Student::query()->with('unidade')->apenasVinculosPermitidos();
+
+        // Aplica a ordenação no banco de dados
+        if ($this->ordenacaoCampo) {
+            
+            // LÓGICA ESPECIAL PARA RELACIONAMENTO
+            if ($this->ordenacaoCampo === 'unidade_nome') {
+                $query->orderBy(
+                    \App\Modules\Unidade\Domain\Models\Unidade::select('nome')
+                        ->whereColumn('unidades.id', 'students.unidade_id'),
+                    $this->ordenacaoDirecao
+                );
+            } else {
+                // Ordenação padrão para colunas da própria tabela (name, id, is_active)
+                $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+            }
+
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        $estudantes = $query->paginate($this->porPagina);
+
         return view('livewire.student.student-manager', [
-            'students' => Student::with('unidade')->apenasVinculosPermitidos()->orderBy('name')->get(),
+            'registros' => $estudantes,
             'unidades' => Unidade::orderBy('nome')->get(),
         ]);
     }
