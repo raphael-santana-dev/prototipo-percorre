@@ -32,23 +32,38 @@
             <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
             @php
-                $formBgUrl = $bg_image_upload ? $bg_image_upload->temporaryUrl() : ($formSettings['bg_image'] ?? null);
-                $formBgColor = $formSettings['bg_color'] ?? '#ffffff';
+                $previewBgUrl = null;
+                if ($bg_image_upload) {
+                    try { 
+                        $previewBgUrl = $bg_image_upload->temporaryUrl(); 
+                    } catch (\Exception $e) {
+                        // Ignora falhas de preview temporário
+                    }
+                } elseif (!empty($formSettings['bg_image'])) {
+                    $previewBgUrl = asset($formSettings['bg_image']);
+                }
+                
+                $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6';
                 $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
             @endphp
 
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 min-h-[600px] relative overflow-hidden flex flex-col items-center">
+            {{-- CAIXA DA PREVIEW --}}
+            <div class="relative w-full min-h-[600px] rounded-xl overflow-hidden bg-transparent shadow-inner">
                 
-                @if($formBgUrl)
-                    <div class="absolute inset-0 z-0 bg-cover bg-center" style="background-image: url('{{ $formBgUrl }}');"></div>
+                {{-- FUNDO FIXO --}}
+                @if($previewBgUrl)
+                    <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" style="background-image: url('{{ $previewBgUrl }}');"></div>
                 @endif
+                
+                {{-- Camada de Cor / Opacidade --}}
                 <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-                <div class="relative z-10 w-full max-w-4xl p-8 md:p-12">
+                {{-- CONTEÚDO --}}
+                <div class="relative z-10 w-full p-8 md:p-12 h-full overflow-y-auto">
                     
-                    <div class="mb-10 border-b {{ $formBgUrl ? 'border-white/20' : 'border-gray-100' }} pb-6">
-                        <h1 class="text-3xl font-extrabold mb-2 {{ $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-900' }}">Simulador da Inscrição</h1>
-                        <p class="{{ $formBgUrl ? 'text-white/80' : 'text-gray-500' }}">Abaixo está a estrutura de como o aluno verá este formulário.</p>
+                    <div class="mb-10 border-b {{ $previewBgUrl ? 'border-white/20' : 'border-gray-100' }} pb-6">
+                        <h1 class="text-3xl font-extrabold mb-2 {{ $previewBgUrl ? 'text-white drop-shadow-md' : 'text-gray-900' }}">Simulador da Inscrição</h1>
+                        <p class="{{ $previewBgUrl ? 'text-white/80' : 'text-gray-500' }}">Abaixo está a estrutura de como o aluno verá este formulário.</p>
                     </div>
 
                     @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
@@ -56,8 +71,8 @@
                             
                             <div class="flex items-center gap-3 mb-6">
                                 <span class="flex items-center justify-center w-7 h-7 text-sm font-bold text-white bg-indigo-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                <h3 class="text-xl font-bold {{ $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">Etapa {{ $numEtapa }}</h3>
-                                <div class="flex-1 h-px ml-4 {{ $formBgUrl ? 'bg-white/20' : 'bg-gray-200' }}"></div>
+                                <h3 class="text-xl font-bold {{ $previewBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">Etapa {{ $numEtapa }}</h3>
+                                <div class="flex-1 h-px ml-4 {{ $previewBgUrl ? 'bg-white/20' : 'bg-gray-200' }}"></div>
                             </div>
                             
                             <div class="grid grid-cols-12 gap-x-6 gap-y-4">
@@ -65,17 +80,11 @@
                                     @php 
                                         $isActive = $campoId == $c->id; 
                                         $colSpan = "col-span-12 md:col-span-{$c->largura}";
-                                        
                                         $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                        $bgStyle = isset($cfg['bg_image']) && !empty($cfg['bg_image']) ? "background-image: url('{$cfg['bg_image']}'); background-size: cover; background-position: center;" : "";
                                     @endphp
 
-                                    <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-indigo-500 shadow-md p-4' : 'border border-transparent hover:border-gray-200 p-4 cursor-pointer hover:bg-white/50' }} {{ $bgStyle ? 'overflow-hidden shadow-sm' : '' }}" style="{{ $isActive && !$bgStyle ? 'background-color: #f8fafc;' : '' }} {{ $bgStyle }}" wire:click="editar({{ $c->id }})">
+                                    <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-indigo-500 shadow-md p-4 bg-white/95' : 'border border-transparent hover:border-gray-200 p-4 cursor-pointer hover:bg-white/50' }}" wire:click="editar({{ $c->id }})">
                                         
-                                        @if($bgStyle)
-                                            <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $cfg['bg_color'] ?? '#000' }}; opacity: {{ $cfg['bg_opacity'] ?? '0.5' }};"></div>
-                                        @endif
-
                                         <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
                                             <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-indigo-50 hover:text-indigo-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
                                             <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
@@ -84,7 +93,7 @@
                                         <div class="relative z-10">
                                             <div class="flex justify-between items-start mb-2">
                                                 @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social']))
-                                                    <label class="block text-sm font-bold {{ $bgStyle || $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">
+                                                    <label class="block text-sm font-bold {{ $previewBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">
                                                         {{ $c->label }} @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
                                                     </label>
                                                 @else
@@ -111,10 +120,10 @@
                                             
                                             @elseif($c->tipo === 'radio' || $c->tipo === 'check')
                                                 <div class="flex flex-wrap gap-4 mt-1 pointer-events-none">
-                                                    <div class="flex items-center gap-2 {{ $bgStyle || $formBgUrl ? 'text-white drop-shadow-sm' : 'text-gray-500' }} text-sm">
+                                                    <div class="flex items-center gap-2 {{ $previewBgUrl ? 'text-white drop-shadow-sm' : 'text-gray-500' }} text-sm">
                                                         <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
                                                     </div>
-                                                    <div class="flex items-center gap-2 {{ $bgStyle || $formBgUrl ? 'text-white drop-shadow-sm' : 'text-gray-500' }} text-sm">
+                                                    <div class="flex items-center gap-2 {{ $previewBgUrl ? 'text-white drop-shadow-sm' : 'text-gray-500' }} text-sm">
                                                         <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
                                                     </div>
                                                 </div>
@@ -127,12 +136,10 @@
                                                 @php
                                                     $linhasPv = [];
                                                     $colunasPv = [];
-                                                    // PREVIEW EM TEMPO REAL: Se estiver editando, puxa o que o usuário está digitando agora
                                                     if ($isActive) {
                                                         $linhasPv = array_filter(array_map('trim', explode("\n", $matriz_linhas ?? '')));
                                                         $colunasPv = array_filter(array_map('trim', explode(',', $matriz_colunas ?? '')));
                                                     }
-                                                    // Fallbacks para caso esteja vazio
                                                     if (empty($linhasPv)) $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
                                                     if (empty($colunasPv)) $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
                                                 @endphp
@@ -162,7 +169,7 @@
                                                 </div>
 
                                             @elseif($c->tipo === 'html')
-                                                <div class="{{ $bgStyle || $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">
+                                                <div class="{{ $previewBgUrl ? 'text-white drop-shadow-md' : 'text-gray-800' }}">
                                                     @if($c->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{{ $c->label }}</h1>
                                                     @elseif($c->subtipo === 'h2') <h2 class="text-2xl font-bold">{{ $c->label }}</h2>
                                                     @elseif($c->subtipo === 'h3') <h3 class="text-xl font-bold">{{ $c->label }}</h3>
@@ -176,7 +183,7 @@
                                                 </div>
 
                                             @elseif($c->tipo === 'divider')
-                                                <hr class="border-t-2 border-dashed {{ $formBgUrl ? 'border-white/30' : 'border-gray-300' }} my-2">
+                                                <hr class="border-t-2 border-dashed {{ $previewBgUrl ? 'border-white/30' : 'border-gray-300' }} my-2">
 
                                             @elseif($c->tipo === 'media')
                                                 <div class="w-full bg-white/90 rounded-md p-4 text-center border border-gray-200 pointer-events-none text-gray-500 shadow-sm">
@@ -218,13 +225,13 @@
                             <div class="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center mb-4 shadow-sm">
                                 <i class="ph ph-list-plus text-4xl text-gray-400"></i>
                             </div>
-                            <h3 class="text-lg font-bold {{ $formBgUrl ? 'text-white' : 'text-gray-900' }} mb-1">Formulário Vazio</h3>
-                            <p class="{{ $formBgUrl ? 'text-white/80' : 'text-gray-500' }} text-sm max-w-sm">Use a aba de configurações ao lado para construir seu layout.</p>
+                            <h3 class="text-lg font-bold {{ $previewBgUrl ? 'text-white' : 'text-gray-900' }} mb-1">Formulário Vazio</h3>
+                            <p class="{{ $previewBgUrl ? 'text-white/80' : 'text-gray-500' }} text-sm max-w-sm">Use a aba de configurações ao lado para construir seu layout.</p>
                         </div>
                     @endforelse
 
                     <div class="relative z-10">
-                        <button type="button" wire:click="cancelarEdicao" class="w-full mt-4 py-4 border-2 border-dashed {{ $formBgUrl ? 'border-white/40 text-white hover:bg-white/10 hover:border-white' : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400' }} rounded-xl font-bold transition flex justify-center items-center gap-2">
+                        <button type="button" wire:click="cancelarEdicao" class="w-full mt-4 py-4 border-2 border-dashed {{ $previewBgUrl ? 'border-white/40 text-white hover:bg-white/10 hover:border-white' : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400' }} rounded-xl font-bold transition flex justify-center items-center gap-2">
                             <i class="ph ph-plus-circle text-xl"></i> Adicionar Novo Bloco
                         </button>
                     </div>
@@ -250,7 +257,6 @@
             <!-- ==================== ABA 1: CONFIG DO BLOCO ==================== -->
             <div x-show="activeTab === 'field'" class="flex-1 flex flex-col overflow-hidden">
                 
-                {{-- MUDANÇA CRUCIAL: O <form> agora abraça todo o painel, incluindo o botão Salvar --}}
                 <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-5">
                         
@@ -504,29 +510,6 @@
                             </label>
                         @endif
 
-                        <div x-data="{ openBg: {{ isset($configuracoes['bg_image']) ? 'true' : 'false' }} }" class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
-                            <button type="button" @click="openBg = !openBg" class="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-bold text-gray-700">
-                                <span class="flex items-center gap-2"><i class="ph ph-image text-indigo-500 text-lg"></i> Fundo Deste Bloco</span>
-                                <i class="ph ph-caret-down transition-transform" :class="openBg ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="openBg" x-collapse x-cloak class="p-4 bg-white border-t border-gray-200 space-y-3">
-                                <div>
-                                    <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">URL (Não faz upload, apenas link externo)</label>
-                                    <input type="url" wire:model.live.debounce.1000ms="configuracoes.bg_image" placeholder="https://..." class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor</label>
-                                        <input type="color" wire:model.live="configuracoes.bg_color" class="w-full h-9 rounded-lg border-gray-300 cursor-pointer p-1">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
-                                        <input type="number" step="0.1" min="0" max="1" wire:model.live="configuracoes.bg_opacity" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="mt-4 border border-yellow-200 rounded-lg overflow-hidden">
                             <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-3 bg-yellow-50 hover:bg-yellow-100 transition text-sm font-bold text-yellow-800">
                                 <span class="flex items-center gap-2"><i class="ph-fill ph-git-branch text-yellow-600 text-lg"></i> Regras de Exibição</span>
@@ -563,7 +546,6 @@
                         </div>
                     </div>
                     
-                    {{-- BOTÕES DE AÇÃO AGORA FICAM DENTRO DO <FORM> --}}
                     <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-3">
                         @if($campoId)
                             <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 hover:text-gray-900 transition">Cancelar</button>
@@ -596,12 +578,10 @@
                                         <i class="ph ph-upload-simple text-3xl text-gray-400 mb-2"></i>
                                         <p class="text-xs text-gray-500"><span class="font-bold">Clique para enviar</span> ou arraste (PNG/JPG)</p>
                                     </div>
-                                    <!-- Input File Vinculado ao Livewire -->
                                     <input type="file" wire:model="bg_image_upload" class="hidden" accept="image/*">
                                 </label>
                             </div>
                             
-                            <!-- Indicador de Carregamento -->
                             <div wire:loading wire:target="bg_image_upload" class="mt-2 text-xs font-bold text-indigo-600 flex items-center gap-2">
                                 <i class="ph ph-spinner animate-spin text-lg"></i> Fazendo upload seguro...
                             </div>

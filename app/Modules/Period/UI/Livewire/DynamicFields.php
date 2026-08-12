@@ -207,12 +207,12 @@ class DynamicFields extends Component
     public function salvarFormSettings()
     {
         $this->validate([
-            'bg_image_upload' => 'nullable|image|max:2048', // Max 2MB
+            'bg_image_upload' => 'nullable|image|max:10240', // Max 2MB
         ]);
 
         if ($this->bg_image_upload) {
             $path = $this->bg_image_upload->store('formularios/bg', 'public');
-            $this->formSettings['bg_image'] = '/storage/' . $path;
+            $this->formSettings['bg_image'] = 'storage/' . $path;
             $this->bg_image_upload = null;
         }
 

@@ -1,19 +1,21 @@
 @php
-    // Variáveis do Papel de Parede Global
-    $formBgUrl = $formSettings['bg_image'] ?? null;
-    $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6'; // fundo cinza claro padrão
+    // O uso do !empty garante que ele não tente carregar uma imagem vazia
+    $formBgUrl = !empty($formSettings['bg_image']) ? asset($formSettings['bg_image']) : null;
+    $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6'; 
     $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
 @endphp
 
-<div class="min-h-[90vh] flex flex-col relative w-full font-sans">
+<div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent">
     
-    {{-- BACKGROUND DE FUNDO --}}
+    {{-- MUDAMOS DE z-[-2] PARA z-0 --}}
     @if($formBgUrl)
-        <div class="absolute inset-0 z-0 bg-cover bg-center bg-fixed" style="background-image: url('{{ $formBgUrl }}');"></div>
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat" style="background-image: url('{{ $formBgUrl }}');"></div>
     @endif
-    <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
+    
+    {{-- MUDAMOS DE z-[-1] PARA z-0 --}}
+    <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-    {{-- CONTAINER DO FORMULÁRIO --}}
+    {{-- MUDAMOS O CONTAINER DO FORMULÁRIO PARA z-10 (fica na frente da imagem) --}}
     <div class="relative z-10 w-full max-w-4xl mx-auto py-12 px-4 sm:px-6 flex-1 flex flex-col justify-center">
         
         @if($finalizado)

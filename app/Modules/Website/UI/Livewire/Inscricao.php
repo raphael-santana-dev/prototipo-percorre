@@ -47,6 +47,8 @@ class Inscricao extends Component
     public array $turnosDisponiveis = [];
     public array $cursosDisponiveis = [];
 
+    public array $formSettings = [];
+
     public function mount()
     {
         $ciclo = Ciclo::with('campos')->where('status', true)
@@ -58,6 +60,11 @@ class Inscricao extends Component
             $this->cicloAtivoId = $ciclo->id;
             $this->inscricoesAbertas = true;
             $this->camposDinamicos = $ciclo->campos;
+
+            $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
+            if ($cfg && $cfg->configuracoes) {
+                $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+            }
             
             $maxEtapaDinamica = $this->camposDinamicos->max('etapa') ?? 1;
             $this->totalEtapas = max(1, $maxEtapaDinamica);
