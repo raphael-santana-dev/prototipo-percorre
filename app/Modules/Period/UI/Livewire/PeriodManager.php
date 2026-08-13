@@ -56,6 +56,46 @@ class PeriodManager extends Component
         ];
     }
 
+    public function duplicar(int $id)
+    {
+        // 1. Busca o ciclo original com seus relacionamentos
+        $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
+
+        // 2. Clona o ciclo base (Copia inclusive regras de pontuação JSON, se existirem)
+        $novoCiclo = $cicloOriginal->replicate();
+        $novoCiclo->nome = $cicloOriginal->nome . ' (Cópia)';
+        $novoCiclo->slug = \Str::slug($novoCiclo->nome) . '-' . time();
+        $novoCiclo->status = false; // A cópia sempre nasce inativa para evitar conflitos no portal
+        $novoCiclo->save();
+
+        // 3. Sincroniza a tabela pivô de cursos ofertados
+        if ($cicloOriginal->cursos) {
+            $novoCiclo->cursos()->sync($cicloOriginal->cursos->pluck('id')->toArray());
+        }
+
+        // 4. Sincroniza a tabela pivô de status do CRM preservando a ordem
+        if ($cicloOriginal->statusPipeline) {
+            $syncStatus = [];
+            foreach ($cicloOriginal->statusPipeline as $status) {
+                $syncStatus[$status->id] = ['ordem' => $status->pivot->ordem ?? 1];
+            }
+            $novoCiclo->statusPipeline()->sync($syncStatus);
+        }
+
+        // 5. O SEGREDO: Duplica todos os campos dinâmicos e configurações globais do formulário
+        $camposOriginais = \App\Models\CampoFormulario::where('ciclo_id', $id)->get();
+        foreach ($camposOriginais as $campo) {
+            $novoCampo = $campo->replicate();
+            $novoCampo->ciclo_id = $novoCiclo->id;
+            
+            // Tratamento de segurança: Se o campo original tiver uma dependência (ex: depende_de = "renda"),
+            // a cópia manterá o mesmo link lógico, pois os "names" serão replicados de forma idêntica no novo ciclo.
+            $novoCampo->save();
+        }
+
+        session()->flash('sucesso', 'Ciclo e formulário duplicados com sucesso!');
+    }
+
     public function showQuickView(int $id)
     {
         $ciclo = Ciclo::findOrFail($id);

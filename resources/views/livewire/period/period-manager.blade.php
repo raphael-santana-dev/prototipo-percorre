@@ -57,6 +57,10 @@
                         <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
                             <i class="text-xl ph ph-eye"></i>
                         </a>
+
+                        <button wire:click="duplicar({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar Ciclo e Campos" onclick="confirm('Deseja realmente criar uma cópia exata deste ciclo, incluindo todos os campos do formulário?') || event.stopImmediatePropagation()">
+                            <i class="text-xl ph ph-copy"></i>
+                        </button>
                         
                         <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
                             <i class="text-xl ph ph-pencil-simple"></i>
@@ -108,6 +112,10 @@
                             <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
                                 <i class="text-xl ph ph-eye"></i>
                             </a>
+
+                            <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar Ciclo e Campos" onclick="confirm('Deseja realmente criar uma cópia exata deste ciclo, incluindo todos os campos do formulário?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-copy"></i>
+                            </button>
                             
                             <button wire:click="abrirModal({{ $ciclo->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo">
                                 <i class="text-xl ph ph-pencil-simple"></i>
