@@ -31,12 +31,53 @@
 
     <div class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
         @if($isCondicional)
+            data-target="{{ $campo->depende_valor }}"
+            x-data="{
+                get isVisivel() {
+                    let respostas = $wire.respostas;
+                    let atual = null;
+                    
+                    if (respostas && respostas['{{ $campo->depende_de }}'] !== undefined && respostas['{{ $campo->depende_de }}'] !== '') {
+                        atual = respostas['{{ $campo->depende_de }}'];
+                    } else {
+                        atual = $wire.{{ $campo->depende_de }};
+                    }
+                    
+                    if (atual === null || atual === undefined) {
+                        atual = '';
+                    }
+                    
+                    // O pulo do gato: pega o valor de forma segura via dataset do HTML
+                    let target = String($el.dataset.target).toLowerCase().trim();
+                    let op = '{{ $campo->depende_operador }}';
+                    
+                    if (Array.isArray(atual)) {
+                        let atualArray = atual.map(s => String(s).toLowerCase().trim());
+                        let targetArray = target.split(',').map(s => s.trim());
+                        
+                        if (op === '=') return atualArray.includes(target);
+                        if (op === '!=') return !atualArray.includes(target);
+                        if (op === 'in') return atualArray.some(r => targetArray.includes(r));
+                        return false;
+                    }
+
+                    let val = String(atual).toLowerCase().trim();
+                    let numVal = Number(val);
+                    let numTarget = Number(target);
+
+                    if (op === '=') return val === target;
+                    if (op === '!=') return val !== target;
+                    if (op === '>') return !isNaN(numVal) && !isNaN(numTarget) && numVal > numTarget;
+                    if (op === '<') return !isNaN(numVal) && !isNaN(numTarget) && numVal < numTarget;
+                    if (op === '>=') return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
+                    if (op === '<=') return !isNaN(numVal) && !isNaN(numTarget) && numVal <= numTarget;
+                    if (op === 'in') return target.split(',').map(s => s.trim()).includes(val);
+                    
+                    return false;
+                }
+            }"
+            x-show="isVisivel"
             x-cloak
-            x-show="window.avaliarCondicao(
-                ($wire.respostas && $wire.respostas['{{ $campo->depende_de }}']) || $wire.{{ $campo->depende_de }},
-                '{{ $campo->depende_operador }}',
-                '{{ $campo->depende_valor }}'
-            )"
         @endif
         style="{{ $bgStyle }}"
     >
@@ -175,7 +216,6 @@
             @elseif($campo->tipo === 'system')
                 @php
                     $opcoesSistema = [];
-                    // Resgata o Array correto usando isset para não quebrar no Inscrição padrão
                     if ($campo->subtipo === 'unidade' && isset($unidadesDisponiveis)) $opcoesSistema = $unidadesDisponiveis;
                     elseif ($campo->subtipo === 'curso' && isset($cursosDisponiveis)) $opcoesSistema = $cursosDisponiveis;
                     elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema = $turnosDisponiveis;
@@ -207,28 +247,3 @@
         </div>
     </div>
 @endforeach
-
-@once
-<script>
-    window.avaliarCondicao = function(valorAtual, operador, valorEsperado) {
-        if(valorAtual === undefined || valorAtual === null) valorAtual = '';
-        
-        let val = String(valorAtual).toLowerCase().trim();
-        let target = String(valorEsperado).toLowerCase().trim();
-        
-        let numVal = Number(val);
-        let numTarget = Number(target);
-
-        switch(operador) {
-            case '=': return val === target;
-            case '!=': return val !== target;
-            case '>': return !isNaN(numVal) && !isNaN(numTarget) && numVal > numTarget;
-            case '<': return !isNaN(numVal) && !isNaN(numTarget) && numVal < numTarget;
-            case '>=': return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
-            case '<=': return !isNaN(numVal) && !isNaN(numTarget) && numVal <= numTarget;
-            case 'in': return target.split(',').map(s => s.trim()).includes(val);
-            default: return false;
-        }
-    }
-</script>
-@endonce
