@@ -97,7 +97,7 @@
 
                                 <div class="col-span-12 md:col-span-6">
                                     <label class="block text-sm font-semibold text-brand-textLabel mb-1">Celular / Telefone</label>
-                                    <input wire:model="celular" x-mask="(99) 99999-9999" type="text" placeholder="(00) 00000-0000" class="w-full rounded-md border border-brand-border px-3 py-2 focus:outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/25 @if(!empty($celular)) border-green-500 bg-green-50 @endif">
+                                    <input wire:model="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="w-full rounded-md border border-brand-border px-3 py-2 focus:outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/25 @if(!empty($celular)) border-green-500 bg-green-50 @endif">
                                 </div>
 
                                 <div class="col-span-12 md:col-span-6">
