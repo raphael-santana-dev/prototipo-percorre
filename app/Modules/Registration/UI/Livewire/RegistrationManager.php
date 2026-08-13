@@ -5,7 +5,7 @@ namespace App\Modules\Registration\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\On; // IMPORTANTE PARA O QUICK VIEW
+use Livewire\Attributes\On; 
 use App\Models\Inscricao;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
@@ -78,10 +78,9 @@ class RegistrationManager extends Component
     }
 
     // ==========================================
-    // ETAPA 3: QUICK VIEW COM AÇÃO DE STATUS
+    // QUICK VIEW COM AÇÃO DE STATUS
     // ==========================================
     
-    // Este método é chamado silenciosamente pelo AlpineJS quando clicamos nos botões de status dentro do Drawer
     #[On('quick-change-status')]
     public function alterarStatusQuickView($id, $status)
     {
@@ -107,12 +106,10 @@ class RegistrationManager extends Component
         $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
         
         foreach($statusDisponiveis as $st) {
-            // Pinta o botão de Roxo se for o status atual do aluno
             $corClass = $st->id == $inscricao->status_inscricao_id 
                         ? 'bg-purpura-500 text-white border-purpura-500' 
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
                         
-            // Usa o $dispatch do Alpine para enviar a informação de volta pro nosso #[On] no Livewire
             $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', status: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
         }
         $botoesAcao .= '</div>';
@@ -123,7 +120,6 @@ class RegistrationManager extends Component
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
             foreach($inscricao->dados_dinamicos as $chave => $valor) {
                 
-                // MUDANÇA AQUI: Se for array (checkbox), junta com vírgula e espaço. Se não, mantém o valor.
                 $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
                 
                 $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
@@ -173,7 +169,6 @@ class RegistrationManager extends Component
     {
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
         
-        // Pega as inscrições e envia para o Helper processar as aprovações individualmente
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
         $this->aplicarMudancaDeStatus($inscricoes, $this->novoStatusId);
         
@@ -209,7 +204,6 @@ class RegistrationManager extends Component
     {
         if (count($this->selecionadas) === 0) return;
         
-        // Pega as inscrições e envia para o Helper processar as aprovações individualmente
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
         $this->aplicarMudancaDeStatus($inscricoes, $statusId);
         
@@ -225,12 +219,15 @@ class RegistrationManager extends Component
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
-            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'], // COLUNA ADICIONADA
+            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
 
+    // ==========================================
+    // RECÁLCULO GLOBAL (TWO-PASS EVALUATION)
+    // ==========================================
     public function recalcularScoresGlobais()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
@@ -246,17 +243,25 @@ class RegistrationManager extends Component
             $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
             if (empty($regras)) continue;
 
-            // Varre as inscrições desse ciclo de 100 em 100 (alta performance)
+            // Varre as inscrições desse ciclo de 100 em 100
             $ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
                 foreach ($inscricoes as $inscricao) {
-                    $total = 0;
+                    
+                    $scoreBase = 0;
+                    $scoreBonus = 0;
+                    $acertosPadrao = 0;
                     $detalhes = ['auditoria_detalhada' => []];
+
                     $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
 
-                    foreach ($regras as $regra) {
+                    // Closure isolada para avaliar a condição cruzando a regra vs as respostas deste candidato
+                    $avaliarCondicao = function($regra) use ($inscricao, $respostas) {
+                        if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') {
+                            return true; 
+                        }
+
                         $campo = trim($regra['campo'] ?? '');
                         $operador = trim($regra['operador'] ?? '=');
-                        $pontos = (int) ($regra['pontos'] ?? 0);
                         $valorResposta = null;
 
                         if ($campo === 'idade' && $inscricao->data_nascimento) {
@@ -267,41 +272,100 @@ class RegistrationManager extends Component
                             $valorResposta = $respostas[$campo];
                         }
 
-                        if ($valorResposta !== null && $valorResposta !== '') {
-                            $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
-                            $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
-                            $valorAlvo = $valoresEsperados[0] ?? null;
-                            $pontuou = false;
+                        if ($valorResposta === null || $valorResposta === '') return false;
 
-                            switch ($operador) {
-                                case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
-                                case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
-                                case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
-                                case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
-                                case 'between': $pontuou = ((float)$valorResposta >= (float)($valoresEsperados[0] ?? 0) && (float)$valorResposta <= (float)($valoresEsperados[1] ?? 0)); break;
-                                case 'in': $pontuou = in_array(strtolower(trim((string)$valorResposta)), array_map('strtolower', $valoresEsperados)); break;
-                            }
+                        $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
+                        $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
+                        $valorAlvo = $valoresEsperados[0] ?? null;
 
-                            if ($pontuou) {
-                                $total += $pontos;
+                        switch ($operador) {
+                            case '=': return (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo)));
+                            case '!=': return (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo)));
+                            case '>=': return ((float)$valorResposta >= (float)$valorAlvo);
+                            case '<=': return ((float)$valorResposta <= (float)$valorAlvo);
+                            case '>': return ((float)$valorResposta > (float)$valorAlvo);
+                            case '<': return ((float)$valorResposta < (float)$valorAlvo);
+                            case 'between':
+                                $min = (float)($valoresEsperados[0] ?? 0);
+                                $max = (float)($valoresEsperados[1] ?? $min);
+                                return ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
+                            case 'in':
+                                $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
+                                return in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+                        }
+                        return false;
+                    };
+
+                    // PASSAGEM 1: A Base
+                    foreach ($regras as $regra) {
+                        $tipo = $regra['tipo_regra'] ?? 'padrao';
+                        
+                        if ($tipo === 'padrao') {
+                            if ($avaliarCondicao($regra)) {
+                                $pontos = (float) ($regra['pontos'] ?? 0);
+                                $scoreBase += $pontos;
+                                $acertosPadrao++;
+                                
                                 $detalhes['auditoria_detalhada'][] = [
-                                    'campo_avaliado' => $campo, 'resposta_dada' => $valorResposta,
-                                    'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
+                                    'tipo_regra' => 'padrao',
+                                    'campo_avaliado' => $regra['campo'],
+                                    'resposta_dada' => "Condição atendida",
+                                    'pontos_ganhos' => $pontos,
+                                    'condicao' => "{$regra['operador']} {$regra['valor']}"
                                 ];
                             }
                         }
                     }
 
+                    // PASSAGEM 2: O Bônus Especial
+                    foreach ($regras as $regra) {
+                        $tipo = $regra['tipo_regra'] ?? 'padrao';
+                        $escopo = $regra['escopo'] ?? 'especifico';
+                        
+                        if ($tipo !== 'padrao') {
+                            if ($avaliarCondicao($regra)) {
+                                $multiplicador = (float) ($regra['pontos'] ?? 0);
+                                $pontosGanhos = 0;
+                                $motivo = "";
+
+                                if ($tipo === 'bonus_por_acerto') {
+                                    $pontosGanhos = $multiplicador * $acertosPadrao; 
+                                    $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
+                                } elseif ($tipo === 'multiplicador_percentual') {
+                                    $pontosGanhos = $scoreBase * ($multiplicador / 100); 
+                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
+                                }
+
+                                if ($pontosGanhos > 0) {
+                                    $scoreBonus += $pontosGanhos;
+                                    
+                                    $alvoDescritivo = ($escopo === 'todos') ? 'Regra Global (Todos os Campos)' : $regra['campo'];
+                                    
+                                    $detalhes['auditoria_detalhada'][] = [
+                                        'tipo_regra' => 'especial',
+                                        'campo_avaliado' => $alvoDescritivo,
+                                        'resposta_dada' => "Benefício Ativado",
+                                        'pontos_ganhos' => $pontosGanhos,
+                                        'condicao' => $motivo
+                                    ];
+                                }
+                            }
+                        }
+                    }
+
+                    $totalFinal = $scoreBase + $scoreBonus;
+
                     $inscricao->update([
-                        'pontuacao_total' => $total,
-                        'pontuacao_detalhes' => $total > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global. Total: {$total} pts."]) : null
+                        'pontuacao_total' => $totalFinal,
+                        'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Admin). Score Base: {$scoreBase} pts. Score Bônus: {$scoreBonus} pts. Total Consolidado: {$totalFinal} pts."]) : null
                     ]);
+                    
                     $atualizados++;
                 }
             });
         }
         
-        $this->dispatch('sucesso', msg: "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos.");
+        $this->dispatch('sucesso', msg: "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos usando as regras Multiplicadoras.");
     }
 
     public function gerarRankingGlobal()
@@ -413,11 +477,8 @@ class RegistrationManager extends Component
 
     public function render()
     {
-        // APLICAMOS O BLOQUEIO AQUI NO INÍCIO!
-        // Assim, tanto a tabela quanto os cards respeitarão o isolamento de dados.
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
-        // 1. Calcula os cards (Agora protegidos pelo filtro acima)
         $metricas = [
             [
                 'label' => 'Total',
@@ -451,14 +512,12 @@ class RegistrationManager extends Component
             ],
         ];
 
-        // 2. APLICA A ORDENAÇÃO
         if ($this->ordenacaoCampo) {
             $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $queryBase->orderBy('id', 'desc');
         }
 
-        // 3. PAGINAÇÃO SEMPRE POR ÚLTIMO (Removido o escopo daqui, pois já foi aplicado lá em cima)
         $inscricoes = $queryBase->paginate($this->porPagina);
 
         return view('livewire.registration.registration-manager', [
