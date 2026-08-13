@@ -464,6 +464,9 @@ class RegistrationManager extends Component
                         'name' => $inscricao->nome,
                         'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
                         'is_active' => true,
+                        'unidade_id' => $inscricao->unidade_id,
+                        'cpf' => $inscricao->cpf,
+                        'slug' => \Illuminate\Support\Str::slug($inscricao->nome)
                     ]
                 );
                 $inscricao->student_id = $estudante->id;
