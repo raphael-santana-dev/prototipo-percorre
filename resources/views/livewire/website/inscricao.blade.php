@@ -84,7 +84,14 @@
                                 @if($possui_deficiencia === 'sim')
                                     <div class="col-span-12">
                                         <label class="block text-sm font-semibold text-brand-textLabel mb-1">Qual a natureza da deficiência?</label>
-                                        <input wire:model="natureza_deficiencia" type="text" class="w-full rounded-md border border-brand-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple">
+                                        <select wire:model.live="nature_deficiencia" class="w-full rounded-md border px-3 py-2 focus:ring-brand-purple @error('unidade') border-red-500 @else @if(!empty($unidade)) border-green-500 @else border-brand-border @endif @enderror">
+                                            <option value="">Selecione...</option>
+                                            <option value="fisica">Física</option>
+                                            <option value="auditiva">Auditiva</option>
+                                            <option value="visual">Visual</option>
+                                            <option value="intelectual">Intelectual</option>
+                                            <option value="multipla">Múltipla</option>
+                                        </select>
                                     </div>
                                 @endif
 
@@ -134,9 +141,21 @@
                                     <input wire:model="estado" type="text" readonly class="w-full rounded-md border border-brand-border px-3 py-2 bg-brand-bgInput text-gray-500 focus:outline-none">
                                 </div>
 
-                                <div class="col-span-12 md:col-span-12">
+                                <div class="col-span-6 md:col-span-6">
                                     <label class="block text-sm font-semibold text-brand-textLabel mb-1">Complemento</label>
                                     <input wire:model="complemento" type="text" class="w-full rounded-md border border-brand-border px-3 py-2 bg-brand-bgInput text-gray-500 focus:outline-none">
+                                </div>
+
+                                <div class="col-span-6 md:col-span-6">
+                                    <label class="block text-sm font-semibold text-brand-textLabel mb-1">Região</label>
+                                    <select wire:model.live="regiao" class="w-full rounded-md border px-3 py-2 focus:ring-brand-purple @error('unidade') border-red-500 @else @if(!empty($unidade)) border-green-500 @else border-brand-border @endif @enderror">
+                                        <option value="">Selecione...</option>
+                                        <option value="centro">Centro</option>
+                                        <option value="norte">Norte</option>
+                                        <option value="sul">Sul</option>
+                                        <option value="leste">Leste</option>
+                                        <option value="oeste">Oeste</option>
+                                    </select>
                                 </div>
                             
                                 {{-- BLOCO INTELIGENTE: SELEÇÃO DE CURSO/UNIDADE --}}
