@@ -7,7 +7,7 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            <button class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
                 <i class="ph ph-plus"></i> Nova Etapa
             </button>
         </x-slot>
