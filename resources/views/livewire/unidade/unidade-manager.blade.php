@@ -9,10 +9,10 @@
 
     <div class="flex items-center justify-between mb-6">
         <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Ciclos (Semestres)
+            <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Unidades
         </h2>
-        <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus text-lg"></i> Novo Ciclo
+        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+            <i class="ph ph-plus text-lg"></i> Nova Unidade
         </button>
     </div>
 
