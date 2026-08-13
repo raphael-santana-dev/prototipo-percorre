@@ -1,42 +1,63 @@
 @props([
     'title',
     'subtitle' => null,
-    'icon' => 'ph-cube',
-    'bannerColor' => 'bg-indigo-600', // Cor de fundo do banner (Padrão)
-    'iconColor' => 'text-indigo-600'  // Cor do ícone (Padrão)
+    'backUrl' => '#',
+    'backLabel' => 'Voltar à Lista',
+    'avatarInitials' => 'US',
+    'itemName' => '',
+    'itemDescription' => '',
 ])
 
-<div class="relative mb-8 font-sans">
+<div class="font-sans mb-8">
     
-    <!-- 1. Banner Colorido Superior -->
-    <!-- Usamos h-32 para dar altura e rounded-xl para as pontas arredondadas -->
-    <div class="w-full h-32 {{ $bannerColor }} rounded-xl"></div>
+    <!-- Header: Título e Botão Voltar -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ $title }}</h1>
+            @if($subtitle)
+                <p class="text-sm text-gray-500 mt-1">{{ $subtitle }}</p>
+            @endif
+        </div>
+        
+        <a href="{{ $backUrl }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 text-sm font-bold rounded-lg border border-gray-200 transition-colors shadow-sm shrink-0">
+            <i class="ph ph-arrow-left text-lg"></i> {{ $backLabel }}
+        </a>
+    </div>
 
-    <!-- 2. Card Branco Flutuante (Sobreposto) -->
-    <!-- A mágica acontece no margem negativa (-mt-12) que puxa o card para cima do banner -->
-    <div class="relative mx-4 sm:mx-8 -mt-12 sm:-mt-14">
-        <div class="flex flex-col sm:flex-row items-center sm:items-stretch bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 gap-4 sm:gap-6">
-            
-            <!-- Caixa do Ícone -->
-            <div class="flex items-center justify-center w-20 h-20 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm shrink-0 transition-transform hover:scale-105">
-                <i class="text-4xl ph {{ $icon }} {{ $iconColor }}"></i>
-            </div>
-            
-            <!-- Textos (Título e Subtítulo) -->
-            <div class="flex-1 flex flex-col justify-center text-center sm:text-left">
-                <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ $title }}</h1>
-                @if($subtitle)
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{!! $subtitle !!}</p>
-                @endif
+    <!-- Ficha / Card Principal -->
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        
+        <!-- Topo: Avatar, Nome e Badge -->
+        <div class="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex items-center gap-4">
+                <!-- Avatar Circular -->
+                <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-extrabold text-xl shrink-0">
+                    {{ $avatarInitials }}
+                </div>
+                <!-- Informações do Usuário/Item -->
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">{{ $itemName }}</h2>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ $itemDescription }}</p>
+                </div>
             </div>
 
-            <!-- Espaço Direito (Para botões ou Status Badges informados na View) -->
-            @if($slot->isNotEmpty())
-                <div class="flex items-center justify-center sm:justify-end shrink-0 mt-4 sm:mt-0 gap-3">
-                    {{ $slot }}
+            <!-- Espaço Direita (Slot para Badge "CONTA ATIVA") -->
+            @if(isset($badge))
+                <div class="shrink-0">
+                    {{ $badge }}
                 </div>
             @endif
-            
         </div>
+
+        <!-- Divisor -->
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Rodapé da Ficha (Grid de Informações - Inserido via Slot) -->
+        <div class="p-6 bg-white">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {{ $slot }}
+            </div>
+        </div>
+
     </div>
 </div>
