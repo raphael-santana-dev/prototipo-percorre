@@ -1,24 +1,25 @@
-<div class="p-6 max-w-7xl mx-auto font-sans">
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
+    
     @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-4 rounded-md text-pistache-100 bg-pistache-500">
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
             <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
         </div>
     @endif
 
-    <x-breadcrumb :items="$breadcrumbs" />
-
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-tag text-purpura-500"></i> Status de Inscrição
-        </h2>
-        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus"></i> Novo Status
-        </button>
-    </div>
-
-    @if(isset($metricas))
-        <x-summary-cards :metricas="$metricas" />
-    @endif
+    {{-- CABEÇALHO UNIFICADO --}}
+    <x-page-header 
+        title="Status de Inscrição" 
+        icon="ph ph-tag"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
+        
+        <x-slot name="actions">
+            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus text-lg"></i> Novo Status
+            </button>
+        </x-slot>
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"
@@ -29,36 +30,45 @@
         :modoExibicao="$modoExibicao">
 
         @forelse ($registros as $status)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 text-sm font-medium text-gray-500 whitespace-nowrap dark:text-gray-400">#{{ $status->id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-3 py-1 text-xs font-bold rounded-full bg-purpura-100 text-purpura-700 uppercase">
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+                    #{{ $status->id }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="inline-flex px-3 py-1 text-[10px] font-bold rounded-full bg-purpura-100 text-purpura-700 uppercase tracking-wider">
                         {{ $status->nome }}
                     </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ $status->descricao ?: '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-3 py-1 text-xs font-bold rounded-full shadow-sm uppercase tracking-wider" 
+                
+                <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 max-w-xs truncate">
+                    {{ $status->descricao ?: '-' }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="inline-flex px-3 py-1 text-[10px] font-bold rounded-full shadow-sm uppercase tracking-wider" 
                         style="background-color: {{ $status->cor ?? '#9CA3AF' }}; color: #ffffff;">
                         {{ $status->nome }}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-2">
-                        <button wire:click="edit({{ $status->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="edit({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
-                        <button wire:click="delete({{ $status->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
+                        <button wire:click="delete({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
-                    <p class="text-lg font-semibold">Nenhum status encontrado.</p>
-                    <p class="text-sm">Ajuste os filtros ou crie um novo status.</p>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <p class="font-semibold text-gray-500">Nenhum status encontrado.</p>
+                    <p class="text-xs mt-1">Ajuste os filtros ou crie um novo status.</p>
                 </td>
             </tr>
         @endforelse

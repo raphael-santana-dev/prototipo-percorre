@@ -249,7 +249,7 @@
                                 <div></div>
                             @endif
                             
-                            <button type="button" wire:click="avancarEtapa" class="{{ $etapaAtual === $totalEtapas ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-purple hover:bg-brand-purpleHover' }} text-white font-bold py-2 px-6 rounded-md transition duration-200 shadow-sm">
+                            <button type="button" wire:click="avancarEtapa" class="{{ $etapaAtual === $totalEtapas ? 'text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600' : 'text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600' }} text-white font-bold py-2 px-6 rounded-md transition duration-200 shadow-sm">
                                 {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
                             </button>
                         </div>

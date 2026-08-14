@@ -1,21 +1,30 @@
-<div class="space-y-6">
-    <x-breadcrumb :items="$breadcrumbs" />
-
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <i class="ph ph-users text-purpura-500"></i> Usuários
-        </h1>
-        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus"></i> Novo Usuário
-        </button>
-    </div>
-
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
+    
     @if (session()->has('success'))
-        <div class="p-4 rounded-md text-pistache-100 bg-pistache-500 font-bold shadow-sm"><i class="ph ph-check-circle"></i> {{ session('success') }}</div>
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
+            <i class="ph ph-check-circle text-lg"></i> {{ session('success') }}
+        </div>
     @endif
     @if (session()->has('error'))
-        <div class="p-4 rounded-md text-red-100 bg-red-500 font-bold shadow-sm"><i class="ph ph-warning"></i> {{ session('error') }}</div>
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-red-100 bg-red-500 font-medium shadow-sm">
+            <i class="ph ph-warning text-lg"></i> {{ session('error') }}
+        </div>
     @endif
+
+    <x-page-header 
+        title="Usuários" 
+        icon="ph ph-users"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
+
+        <x-slot name="actions">
+            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus text-lg"></i> Novo Usuário
+            </button>
+        </x-slot>
+
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"
@@ -26,12 +35,12 @@
         :modoExibicao="$modoExibicao">
         
         @forelse($registros as $user)
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-bold text-gray-900">{{ $user->name }}</div>
-                    <div class="text-sm text-gray-500">{{ $user->email }}</div>
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $user->name }}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $user->email }}</div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-4 py-2.5">
                     <div class="flex flex-wrap gap-1 mb-1.5">
                         @foreach($user->roles as $role)
                             <span class="inline-flex px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-100 border border-purpura-200 rounded uppercase">
@@ -42,39 +51,39 @@
                     <div class="text-xs font-semibold text-gray-500 flex flex-wrap gap-1">
                         @if($user->unidades->count() > 0)
                             @foreach($user->unidades as $unidadeVinculada)
-                                <span class="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded text-[10px]">
+                                <span class="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded text-[10px] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
                                     <i class="ph ph-map-pin"></i> {{ $unidadeVinculada->nome }}
                                 </span>
                             @endforeach
                         @else
-                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
                                 <i class="ph ph-globe"></i> Acesso Global / Não Restrito
                             </span>
                         @endif
                     </div>
                 </td>
                 
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-2">
-                        <button wire:click="showQuickDetails({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                            <i class="text-xl ph ph-info"></i>
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                            <i class="text-lg ph ph-info"></i>
                         </button>
-                        <a href="{{ route('users.show', $user->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600">
-                            <i class="text-xl ph ph-eye"></i>
+                        <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600">
+                            <i class="text-lg ph ph-eye"></i>
                         </a>
-                        <button wire:click="edit({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                        <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
                         @if($user->id !== auth()->id() && !$user->hasRole('dev'))
-                            <button wire:click="delete({{ $user->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Usuário" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-xl ph ph-trash"></i>
+                            <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Usuário" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
                     </div>
                 </td>
             </tr>
         @empty
-            <tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">Nenhum usuário cadastrado.</td></tr>
+            <tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Nenhum usuário cadastrado.</td></tr>
         @endforelse
 
         <x-slot name="gridSlot">
@@ -97,11 +106,11 @@
                         </span>
                         
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-info"></i></button>
-                            <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-eye"></i></a>
-                            <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-pencil-simple"></i></button>
+                            <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-info"></i></button>
+                            <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-eye"></i></a>
+                            <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-pencil-simple"></i></button>
                             @if($user->id !== auth()->id() && !$user->hasRole('dev'))
-                                <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 dark:hover:bg-gray-600" onclick="confirm('Excluir este usuário?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
+                                <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir este usuário?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
                             @endif
                         </div>
                     </div>

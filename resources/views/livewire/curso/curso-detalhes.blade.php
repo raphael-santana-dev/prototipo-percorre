@@ -1,61 +1,59 @@
-<div class="max-w-7xl px-4 py-8 mx-auto font-sans relative">
+<div class="p-6 max-w-[1400px] mx-auto font-sans">
+    
+    <x-breadcrumb :items="[
+        ['label' => 'Admin', 'url' => '#'], 
+        ['label' => 'Cursos', 'url' => route('cursos.index') ?? '#'], 
+        ['label' => 'Detalhes', 'url' => '#']
+    ]" />
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+    <x-details-card 
+        title="Ficha do Curso" 
+        subtitle="Gestão de configurações, turnos e corpo docente."
+        backUrl="{{ route('cursos.index') ?? '#' }}"
+        backLabel="Voltar à Lista"
+        avatarInitials="{{ strtoupper(substr($this->curso->nome, 0, 2)) }}"
+        itemName="{{ $this->curso->nome }}"
+        itemDescription="ID: #{{ str_pad($this->curso->id, 4, '0', STR_PAD_LEFT) }} • {{ $this->curso->slug }}">
         
-        <!-- ========================================== -->
-        <!-- COLUNA ESQUERDA: SIDEBAR DE METADADOS      -->
-        <!-- ========================================== -->
-        <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
-            
-            <!-- 1. Card Principal de Metadados -->
-            <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 dark:bg-gray-800 dark:border-gray-700 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purpura-500 to-ponkan-500"></div>
+        <x-slot name="badge">
+            @if($this->curso->status === 'Ativo')
+                <span class="px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">CURSO ATIVO</span>
+            @else
+                <span class="px-3 py-1 bg-red-100 text-red-700 font-bold text-xs rounded-full border border-red-200">INATIVO</span>
+            @endif
+        </x-slot>
 
-                <div class="mt-2 mb-6">
-                    <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ $this->curso->nome }}</h1>
-                    <p class="text-xs text-gray-400 font-mono mt-1">ID: #{{ str_pad($this->curso->id, 4, '0', STR_PAD_LEFT) }} • {{ $this->curso->slug }}</p>
-                </div>
+        <!-- Slot Inferior (Grid de Metadados) -->
+        <div>
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Idade Mínima</span>
+            <span class="block text-base font-bold text-gray-900">{{ $this->curso->min_idade ?? '--' }} <span class="text-sm font-normal text-gray-400">anos</span></span>
+        </div>
+        <div>
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Idade Máxima</span>
+            <span class="block text-base font-bold text-gray-900">{{ $this->curso->max_idade ?? '--' }} <span class="text-sm font-normal text-gray-400">anos</span></span>
+        </div>
+        <div>
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Aceita Fora do Estado</span>
+            <span class="block text-sm font-bold text-gray-900 mt-1">{{ $this->curso->permite_estado_diferente ? 'Sim' : 'Não' }}</span>
+        </div>
+        <div>
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tipo de Perfil</span>
+            <span class="inline-block px-2 py-0.5 mt-0.5 bg-blue-50 text-blue-600 font-bold text-[10px] rounded border border-blue-200">CURSO ACADÊMICO</span>
+        </div>
+    </x-details-card>
 
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl dark:bg-gray-700/30">
-                        <span class="text-sm font-bold text-gray-600 dark:text-gray-300"><i class="ph ph-activity text-purpura-500"></i> Status</span>
-                        @if($this->curso->status === 'Ativo')
-                            <span class="px-2 py-1 text-xs font-bold text-pistache-700 bg-pistache-100 rounded uppercase">Ativo</span>
-                        @else
-                            <span class="px-2 py-1 text-xs font-bold text-red-700 bg-red-100 rounded uppercase">Inativo</span>
-                        @endif
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 dark:bg-gray-700/30 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase">Idade Mínima</span>
-                            <span class="text-lg font-extrabold text-gray-900 dark:text-white">{{ $this->curso->min_idade ?? '--' }} <span class="text-sm font-normal text-gray-500">anos</span></span>
-                        </div>
-                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 dark:bg-gray-700/30 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase">Idade Máxima</span>
-                            <span class="text-lg font-extrabold text-gray-900 dark:text-white">{{ $this->curso->max_idade ?? '--' }} <span class="text-sm font-normal text-gray-500">anos</span></span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
-                        <span>Aceita fora do Estado?</span>
-                        @if($this->curso->permite_estado_diferente)
-                            <i class="text-xl ph-fill ph-check-circle text-pistache-500"></i>
-                        @else
-                            <i class="text-xl ph-fill ph-x-circle text-red-500"></i>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. Unidades Presentes -->
-            <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-5 dark:bg-gray-800 dark:border-gray-700">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-3">
-                    <i class="ph ph-buildings text-lg text-blue-500"></i> Unidades Presentes
+    <!-- Estrutura Inferior de Conteúdo -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        
+        <!-- Coluna Esquerda: Unidades e Professores -->
+        <div class="space-y-6 lg:col-span-1">
+            <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-5">
+                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                    <i class="ph-fill ph-buildings text-lg text-purpura-500"></i> Unidades Presentes
                 </h3>
                 <div class="flex flex-wrap gap-2">
                     @forelse($this->curso->unidades as $unidade)
-                        <span class="px-2.5 py-1 text-xs font-bold text-gray-700 bg-gray-100 rounded-md border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                        <span class="px-2.5 py-1 text-xs font-bold text-gray-700 bg-gray-50 rounded-md border border-gray-200">
                             {{ $unidade->nome }}
                         </span>
                     @empty
@@ -64,14 +62,13 @@
                 </div>
             </div>
 
-            <!-- 3. Turnos Habilitados -->
-            <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-5 dark:bg-gray-800 dark:border-gray-700">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-3">
-                    <i class="ph ph-clock text-lg text-amber-500"></i> Turnos Habilitados
+            <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-5">
+                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                    <i class="ph-fill ph-clock text-lg text-amber-500"></i> Turnos Habilitados
                 </h3>
                 <div class="flex flex-wrap gap-2">
                     @forelse($this->curso->turnosVinculados as $turno)
-                        <span class="px-2.5 py-1 text-xs font-bold text-gray-700 bg-gray-100 rounded-md border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                        <span class="px-2.5 py-1 text-xs font-bold text-gray-700 bg-gray-50 rounded-md border border-gray-200">
                             {{ $turno->nome }}
                         </span>
                     @empty
@@ -80,72 +77,69 @@
                 </div>
             </div>
 
-            <!-- 4. Corpo Docente -->
-            <div class="bg-white border border-gray-100 shadow-sm rounded-2xl p-5 dark:bg-gray-800 dark:border-gray-700">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4">
-                    <i class="ph ph-chalkboard-teacher text-lg text-ponkan-500"></i> Corpo Docente
+            <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-5">
+                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                    <i class="ph-fill ph-chalkboard-teacher text-lg text-ponkan-500"></i> Corpo Docente
                 </h3>
                 <div class="space-y-3">
                     @forelse($this->professoresVinculados as $professor)
                         <div class="flex items-center gap-3">
-                            <img src="https://ui-avatars.com/api/?name={{ urlencode($professor->name) }}&background=F3E8FF&color=9B26B6&bold=true" class="w-8 h-8 rounded-full">
+                            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs shrink-0">
+                                {{ strtoupper(substr($professor->name, 0, 2)) }}
+                            </div>
                             <div>
-                                <p class="text-sm font-bold text-gray-900 dark:text-gray-200 leading-none">{{ $professor->name }}</p>
-                                <p class="text-[10px] text-gray-500 mt-1 uppercase">{{ $professor->unidades->first()->nome ?? 'Global' }}</p>
+                                <p class="text-sm font-bold text-gray-900 leading-none">{{ $professor->name }}</p>
+                                <p class="text-[10px] text-gray-500 mt-1 uppercase font-bold">{{ $professor->unidades->first()->nome ?? 'Global' }}</p>
                             </div>
                         </div>
                     @empty
-                        <p class="text-sm text-gray-400 italic">Nenhum professor vinculado.</p>
+                        <p class="text-sm text-gray-400 italic font-medium">Nenhum professor vinculado.</p>
                     @endforelse
                 </div>
             </div>
-
         </div>
 
-        <!-- ========================================== -->
-        <!-- COLUNA DIREITA: INSCRIÇÕES (Listagem)      -->
-        <!-- ========================================== -->
-        <div class="lg:col-span-8">
-            <div class="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
-                <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
-                    <h3 class="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph ph-users-three text-xl text-purpura-500"></i> Últimas Inscrições
+        <!-- Coluna Direita: Lista de Inscrições Recentes -->
+        <div class="lg:col-span-2">
+            <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                        <i class="ph-fill ph-users-three text-lg text-purpura-500"></i> Últimas Inscrições
                     </h3>
-                    <a href="{{ route('inscricoes.index', ['filtroCurso' => $this->curso->id]) }}" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 hover:underline">
-                        Ver todas &rarr;
+                    <a href="{{ route('inscricoes.index', ['filtroCurso' => $this->curso->id]) }}" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 hover:underline bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
+                        Ver base completa &rarr;
                     </a>
                 </div>
                 
-                <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                <div class="divide-y divide-gray-100">
                     @forelse($this->inscricoesRecentes as $inscricao)
-                        <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                        <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                             <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold dark:bg-gray-700">
-                                    {{ substr($inscricao->nome, 0, 1) }}
+                                <div class="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                    {{ strtoupper(substr($inscricao->nome, 0, 2)) }}
                                 </div>
                                 <div>
-                                    <p class="text-sm font-bold text-gray-900 dark:text-gray-200">{{ $inscricao->nome }}</p>
+                                    <p class="text-sm font-bold text-gray-900">{{ $inscricao->nome }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">{{ $inscricao->email }} • {{ $inscricao->created_at->format('d/m/Y') }}</p>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-gray-100 text-gray-600 border border-gray-200">
                                     Etapa {{ $inscricao->etapa_atual }}
                                 </span>
                             </div>
                         </div>
                     @empty
-                        <div class="px-6 py-12 text-center">
-                            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-50 mb-3 dark:bg-gray-700">
-                                <i class="ph ph-empty text-2xl text-gray-400"></i>
+                        <div class="px-6 py-16 text-center">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-3 border border-gray-100 shadow-sm">
+                                <i class="ph ph-empty text-3xl text-gray-400"></i>
                             </div>
-                            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">Nenhum aluno matriculado.</p>
-                            <p class="text-xs text-gray-500 mt-1">As inscrições para este curso aparecerão aqui.</p>
+                            <p class="text-base font-bold text-gray-900">Nenhum aluno matriculado.</p>
+                            <p class="text-sm text-gray-500 mt-1 max-w-sm mx-auto">As inscrições e candidaturas para este curso aparecerão de forma resumida aqui.</p>
                         </div>
                     @endforelse
                 </div>
             </div>
         </div>
-
     </div>
 </div>

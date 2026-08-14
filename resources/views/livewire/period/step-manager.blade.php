@@ -8,7 +8,7 @@
 
         <x-slot name="actions">
             <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus"></i> Nova Etapa
+                <i class="ph ph-plus text-lg"></i> Nova Etapa
             </button>
         </x-slot>
 
@@ -18,34 +18,79 @@
         :headers="$this->headers"
         :registros="$registros"
         :ordenacaoCampo="$ordenacaoCampo"
-        :ordenacaoDirecao="$ordenacaoDirecao">
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid ?? true"
+        :modoExibicao="$modoExibicao ?? 'lista'">
 
         @forelse($registros as $etapa)
-            <tr class="bg-white hover:bg-gray-100">
-                <td class="px-6 py-4 font-medium text-gray-900">{{ $etapa->id }}</td>
-                <td class="px-6 py-4">{{ $etapa->numero }}</td>
-                <td class="px-6 py-4">{{ $etapa->nome }}</td>
-                <td class="px-6 py-4 text-right">
-                    @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
-                        <button wire:click="edit({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
-                            <i class="text-xl ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="delete({{ $etapa->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
-                        </button>
-                    @else
-                        <span class="px-2 py-1 text-xs font-bold text-gray-500 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-400">Etapa Fixa</span>
-                    @endif
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+                    #{{ $etapa->id }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    {{ $etapa->numero }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-bold text-gray-800 dark:text-white">
+                    {{ $etapa->nome }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
+                            <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                            <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @else
+                            <span class="px-2 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded uppercase tracking-wider dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">Etapa Fixa</span>
+                        @endif
+                    </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
-                    <p class="text-lg font-semibold">Nenhuma etapa encontrada.</p>
-                    <p class="text-sm">Ajuste os filtros ou crie uma nova etapa.</p>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <p class="font-semibold text-gray-500">Nenhuma etapa encontrada.</p>
+                    <p class="text-xs mt-1">Ajuste os filtros ou crie uma nova etapa.</p>
                 </td>
             </tr>   
         @endforelse
+
+        {{-- VISÃO DE GRID (CARDS) --}}
+        <x-slot name="gridSlot">
+            @foreach($registros as $etapa)
+                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $etapa->nome }}</div>
+                        <span class="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">#{{ $etapa->id }}</span>
+                    </div>
+                    
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        Ordem no Funil: <span class="font-bold text-gray-700 dark:text-gray-300">{{ $etapa->numero }}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-end mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center gap-1">
+                            @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
+                                <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                                <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta etapa?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @else
+                                <span class="px-2 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded uppercase tracking-wider dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">Etapa Fixa</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
 
     </x-table>
 
@@ -77,20 +122,20 @@
                         
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome da Etapa <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" placeholder="Ex: Análise de Documentos" class="w-full mt-1">
+                            <input type="text" wire:model="nome" placeholder="Ex: Análise de Documentos" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Ordem de Execução <span class="text-red-500">*</span></label>
-                            <input type="number" wire:model="numero" placeholder="Ex: 1" class="w-full mt-1">
+                            <input type="number" wire:model="numero" placeholder="Ex: 1" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Define em qual posição esta etapa aparecerá no funil.</p>
                             @error('numero') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Descrição / Instruções</label>
-                            <textarea wire:model="descricao" rows="3" placeholder="Detalhes opcionais sobre o que acontece nesta etapa..." class="w-full mt-1"></textarea>
+                            <textarea wire:model="descricao" rows="3" placeholder="Detalhes opcionais sobre o que acontece nesta etapa..." class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
                             @error('descricao') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 

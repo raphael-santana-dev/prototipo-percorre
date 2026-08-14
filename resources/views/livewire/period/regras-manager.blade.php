@@ -10,7 +10,7 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <button wire:click="salvar" class="bg-brand-purple hover:bg-brand-purpleHover text-white font-bold py-2.5 px-6 rounded-lg shadow-sm transition flex items-center gap-2">
+            <button wire:click="salvar" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
                 <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Todas as Regras
             </button>
         </div>

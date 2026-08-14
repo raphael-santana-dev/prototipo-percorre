@@ -1,20 +1,24 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium">
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
             <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
         </div>
     @endif
 
-    <x-breadcrumb :items="$breadcrumbs" />
+    <x-page-header 
+        title="Cursos" 
+        icon="ph ph-graduation-cap"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
 
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos
-        </h2>
-        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus"></i> Novo Curso
-        </button>
-    </div>
+        <x-slot name="actions">
+            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus text-lg"></i> Novo Curso
+            </button>
+        </x-slot>
+
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"
@@ -25,51 +29,51 @@
         :modoExibicao="$modoExibicao">
 
         @forelse ($registros as $curso)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap">
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-900 dark:text-white">{{ $curso->nome }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">Slug: {{ $curso->slug }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-300">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-300">
                     @if($curso->min_idade || $curso->max_idade)
                         {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
                     @else
                         <span class="text-gray-400">Livre</span>
                     @endif
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
                     <div class="text-[10px] mt-1 font-bold {{ $curso->status ? 'text-green-600' : 'text-gray-500' }}">
                         {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-2">
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
                         <!-- Botão de Quick View -->
-                        <button wire:click="showQuickView({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-xl ph ph-info"></i>
+                        <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <i class="text-lg ph ph-info"></i>
                         </button>
                         
                         <!-- Botão de Full View -->
-                        <a href="{{ route('cursos.show', $curso->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                            <i class="text-xl ph ph-eye"></i>
+                        <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                            <i class="text-lg ph ph-eye"></i>
                         </a>
 
                         <!-- Editar e Excluir -->
-                        <button wire:click="edit({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                        <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
-                        <button wire:click="delete({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
+                        <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
-                    <p class="text-lg font-semibold">Nenhum formulário encontrado.</p>
-                    <p class="text-sm">Crie seu primeiro formulário customizado agora mesmo.</p>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                    <p class="font-semibold">Nenhum formulário encontrado.</p>
+                    <p class="text-xs mt-1">Crie seu primeiro formulário customizado agora mesmo.</p>
                 </td>
             </tr>
         @endforelse
@@ -91,28 +95,28 @@
                     <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                         <span>Aceita fora do Estado?</span>
                         @if($curso->permite_estado_diferente)
-                            <i class="text-xl ph-fill ph-check-circle text-pistache-500"></i>
+                            <i class="text-lg ph-fill ph-check-circle text-pistache-500"></i>
                         @else
-                            <i class="text-xl ph-fill ph-x-circle text-red-500"></i>
+                            <i class="text-lg ph-fill ph-x-circle text-red-500"></i>
                         @endif
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
                         <div class="flex items-center gap-1">
-                            <a href="{{ route('formularios.show', $curso->id) }}" target="_blank" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
-                                <i class="text-xl ph ph-eye"></i>
+                            <a href="{{ route('formularios.show', $curso->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
+                                <i class="text-lg ph ph-eye"></i>
                             </a>
-                            <a href="{{ route('formularios.publico', $curso->slug) }}" target="_blank" class="p-2 text-gray-400 transition-colors hover:text-blue-500 rounded-lg dark:bg-blue-900/30 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
-                                <i class="text-xl ph ph-arrow-square-in"></i>
+                            <a href="{{ route('formularios.publico', $curso->slug) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors hover:text-blue-500 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
+                                <i class="text-lg ph ph-arrow-square-in"></i>
                             </a>
-                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $curso->id]) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
-                                <i class="text-xl ph ph-list-dashes"></i>
+                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $curso->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                                <i class="text-lg ph ph-list-dashes"></i>
                             </a>
-                            <button wire:click="abrirModal({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 dark:hover:bg-gray-600" title="Editar Informações">
-                                <i class="text-xl ph ph-pencil-simple"></i>
+                            <button wire:click="abrirModal({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                                <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
-                            <button wire:click="excluir({{ $curso->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-xl ph ph-trash"></i>
+                            <button wire:click="excluir({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
                             </button>
                         </div>
                     </div>

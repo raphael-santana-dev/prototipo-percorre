@@ -1,24 +1,25 @@
-<div class="p-6 max-w-7xl mx-auto font-sans">
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
+    
     @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-4 rounded-md text-pistache-100 bg-pistache-500">
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
             <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
         </div>
     @endif
 
-    <x-breadcrumb :items="$breadcrumbs" />
+    <x-page-header 
+        title="Gerenciamento de Unidades" 
+        icon="ph ph-buildings"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
 
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-calendar-check text-purpura-500"></i> Gerenciamento de Unidades
-        </h2>
-        <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus text-lg"></i> Nova Unidade
-        </button>
-    </div>
+        <x-slot name="actions">
+            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus text-lg"></i> Nova Unidade
+            </button>
+        </x-slot>
 
-    @if(isset($metricas))
-        <x-summary-cards :metricas="$metricas" />
-    @endif
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"
@@ -30,46 +31,57 @@
 
         {{-- VISÃO EM LISTA --}}
         @forelse($registros as $unidade)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $unidade->id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+                    #{{ $unidade->id }}
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-900 dark:text-white">{{ $unidade->nome }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ $unidade->endereco }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="text-sm text-gray-900 dark:text-gray-300">{{ $unidade->email ?: 'Sem e-mail' }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ $unidade->telefone ?: 'Sem telefone' }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <x-toggle :status="$unidade->status === 'Ativa'" action="toggleStatus({{ $unidade->id }})" />
-                    
-                    <div class="text-[10px] mt-1 font-bold {{ $unidade->status === 'Ativa' ? 'text-green-600' : 'text-gray-500' }}">
-                        {{ $unidade->status === 'Ativa' ? 'ATIVA' : 'INATIVA' }}
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                        <x-toggle :status="$unidade->status === 'Ativa'" action="toggleStatus({{ $unidade->id }})" />
+                        <span class="text-[10px] font-bold {{ $unidade->status === 'Ativa' ? 'text-green-600' : 'text-gray-400' }}">
+                            {{ $unidade->status === 'Ativa' ? 'ATIVA' : 'INATIVA' }}
+                        </span>
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        <button wire:click="showQuickView({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-xl ph ph-info"></i>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <i class="text-lg ph ph-info"></i>
                         </button>
                         
-                        <a href="{{ route('unidades.show', $unidade->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                            <i class="text-xl ph ph-eye"></i>
+                        <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                            <i class="text-lg ph ph-eye"></i>
                         </a>
 
-                        <button wire:click="edit({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                        <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
 
-                        <button wire:click="delete({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
+                        <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">Nenhuma unidade cadastrada.</td>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <p class="font-semibold text-gray-500">Nenhuma unidade cadastrada.</p>
+                    <p class="text-xs mt-1">Ajuste os filtros ou crie uma nova unidade.</p>
+                </td>
             </tr>
         @endforelse
 
@@ -82,7 +94,7 @@
                         <span class="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">#{{ $unidade->id }}</span>
                     </div>
                     
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 min-h-[32px]">
                         <i class="ph-fill ph-map-pin text-purpura-500"></i> {{ $unidade->cidade }}/{{ $unidade->estado }}<br>
                         <i class="ph-fill ph-envelope-simple text-gray-400"></i> {{ $unidade->email ?: 'Sem e-mail' }}
                     </div>
@@ -96,14 +108,17 @@
                         </div>
                         
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 dark:hover:bg-gray-600">
-                                <i class="text-xl ph ph-info"></i>
+                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <i class="text-lg ph ph-info"></i>
                             </button>
-                            <button wire:click="edit({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 dark:hover:bg-gray-600">
-                                <i class="text-xl ph ph-pencil-simple"></i>
+                            <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
+                            <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                                <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
-                            <button wire:click="delete({{ $unidade->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()">
-                                <i class="text-xl ph ph-trash"></i>
+                            <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()" title="Excluir">
+                                <i class="text-lg ph ph-trash"></i>
                             </button>
                         </div>
                     </div>
@@ -140,7 +155,6 @@
 
                                 <div class="col-span-1 md:col-span-3">
                                     <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">CEP <span class="text-red-500">*</span></label>
-                                    <!-- .live.debounce para disparar o ViaCEP apenas quando parar de digitar -->
                                     <input type="text" wire:model.live.debounce.500ms="cep" x-mask="99999-999" placeholder="00000-000" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                     @error('cep') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                                 </div>
@@ -229,4 +243,13 @@
             </div>
         </div>
     @endif
+
+    {{-- TOAST SYSTEM --}}
+    <div x-data="{ show: false, msg: '' }" 
+        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
+        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
+        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
+        <i class="text-2xl ph ph-check-circle text-white"></i>
+        <span x-text="msg"></span>
+    </div>
 </div>
