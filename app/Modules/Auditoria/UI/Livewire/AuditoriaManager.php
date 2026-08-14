@@ -15,10 +15,25 @@ class AuditoriaManager extends Component
 
     public array $breadcrumbs = [];
 
+    // Filtros
+    public $filtro_keyword = '';
+    public $filtro_acao = '';
+    public $filtro_tabela = '';
+    public $filtro_data_inicio = '';
+    public $filtro_data_fim = '';
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    // Reseta a paginação sempre que um filtro for alterado
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_keyword', 'filtro_acao', 'filtro_tabela', 'filtro_data_inicio', 'filtro_data_fim'])) {
+            $this->resetPage();
+        }
     }
 
     public function getHeadersProperty()
@@ -29,7 +44,7 @@ class AuditoriaManager extends Component
             ['key' => 'usuario_nome', 'label' => 'Usuário / IP', 'sortable' => false],
             ['key' => 'acao', 'label' => 'Ação', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'tabela_alterada', 'label' => 'Tabela / Reg. ID', 'sortable' => false],
-            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'w-16 text-right'], // <- NOVA COLUNA
+            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'w-16 text-right'],
         ];
     }
 
@@ -37,7 +52,6 @@ class AuditoriaManager extends Component
     {
         $log = AuditoriaLog::findOrFail($id);
 
-        // 1. Badge Dinâmica de Ação
         $acaoBadge = match(strtolower($log->acao)) {
             'criacao' => '<span class="bg-green-100 text-green-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-green-200"><i class="ph-bold ph-plus"></i> Criação</span>',
             'atualizacao' => '<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-blue-200"><i class="ph-bold ph-pencil-simple"></i> Atualização</span>',
@@ -45,7 +59,6 @@ class AuditoriaManager extends Component
             default => '<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-gray-200">'.$log->acao.'</span>',
         };
 
-        // 2. Info do Usuário
         $infoUsuario = "
             <div class='text-sm text-gray-700 dark:text-gray-300 space-y-1'>
                 <p><b>Nome:</b> {$log->usuario_nome} ({$log->usuario_role})</p>
@@ -57,7 +70,6 @@ class AuditoriaManager extends Component
             </div>
         ";
 
-        // 3. Info do Sistema
         $dataAlteracao = $log->created_at ? $log->created_at->format('d/m/Y \à\s H:i:s') : 'N/A';
         $infoSistema = "
             <div class='text-sm text-gray-700 dark:text-gray-300 space-y-1'>
@@ -67,7 +79,6 @@ class AuditoriaManager extends Component
             </div>
         ";
 
-        // 4. Construtor de Comparativo (Diff)
         $oldData = is_string($log->informacao_anterior) ? json_decode($log->informacao_anterior, true) : ($log->informacao_anterior ?? []);
         $newData = is_string($log->nova_informacao) ? json_decode($log->nova_informacao, true) : ($log->nova_informacao ?? []);
 
@@ -80,12 +91,10 @@ class AuditoriaManager extends Component
             $comparativo .= '<thead class="bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider sticky top-0 shadow-sm">';
             $comparativo .= '<tr><th class="p-3 border-r border-gray-200 dark:border-gray-700">Campo (Coluna)</th><th class="p-3 border-r border-gray-200 dark:border-gray-700">Valor Anterior</th><th class="p-3">Novo Valor</th></tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800">';
             
-            // Une todas as chaves (colunas) que existem no array velho e no novo e ordena alfabeticamente
             $allKeys = array_unique(array_merge(array_keys($oldData ?? []), array_keys($newData ?? [])));
             sort($allKeys);
 
             foreach ($allKeys as $key) {
-                // Ignora timestamps padrão se não foram alterados para não poluir a tela
                 if (in_array($key, ['created_at', 'updated_at', 'deleted_at']) && ($oldData[$key] ?? '') === ($newData[$key] ?? '')) {
                     continue;
                 }
@@ -93,7 +102,6 @@ class AuditoriaManager extends Component
                 $oldVal = $oldData[$key] ?? null;
                 $newVal = $newData[$key] ?? null;
                 
-                // Formatação para Arrays/Objetos e Booleanos
                 $formatValue = function($val) {
                     if (is_null($val)) return '<span class="text-gray-400 italic">null</span>';
                     if (is_bool($val)) return $val ? 'true' : 'false';
@@ -106,12 +114,10 @@ class AuditoriaManager extends Component
                 
                 $isDifferent = $oldVal !== $newVal;
                 
-                // Definição de Cores baseado no status da alteração
                 $rowClass = $isDifferent ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : 'bg-white dark:bg-gray-800';
                 $newValClass = $isDifferent ? 'text-green-600 font-bold bg-green-50 dark:bg-green-900/20 px-1 rounded' : 'text-gray-600 dark:text-gray-300';
                 $oldValClass = $isDifferent ? 'text-red-500 line-through bg-red-50 dark:bg-red-900/20 px-1 rounded' : 'text-gray-600 dark:text-gray-300';
                 
-                // Ajustes finos para Criação e Exclusão
                 if (strtolower($log->acao) === 'criacao') {
                     $oldValStr = '-';
                     $oldValClass = 'text-gray-400 dark:text-gray-600';
@@ -131,7 +137,6 @@ class AuditoriaManager extends Component
             $comparativo .= '</tbody></table></div>';
         }
 
-        // 5. Dispara o componente QuickViewDrawer global
         $this->dispatch('load-quick-view', [
             'title' => 'Log de Registro #' . $log->id,
             'subtitle' => 'Auditoria disparada na tabela ' . $log->tabela_alterada,
@@ -147,7 +152,44 @@ class AuditoriaManager extends Component
 
     public function render()
     {
-        $query = AuditoriaLog::query()->with('usuario');
+        $query = AuditoriaLog::query();
+
+        // 1. Filtro de Palavra-chave
+        if (!empty($this->filtro_keyword)) {
+            $query->where(function($q) {
+                $q->where('usuario_nome', 'like', '%' . $this->filtro_keyword . '%')
+                  ->orWhere('ip', 'like', '%' . $this->filtro_keyword . '%')
+                  ->orWhere('registro_id', 'like', '%' . $this->filtro_keyword . '%');
+            });
+        }
+
+        // 2. Filtro de Ação
+        if (!empty($this->filtro_acao)) {
+            $query->where('acao', $this->filtro_acao);
+        }
+
+        // 3. Filtro de Tabela
+        if (!empty($this->filtro_tabela)) {
+            $query->where('tabela_alterada', $this->filtro_tabela);
+        }
+
+        // 4. Filtro de Data Inicial (De)
+        if (!empty($this->filtro_data_inicio)) {
+            $query->where('created_at', '>=', str_replace('T', ' ', $this->filtro_data_inicio));
+        }
+
+        // 5. Filtro de Data Final (Até)
+        if (!empty($this->filtro_data_fim)) {
+            $dataFim = str_replace('T', ' ', $this->filtro_data_fim);
+            // Se o usuário informar apenas a data (sem hora), estendemos para o final do dia
+            if (strlen($dataFim) === 10) {
+                $dataFim .= ' 23:59:59';
+            } elseif (strlen($dataFim) === 16) { 
+                // Se informar hora sem os segundos, englobamos o final daquele minuto
+                $dataFim .= ':59';
+            }
+            $query->where('created_at', '<=', $dataFim);
+        }
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -155,8 +197,14 @@ class AuditoriaManager extends Component
             $query->orderBy('id', 'desc');
         }
 
+        // Coleta as ações e tabelas existentes para preencher os selects do filtro dinamicamente
+        $acoesDisponiveis = AuditoriaLog::select('acao')->distinct()->orderBy('acao')->pluck('acao');
+        $tabelasDisponiveis = AuditoriaLog::select('tabela_alterada')->distinct()->orderBy('tabela_alterada')->pluck('tabela_alterada');
+
         return view('livewire.auditoria.auditoria-manager', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros' => $query->paginate($this->porPagina),
+            'acoesDisponiveis' => $acoesDisponiveis,
+            'tabelasDisponiveis' => $tabelasDisponiveis,
         ])->layout('components.layouts.app', ['title' => 'Auditoria de Sistema']);
     }
 }
