@@ -1,42 +1,46 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
+    
     @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-4 rounded-md text-pistache-100 bg-pistache-500">
+        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
             <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
         </div>
     @endif
 
-    <x-breadcrumb :items="$breadcrumbs" />
+    <x-page-header 
+        title="Gerenciamento de Permissões" 
+        icon="ph ph-key"
+        badge=""
+        :breadcrumbs="$breadcrumbs" 
+        :metricas="$metricas ?? null">
 
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-key text-purpura-500"></i> Gerenciamento de Permissões
-        </h2>
-        <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus text-lg"></i> Nova Permissão
-        </button>
-    </div>
+        <x-slot name="actions">
+            <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <i class="ph ph-plus text-lg"></i> Nova Permissão
+            </button>
+        </x-slot>
 
-    {{-- BARRA DE FILTROS --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-        <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-magnifying-glass text-purpura-500"></i> Palavra-chave
-            </label>
-            <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Buscar por nome ou descrição..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-        </div>
+        {{-- FILTROS INTEGRADOS AO HEADER --}}
+        <x-slot name="filters" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                    <i class="ph ph-magnifying-glass text-purpura-500"></i> Palavra-chave
+                </label>
+                <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Buscar por nome ou descrição..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-squares-four text-purpura-500"></i> Módulo
-            </label>
-            <select wire:model.live="filtro_module" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Módulos</option>
-                @foreach($modulosDisponiveis as $modulo) 
-                    <option value="{{ $modulo }}">{{ ucfirst($modulo) }}</option> 
-                @endforeach
-            </select>
-        </div>
-    </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
+                    <i class="ph ph-squares-four text-purpura-500"></i> Módulo
+                </label>
+                <select wire:model.live="filtro_module" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Módulos</option>
+                    @foreach($modulosDisponiveis as $modulo) 
+                        <option value="{{ $modulo }}">{{ ucfirst($modulo) }}</option> 
+                    @endforeach
+                </select>
+            </div>
+        </x-slot>
+    </x-page-header>
 
     <x-table
         :headers="$this->headers"
@@ -47,33 +51,37 @@
         :modoExibicao="$modoExibicao">
 
         @forelse ($registros as $permission)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ $permission->id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2.5 py-1 text-[10px] font-bold rounded bg-gray-100 text-gray-700 uppercase dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+                    #{{ $permission->id }}
+                </td>
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="px-2.5 py-1 text-[10px] font-bold rounded bg-gray-100 text-gray-700 uppercase tracking-wider dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
                         {{ $permission->module }}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="font-bold text-gray-900 dark:text-white">{{ $permission->name }}</div>
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="font-bold text-sm text-gray-900 dark:text-white">{{ $permission->name }}</div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ $permission->description }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-2">
-                        <button wire:click="abrirModal({{ $permission->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 max-w-xs truncate">
+                    {{ $permission->description }}
+                </td>
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
-                        <button wire:click="excluir({{ $permission->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
+                        <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                    <p class="text-lg font-semibold">Nenhuma permissão encontrada.</p>
-                    <p class="text-sm">Cadastre uma nova permissão ou altere os filtros.</p>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                    <p class="font-semibold">Nenhuma permissão encontrada.</p>
+                    <p class="text-xs mt-1">Cadastre uma nova permissão ou altere os filtros.</p>
                 </td>
             </tr>
         @endforelse
@@ -83,18 +91,18 @@
             @foreach ( $registros as $permission )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-2">
-                        <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $permission->name }}</div>
+                        <div class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $permission->name }}</div>
                         <span class="px-2 py-1 text-[10px] font-bold text-gray-700 bg-gray-100 rounded-full dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-600">{{ $permission->module }}</span>
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 min-h-[32px]">
                         {{ $permission->description }}
                     </div>
                     <div class="flex items-center justify-end mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center gap-2">
-                            <button wire:click="abrirModal({{ $permission->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
+                        <div class="flex items-center gap-1">
+                            <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
-                            <button wire:click="excluir({{ $permission->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         </div>

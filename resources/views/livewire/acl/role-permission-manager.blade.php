@@ -1,50 +1,73 @@
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">
-            Gerenciar Permissões: <span class="text-blue-600 uppercase">{{ $roleName }}</span>
-        </h1>
-        <a href="{{ route('roles.index') }}" class="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-            Voltar para Roles
-        </a>
-    </div>
+<div class="p-6 max-w-7xl mx-auto font-sans relative">
 
     @if (session()->has('success'))
-        <div class="p-4 text-green-700 bg-green-100 border-l-4 border-green-500 rounded-md">
-            {{ session('success') }}
+        <div class="flex items-center gap-2 p-4 mb-6 font-medium rounded-md shadow-sm text-pistache-100 bg-pistache-500">
+            <i class="text-lg ph ph-check-circle"></i> {{ session('success') }}
         </div>
     @endif
 
-    <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
-        <form wire:submit="save">
+    <x-page-header 
+        title="Gerenciar Permissões: {{ strtoupper($roleName) }}" 
+        icon="ph ph-shield-check"
+        badge=""
+        :breadcrumbs="$breadcrumbs ?? []">
+
+        <x-slot name="actions">
+            <a href="{{ route('roles.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                <i class="text-lg ph ph-arrow-left"></i> Voltar para Roles
+            </a>
+        </x-slot>
+
+    </x-page-header>
+
+    <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+        <form wire:submit.prevent="save">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse($permissionsByModule as $module => $permissions)
                     <!-- Card do Módulo -->
-                    <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                        <h3 class="mb-3 font-bold text-gray-800 uppercase border-b border-gray-300 pb-2">{{ $module }}</h3>
-                        <div class="space-y-2">
+                    <div class="p-5 border border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700 hover:border-purpura-300 transition-colors">
+                        <h3 class="flex items-center gap-2 mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase border-b border-gray-200 pb-2 dark:text-gray-400 dark:border-gray-600">
+                            <i class="ph-fill ph-squares-four text-purpura-500 text-lg"></i> {{ $module }}
+                        </h3>
+                        <div class="space-y-3">
                             @foreach($permissions as $permission)
-                                <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->name }}" class="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <label class="flex items-start gap-3 p-2 transition-colors border border-transparent rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-800">
+                                    <input type="checkbox" wire:model="selectedPermissions" value="{{ $permission->name }}" class="w-4 h-4 mt-0.5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-semibold text-gray-900">{{ $permission->name }}</span>
-                                        <span class="text-xs text-gray-500">{{ $permission->description }}</span>
+                                        <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $permission->name }}</span>
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 leading-tight mt-0.5">{{ $permission->description }}</span>
                                     </div>
                                 </label>
                             @endforeach
                         </div>
                     </div>
                 @empty
-                    <div class="col-span-full text-center text-gray-500">
-                        Nenhuma permissão cadastrada no sistema ainda.
+                    <div class="col-span-full py-12 text-center text-gray-500 border border-dashed border-gray-300 rounded-xl dark:border-gray-700">
+                        <i class="ph-fill ph-shield-warning text-3xl text-gray-300 mb-2"></i>
+                        <p class="font-bold text-gray-700 dark:text-gray-400">Nenhuma permissão cadastrada no sistema ainda.</p>
+                        <p class="text-xs mt-1">Crie as permissões no módulo de gerenciamento antes de vinculá-las.</p>
                     </div>
                 @endforelse
             </div>
 
-            <div class="flex justify-end mt-8 border-t border-gray-200 pt-6">
-                <button type="submit" class="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                    Salvar Permissões
+            <div class="flex items-center justify-end gap-3 pt-6 mt-8 border-t border-gray-100 dark:border-gray-700">
+                <a href="{{ route('roles.index') }}" class="px-5 py-2.5 text-sm font-bold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                    Cancelar
+                </a>
+                <button type="submit" class="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
+                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Permissões
                 </button>
             </div>
         </form>
     </div>
+    
+    {{-- TOAST SYSTEM --}}
+    <div x-data="{ show: false, msg: '' }" 
+        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
+        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
+        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
+        <i class="text-2xl ph ph-check-circle text-white"></i>
+        <span x-text="msg"></span>
+    </div>
+
 </div>
