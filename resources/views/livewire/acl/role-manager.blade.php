@@ -12,7 +12,7 @@
     @endif
 
     <x-page-header 
-        title="Roles (Grupos)" 
+        title="Grupos" 
         icon="ph ph-shield-check"
         badge=""
         :breadcrumbs="$breadcrumbs" 
