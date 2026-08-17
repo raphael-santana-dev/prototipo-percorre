@@ -1,9 +1,15 @@
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+
+
 /* Ensina o Tailwind v4 a ativar as classes dark: apenas quando a tag html tiver a classe .dark */
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+    --font-sans: 'Inter', sans-serif;
+
   /* Cores Primitivas e Semânticas do Design System Percorre */
   --color-purpura-100: #F4E8FF;
   --color-purpura-500: #9B26B6;
@@ -30,6 +36,10 @@
   --color-gray-500: #9E9E9E;
   --color-gray-800: #424242;
   --color-gray-1000: #121212;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
 }
 
 @layer base {
