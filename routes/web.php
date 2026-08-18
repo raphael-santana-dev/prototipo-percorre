@@ -111,6 +111,11 @@ Route::middleware('auth')->group(function () {
     
     // --- 11. Importações/Exportações ---
     Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
+
+    // --- 12. Comunicação (Templates e Automação) ---
+    Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');
+    Route::get('/templates/create', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.create');
+    Route::get('/templates/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.edit');
 });
 
 // ==========================================
