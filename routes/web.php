@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/comunicados', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::class)->name('comunicados.index');
     Route::get('/comunicados/create', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoForm::class)->name('comunicados.create');
+
+    Route::get('/automacoes', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class)->name('automacoes.index');
+    Route::get('/automacoes/create', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.create');
 });
 
 // ==========================================

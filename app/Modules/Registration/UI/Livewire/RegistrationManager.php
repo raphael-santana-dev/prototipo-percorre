@@ -475,6 +475,8 @@ class RegistrationManager extends Component
             // Atualiza o status e salva a inscrição
             $inscricao->status_inscricao_id = $statusId;
             $inscricao->save();
+
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.aprovada', $inscricao);
         }
     }
 

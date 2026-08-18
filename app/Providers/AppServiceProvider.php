@@ -137,6 +137,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('comunicacao.comunicado-form', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoForm::class);
         Livewire::component('comunicacao.comunicado-manager', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::class);
 
+        Livewire::component('comunicacao.automacao-form', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class);
+        Livewire::component('comunicacao.automacao-manager', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class);
+
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
