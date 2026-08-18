@@ -27,11 +27,16 @@ class FormularioPublico extends Component
 
     public function mount($id, $slug)
     {
-        $this->formulario = Formulario::with('campos')->where('id', $id)->where('status', true)->firstOrFail();
+        // CORREÇÃO AQUI: Forçando a ordenação Matemática vinda do Banco de Dados
+        $this->formulario = Formulario::with(['campos' => function($query) {
+            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+        }])->where('id', $id)->where('status', true)->firstOrFail();
+        
         $this->camposDinamicos = $this->formulario->campos;
         
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         $this->carregarOpcoesSistemaInicial();
+        
         // Carrega o Papel de Parede Global se existir
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
         if ($cfg && $cfg->configuracoes) {
@@ -57,7 +62,6 @@ class FormularioPublico extends Component
             $aplicarRegras = filter_var($cfg['aplicar_regras'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             if ($campo->subtipo === 'unidade') {
-                // Unidades sempre carregam inicialmente
                 $this->unidadesDisponiveis = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
             } 
             elseif ($campo->subtipo === 'curso') {
@@ -81,7 +85,7 @@ class FormularioPublico extends Component
         return [];
     }
 
-    // Motor Inteligente de Validação (Idêntico ao Inscricao.php)
+    // Motor Inteligente de Validação
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];

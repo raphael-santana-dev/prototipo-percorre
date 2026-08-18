@@ -211,7 +211,6 @@ class DynamicFields extends Component
     {
         $tabelaFoco = $this->contextoTipo === 'ciclo' ? 'ciclos' : 'formularios';
 
-        // 1. FORÇA a slugificação automática para evitar quebra na validação Regex
         $this->slug = Str::slug($this->slug);
 
         $this->validate([
@@ -232,14 +231,12 @@ class DynamicFields extends Component
             $this->bg_image_upload = null;
         }
 
-        // Salva a URL amigável no Model Principal
         if ($this->contextoTipo === 'ciclo') {
             Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         } else {
             Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         }
 
-        // Salva as Configs Visuais
         CampoFormulario::updateOrCreate(
             [
                 $this->getContextColumn() => $this->contextoId, 

@@ -42,7 +42,9 @@ class Inscricao extends Component
 
     public function mount()
     {
-        $ciclo = Ciclo::with('campos')->where('status', true)
+        $ciclo = Ciclo::with(['campos' => function($query) {
+            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+        }])->where('status', true)
             ->where('data_inicio', '<=', now())
             ->where('data_fim', '>=', now())
             ->first();

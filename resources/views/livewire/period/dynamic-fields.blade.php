@@ -18,9 +18,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {{-- ========================================== --}}
-        {{-- COLUNA ESQUERDA: CANVAS / PREVIEW (8/12)   --}}
-        {{-- ========================================== --}}
+        {{-- COLUNA ESQUERDA: CANVAS / PREVIEW --}}
         <div class="lg:col-span-8 space-y-6">
             
             <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
@@ -33,30 +31,24 @@
                     $previewBgUrl = asset($formSettings['bg_image']);
                 }
                 
-                // Variáveis da Nova Engine Visual
                 $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6';
                 $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
                 $bgSize = $formSettings['bg_size'] ?? 'cover';
                 $formWidth = $formSettings['form_width'] ?? 'max-w-4xl';
                 $isTranslucent = filter_var($formSettings['translucent_card'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 
-                // Classes de estilo do "Card" simulado
                 $cardClass = $isTranslucent ? 'bg-white/80 backdrop-blur-md shadow-2xl' : 'bg-white shadow-xl';
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
-            {{-- CAIXA DA PREVIEW --}}
             <div class="relative w-full min-h-[600px] rounded-xl overflow-hidden bg-gray-100 shadow-inner">
                 
-                {{-- FUNDO FIXO --}}
                 @if($previewBgUrl)
                     <div class="absolute inset-0 z-0 bg-center bg-no-repeat" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
                 @endif
                 
-                {{-- Camada de Cor / Opacidade --}}
                 <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-                {{-- CONTEÚDO --}}
                 <div class="relative z-10 w-full p-4 md:p-8 h-full overflow-y-auto flex flex-col items-center">
                     
                     <div class="w-full {{ $formWidth }} {{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
@@ -81,6 +73,8 @@
                                             $isActive = $campoId == $c->id; 
                                             $colSpan = "col-span-12 md:col-span-{$c->largura}";
                                             $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                            // Puxa a configuração de layout na preview se for o campo ativo, senão puxa do banco
+                                            $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
                                         @endphp
 
                                         <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-4 bg-white/95' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/50' }}" wire:click="editar({{ $c->id }})">
@@ -102,6 +96,7 @@
                                                     <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
                                                 </div>
                                                 
+                                                <!-- PREVIEWS VISUAIS -->
                                                 @if($c->tipo === 'text')
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
                                                         @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
@@ -117,15 +112,22 @@
                                                         <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
                                                     </div>
                                                 
+                                                {{-- NOVA LÓGICA DE PREVIEW VERTICAL VS HORIZONTAL --}}
                                                 @elseif($c->tipo === 'radio' || $c->tipo === 'check')
-                                                    <div class="flex flex-wrap gap-4 mt-1 pointer-events-none">
+                                                    <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
                                                         <div class="flex items-center gap-2 text-gray-600 text-sm">
                                                             <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
                                                         </div>
                                                         <div class="flex items-center gap-2 text-gray-600 text-sm">
                                                             <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
                                                         </div>
+                                                        @if($layoutOpcoes === 'vertical')
+                                                        <div class="flex items-center gap-2 text-gray-600 text-sm">
+                                                            <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 3
+                                                        </div>
+                                                        @endif
                                                     </div>
+                                                    
                                                 @elseif($c->tipo === 'system')
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
                                                         <span class="flex items-center gap-2"><i class="ph ph-database text-purpura-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
@@ -202,6 +204,7 @@
                                                     </div>
                                                 @endif
                                                 
+                                                <!-- Badges de Log -->
                                                 <div class="mt-2.5 flex flex-wrap gap-2 items-center">
                                                     @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media']))
                                                         <span class="text-[10px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
@@ -239,9 +242,7 @@
             </div>
         </div>
 
-        {{-- ========================================== --}}
-        {{-- COLUNA DIREITA: CONFIGURAÇÕES (4/12)       --}}
-        {{-- ========================================== --}}
+        {{-- COLUNA DIREITA: CONFIGURAÇÕES --}}
         <div x-data="{ activeTab: 'form' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
             
             <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
@@ -253,6 +254,7 @@
                 </button>
             </div>
 
+            <!-- ==================== ABA 1: CONFIG DO BLOCO ==================== -->
             <div x-show="activeTab === 'field'" class="flex-1 flex flex-col overflow-hidden">
                 
                 <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
@@ -428,11 +430,25 @@
                                     <input type="text" wire:model="regex_mascara" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
                                 </div>
                             </div>
+
+                        {{-- SELETOR DE DISPOSIÇÃO ADICIONADO AQUI --}}
                         @elseif(in_array($tipo, ['select', 'radio', 'check']))
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-gray-700">Opções de Resposta</label>
-                                <p class="text-[10px] text-gray-500 mb-1.5">Separe as opções por vírgula.</p>
-                                <textarea wire:model="opcoes" rows="3" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700">Opções de Resposta</label>
+                                    <p class="text-[10px] text-gray-500 mb-1.5">Separe as opções por vírgula.</p>
+                                    <textarea wire:model="opcoes" rows="3" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                                </div>
+
+                                @if(in_array($tipo, ['radio', 'check']))
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Alinhamento das Opções</label>
+                                    <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                        <option value="horizontal">Lado a Lado (Horizontal)</option>
+                                        <option value="vertical">Uma abaixo da outra (Vertical)</option>
+                                    </select>
+                                </div>
+                                @endif
                             </div>
                         
                         @elseif($tipo === 'matriz')
@@ -554,6 +570,7 @@
                 </form>
             </div>
 
+            <!-- ==================== ABA 2: CONFIG DO FORMULÁRIO (GERAL) ==================== -->
             <div x-show="activeTab === 'form'" x-cloak class="flex-1 flex flex-col overflow-hidden bg-white">
                 
                 <form wire:submit.prevent="salvarFormSettings" class="flex-1 flex flex-col overflow-hidden">

@@ -26,6 +26,9 @@
             $color = $config['bg_color'] ?? '#000000';
             $overlayStyle = "background-color: {$color}; opacity: {$opacity};";
         }
+
+        // Variável da Posição das Opções
+        $layoutOpcoes = $config['layout_opcoes'] ?? 'horizontal';
     @endphp
 
     <div class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
@@ -80,15 +83,12 @@
 
         <div class="relative z-10">
             @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media']))
-                {{-- CORRIGIDO: text-gray-800 em vez de brand-textLabel --}}
                 <label class="block text-sm font-semibold text-gray-800 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
                     {{ $campo->label }} 
                     @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
                 </label>
             @endif
             
-            {{-- CORREÇÃO GERAL: Substituído border-brand-border, focus:ring-brand-purple, focus:border-brand-purple e text-brand-purple pelas cores padrão Tailwind --}}
-
             @if($campo->tipo === 'select')
                 <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 @error('respostas.'.$campo->name) border-red-500 @enderror">
                     <option value="">Selecione...</option>
@@ -98,7 +98,7 @@
                 </select>
                 
             @elseif($campo->tipo === 'radio')
-                <div class="flex flex-wrap gap-4 mt-2">
+                <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
                     @foreach($listaOpcoes as $opcao)
                         <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700' }}">
                             <input wire:model.live="respostas.{{ $campo->name }}" type="radio" value="{{ trim($opcao) }}" class="form-radio text-purpura-600 focus:ring-purpura-500">
@@ -108,7 +108,7 @@
                 </div>
 
             @elseif($campo->tipo === 'check')
-                <div class="flex flex-wrap gap-4 mt-2">
+                <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
                     @foreach($listaOpcoes as $opcao)
                         <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700' }}">
                             <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" class="form-checkbox text-purpura-600 focus:ring-purpura-500">
