@@ -110,7 +110,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     
     // --- 11. Importações/Exportações ---
-    Route::get('/admin/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('admin.importacoes');
+    Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
 });
 
 // ==========================================

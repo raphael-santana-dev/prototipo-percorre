@@ -129,13 +129,15 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
 
         Livewire::component('importacao.importacao-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class);
+        Livewire::component('importacao.import-progress', \App\Modules\Importacao\UI\Livewire\ImportProgress::class);
+
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
         });
 
         Livewire::component('auditoria.auditoria-manager', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class);
-
+        
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;
