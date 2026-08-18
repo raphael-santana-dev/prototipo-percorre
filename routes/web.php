@@ -109,7 +109,8 @@ Route::middleware('auth')->group(function () {
     // --- 10. Auditoria e Logs ---
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     
-    // (A rota /inscricoes/status duplicada que apontava para status.index foi removida para evitar conflitos)
+    // --- 11. Importações/Exportações ---
+    Route::get('/admin/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('admin.importacoes');
 });
 
 // ==========================================

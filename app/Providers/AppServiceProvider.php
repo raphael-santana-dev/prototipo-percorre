@@ -127,6 +127,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('forms.formulario', \App\Modules\Website\UI\Livewire\FormularioPublico::class);
         Livewire::component('forms.form-details', \App\Modules\Forms\UI\Livewire\FormDetails::class);
         Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
+
+        Livewire::component('importacao.importacao-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class);
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');
