@@ -20,9 +20,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    // Aumentamos o tempo limite do Job para arquivos muito grandes (em segundos)
     public $timeout = 3600; 
-
     protected $importacao;
 
     public function __construct(Importacao $importacao)
@@ -40,38 +38,40 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $caminhoAbsoluto = Storage::disk('local')->path($this->importacao->arquivo_caminho);
             $formato = $this->importacao->formato;
             
-            // Extrai as linhas sob demanda (Lazy Loading) para não estourar a RAM
             $registros = $this->extrairRegistrosLazy($caminhoAbsoluto, $formato);
             $mapeamento = $this->importacao->mapeamento ?? [];
 
-            foreach ($registros as $linha) {
+            foreach ($registros as $linhaOriginal) {
                 $linhaAtual++;
 
                 try {
-                    // Direciona para o processador correto
+                    // LIMPEZA ANTI-BOM: Remove o caractere invisível que o Excel deixa e coloca tudo em minúsculo
+                    $dadosLimpos = [];
+                    foreach ($linhaOriginal as $key => $value) {
+                        $cleanKey = strtolower(trim(str_replace("\xEF\xBB\xBF", '', $key)));
+                        $dadosLimpos[$cleanKey] = $value;
+                    }
+
                     match ($this->importacao->tipo) {
-                        'campos' => $this->processarCampo($linha, $mapeamento),
-                        'usuarios' => $this->processarUsuario($linha),
-                        'inscricoes' => $this->processarInscricao($linha, $mapeamento),
+                        'campos' => $this->processarCampo($dadosLimpos, $mapeamento),
+                        'usuarios' => $this->processarUsuario($dadosLimpos),
+                        'inscricoes' => $this->processarInscricao($linhaOriginal, $mapeamento),
                         default => throw new \Exception("Tipo de importação '{$this->importacao->tipo}' não implementado."),
                     };
 
                 } catch (\Throwable $e) {
                     $erros[] = ['linha' => $linhaAtual, 'mensagem' => $e->getMessage()];
                     
-                    // Trava de segurança: se der mais de 100 erros seguidos, aborta a operação.
                     if (count($erros) >= 100) {
-                        throw new \Exception("Excesso de erros detectados. Processamento abortado por segurança.");
+                        throw new \Exception("Excesso de erros detectados (100+). Processamento abortado por segurança.");
                     }
                 }
 
-                // Atualiza a barra de progresso a cada 50 linhas para não floodar o banco de dados
                 if ($linhaAtual % 50 === 0) {
                     $this->importacao->update(['linhas_processadas' => $linhaAtual]);
                 }
             }
 
-            // Definição do Status Final
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
             $this->importacao->update([
                 'status' => $statusFinal,
@@ -88,9 +88,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
     }
 
-    /**
-     * Leitor Universal que retorna os dados via Iterable (Generator ou LazyCollection)
-     */
     private function extrairRegistrosLazy(string $caminho, string $formato): iterable
     {
         if (in_array($formato, ['csv', 'xlsx', 'xls'])) {
@@ -119,73 +116,69 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
     }
 
     // =========================================================================
-    // PROCESSADORES ESPECÍFICOS POR TIPO DE DADO
+    // PROCESSADORES (AGORA ACEITAM OS CABEÇALHOS AMIGÁVEIS!)
     // =========================================================================
 
-    private function processarCampo(array $linha, array $mapeamento)
+    private function processarCampo(array $dados, array $mapeamento)
     {
         $cicloId = $mapeamento['ciclo_id'] ?? null;
         if (!$cicloId) throw new \Exception("ID do Ciclo ausente no mapeamento.");
-
-        // Normalização das chaves do Excel
-        $dados = array_change_key_case($linha, CASE_LOWER);
         
-        $name = trim($dados['name'] ?? $dados['nome do campo'] ?? '');
-        if (empty($name)) throw new \Exception("A coluna 'name' ou 'nome do campo' é obrigatória.");
+        $label = trim($dados['nome do campo'] ?? $dados['label'] ?? '');
+        if (empty($label)) throw new \Exception("A coluna 'Nome do Campo' (ou 'label') é obrigatória.");
 
-        // Tratamento da Largura (Vazio = 100% / 12 cols)
+        // Se o Excel vier com a coluna "ID no Banco", usamos, senão usamos Slug do Título
+        $name = trim($dados['id no banco'] ?? $dados['id no banco (name)'] ?? $dados['name'] ?? '');
+        if (empty($name)) {
+            $name = Str::slug($label, '_');
+        }
+
         $largura = trim($dados['largura'] ?? '');
         $larguraVal = empty($largura) ? 12 : (int)$largura;
 
-        // Tratamento dos Booleanos
         $obrigRaw = trim($dados['obrigatório'] ?? $dados['obrigatorio'] ?? 'nao');
         $isObrigatorio = in_array(strtolower($obrigRaw), ['sim', 's', '1', 'true', 'yes']);
 
         $sempreVisivelRaw = trim($dados['sempre visível?'] ?? $dados['sempre visivel'] ?? 'sim');
         $sempreVisivel = in_array(strtolower($sempreVisivelRaw), ['sim', 's', '1', 'true', 'yes']);
 
-        // Regras de Exibição via Regex (ex: "nome>=Luis")
         $regrasStr = trim($dados['regras de exibição'] ?? $dados['regras de exibicao'] ?? '');
         $dependeDe = null;
         $dependeOperador = '=';
         $dependeValor = null;
 
         if (!$sempreVisivel && !empty($regrasStr)) {
-            // Separa Variável, Operador e Valor usando Regex
             if (preg_match('/^([a-zA-Z0-9_]+)(>=|<=|!=|=|>|<)(.*)$/', $regrasStr, $matches)) {
                 $dependeDe = trim($matches[1]);
                 $dependeOperador = trim($matches[2]);
                 $dependeValor = trim($matches[3]);
             } else {
-                throw new \Exception("Regra de exibição mal formatada. Use o padrão 'campo=valor' ou 'campo>=valor'.");
+                throw new \Exception("Regra mal formatada. Exemplo correto: 'como_conheceu=Instagram'.");
             }
         }
 
-        // Tratamento das Opções Inteligentes (db:tabela:filtro ou CSV)
         $opcoesRaw = trim($dados['opções'] ?? $dados['opcoes'] ?? '');
         $opcoesArray = null;
 
         if (!empty($opcoesRaw)) {
-            if (str_starts_with(strtolower($opcoesRaw), 'db:')) {
-                // Exemplo de Input: db:unidade:ativas
+            if (str_starts_with(strtolower($opcoesRaw), 'bd:') || str_starts_with(strtolower($opcoesRaw), 'db:')) {
+                // Suporta db:unidade:ativas ou bd:unidade:ativas
                 $partes = explode(':', $opcoesRaw);
                 $opcoesArray = [
                     'origem_bd' => $partes[1] ?? '',
                     'filtro' => $partes[2] ?? ''
                 ];
             } else {
-                // Opções normais separadas por vírgula
                 $opcoesArray = array_map('trim', explode(',', $opcoesRaw));
             }
         }
 
-        // Salva o Campo
         CampoFormulario::updateOrCreate(
-            ['ciclo_id' => $cicloId, 'name' => Str::slug($name, '_')],
+            ['ciclo_id' => $cicloId, 'name' => $name],
             [
                 'etapa' => (int)($dados['etapa'] ?? 1),
                 'ordem' => (int)($dados['ordem'] ?? 0),
-                'label' => trim($dados['label'] ?? $name),
+                'label' => $label,
                 'tipo' => trim($dados['tipo'] ?? 'text'),
                 'largura' => $larguraVal,
                 'subtipo' => trim($dados['subtipo'] ?? 'text'),
@@ -198,16 +191,14 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         );
     }
 
-    private function processarUsuario(array $linha)
+    private function processarUsuario(array $dados)
     {
-        $dados = array_change_key_case($linha, CASE_LOWER);
-        
         $cpfRaw = $dados['cpf'] ?? null;
-        if (empty($cpfRaw)) throw new \Exception("A coluna 'cpf' é obrigatória para usuários.");
+        if (empty($cpfRaw)) throw new \Exception("A coluna 'CPF' é obrigatória.");
 
         $cpfLimpo = preg_replace('/[^0-9]/', '', $cpfRaw);
-        $email = trim($dados['email'] ?? '');
-        $nome = trim($dados['nome'] ?? 'Usuário Sem Nome');
+        $email = trim($dados['e-mail'] ?? $dados['email'] ?? '');
+        $nome = trim($dados['nome completo'] ?? $dados['nome'] ?? 'Usuário Sem Nome');
         $senha = trim($dados['senha'] ?? $cpfLimpo);
         
         $usuario = User::where('cpf', $cpfLimpo)->orWhere('email', $email)->first();
@@ -227,28 +218,44 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             ]);
         }
 
-        // Atribuição de Grupo de Acesso
-        $roleName = trim($dados['role'] ?? $dados['grupo'] ?? '');
+        $roleName = trim($dados['grupo de acesso'] ?? $dados['role'] ?? '');
         if (!empty($roleName)) {
             $usuario->assignRole(Str::slug($roleName, '-'));
         }
+
+        $permissoesRaw = trim($dados['permissões extras'] ?? $dados['permissoes'] ?? '');
+        if (!empty($permissoesRaw)) {
+            $permissoesArray = array_map('trim', explode(',', $permissoesRaw));
+            $permissoesValidas = [];
+
+            foreach ($permissoesArray as $p) {
+                $pSlug = Str::slug($p, '_'); 
+                if (\Spatie\Permission\Models\Permission::where('name', $pSlug)->exists()) {
+                    $permissoesValidas[] = $pSlug;
+                }
+            }
+            
+            if (count($permissoesValidas) > 0) {
+                $usuario->givePermissionTo($permissoesValidas);
+            }
+        }
     }
 
-    private function processarInscricao(array $linha, array $mapeamento)
+    private function processarInscricao(array $linhaOriginal, array $mapeamento)
     {
+        // Aqui usamos a linha inteira crua porque o mapeamento se baseia nas colunas EXATAS enviadas pelo usuario
         $dadosFixos = [];
         $dadosDinamicos = [];
 
         foreach ($mapeamento as $colunaExcel => $config) {
-            if (!isset($linha[$colunaExcel])) continue;
+            if (!isset($linhaOriginal[$colunaExcel])) continue;
 
             $destino = $config['destino'] ?? 'ignorar';
             $tipoDado = $config['tipo'] ?? 'texto';
             if ($destino === 'ignorar') continue;
             
-            $valor = trim($linha[$colunaExcel]);
+            $valor = trim($linhaOriginal[$colunaExcel]);
 
-            // Limpeza e Formatação de Datas
             if (!empty($valor) && in_array($tipoDado, ['data', 'data_hora'])) {
                 try {
                     $formatoSaida = $tipoDado === 'data' ? 'Y-m-d' : 'Y-m-d H:i:s';
@@ -270,7 +277,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
-        $dadosFixos['status_inscricao_id'] = 1; // 1 = Pendente
+        $dadosFixos['status_inscricao_id'] = 1; 
         
         Inscricao::create($dadosFixos);
     }

@@ -19,13 +19,12 @@ class ImportacaoManager extends Component
 
     public array $breadcrumbs = [];
 
-    // Propriedades do Upload e Mapeamento
     public $modalUploadAberto = false;
     public $modalMapeamentoAberto = false;
     public $modalErroAberto = false;
 
     public $arquivo;
-    public $tipoImportacao = 'inscricoes'; // inscricoes, usuarios, campos
+    public $tipoImportacao = 'inscricoes';
     public $cicloSelecionadoId = null;
     public $ciclosDisponiveis = [];
 
@@ -36,7 +35,6 @@ class ImportacaoManager extends Component
     public $mensagemErroAtual = '';
     public $arquivoErroAtual = '';
 
-    // Opções disponíveis para o usuário mapear (De/Para)
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
         'email' => 'E-mail',
@@ -76,19 +74,21 @@ class ImportacaoManager extends Component
         ];
     }
 
-    // --- TEMPLATES PARA DOWNLOAD ---
+    // --- TEMPLATES PARA DOWNLOAD ATUALIZADOS ---
     public function baixarTemplate($tipo)
     {
         if ($tipo === 'usuarios') {
-            $cabecalho = ['nome', 'email', 'cpf', 'senha', 'role', 'permissoes'];
+            $cabecalho = ['Nome Completo', 'E-mail', 'CPF', 'Senha', 'Grupo de Acesso', 'Permissões Extras'];
             $exemplo = ['João Silva', 'joao@email.com', '123.456.789-00', 'senha123', 'estudante', 'ver_aulas, editar_perfil'];
             return $this->gerarCsv('modelo_importacao_usuarios.csv', [$cabecalho, $exemplo]);
         }
 
         if ($tipo === 'campos') {
-            $cabecalho = ['etapa', 'ordem', 'label', 'name', 'tipo', 'largura', 'subtipo', 'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor'];
-            $exemplo = ['1', '1', 'Qual sua Renda?', 'renda_familiar', 'select', '12', '', '', '', '', 'bd:rendas', '1', 'required', '', '', ''];
-            return $this->gerarCsv('modelo_importacao_campos.csv', [$cabecalho, $exemplo]);
+            $cabecalho = ['Etapa', 'Ordem', 'Nome do Campo', 'ID no Banco', 'Tipo', 'Subtipo', 'Largura', 'Obrigatório', 'Sempre Visível?', 'Regras de Exibição', 'Opções'];
+            $exemplo1 = ['1', '1', 'Unidade de Interesse', 'unidade_id', 'system', 'unidade', '12', 'Sim', 'Sim', '', ''];
+            $exemplo2 = ['1', '2', 'Como nos conheceu?', 'como_conheceu', 'select', '', '12', 'Não', 'Sim', '', 'Instagram, Facebook, Amigos'];
+            $exemplo3 = ['1', '3', 'Qual rede social?', 'qual_rede', 'text', 'text', '12', 'Sim', 'Não', 'como_conheceu=Instagram', ''];
+            return $this->gerarCsv('modelo_importacao_campos.csv', [$cabecalho, $exemplo1, $exemplo2, $exemplo3]);
         }
     }
 
@@ -96,17 +96,15 @@ class ImportacaoManager extends Component
     {
         $callback = function() use ($dados) {
             $file = fopen('php://output', 'w');
-            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // Formato UTF-8 com BOM para Excel ler acentos
+            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             foreach ($dados as $linha) {
                 fputcsv($file, $linha, ';');
             }
             fclose($file);
         };
-
         return response()->streamDownload($callback, $nomeArquivo, ['Content-Type' => 'text/csv']);
     }
 
-    // --- FLUXO DE UPLOAD E MAPEAMENTO ---
     public function abrirModalUpload()
     {
         $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId']);
@@ -115,13 +113,12 @@ class ImportacaoManager extends Component
 
     public function processarUpload()
     {
-        $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; // Max 50MB
+        $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; 
         if ($this->tipoImportacao === 'campos' || $this->tipoImportacao === 'inscricoes') {
             $regras['cicloSelecionadoId'] = 'required';
         }
         $this->validate($regras, ['cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo para este tipo de importação.']);
 
-        // Trava para evitar sobrecarga (Max 5 importações simultâneas pendentes por usuário)
         $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
             $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
@@ -134,7 +131,6 @@ class ImportacaoManager extends Component
         
         $totalLinhas = 0;
         
-        // Se for Excel/CSV, usamos o Spatie Reader para contar e pegar cabeçalhos
         if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
             $reader = SimpleExcelReader::create($caminhoAbsoluto);
             if (strtolower($extensao) === 'csv') {
@@ -144,9 +140,8 @@ class ImportacaoManager extends Component
             $this->cabecalhos = $reader->getHeaders() ?? [];
             $totalLinhas = $reader->getRows()->count();
         } else {
-            // Lógica para JSON/XML será implementada no Motor (Etapa 4)
             $this->cabecalhos = ['Dados Brutos (Mapeamento Automático)'];
-            $totalLinhas = 1; // Temporário até processar
+            $totalLinhas = 1; 
         }
 
         $importacao = Importacao::create([
@@ -164,12 +159,11 @@ class ImportacaoManager extends Component
         $this->importacaoAtualId = $importacao->id;
         $this->modalUploadAberto = false;
 
-        // Se for inscrição, obriga a mapear colunas. Senão, vai direto pra fila.
         if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
             $this->gerarAutoMapeamento();
             $this->modalMapeamentoAberto = true;
         } else {
-            $this->iniciarImportacao(); // Envia para fila direto
+            $this->iniciarImportacao(); 
         }
     }
 
@@ -218,7 +212,6 @@ class ImportacaoManager extends Component
         $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto']);
         $this->dispatch('sucesso', msg: 'Importação adicionada à fila! O processamento ocorrerá em segundo plano.');
         
-        // Na etapa 4 usaremos o Job que vamos criar!
         \App\Jobs\ProcessarImportacaoUniversalJob::dispatch($importacao);
     }
 
@@ -241,14 +234,12 @@ class ImportacaoManager extends Component
 
     public function solicitarExportacao($tipoDado, $formato = 'xlsx')
     {
-        // Trava de prevenção de sobrecarga (limite de 5 itens simultâneos)
         $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
             $this->dispatch('sucesso', msg: 'Sua fila está cheia. Aguarde as gerações atuais terminarem.');
             return;
         }
 
-        // Cria o log de Exportação
         $exportacao = Importacao::create([
             'user_id' => auth()->id(),
             'tipo' => $tipoDado,
@@ -256,10 +247,9 @@ class ImportacaoManager extends Component
             'formato' => $formato,
             'arquivo_nome' => "Exportacao_" . ucfirst($tipoDado) . ".{$formato}",
             'status' => 'na_fila',
-            'total_linhas' => 0, // Será calculado no Job
+            'total_linhas' => 0, 
         ]);
 
-        // Dispara o Job de Exportação em background
         \App\Jobs\ProcessarExportacaoUniversalJob::dispatch($exportacao);
 
         $this->dispatch('sucesso', msg: 'Exportação solicitada com sucesso! O sistema está processando em background.');
@@ -284,9 +274,8 @@ class ImportacaoManager extends Component
             $query->orderBy('id', 'desc');
         }
 
-        // Alteramos para buscar a view na nova pasta
         return view('livewire.importacao.importacao-manager', [
             'registros' => $query->paginate($this->porPagina)
-        ])->layout('components.layouts.app', ['title' => 'Gestor de Importações']);
+        ])->layout('components.layouts.app', ['title' => 'Gestor de Integrações']);
     }
 }
