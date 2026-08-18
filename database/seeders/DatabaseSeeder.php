@@ -24,8 +24,8 @@ class DatabaseSeeder extends Seeder
             EtapaSeeder::class,
             StudentSeeder::class,
             StatusInscricaoBaseSeeder::class,
-            UnidadeSeeder::class,
-            CursoSeeder::class,
+            UnidadesTesteSeeder::class,
+            CursosTesteSeeder::class,
         ]);
     }
 }
