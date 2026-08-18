@@ -131,6 +131,17 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('importacao.importacao-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class);
         Livewire::component('importacao.import-progress', \App\Modules\Importacao\UI\Livewire\ImportProgress::class);
 
+        Livewire::component('comunicacao.template-form', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class);
+        Livewire::component('comunicacao.template-manager', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class);
+
+        Livewire::component('comunicacao.comunicado-form', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoForm::class);
+        Livewire::component('comunicacao.comunicado-manager', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::class);
+
+        Livewire::component('comunicacao.automacao-form', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class);
+        Livewire::component('comunicacao.automacao-manager', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class);
+
+        Livewire::component('comunicacao.email-log-manager', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class);
+
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/livewire/update', $handle)->middleware('web');

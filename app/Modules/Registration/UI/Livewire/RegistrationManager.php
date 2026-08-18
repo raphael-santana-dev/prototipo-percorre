@@ -453,7 +453,9 @@ class RegistrationManager extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         if (!$statusNovo) return;
 
-        $isAprovacao = strtolower($statusNovo->nome) === 'aprovado';
+        // Limpa o nome do status para facilitar a validação
+        $nomeStatus = strtolower(trim($statusNovo->nome));
+        $isAprovacao = in_array($nomeStatus, ['aprovado', 'selecionado', 'aprovada']);
 
         foreach ($inscricoes as $inscricao) {
             // REGRA DE NEGÓCIO: Criação do Estudante
@@ -475,6 +477,18 @@ class RegistrationManager extends Component
             // Atualiza o status e salva a inscrição
             $inscricao->status_inscricao_id = $statusId;
             $inscricao->save();
+
+            // LÓGICA DINÂMICA DE GATILHOS PARA E-MAIL
+            $eventoGatilho = 'inscricao.pendente'; // Padrão
+            
+            if ($isAprovacao) {
+                $eventoGatilho = 'inscricao.aprovada';
+            } elseif (in_array($nomeStatus, ['reprovado', 'reprovada', 'cancelado', 'cancelada'])) {
+                $eventoGatilho = 'inscricao.reprovada';
+            }
+
+            // Agora dispara a automação correta baseada no status!
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
         }
     }
 
