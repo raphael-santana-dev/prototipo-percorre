@@ -7,6 +7,7 @@ use Livewire\WithFileUploads;
 use Livewire\Attributes\Computed;
 use App\Models\Ciclo;
 use App\Models\Etapa;
+use App\Models\Formulario;
 use App\Models\CampoFormulario;
 use Illuminate\Support\Str;
 
@@ -39,11 +40,15 @@ class DynamicFields extends Component
     public $matriz_colunas = '';
 
     // Propriedades de Configuração Geral do Formulário (Aba 2)
+    public $slug = '';
     public $bg_image_upload;
     public array $formSettings = [
         'bg_image' => null,
         'bg_color' => '#ffffff',
         'bg_opacity' => '0.0',
+        'bg_size' => 'cover', 
+        'form_width' => 'max-w-4xl',
+        'translucent_card' => false,
     ];
 
     public string $contextoTipo; // 'ciclo' ou 'formulario'
@@ -64,11 +69,12 @@ class DynamicFields extends Component
         } else {
             $model = \App\Models\Formulario::findOrFail($id);
             $this->contextoNome = $model->titulo;
-            // Para formulários customizados, podemos liberar até 5 etapas genéricas
             $this->etapasDisponiveis = [
                 (object)['numero' => 1], (object)['numero' => 2], (object)['numero' => 3]
             ];
         }
+
+        $this->slug = $model->slug ?? '';
 
         if (count($this->etapasDisponiveis) > 0) {
             $this->etapa = is_object($this->etapasDisponiveis[0]) ? $this->etapasDisponiveis[0]->numero : 1;
@@ -82,16 +88,15 @@ class DynamicFields extends Component
         return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
     }
 
-    // Carrega as configurações globais salvas no campo "fantasma"
     public function loadFormSettings()
     {
         $cfg = CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('name', '_form_config')->first();
         if ($cfg && $cfg->configuracoes) {
-            $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+            $savedSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+            $this->formSettings = array_merge($this->formSettings, $savedSettings);
         }
     }
 
-    // Define o tipo e subtipo pelos botões visuais da nova interface
     public function setTipo($tipo, $subtipo = 'text')
     {
         $this->tipo = $tipo;
@@ -111,7 +116,6 @@ class DynamicFields extends Component
         }
     }
 
-    // LIMITADOR INTELIGENTE DE ORDEM (POSIÇÃO)
     #[Computed]
     public function limiteOrdem()
     {
@@ -125,11 +129,11 @@ class DynamicFields extends Component
         if ($this->campoId) {
             $campoAtual = CampoFormulario::find($this->campoId);
             if ($campoAtual && $campoAtual->etapa == $this->etapa) {
-                return $count; // Limite é o total atual se estivermos apenas editando
+                return $count;
             }
         }
 
-        return $count + 1; // Limite é o total + 1 se for novo cadastro ou mudança de etapa
+        return $count + 1;
     }
 
     public function atualizarProximaOrdem()
@@ -203,11 +207,23 @@ class DynamicFields extends Component
         $this->atualizarProximaOrdem(); 
     }
 
-    // Salva as Configurações Globais (Fundo da Página)
     public function salvarFormSettings()
     {
+        $tabelaFoco = $this->contextoTipo === 'ciclo' ? 'ciclos' : 'formularios';
+
+        // 1. FORÇA a slugificação automática para evitar quebra na validação Regex
+        $this->slug = Str::slug($this->slug);
+
         $this->validate([
-            'bg_image_upload' => 'nullable|image|max:10240', // Max 2MB
+            'bg_image_upload' => 'nullable|image|max:10240',
+            'slug' => [
+                'required',
+                'regex:/^[a-z0-9\-]+$/',
+                \Illuminate\Validation\Rule::unique($tabelaFoco, 'slug')->ignore($this->contextoId)
+            ]
+        ], [
+            'slug.unique' => 'Esta URL amigável já está sendo utilizada por outro formulário.',
+            'slug.regex' => 'A URL amigável só pode conter letras minúsculas, números e traços.'
         ]);
 
         if ($this->bg_image_upload) {
@@ -216,6 +232,14 @@ class DynamicFields extends Component
             $this->bg_image_upload = null;
         }
 
+        // Salva a URL amigável no Model Principal
+        if ($this->contextoTipo === 'ciclo') {
+            Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+        } else {
+            Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+        }
+
+        // Salva as Configs Visuais
         CampoFormulario::updateOrCreate(
             [
                 $this->getContextColumn() => $this->contextoId, 
@@ -233,10 +257,9 @@ class DynamicFields extends Component
             ]
         );
 
-        session()->flash('sucesso', 'Configurações globais salvas com sucesso!');
+        $this->dispatch('sucesso', msg: 'Tema e aparência aplicados com sucesso!');
     }
 
-    // Salva um Campo/Bloco específico
     public function salvar()
     {
         $this->validate([
@@ -335,7 +358,7 @@ class DynamicFields extends Component
         }
 
         $this->cancelarEdicao(); 
-        session()->flash('sucesso', 'Campo configurado e ordenado com sucesso!');
+        $this->dispatch('sucesso', msg: 'Bloco configurado e estruturado com sucesso!');
     }
 
     public function excluir($id)
@@ -348,12 +371,11 @@ class DynamicFields extends Component
         
         CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
         $this->atualizarProximaOrdem();
-        session()->flash('sucesso', 'Campo excluído da estrutura com sucesso.');
+        $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
     }
 
     public function render()
     {
-        // Puxamos apenas os blocos reais (ignora configurações globais)
         $camposCadastrados = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('tipo', '!=', 'config')
             ->orderBy('etapa')
