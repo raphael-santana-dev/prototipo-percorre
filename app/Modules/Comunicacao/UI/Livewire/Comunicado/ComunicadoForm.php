@@ -39,24 +39,18 @@ class ComunicadoForm extends Component
         $this->cc = array_filter(array_map('trim', $this->cc));
         $this->bcc = array_filter(array_map('trim', $this->bcc));
 
-        // 2. Lógica do Modo Dinâmico (Busca e-mails no Banco de Dados)
+        // 2. Lógica do Modo Dinâmico
         if ($this->modo_selecao === 'dinamico' && !empty($this->filtro_publico)) {
             $emailsBuscados = [];
-
             if ($this->filtro_publico === 'todos') {
-                $emailsBuscados = User::whereNotNull('email')->pluck('email')->toArray();
-            } 
-            elseif ($this->filtro_publico === 'grupo' && !empty($this->filtro_role)) {
-                $emailsBuscados = User::role($this->filtro_role)->whereNotNull('email')->pluck('email')->toArray();
-            } 
-            elseif ($this->filtro_publico === 'unidade' && !empty($this->filtro_unidade)) {
-                $emailsBuscados = Inscricao::where('unidade_id', $this->filtro_unidade)->whereNotNull('email')->pluck('email')->toArray();
-            } 
-            elseif ($this->filtro_publico === 'curso' && !empty($this->filtro_curso)) {
-                $emailsBuscados = Inscricao::where('curso_id', $this->filtro_curso)->whereNotNull('email')->pluck('email')->toArray();
+                $emailsBuscados = \App\Models\User::whereNotNull('email')->pluck('email')->toArray();
+            } elseif ($this->filtro_publico === 'grupo' && !empty($this->filtro_role)) {
+                $emailsBuscados = \App\Models\User::role($this->filtro_role)->whereNotNull('email')->pluck('email')->toArray();
+            } elseif ($this->filtro_publico === 'unidade' && !empty($this->filtro_unidade)) {
+                $emailsBuscados = \App\Models\Inscricao::where('unidade_id', $this->filtro_unidade)->whereNotNull('email')->pluck('email')->toArray();
+            } elseif ($this->filtro_publico === 'curso' && !empty($this->filtro_curso)) {
+                $emailsBuscados = \App\Models\Inscricao::where('curso_id', $this->filtro_curso)->whereNotNull('email')->pluck('email')->toArray();
             }
-
-            // Mescla os e-mails buscados com os manuais (caso existam) e remove duplicados
             $this->destinatarios = array_unique(array_merge($this->destinatarios, $emailsBuscados));
         }
 
@@ -65,8 +59,6 @@ class ComunicadoForm extends Component
             'template_id' => 'required',
             'destinatarios' => 'required|array|min:1',
             'destinatarios.*' => 'email',
-            'cc.*' => 'email',
-            'bcc.*' => 'email',
             'anexos_upload.*' => 'max:10240', 
         ];
 
@@ -74,7 +66,6 @@ class ComunicadoForm extends Component
             $regras['data_agendamento'] = 'required|date|after_or_equal:now';
         }
 
-        // Se estiver no modo dinâmico mas não houver e-mails encontrados, retorna erro
         $this->validate($regras, [
             'template_id.required' => 'Selecione um template.',
             'destinatarios.required' => 'Nenhum destinatário válido encontrado ou informado.',
@@ -89,10 +80,10 @@ class ComunicadoForm extends Component
             }
         }
 
-        // 5. Criação do Registro
         $dataEnvio = $this->tipo_envio === 'agendado' ? \Carbon\Carbon::parse($this->data_agendamento) : now();
 
-        Comunicado::create([
+        // 5. Criação do Registro Principal
+        $comunicado = Comunicado::create([
             'template_id' => $this->template_id,
             'destinatarios' => $this->destinatarios,
             'cc' => $this->cc,
@@ -101,6 +92,30 @@ class ComunicadoForm extends Component
             'data_agendamento' => $dataEnvio,
             'status' => 'pendente', 
         ]);
+
+        // 6. GERAÇÃO DOS LOGS INDIVIDUAIS (PARA PREVIEW E ENVIO)
+        $template = EmailTemplate::find($this->template_id);
+        foreach ($this->destinatarios as $email) {
+            $user = \App\Models\User::where('email', $email)->first();
+            $inscricao = \App\Models\Inscricao::where('email', $email)->latest()->first();
+            $contexto = ['user' => $user, 'inscricao' => $inscricao];
+
+            \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::create([
+                'comunicado_id' => $comunicado->id,
+                'origem' => 'comunicado',
+                'destinatario' => $email,
+                'assunto' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->assunto, $contexto),
+                'corpo' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->corpo, $contexto),
+                'anexos' => $caminhosAnexos,
+                'data_agendamento' => $dataEnvio,
+                'status' => 'pendente'
+            ]);
+        }
+
+        // 7. Se for imediato, já manda pro Worker
+        if ($this->tipo_envio === 'imediato') {
+            \App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob::dispatch($comunicado);
+        }
 
         session()->flash('sucesso', $this->tipo_envio === 'agendado' ? 'Comunicado agendado com sucesso!' : 'Disparo colocado na fila de envio!');
         return redirect()->route('comunicados.index');

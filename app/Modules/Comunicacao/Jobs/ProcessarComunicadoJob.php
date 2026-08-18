@@ -29,39 +29,33 @@ class ProcessarComunicadoJob implements ShouldQueue
     public function handle(): void
     {
         $this->comunicado->update(['status' => 'enviando']);
-        $template = $this->comunicado->template;
+        
+        // Pega todos os logs pendentes deste comunicado
+        $logs = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::where('comunicado_id', $this->comunicado->id)
+            ->where('status', 'pendente')
+            ->get();
 
-        try {
-            foreach ($this->comunicado->destinatarios as $index => $email) {
-                
-                // 1. Monta o Contexto do usuário para traduzir as variáveis
-                $user = User::where('email', $email)->first();
-                $inscricao = Inscricao::where('email', $email)->latest()->first();
-                $contexto = ['user' => $user, 'inscricao' => $inscricao];
+        $isFirst = true;
 
-                // 2. Faz a tradução mágica (Parser)
-                $assuntoTraduzido = EmailParserService::parse($template->assunto, $contexto);
-                $corpoTraduzido = EmailParserService::parse($template->corpo, $contexto);
+        foreach ($logs as $log) {
+            try {
+                $mensagem = Mail::to($log->destinatario);
 
-                // 3. Prepara o envio
-                $mensagem = Mail::to($email);
-
-                // Prevenção de Spam: Só adicionamos CC e BCC na primeira volta do laço,
-                // caso contrário as pessoas em CC receberiam 1000 cópias repetidas.
-                if ($index === 0) {
+                // Aplica CC e BCC apenas no primeiro e-mail para evitar que as cópias recebam emails repetidos
+                if ($isFirst) {
                     if (!empty($this->comunicado->cc)) $mensagem->cc($this->comunicado->cc);
                     if (!empty($this->comunicado->bcc)) $mensagem->bcc($this->comunicado->bcc);
+                    $isFirst = false;
                 }
 
-                // 4. Dispara
-                $mensagem->send(new ComunicadoMail($assuntoTraduzido, $corpoTraduzido, $this->comunicado->anexos ?? []));
+                $mensagem->send(new ComunicadoMail($log->assunto, $log->corpo, $log->anexos ?? []));
+                
+                $log->update(['status' => 'enviado', 'data_envio' => now()]);
+            } catch (\Throwable $e) {
+                $log->update(['status' => 'erro', 'erro_mensagem' => $e->getMessage()]);
             }
-
-            $this->comunicado->update(['status' => 'concluido']);
-
-        } catch (\Throwable $e) {
-            \Log::error('Erro ao enviar comunicado ID ' . $this->comunicado->id . ': ' . $e->getMessage());
-            $this->comunicado->update(['status' => 'erro']);
         }
+
+        $this->comunicado->update(['status' => 'concluido']);
     }
 }

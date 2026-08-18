@@ -26,14 +26,14 @@
             
             @forelse($registros as $comunicado)
                 <tr class="hover:bg-gray-50 transition-colors duration-200">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">
+                    <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500">
                         #{{ $comunicado->id }}
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <div class="text-sm font-bold text-gray-900">{{ $comunicado->template->nome ?? 'Template Excluído' }}</div>
                         <div class="text-xs text-gray-500">{{ $comunicado->template->assunto ?? 'Sem Assunto' }}</div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         @php 
                             $qtdDest = is_array($comunicado->destinatarios) ? count($comunicado->destinatarios) : 0;
                             $qtdAnexos = is_array($comunicado->anexos) ? count($comunicado->anexos) : 0;
@@ -47,7 +47,7 @@
                             </div>
                         @endif
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         @if($comunicado->data_agendamento)
                             <div class="text-sm font-bold text-gray-800">{{ $comunicado->data_agendamento->format('d/m/Y') }}</div>
                             <div class="text-xs text-gray-500">{{ $comunicado->data_agendamento->format('H:i') }}</div>
@@ -55,7 +55,7 @@
                             <span class="text-xs text-gray-400 italic">Imediato</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <span class="px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border {{ $comunicado->status_color }}">
                             @if($comunicado->status === 'pendente') <i class="ph ph-clock mr-1"></i> Agendado
                             @elseif($comunicado->status === 'enviando') <i class="ph ph-spinner animate-spin mr-1"></i> Enviando
@@ -64,7 +64,7 @@
                             @endif
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                             @if($comunicado->status === 'pendente')
                                 <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Cancelar Agendamento" onclick="confirm('Tem certeza que deseja cancelar este envio?') || event.stopImmediatePropagation()">
