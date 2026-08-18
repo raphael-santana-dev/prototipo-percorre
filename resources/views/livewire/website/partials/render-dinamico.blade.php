@@ -1,4 +1,3 @@
-{{-- SAFELIST: Força o Tailwind a compilar essas classes de largura --}}
 <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
 @foreach($camposDinamicos->where('etapa', $etapaAtual) as $campo)
@@ -27,7 +26,6 @@
             $overlayStyle = "background-color: {$color}; opacity: {$opacity};";
         }
 
-        // Variável da Posição das Opções
         $layoutOpcoes = $config['layout_opcoes'] ?? 'horizontal';
     @endphp
 
@@ -90,7 +88,7 @@
             @endif
             
             @if($campo->tipo === 'select')
-                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 @error('respostas.'.$campo->name) border-red-500 @enderror">
+                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
                     <option value="">Selecione...</option>
                     @foreach($listaOpcoes as $opcao)
                         <option value="{{ trim($opcao) }}">{{ trim($opcao) }}</option>
@@ -101,7 +99,7 @@
                 <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
                     @foreach($listaOpcoes as $opcao)
                         <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700' }}">
-                            <input wire:model.live="respostas.{{ $campo->name }}" type="radio" value="{{ trim($opcao) }}" class="form-radio text-purpura-600 focus:ring-purpura-500">
+                            <input wire:model.live="respostas.{{ $campo->name }}" type="radio" value="{{ trim($opcao) }}" class="form-radio text-purpura-600 focus:ring-purpura-500 bg-white">
                             <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
                         </label>
                     @endforeach
@@ -111,7 +109,7 @@
                 <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-2">
                     @foreach($listaOpcoes as $opcao)
                         <label class="inline-flex items-center {{ isset($config['bg_image']) ? 'text-white' : 'text-gray-700' }}">
-                            <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" class="form-checkbox text-purpura-600 focus:ring-purpura-500">
+                            <input wire:model.live="respostas.{{ $campo->name }}" type="checkbox" value="{{ trim($opcao) }}" class="form-checkbox text-purpura-600 focus:ring-purpura-500 bg-white">
                             <span class="ml-2 text-sm">{{ trim($opcao) }}</span>
                         </label>
                     @endforeach
@@ -138,7 +136,7 @@
                                     <td class="p-3 font-medium text-gray-800">{{ $linha }}</td>
                                     @foreach($colunas as $col)
                                         <td class="p-3 text-center border-l border-gray-100 bg-white">
-                                            <input wire:model.live="respostas.{{ $campo->name }}.{{ $indexLinha }}" type="radio" value="{{ $col }}" class="w-4 h-4 text-purpura-600 focus:ring-purpura-500 border-gray-300 cursor-pointer">
+                                            <input wire:model.live="respostas.{{ $campo->name }}.{{ $indexLinha }}" type="radio" value="{{ $col }}" class="w-4 h-4 text-purpura-600 focus:ring-purpura-500 border-gray-300 cursor-pointer bg-white">
                                         </td>
                                     @endforeach
                                 </tr>
@@ -165,20 +163,20 @@
             @elseif($campo->tipo === 'media')
                 <div class="w-full flex justify-center mt-2 rounded-lg overflow-hidden border border-gray-100">
                     @if($campo->subtipo === 'image')
-                        <img src="{{ $config['url'] ?? '' }}" alt="{{ $campo->label }}" class="max-w-full h-auto">
+                        <img src="{{ $config['url'] ?? '' }}" alt="{{ $campo->label }}" class="max-w-full h-auto bg-white">
                     @elseif($campo->subtipo === 'video')
-                        <iframe class="w-full aspect-video" src="{{ $config['url'] ?? '' }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe class="w-full aspect-video bg-black" src="{{ $config['url'] ?? '' }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     @endif
                 </div>
 
             @elseif($campo->tipo === 'divider')
-                <hr class="border-t-2 border-dashed border-gray-200 my-6">
+                <hr class="border-t-2 border-dashed border-gray-300 my-6">
 
             @elseif($campo->tipo === 'social')
                 @php $redes = $config['redes'] ?? []; @endphp
                 <div class="flex flex-wrap gap-4 items-center justify-center py-4">
                     @foreach($redes as $rede)
-                        <a href="{{ $rede['url'] }}" target="_blank" class="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition text-gray-700 hover:text-purpura-600">
+                        <a href="{{ $rede['url'] }}" target="_blank" class="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition text-gray-700 hover:text-purpura-600">
                             <i class="text-2xl ph-fill ph-{{ strtolower($rede['nome']) }}"></i>
                         </a>
                     @endforeach
@@ -188,13 +186,14 @@
                 <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name) }">
                     @for($i = 1; $i <= ($config['max_stars'] ?? 5); $i++)
                         <i class="cursor-pointer transition-colors" 
-                           :class="(temp >= {{ $i }} || (!temp && rating >= {{ $i }})) ? 'ph-fill ph-star text-yellow-400' : 'ph ph-star text-gray-300'"
+                           :class="(temp >= {{ $i }} || (!temp && rating >= {{ $i }})) ? 'ph-fill ph-star text-yellow-400 drop-shadow-sm' : 'ph ph-star text-gray-300 bg-white rounded-full'"
                            @mouseover="temp = {{ $i }}" 
                            @mouseleave="temp = 0" 
                            @click="rating = {{ $i }}">
                         </i>
                     @endfor
                 </div>
+                
             @elseif($campo->tipo === 'system')
                 @php
                     $opcoesSistema = [];
@@ -203,12 +202,13 @@
                     elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema = $turnosDisponiveis;
                 @endphp
                 
-                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 bg-white text-gray-900 @error('respostas.'.$campo->name) border-red-500 @enderror">
+                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
                     <option value="">Selecione...</option>
                     @foreach($opcoesSistema as $id => $nome)
                         <option value="{{ $id }}">{{ $nome }}</option>
                     @endforeach
                 </select>
+                
             @else
                 <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password']) ? $campo->subtipo : 'text' }}" 
                     wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
@@ -217,7 +217,7 @@
                     @if($campo->tamanho_min && $campo->subtipo == 'number') min="{{ $campo->tamanho_min }}" @endif
                     @if($campo->tamanho_max && $campo->subtipo == 'number') max="{{ $campo->tamanho_max }}" @endif
 
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 bg-white text-gray-900 @error('respostas.'.$campo->name) border-red-500 @enderror">
+                    class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
             @endif
 
             @error('respostas.'.$campo->name) <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror
