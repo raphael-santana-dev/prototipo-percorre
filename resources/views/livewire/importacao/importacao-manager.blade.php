@@ -13,17 +13,22 @@
         :breadcrumbs="$breadcrumbs ?? []">
 
         <x-slot name="actions">
-            <div x-data="{ openTemplate: false }" class="relative inline-block text-left mr-2">
-                <button @click="openTemplate = !openTemplate" @click.away="openTemplate = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                    <i class="text-lg ph ph-download-simple"></i> Baixar Modelos <i class="ph ph-caret-down"></i>
+            
+            {{-- NOVO: DROPDOWN DE EXPORTAÇÃO --}}
+            <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
+                <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
+                    <i class="text-lg ph ph-export"></i> Exportar <i class="ph ph-caret-down"></i>
                 </button>
-                <div x-show="openTemplate" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
+                <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
                     <div class="py-1">
-                        <button wire:click="baixarTemplate('usuarios')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Planilha de Usuários
+                        <button wire:click="solicitarExportacao('inscricoes', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium">
+                            Planilha de Inscrições
                         </button>
-                        <button wire:click="baixarTemplate('campos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Planilha de Formulários
+                        <button wire:click="solicitarExportacao('usuarios', 'csv')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium">
+                            CSV de Usuários
+                        </button>
+                        <button wire:click="solicitarExportacao('campos', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium">
+                            Planilha de Campos
                         </button>
                     </div>
                 </div>
