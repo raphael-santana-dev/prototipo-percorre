@@ -10,7 +10,7 @@
         </div>
     </div>
 
-    <!-- Script Reutilizável de Input de E-mails via Alpine -->
+    <!-- Script Alpine de Tags de Email -->
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('emailTags', (entangledArray) => ({
@@ -60,29 +60,98 @@
 
             <hr class="border-gray-100">
 
-            <!-- DESTINATÁRIOS (TO) -->
-            <div x-data="emailTags(@entangle('destinatarios'))">
-                <label class="block text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
-                    <i class="ph-fill ph-users text-purpura-500"></i> Destinatários (Para) <span class="text-red-500">*</span>
+            <!-- SELEÇÃO DE DESTINATÁRIOS (INTELIGENTE) -->
+            <div>
+                <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="ph-fill ph-users text-purpura-500"></i> Como deseja selecionar os destinatários?
                 </label>
-                <p class="text-[10px] text-gray-500 mb-2">Digite o e-mail e aperte <kbd class="bg-gray-100 px-1 rounded border">Enter</kbd> ou <b>cole uma lista do Excel.</b></p>
-                
-                <div class="w-full min-h-[42px] border border-gray-300 rounded-md p-1.5 flex flex-wrap gap-1 focus-within:ring-1 focus-within:ring-purpura-500 focus-within:border-purpura-500 bg-white">
-                    <template x-for="(email, index) in emails" :key="index">
-                        <span class="inline-flex items-center gap-1 bg-purpura-50 text-purpura-700 text-xs font-bold px-2.5 py-1 rounded-full border border-purpura-200">
-                            <span x-text="email"></span>
-                            <button type="button" @click="remove(index)" class="hover:text-red-500 transition"><i class="ph-bold ph-x"></i></button>
-                        </span>
-                    </template>
-                    <input type="email" x-model="newEmail" @keydown.enter.prevent="add" @keydown.space.prevent="add" @paste="handlePaste" placeholder="Adicionar e-mail..." class="flex-1 outline-none border-none focus:ring-0 min-w-[150px] text-sm py-1 bg-transparent">
+
+                <!-- TABS -->
+                <div class="flex gap-4 mb-4 border-b border-gray-200">
+                    <button type="button" wire:click="$set('modo_selecao', 'manual')" class="pb-2 text-sm font-bold transition-colors border-b-2 px-2 {{ $modo_selecao === 'manual' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-400 hover:text-gray-700' }}">
+                        1. Digitar / Colar E-mails
+                    </button>
+                    <button type="button" wire:click="$set('modo_selecao', 'dinamico')" class="pb-2 text-sm font-bold transition-colors border-b-2 px-2 {{ $modo_selecao === 'dinamico' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-400 hover:text-gray-700' }}">
+                        2. Buscar na Base de Dados (Automático)
+                    </button>
                 </div>
-                @error('destinatarios') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+
+                <!-- CONTEÚDO MODO MANUAL -->
+                @if($modo_selecao === 'manual')
+                    <div x-data="emailTags(@entangle('destinatarios'))" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="text-xs text-gray-600 mb-2 font-medium">Digite o e-mail e aperte <kbd class="bg-white px-1 rounded border shadow-sm">Enter</kbd> ou <b>cole uma lista do Excel/Word.</b></p>
+                        
+                        <div class="w-full min-h-[42px] border border-gray-300 rounded-md p-1.5 flex flex-wrap gap-1 focus-within:ring-1 focus-within:ring-purpura-500 focus-within:border-purpura-500 bg-white">
+                            <template x-for="(email, index) in emails" :key="index">
+                                <span class="inline-flex items-center gap-1 bg-purpura-50 text-purpura-700 text-xs font-bold px-2.5 py-1 rounded-full border border-purpura-200">
+                                    <span x-text="email"></span>
+                                    <button type="button" @click="remove(index)" class="hover:text-red-500 transition"><i class="ph-bold ph-x"></i></button>
+                                </span>
+                            </template>
+                            <input type="email" x-model="newEmail" @keydown.enter.prevent="add" @keydown.space.prevent="add" @paste="handlePaste" placeholder="Adicionar e-mail..." class="flex-1 outline-none border-none focus:ring-0 min-w-[150px] text-sm py-1 bg-transparent">
+                        </div>
+                    </div>
+                @endif
+
+                <!-- CONTEÚDO MODO DINÂMICO -->
+                @if($modo_selecao === 'dinamico')
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <p class="text-xs text-blue-700 mb-4 font-medium">O sistema fará a varredura e extrairá os e-mails do público escolhido no momento do envio.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Qual o Público Alvo?</label>
+                                <select wire:model.live="filtro_publico" class="w-full rounded-md border-blue-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                    <option value="">Selecione...</option>
+                                    <option value="todos">Todos os Usuários Cadastrados</option>
+                                    <option value="grupo">Usuários de um Grupo de Acesso (Role)</option>
+                                    <option value="unidade">Estudantes inscritos em uma Unidade</option>
+                                    <option value="curso">Estudantes inscritos em um Curso</option>
+                                </select>
+                            </div>
+
+                            <!-- Filtros Secundários Baseados na Seleção -->
+                            @if($filtro_publico === 'grupo')
+                                <div>
+                                    <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Qual Grupo (Role)?</label>
+                                    <select wire:model="filtro_role" class="w-full rounded-md border-blue-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                        <option value="">Selecione o Grupo...</option>
+                                        @foreach($rolesDisponiveis as $role)
+                                            <option value="{{ $role->name }}">{{ $role->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @elseif($filtro_publico === 'unidade')
+                                <div>
+                                    <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Qual Unidade?</label>
+                                    <select wire:model="filtro_unidade" class="w-full rounded-md border-blue-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                        <option value="">Selecione a Unidade...</option>
+                                        @foreach($unidadesDisponiveis as $unidade)
+                                            <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @elseif($filtro_publico === 'curso')
+                                <div>
+                                    <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Qual Curso?</label>
+                                    <select wire:model="filtro_curso" class="w-full rounded-md border-blue-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                        <option value="">Selecione o Curso...</option>
+                                        @foreach($cursosDisponiveis as $curso)
+                                            <option value="{{ $curso->id }}">{{ $curso->nome }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+                @error('destinatarios') <span class="text-xs text-red-500 font-bold block mt-2"><i class="ph-fill ph-warning-circle"></i> {{ $message }}</span> @enderror
             </div>
 
             <!-- CÓPIA (CC) E OCULTA (BCC) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div x-data="emailTags(@entangle('cc'))">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cópia (CC)</label>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cópia (CC) - Opcional</label>
                     <div class="w-full min-h-[42px] border border-gray-300 rounded-md p-1.5 flex flex-wrap gap-1 focus-within:border-purpura-500 bg-white shadow-sm">
                         <template x-for="(email, index) in emails" :key="index">
                             <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded border border-gray-200">
@@ -95,7 +164,7 @@
                 </div>
 
                 <div x-data="emailTags(@entangle('bcc'))">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cópia Oculta (CCO)</label>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cópia Oculta (CCO) - Opcional</label>
                     <div class="w-full min-h-[42px] border border-gray-300 rounded-md p-1.5 flex flex-wrap gap-1 focus-within:border-purpura-500 bg-white shadow-sm">
                         <template x-for="(email, index) in emails" :key="index">
                             <span class="inline-flex items-center gap-1 bg-gray-800 text-gray-200 text-xs font-bold px-2 py-1 rounded border border-gray-900">
@@ -123,7 +192,6 @@
                     </label>
                 </div>
                 
-                <!-- Lista de arquivos selecionados -->
                 @if($anexos_upload)
                     <div class="mt-3 space-y-1">
                         @foreach($anexos_upload as $file)
@@ -160,9 +228,9 @@
                 </div>
 
                 @if($tipo_envio === 'agendado')
-                    <div class="w-full md:w-1/3 bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                        <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Data e Hora exata</label>
-                        <input wire:model="data_agendamento" type="datetime-local" class="w-full rounded-md border-blue-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                    <div class="w-full md:w-1/3 bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                        <label class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">Data e Hora exata</label>
+                        <input wire:model="data_agendamento" type="datetime-local" class="w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 shadow-sm bg-white">
                         @error('data_agendamento') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                     </div>
                 @endif
@@ -173,7 +241,7 @@
                 <a href="{{ route('comunicados.index') }}" class="px-5 py-2.5 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancelar</a>
                 
                 @if($tipo_envio === 'agendado')
-                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 transition flex items-center gap-2">
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-gray-800 hover:bg-gray-900 transition flex items-center gap-2">
                         <i class="ph-bold ph-calendar-plus text-lg"></i> Agendar Envio
                     </button>
                 @else
