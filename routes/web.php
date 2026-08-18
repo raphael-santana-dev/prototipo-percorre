@@ -116,6 +116,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');
     Route::get('/templates/create', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.create');
     Route::get('/templates/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.edit');
+
+    Route::get('/comunicados', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::class)->name('comunicados.index');
+    Route::get('/comunicados/create', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoForm::class)->name('comunicados.create');
 });
 
 // ==========================================
