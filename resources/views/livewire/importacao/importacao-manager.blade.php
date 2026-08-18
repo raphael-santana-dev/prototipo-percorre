@@ -12,6 +12,94 @@
         badge=""
         :breadcrumbs="$breadcrumbs ?? []">
 
+        {{-- AREA DE FILTROS APLICADA --}}
+        <x-slot name="filters">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                
+                <!-- Tipo de Importação -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                        <i class="ph ph-files text-purpura-500"></i> Tipo de Registro
+                    </label>
+                    <select wire:model.live="filtro_tipo" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos</option>
+                        <option value="inscricoes">Base de Inscrições</option>
+                        <option value="usuarios">Usuários do Sistema</option>
+                        <option value="campos">Blocos de Formulário</option>
+                        <option value="unidades">Unidades / Sedes</option>
+                        <option value="cursos">Cursos Ativos</option>
+                    </select>
+                </div>
+
+                <!-- Status da Importação -->
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                        <i class="ph ph-activity text-purpura-500"></i> Status
+                    </label>
+                    <select wire:model.live="filtro_status" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos</option>
+                        <option value="mapeamento">Mapeamento</option>
+                        <option value="na_fila">Na Fila</option>
+                        <option value="processando">Processando</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="erro_parcial">Concluído c/ Alertas</option>
+                        <option value="erro">Falha Crítica</option>
+                    </select>
+                </div>
+
+                <!-- Usuário -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                        <i class="ph ph-user text-purpura-500"></i> Usuário Responsável
+                    </label>
+                    <select wire:model.live="filtro_usuario" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos os Usuários</option>
+                        @foreach($usuariosDisponiveis as $id => $nome)
+                            <option value="{{ $id }}">{{ Str::limit($nome, 20) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Data De -->
+                <div class="md:col-span-2" x-data="{
+                    initZero(e) {
+                        if (!e.target.value) {
+                            let d = new Date();
+                            let y = d.getFullYear();
+                            let m = String(d.getMonth() + 1).padStart(2, '0');
+                            let day = String(d.getDate()).padStart(2, '0');
+                            e.target.value = `${y}-${m}-${day}T00:00`;
+                            e.target.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                        <i class="ph ph-calendar-plus text-purpura-500"></i> De (Data)
+                    </label>
+                    <input type="datetime-local" wire:model.live="filtro_data_inicio" @focus="initZero" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                </div>
+
+                <!-- Data Até -->
+                <div class="md:col-span-2" x-data="{
+                    initEnd(e) {
+                        if (!e.target.value) {
+                            let d = new Date();
+                            let y = d.getFullYear();
+                            let m = String(d.getMonth() + 1).padStart(2, '0');
+                            let day = String(d.getDate()).padStart(2, '0');
+                            e.target.value = `${y}-${m}-${day}T23:59`;
+                            e.target.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                        <i class="ph ph-calendar-check text-purpura-500"></i> Até (Data)
+                    </label>
+                    <input type="datetime-local" wire:model.live="filtro_data_fim" @focus="initEnd" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                </div>
+            </div>
+        </x-slot>
+
         <x-slot name="actions">
             
             {{-- EXPORTAR --}}
@@ -34,18 +122,27 @@
                 </div>
             </div>
 
-            {{-- TEMPLATES --}}
+            {{-- TEMPLATES AGORA COM AS 5 OPÇÕES --}}
             <div x-data="{ openTemplate: false }" class="relative inline-block text-left mr-2">
                 <button @click="openTemplate = !openTemplate" @click.away="openTemplate = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
                     <i class="text-lg ph ph-download-simple"></i> Planilhas Modelo <i class="ph ph-caret-down"></i>
                 </button>
                 <div x-show="openTemplate" x-cloak class="absolute right-0 w-64 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
                     <div class="py-1">
+                        <button wire:click="baixarTemplate('inscricoes')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Inscrições
+                        </button>
                         <button wire:click="baixarTemplate('usuarios')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
                             <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Usuários Internos
                         </button>
                         <button wire:click="baixarTemplate('campos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
                             <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Blocos de Formulário
+                        </button>
+                        <button wire:click="baixarTemplate('unidades')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Sedes / Unidades
+                        </button>
+                        <button wire:click="baixarTemplate('cursos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Cursos Ativos
                         </button>
                     </div>
                 </div>
@@ -174,7 +271,6 @@
                             </div>
                         @endif
 
-                        <!-- ... (O restante do modal continua igual) ... -->
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                             <label class="block text-xs font-bold text-gray-800 mb-2 uppercase tracking-wider">Arquivo de Dados</label>
                             

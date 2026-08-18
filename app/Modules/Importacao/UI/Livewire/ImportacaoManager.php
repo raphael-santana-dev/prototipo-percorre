@@ -7,6 +7,7 @@ use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use App\Models\Importacao;
 use App\Models\Ciclo;
+use App\Models\User;
 use Spatie\SimpleExcel\SimpleExcelReader;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -34,6 +35,13 @@ class ImportacaoManager extends Component
     
     public $mensagemErroAtual = '';
     public $arquivoErroAtual = '';
+
+    // NOVOS FILTROS
+    public $filtro_tipo = '';
+    public $filtro_status = '';
+    public $filtro_usuario = '';
+    public $filtro_data_inicio = '';
+    public $filtro_data_fim = '';
 
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
@@ -63,6 +71,14 @@ class ImportacaoManager extends Component
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
     }
 
+    // Reseta a paginação ao mudar qualquer filtro
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_tipo', 'filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim'])) {
+            $this->resetPage();
+        }
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -74,9 +90,15 @@ class ImportacaoManager extends Component
         ];
     }
 
-    // --- TEMPLATES PARA DOWNLOAD ATUALIZADOS ---
+    // --- TEMPLATES PARA DOWNLOAD EXPANDIDOS (AGORA SÃO 5) ---
     public function baixarTemplate($tipo)
     {
+        if ($tipo === 'inscricoes') {
+            $cabecalho = ['Nome', 'E-mail', 'CPF', 'Celular', 'Data de Nascimento', 'Estado', 'Unidade', 'Curso', 'Turno'];
+            $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
+            return $this->gerarCsv('modelo_importacao_inscricoes.csv', [$cabecalho, $exemplo]);
+        }
+
         if ($tipo === 'usuarios') {
             $cabecalho = ['Nome Completo', 'E-mail', 'CPF', 'Senha', 'Grupo de Acesso', 'Permissões Extras'];
             $exemplo = ['João Silva', 'joao@email.com', '123.456.789-00', 'senha123', 'estudante', 'ver_aulas, editar_perfil'];
@@ -89,6 +111,18 @@ class ImportacaoManager extends Component
             $exemplo2 = ['1', '2', 'Como nos conheceu?', 'como_conheceu', 'select', '', '12', 'Não', 'Sim', '', 'Instagram, Facebook, Amigos'];
             $exemplo3 = ['1', '3', 'Qual rede social?', 'qual_rede', 'text', 'text', '12', 'Sim', 'Não', 'como_conheceu=Instagram', ''];
             return $this->gerarCsv('modelo_importacao_campos.csv', [$cabecalho, $exemplo1, $exemplo2, $exemplo3]);
+        }
+
+        if ($tipo === 'unidades') {
+            $cabecalho = ['Nome da Unidade', 'Estado', 'Cidade', 'Status'];
+            $exemplo = ['Unidade Paulista', 'SP', 'São Paulo', 'Ativa'];
+            return $this->gerarCsv('modelo_importacao_unidades.csv', [$cabecalho, $exemplo]);
+        }
+
+        if ($tipo === 'cursos') {
+            $cabecalho = ['Nome do Curso', 'Status', 'Idade Mínima', 'Idade Máxima', 'Permite Estado Diferente?'];
+            $exemplo = ['Design Gráfico', 'Ativo', '16', '99', 'Não'];
+            return $this->gerarCsv('modelo_importacao_cursos.csv', [$cabecalho, $exemplo]);
         }
     }
 
@@ -268,14 +302,46 @@ class ImportacaoManager extends Component
     {
         $query = Importacao::with('user');
         
+        // Aplicação dos Filtros
+        if (!empty($this->filtro_tipo)) {
+            $query->where('tipo', $this->filtro_tipo);
+        }
+        if (!empty($this->filtro_status)) {
+            $query->where('status', $this->filtro_status);
+        }
+        if (!empty($this->filtro_usuario)) {
+            $query->where('user_id', $this->filtro_usuario);
+        }
+        
+        // Filtros de Data
+        if (!empty($this->filtro_data_inicio)) {
+            $query->where('created_at', '>=', str_replace('T', ' ', $this->filtro_data_inicio));
+        }
+        if (!empty($this->filtro_data_fim)) {
+            $dataFim = str_replace('T', ' ', $this->filtro_data_fim);
+            if (strlen($dataFim) === 10) {
+                $dataFim .= ' 23:59:59';
+            } elseif (strlen($dataFim) === 16) { 
+                $dataFim .= ':59';
+            }
+            $query->where('created_at', '<=', $dataFim);
+        }
+
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $query->orderBy('id', 'desc');
         }
 
+        // CORREÇÃO: Busca os usuários consultando a tabela de importações de forma independente, 
+        // sem depender de relacionamentos no model User.
+        $usuariosDisponiveis = User::whereIn('id', Importacao::select('user_id')->distinct())
+            ->orderBy('name')
+            ->pluck('name', 'id');
+
         return view('livewire.importacao.importacao-manager', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros' => $query->paginate($this->porPagina),
+            'usuariosDisponiveis' => $usuariosDisponiveis
         ])->layout('components.layouts.app', ['title' => 'Gestor de Integrações']);
     }
 }
