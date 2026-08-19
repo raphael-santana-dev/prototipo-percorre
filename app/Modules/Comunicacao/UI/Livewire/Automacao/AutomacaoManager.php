@@ -18,7 +18,27 @@ class AutomacaoManager extends Component
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
-        $this->permiteGrid = true;
+        $this->permiteGrid = false;
+    }
+
+    public function previewTemplate($templateId)
+    {
+        $template = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($templateId);
+        
+        if ($template) {
+            $this->dispatch('load-quick-view', [
+                'title' => 'Pré-visualização do Template',
+                'subtitle' => 'Layout que será disparado por esta automação',
+                'icon' => 'ph-layout',
+                'data' => [
+                    'Nome do Template' => $template->nome,
+                    'Assunto do E-mail' => '<div class="font-bold text-gray-900">'.$template->assunto.'</div>',
+                    'Corpo da Mensagem' => '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 mt-2 max-h-96 overflow-y-auto">'.($template->conteudo ?? '<i>Sem conteúdo configurado.</i>').'</div>'
+                ]
+            ]);
+        } else {
+            $this->dispatch('erro', msg: 'Template não encontrado ou excluído.');
+        }
     }
 
     public function getHeadersProperty()

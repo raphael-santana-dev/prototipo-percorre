@@ -5,7 +5,9 @@
             <a href="{{ route('automacoes.index') }}" class="text-purpura-600 hover:text-purpura-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
                 <i class="ph ph-arrow-left"></i> Voltar para Regras
             </a>
-            <h2 class="text-2xl font-bold text-gray-900 mt-1">Configurar Gatilho de Automação</h2>
+            <h2 class="text-2xl font-bold text-gray-900 mt-1">
+                {{ $automacaoId ? 'Editar Gatilho de Automação' : 'Configurar Gatilho de Automação' }}
+            </h2>
         </div>
     </div>
 
