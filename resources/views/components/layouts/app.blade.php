@@ -110,10 +110,11 @@
                             </button>
                             <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
                                 <a href="{{ route('templates.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Templates</a>
+                                <a href="{{ route('comunicados.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Comunicados</a>
+                                <a href="{{ route('automacoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Automações</a>
+                                <a href="{{ route('monitor.emails') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Agenda de e-mails</a>
                             </div>
                         </div>
-
-                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
 
                         @role('dev|admin')
                         <div x-data="{ open: false }" @click.away="open = false" class="relative ml-auto">
@@ -124,6 +125,7 @@
                                 <a href="{{ route('users.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Usuários</a>
                                 <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a>
                                 <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Auditoria</a>
+                                <a href="{{ route('importacoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Importações</a>
 
                                 @role('dev')
                                     <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
@@ -133,6 +135,8 @@
                             </div>
                         </div>
                         @endrole
+
+                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
                     </div>
                 </div>
             </nav>
@@ -193,6 +197,19 @@
                         </div>
                     </div>
 
+                    <div x-data="{ open: false }" class="space-y-1">
+                        <button @click="open = !open" class="flex items-center justify-between w-full px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                            <span class="flex items-center gap-3"><i class="text-lg ph ph-buildings"></i> Comunicação</span>
+                            <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                        </button>
+                        <div x-show="open" class="pl-8 space-y-1" x-cloak>
+                            <a href="{{ route('templates.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Templates</a>
+                            <a href="{{ route('comunicados.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Comunicados</a>
+                            <a href="{{ route('automacoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Automações</a>
+                            <a href="{{ route('monitor.emails') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Agenda de e-mails</a>
+                        </div>
+                    </div>
+
                     <div class="px-3 py-2">
                         @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
                     </div>
@@ -206,6 +223,9 @@
                             <div x-show="open" class="pl-8 space-y-1" x-cloak>
                                 <a href="{{ route('users.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Gestão de Usuários</a>
                                 <a href="{{ route('roles.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Perfis (Roles)</a>
+                                <a href="{{ route('permissions.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Permissões</a>
+                                <a href="{{ route('importacoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Importações</a>
+
                                 @role('dev')
                                     <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                     <a href="{{ route('permissions.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Tabela de Permissões</a>
