@@ -1,10 +1,4 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans">
-    
-    @if (session()->has('sucesso'))
-        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 font-bold rounded-lg shadow-sm flex items-center gap-2">
-            <i class="ph-fill ph-check-circle text-xl text-green-500"></i> {{ session('sucesso') }}
-        </div>
-    @endif
 
     <x-breadcrumb :items="[
         ['label' => 'Admin', 'url' => '#'], 

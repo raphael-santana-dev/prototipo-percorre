@@ -16,12 +16,6 @@
         </div>
     </div>
 
-    @if (session()->has('sucesso'))
-        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg shadow-sm flex items-center gap-2 font-bold">
-            <i class="ph-fill ph-check-circle text-xl text-green-500"></i> {{ session('sucesso') }}
-        </div>
-    @endif
-
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         
         <div class="p-4 bg-yellow-50 border-b border-yellow-200 flex items-start gap-3">
