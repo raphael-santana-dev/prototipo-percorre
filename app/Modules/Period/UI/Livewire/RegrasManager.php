@@ -116,7 +116,7 @@ class RegrasManager extends Component
 
         $this->ciclo->update(['regras_pontuacao' => $this->regras]);
         
-        session()->flash('sucesso', 'Regras de pontuação salvas com sucesso!');
+        $this->dispatch('sucesso', msg: 'Regras de pontuação salvas com sucesso!');
     }
 
     public function render()

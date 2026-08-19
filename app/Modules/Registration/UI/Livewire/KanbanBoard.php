@@ -41,7 +41,7 @@ class KanbanBoard extends Component
             ->update(['status_inscricao_id' => $this->statusDestinoLote]);
 
         $this->reset(['selecionados', 'statusDestinoLote']);
-        session()->flash('sucesso', 'Candidatos movidos em lote com sucesso!');
+        $this->dispatch('sucesso', msg: 'Candidatos movidos em lote com sucesso!');
     }
 
     public function render()

@@ -84,13 +84,13 @@ class StatusManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Status atualizado com sucesso!' : 'Status cadastrado com sucesso!');
+        $this->dispatch('sucesso', msg: $this->isEditMode ? 'Status atualizado com sucesso!' : 'Status cadastrado com sucesso!');
     }
 
     public function delete(int $id)
     {
         StatusInscricao::findOrFail($id)->delete();
-        session()->flash('success', 'Status excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Status excluído com sucesso!');
     }
 
     private function resetInputFields()

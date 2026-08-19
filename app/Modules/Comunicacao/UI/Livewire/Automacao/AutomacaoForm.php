@@ -39,7 +39,7 @@ class AutomacaoForm extends Component
             'status' => $this->status,
         ]);
 
-        session()->flash('sucesso', 'Automação criada com sucesso!');
+        $this->dispatch('sucesso', msg: 'Automação criada com sucesso!');
         return redirect()->route('automacoes.index');
     }
 

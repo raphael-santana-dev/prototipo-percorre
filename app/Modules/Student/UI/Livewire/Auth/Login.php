@@ -25,10 +25,12 @@ class Login extends Component
         // Autentica forçando a validação no guard 'student'
         if (Auth::guard('student')->attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
             session()->regenerate();
+            session()->flash('sucesso', 'Bem-vindo(a) de volta!');
             return redirect()->route('student.dashboard');
         }
 
         $this->addError('email', 'As credenciais fornecidas estão incorretas.');
+        $this->dispatch('erro', msg: 'E-mail ou senha incorretos. Tente novamente.');
     }
 
     public function render()

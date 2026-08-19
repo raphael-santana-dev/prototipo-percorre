@@ -37,7 +37,7 @@ class RolePermissionManager extends Component
         // O Sync apaga o que foi desmarcado e salva o que foi marcado automaticamente
         $role->syncPermissions($this->selectedPermissions);
 
-        session()->flash('success', 'Permissões atualizadas com sucesso!');
+        $this->dispatch('sucesso', msg: 'Permissões atualizadas com sucesso!');
     }
 
     public function render()

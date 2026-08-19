@@ -51,7 +51,7 @@ class TemplateForm extends Component
             EmailTemplate::create($dados);
         }
 
-        session()->flash('sucesso', 'Template salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Template salvo com sucesso!');
         return redirect()->route('templates.index');
     }
 

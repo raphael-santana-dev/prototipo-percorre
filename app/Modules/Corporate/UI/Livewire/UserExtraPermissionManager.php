@@ -65,7 +65,7 @@ class UserExtraPermissionManager extends Component
             $permission = Permission::findById($permissionId);
 
             if (!$isDev && !$currentUser->hasPermissionTo($permission->name)) {
-                session()->flash('error', "Você não pode conceder a permissão '{$permission->name}'.");
+                $this->dispatch('erro', msg:  "Você não pode conceder a permissão '{$permission->name}'.");
                 return;
             }
 
@@ -74,7 +74,7 @@ class UserExtraPermissionManager extends Component
         }
 
         $user->permissions()->sync($syncData);
-        session()->flash('success', 'Permissões extras atualizadas com sucesso!');
+        $this->dispatch('sucesso', msg: 'Permissões extras atualizadas com sucesso!');
     }
 
     public function render()

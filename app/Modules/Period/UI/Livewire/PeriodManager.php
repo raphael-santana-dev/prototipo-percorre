@@ -93,7 +93,7 @@ class PeriodManager extends Component
             $novoCampo->save();
         }
 
-        session()->flash('sucesso', 'Ciclo e formulário duplicados com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo e formulário duplicados com sucesso!');
     }
 
     public function showQuickView(int $id)
@@ -226,7 +226,7 @@ class PeriodManager extends Component
         $cicloSalvo->statusPipeline()->sync($syncStatus);
 
         $this->fecharModal();
-        session()->flash('sucesso', 'Ciclo salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo salvo com sucesso!');
     }
 
     public function getHeadersProperty()

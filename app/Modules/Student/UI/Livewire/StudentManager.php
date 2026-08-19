@@ -113,14 +113,14 @@ class StudentManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', 'Estudante salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Estudante salvo com sucesso!');
     }
 
     public function delete(int $id)
     {
         abort_if(!auth()->user()->can('estudante.excluir'), 403);
         Student::findOrFail($id)->delete();
-        session()->flash('success', 'Estudante excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Estudante excluído com sucesso!');
     }
 
     public function getHeadersProperty()

@@ -80,7 +80,7 @@ class CursoManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Curso atualizado!' : 'Curso cadastrado!');
+        $this->dispatch('sucesso', msg: $this->isEditMode ? 'Curso atualizado!' : 'Curso cadastrado!');
     }
 
     // 3. Atualizando o Edit
@@ -110,7 +110,7 @@ class CursoManager extends Component
     public function delete(CursoService $service, int $id)
     {
         $service->deletarCurso($id);
-        session()->flash('success', 'Curso movido para a lixeira.');
+        $this->dispatch('sucesso', msg: 'Curso movido para a lixeira.');
     }
 
     private function resetInputFields() 

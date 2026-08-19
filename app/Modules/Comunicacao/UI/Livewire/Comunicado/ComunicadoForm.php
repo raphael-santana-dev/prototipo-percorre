@@ -117,7 +117,7 @@ class ComunicadoForm extends Component
             \App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob::dispatch($comunicado);
         }
 
-        session()->flash('sucesso', $this->tipo_envio === 'agendado' ? 'Comunicado agendado com sucesso!' : 'Disparo colocado na fila de envio!');
+        $this->dispatch('sucesso', msg: $this->tipo_envio === 'agendado' ? 'Comunicado agendado com sucesso!' : 'Disparo colocado na fila de envio!');
         return redirect()->route('comunicados.index');
     }
 
