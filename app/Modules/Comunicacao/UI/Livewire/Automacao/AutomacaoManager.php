@@ -26,14 +26,23 @@ class AutomacaoManager extends Component
         $template = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($templateId);
         
         if ($template) {
+            
+            // Tenta buscar as nomenclaturas mais comuns de banco de dados. 
+            // Caso a sua coluna tenha um nome muito específico, basta alterar aqui!
+            $corpoEmail = $template->corpo ?? $template->conteudo ?? $template->mensagem ?? $template->html ?? null;
+            
+            if (empty($corpoEmail)) {
+                $corpoEmail = '<i class="text-gray-400">Sem conteúdo configurado.</i>';
+            }
+
             $this->dispatch('load-quick-view', [
                 'title' => 'Pré-visualização do Template',
                 'subtitle' => 'Layout que será disparado por esta automação',
                 'icon' => 'ph-layout',
                 'data' => [
                     'Nome do Template' => $template->nome,
-                    'Assunto do E-mail' => '<div class="font-bold text-gray-900">'.$template->assunto.'</div>',
-                    'Corpo da Mensagem' => '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 mt-2 max-h-96 overflow-y-auto">'.($template->conteudo ?? '<i>Sem conteúdo configurado.</i>').'</div>'
+                    'Assunto do E-mail' => '<div class="font-bold text-gray-900 dark:text-white">'.$template->assunto.'</div>',
+                    'Corpo da Mensagem' => '<div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 mt-2 max-h-96 overflow-y-auto">'.$corpoEmail.'</div>'
                 ]
             ]);
         } else {
