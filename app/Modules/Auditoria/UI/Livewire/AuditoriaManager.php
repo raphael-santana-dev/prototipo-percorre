@@ -36,6 +36,12 @@ class AuditoriaManager extends Component
         }
     }
 
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_keyword', 'filtro_acao', 'filtro_tabela', 'filtro_data_inicio', 'filtro_data_fim']);
+        $this->resetPage();
+    }
+
     public function getHeadersProperty()
     {
         return [
