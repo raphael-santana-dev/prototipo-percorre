@@ -27,7 +27,7 @@ class EmailLogManager extends Component
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
-        $this->permiteGrid = true;
+        $this->permiteGrid = false;
     }
 
     public function updating($nomePropriedade)
@@ -35,6 +35,12 @@ class EmailLogManager extends Component
         if (in_array($nomePropriedade, ['filtro_status', 'filtro_origem'])) {
             $this->resetPage();
         }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_status', 'filtro_origem']);
+        $this->resetPage();
     }
 
     public function getHeadersProperty()
