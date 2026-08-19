@@ -12,6 +12,18 @@
             </a>
         </x-slot>
 
+        <x-slot name="filters">
+            <div class="flex gap-2">
+                <input wire:model.live.debounce.300ms="filtro_busca" type="text" placeholder="Buscar nome ou assunto..." class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 w-64">
+                
+                @if($filtro_busca !== '')
+                    <button wire:click="limparFiltros" class="px-3 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
+                        <i class="ph-bold ph-x"></i> Limpar
+                    </button>
+                @endif
+            </div>
+        </x-slot>
+
     </x-page-header>
 
     <x-table 

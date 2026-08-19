@@ -13,11 +13,28 @@ class ComunicadoManager extends Component
     use WithPagination, ComPadraoListagem;
 
     public array $breadcrumbs = [];
+    public $filtro_status = '';
+    public $filtro_template = '';
+    public $filtro_data_inicio = '';
+    public $filtro_data_fim = '';
+
+    public function updating($nomePropriedade) 
+    { 
+        if (in_array($nomePropriedade, ['filtro_status', 'filtro_template', 'filtro_data_inicio', 'filtro_data_fim'])) {
+            $this->resetPage(); 
+        }
+    }
+    
+    public function limparFiltros() 
+    {
+        $this->reset(['filtro_status', 'filtro_template', 'filtro_data_inicio', 'filtro_data_fim']);
+        $this->resetPage();
+    }
 
     public function mount()
     {
         $this->breadcrumbs = BreadcrumbHelper::generate();
-        $this->permiteGrid = true;
+        $this->permiteGrid = false;
     }
 
     public function getHeadersProperty()
@@ -56,6 +73,12 @@ class ComunicadoManager extends Component
     public function render()
     {
         $query = Comunicado::with('template');
+        
+        // Filtros (O whereDate extrai o "dia" da data de agendamento ignorando a hora)
+        $query->when($this->filtro_status, fn($q) => $q->where('status', $this->filtro_status))
+              ->when($this->filtro_template, fn($q) => $q->where('template_id', $this->filtro_template))
+              ->when($this->filtro_data_inicio, fn($q) => $q->whereDate('data_agendamento', '>=', $this->filtro_data_inicio))
+              ->when($this->filtro_data_fim, fn($q) => $q->whereDate('data_agendamento', '<=', $this->filtro_data_fim));
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -63,8 +86,12 @@ class ComunicadoManager extends Component
             $query->orderBy('id', 'desc');
         }
 
+        // Pega os templates para popular o filtro
+        $templatesDisponiveis = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')->get();
+
         return view('livewire.comunicacao.comunicado.comunicado-manager', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros' => $query->paginate($this->porPagina),
+            'templatesDisponiveis' => $templatesDisponiveis
         ])->layout('components.layouts.app', ['title' => 'Gestão de Comunicados']);
     }
 }

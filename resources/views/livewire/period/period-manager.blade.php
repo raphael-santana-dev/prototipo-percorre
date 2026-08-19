@@ -13,6 +13,37 @@
                 <i class="ph ph-plus text-lg"></i> Novo Ciclo
             </button>
         </x-slot>
+
+        <x-slot name="filters">
+            <div class="flex gap-2">
+                <select wire:model.live="filtro_ano" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Anos</option>
+                    @if(isset($anosDisponiveis))
+                        @foreach($anosDisponiveis as $ano)
+                            <option value="{{ $ano }}">{{ $ano }}</option>
+                        @endforeach
+                    @endif
+                </select>
+                
+                <select wire:model.live="filtro_semestre" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Semestre...</option>
+                    <option value="1">1º Semestre</option>
+                    <option value="2">2º Semestre</option>
+                </select>
+
+                <select wire:model.live="filtro_status" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todos os Status</option>
+                    <option value="1">Ativos</option>
+                    <option value="0">Inativos</option>
+                </select>
+
+                @if($filtro_ano !== '' || $filtro_semestre !== '' || $filtro_status !== '')
+                    <button wire:click="limparFiltros" class="px-3 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
+                        <i class="ph-bold ph-x"></i> Limpar
+                    </button>
+                @endif
+            </div>
+        </x-slot>
     </x-page-header>
 
     <x-table

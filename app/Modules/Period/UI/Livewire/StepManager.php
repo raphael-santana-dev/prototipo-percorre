@@ -29,10 +29,19 @@ class StepManager extends Component
 
     public array $breadcrumbs = [];
 
+    public $filtro_busca = '';
+
     public function mount() 
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    public function updating($nomePropriedade) { if ($nomePropriedade === 'filtro_busca') $this->resetPage(); }
+    
+    public function limparFiltros() {
+        $this->reset(['filtro_busca']);
+        $this->resetPage();
     }
 
     public function openModal()
