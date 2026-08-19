@@ -7,7 +7,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </span>
         @else
-            <button wire:click="previousPage" wire:loading.attr="disabled" class="p-2 rounded-lg text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-brand-purple transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            <button wire:click="previousPage" wire:loading.attr="disabled" class="p-2 rounded-lg text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-purpura-600 transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
         @endif
@@ -23,9 +23,9 @@
             @if (is_array($element))
                 @foreach ($element as $page => $url)
                     @if ($page == $paginator->currentPage())
-                        <span class="px-4 py-2 rounded-lg bg-brand-purple text-white font-bold shadow-sm">{{ $page }}</span>
+                        <span class="px-4 py-2 rounded-lg bg-purpura-600 text-white font-bold shadow-sm">{{ $page }}</span>
                     @else
-                        <button wire:click="gotoPage({{ $page }})" class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-brand-purple font-medium transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <button wire:click="gotoPage({{ $page }})" class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-purpura-600 font-medium transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                             {{ $page }}
                         </button>
                     @endif
@@ -35,7 +35,7 @@
 
         {{-- Botão Avançar (Seta) --}}
         @if ($paginator->hasMorePages())
-            <button wire:click="nextPage" wire:loading.attr="disabled" class="p-2 rounded-lg text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-brand-purple transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            <button wire:click="nextPage" wire:loading.attr="disabled" class="p-2 rounded-lg text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-purpura-600 transition dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
         @else

@@ -43,7 +43,6 @@
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="inline-flex px-3 py-1 text-[10px] font-bold rounded-full shadow-sm uppercase tracking-wider" 
                         style="background-color: {{ $status->cor ?? '#9CA3AF' }}; color: #ffffff;">
-                        {{ $status->nome }}
                     </span>
                 </td>
                 
