@@ -71,6 +71,14 @@
                     @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
                 </select>
             </div>
+
+            @if($filtroNome !== '' || $filtroStatus !== '' || $filtroCiclo !== '' || $filtroUnidade !== '' || $filtroTurno !== '' || $filtroCurso !== '')
+                <div class="flex justify-end col-span-1 md:col-span-2 lg:col-span-3 mt-2 border-t border-gray-100 dark:border-gray-700 pt-4">
+                    <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="ph-bold ph-x"></i> Limpar Filtros
+                    </button>
+                </div>
+            @endif
         </x-slot>
     </x-page-header>
 
@@ -118,93 +126,110 @@
         @forelse($registros as $inscricao)
             <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                 
-                {{-- Reduzimos o padding de py-4 para py-2.5 --}}
-                <td class="px-4 py-2.5 text-center">
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                 </td>
 
-                <td class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs">#{{ $inscricao->id }}</td>
+                <td class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                    #{{ $inscricao->id }}
+                </td>
                 
-                <td class="px-4 py-2.5">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-900 text-sm dark:text-white">{{ $inscricao->nome }}</div>
                     <div class="text-[11px] text-gray-400 dark:text-gray-500">{{ $inscricao->cpf }}</div>
                 </td>
                 
-                <td class="px-4 py-2.5">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-semibold text-gray-700 text-sm dark:text-gray-300">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
                     <div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div>
                 </td>
                 
-                <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400">
+                <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     Passo {{ $inscricao->etapa_atual }}
                 </td>
 
-                {{-- NOVA COLUNA: SCORE E RANKING MULTIPLO --}}
-                <td class="px-4 py-2.5 text-center align-top">
-                    <span class="px-2 py-1 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50' }} rounded-full inline-block mb-1">
+                {{-- 1. SCORE --}}
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-700' }} rounded-full inline-block">
                         {{ $inscricao->pontuacao_total ?? 0 }} pts
                     </span>
-                    
+                </td>
+                
+                {{-- 2. RANKING GERAL --}}
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->posicao_ranking_geral)
-                        <div class="mt-1 grid grid-cols-1 gap-1 text-[9px] font-bold w-max mx-auto text-left">
-                            
-                            <!-- 1. Geral -->
-                            <span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
-                                <span class="text-gray-400">GERAL:</span> {{ $inscricao->posicao_ranking_geral }}º
-                            </span>
-                            
-                            <!-- 2. Unidade -->
-                            @if($inscricao->posicao_ranking_unidade)
-                                <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
-                                    <span class="opacity-50">UNID:</span> {{ $inscricao->posicao_ranking_unidade }}º
-                                </span>
-                            @endif
+                        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-[11px] font-bold">
+                            {{ $inscricao->posicao_ranking_geral }}º
+                        </span>
+                    @else
+                        <span class="text-gray-300 dark:text-gray-600">-</span>
+                    @endif
+                </td>
 
-                            <!-- 3. Curso -->
-                            @if($inscricao->posicao_ranking_curso)
-                                <span class="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
-                                    <span class="opacity-50">CURSO:</span> {{ $inscricao->posicao_ranking_curso }}º
-                                </span>
-                            @endif
-                            
-                            <!-- 4. Turma (Unidade + Curso + Turno) -->
-                            @if($inscricao->posicao_ranking)
-                                @php
-                                    $corRanking = match($inscricao->posicao_ranking) {
-                                        1 => 'bg-yellow-100 text-yellow-800 border-yellow-300', 
-                                        2 => 'bg-gray-200 text-gray-700 border-gray-300',      
-                                        3 => 'bg-orange-100 text-orange-800 border-orange-300', 
-                                        default => 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                    };
-                                @endphp
-                                <span class="{{ $corRanking }} px-1.5 py-0.5 rounded border shadow-sm flex items-center gap-1">
-                                    @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal"></i> @endif
-                                    <span class="opacity-50">TURMA:</span> {{ $inscricao->posicao_ranking }}º
-                                </span>
-                            @endif
-                        </div>
+                {{-- 3. RANKING UNIDADE --}}
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
+                    @if($inscricao->posicao_ranking_unidade)
+                        <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 text-[11px] font-bold">
+                            {{ $inscricao->posicao_ranking_unidade }}º
+                        </span>
+                    @else
+                        <span class="text-gray-300 dark:text-gray-600">-</span>
+                    @endif
+                </td>
+
+                {{-- 4. RANKING CURSO --}}
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
+                    @if($inscricao->posicao_ranking_curso)
+                        <span class="bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 text-[11px] font-bold">
+                            {{ $inscricao->posicao_ranking_curso }}º
+                        </span>
+                    @else
+                        <span class="text-gray-300 dark:text-gray-600">-</span>
                     @endif
                 </td>
                 
-                <td class="px-4 py-2.5">
+                {{-- 5. RANKING TURMA --}}
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
+                    @if($inscricao->posicao_ranking)
+                        @php
+                            $corRanking = match($inscricao->posicao_ranking) {
+                                1 => 'bg-yellow-100 text-yellow-800 border-yellow-300', 
+                                2 => 'bg-gray-200 text-gray-700 border-gray-300',      
+                                3 => 'bg-orange-100 text-orange-800 border-orange-300', 
+                                default => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800',
+                            };
+                        @endphp
+                        <span class="{{ $corRanking }} px-2 py-1 rounded border shadow-sm inline-flex items-center justify-center gap-1 text-[11px] font-bold">
+                            @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal"></i> @endif
+                            {{ $inscricao->posicao_ranking }}º
+                        </span>
+                    @else
+                        <span class="text-gray-300 dark:text-gray-600">-</span>
+                    @endif
+                </td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
                     <span class="px-2.5 py-1 text-[11px] font-bold rounded border whitespace-nowrap" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
                         {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
                     </span>
                 </td>
                 
-                <td class="px-4 py-2.5 text-right">
-                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                        <i class="text-xl ph ph-info"></i>
-                    </button>
+                {{-- AÇÕES CORRIGIDAS (Com div flex e whitespace-nowrap) --}}
+                <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1">
+                        <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <i class="text-xl ph ph-info"></i>
+                        </button>
 
-                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                        <i class="text-xl ph ph-eye"></i>
-                    </a>
+                        <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                            <i class="text-xl ph ph-eye"></i>
+                        </a>
 
-                    <button wire:click="#" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                        <button wire:click="#" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         @empty
@@ -264,16 +289,24 @@
                             <span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span>
                         </div>
                         <div class="flex flex-col items-end gap-1">
-                            <div class="text-xs font-bold text-gray-600 dark:text-gray-300">
-                                {{ $inscricao->pontuacao_total ?? 0 }} pts
-                            </div>
+                        <div class="text-xs font-bold text-gray-600 dark:text-gray-300">
+                            {{ $inscricao->pontuacao_total ?? 0 }} pts
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-1 mt-1">
                             @if($inscricao->posicao_ranking_geral)
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[9px] font-bold bg-gray-100 px-1.5 py-0.5 rounded border">G: {{ $inscricao->posicao_ranking_geral }}º</span>
-                                    <span class="text-[9px] font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border">T: {{ $inscricao->posicao_ranking }}º</span>
-                                </div>
+                                <span class="text-[9px] font-bold bg-gray-100 px-1.5 py-0.5 rounded border" title="Geral">G: {{ $inscricao->posicao_ranking_geral }}º</span>
+                            @endif
+                            @if($inscricao->posicao_ranking_unidade)
+                                <span class="text-[9px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200" title="Unidade">U: {{ $inscricao->posicao_ranking_unidade }}º</span>
+                            @endif
+                            @if($inscricao->posicao_ranking_curso)
+                                <span class="text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200" title="Curso">C: {{ $inscricao->posicao_ranking_curso }}º</span>
+                            @endif
+                            @if($inscricao->posicao_ranking)
+                                <span class="text-[9px] font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-300 flex items-center gap-0.5" title="Turma"><i class="ph-fill ph-medal"></i> {{ $inscricao->posicao_ranking }}º</span>
                             @endif
                         </div>
+                    </div>
                     </div>
 
                 </div>

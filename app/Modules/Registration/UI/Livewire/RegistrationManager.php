@@ -219,7 +219,11 @@ class RegistrationManager extends Component
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
-            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'pontuacao_total', 'label' => 'Score', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'posicao_ranking_geral', 'label' => 'R. Geral', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'posicao_ranking_unidade', 'label' => 'R. Unidade', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'posicao_ranking_curso', 'label' => 'R. Curso', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'posicao_ranking', 'label' => 'R. Turma', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
@@ -442,6 +446,12 @@ class RegistrationManager extends Component
         }
 
         $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
+        $this->resetPage();
     }
 
     /**
