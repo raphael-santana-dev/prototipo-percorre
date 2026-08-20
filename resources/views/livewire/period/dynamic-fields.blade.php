@@ -656,6 +656,20 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">Regras de Negócio</h4>
+                                
+                                <div class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        <input type="checkbox" wire:model.live="formSettings.use_vacancy_limit" id="use_vacancy_limit" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="use_vacancy_limit" class="font-bold text-gray-900 cursor-pointer">Ativar Trava de Vagas (Limitar Matrículas)</label>
+                                        <p class="text-[10px] text-gray-500 font-medium leading-tight mt-0.5">Se ativo, os menus de Unidade, Curso e Turno ocultarão opções que já atingiram o limite de vagas (inscrições aprovadas) na matriz do Ciclo.</p>
+                                    </div>
+                                </div>
+                            </div>
                             
                         </div>
                     </div>

@@ -34,11 +34,14 @@ class Inscricao extends Component
     public $camposDinamicos = [];
     public $respostas = [];
 
-    // Arrays de Cascata trazidos do sistema antigo
+    // Arrays de Cascata
     public array $unidadesDisponiveis = [];
     public array $turnosDisponiveis = [];
     public array $cursosDisponiveis = [];
+    
+    // Configurações do Form Builder
     public array $formSettings = [];
+    public bool $use_vacancy_limit = false; // Controle da Trava
 
     public function mount()
     {
@@ -57,6 +60,10 @@ class Inscricao extends Component
             $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
             if ($cfg && $cfg->configuracoes) {
                 $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+                // Carrega a configuração da trava
+                if (isset($this->formSettings['use_vacancy_limit'])) {
+                    $this->use_vacancy_limit = filter_var($this->formSettings['use_vacancy_limit'], FILTER_VALIDATE_BOOLEAN);
+                }
             }
             
             $maxEtapaDinamica = $this->camposDinamicos->max('etapa') ?? 1;
@@ -86,10 +93,46 @@ class Inscricao extends Component
         'data_nascimento.required' => 'A data de nascimento é obrigatória.',
     ];
 
+    /**
+     * MOTOR ULTRA RÁPIDO DE CHECAGEM DE VAGAS
+     * Retorna um Array associativo apenas com as combinações (Unidade-Curso-Turno)
+     * que ainda possuem vagas > inscritos aprovados.
+     */
+    private function getOfertasValidas()
+    {
+        if (!$this->use_vacancy_limit) return null; // Retorna null se a trava estiver desligada no construtor
+
+        $ofertas = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloAtivoId)->get();
+
+        // Faz 1 única query GROUP BY para contar todas as inscrições aprovadas do ciclo!
+        $ocupadas = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->whereHas('statusInscricao', function($q) {
+                // Considera a vaga ocupada se o status for de aprovação
+                $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+            })
+            ->groupBy('curso_id', 'unidade_id', 'turno_id')
+            ->get()
+            ->keyBy(function($item) {
+                return "{$item->unidade_id}-{$item->curso_id}-{$item->turno_id}";
+            });
+
+        $validas = [];
+        foreach ($ofertas as $oferta) {
+            $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
+            $qtdOcupada = isset($ocupadas[$key]) ? $ocupadas[$key]->total : 0;
+            
+            // Só disponibiliza se a quantidade de vagas da matriz for maior que o preenchido
+            if ($oferta->vagas > $qtdOcupada) {
+                $validas[$key] = true;
+            }
+        }
+        return $validas;
+    }
+
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
-
         if ($etapa === 1) {
             if ($this->temVagasDisponiveis && $this->estado && $this->data_nascimento) {
                 $regras['unidade'] = 'required';
@@ -97,14 +140,11 @@ class Inscricao extends Component
                 $regras['curso'] = 'required';
             }
         }
-
         if ($etapa === $this->totalEtapas) {
             $regras['autorizacao_uso_infos'] = 'accepted';
         }
-
         if ($this->camposDinamicos) {
             foreach ($this->camposDinamicos->where('etapa', $etapa) as $campo) {
-                
                 if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                     $valorGatilho = $this->respostas[$campo->depende_de] ?? $this->{$campo->depende_de} ?? null;
                     $val = strtolower(trim((string)$valorGatilho));
@@ -124,7 +164,6 @@ class Inscricao extends Component
                             $condicaoAtendida = in_array($val, $arrayAlvos);
                             break;
                     }
-
                     if (!$condicaoAtendida) continue; 
                 }
 
@@ -135,18 +174,13 @@ class Inscricao extends Component
                 if ($campo->subtipo === 'email') $ruleStr[] = 'email';
                 if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
                 if ($campo->subtipo === 'date') $ruleStr[] = 'date';
-
                 if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
                 if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
-
-                if (!empty($campo->regras_validacao)) {
-                    $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
-                }
+                if (!empty($campo->regras_validacao)) $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
                 
                 $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
             }
         }
-
         return $regras;
     }
 
@@ -181,7 +215,6 @@ class Inscricao extends Component
     private function salvarProgresso($statusForcado = null)
     {
         $nomeStatus = 'Incompleto'; 
-
         $dados = [
             'ciclo_id' => $this->cicloAtivoId,
             'etapa_atual' => $this->etapaAtual,
@@ -215,7 +248,6 @@ class Inscricao extends Component
             $nomeStatus = 'Pendente'; 
         }
 
-        // CALCULA OS PONTOS (Seja finalização normal OU indo para a Lista de Espera)
         if ($this->etapaAtual === $this->totalEtapas || $statusForcado === 'Lead') {
             $pontuacao = $this->calcularPontuacaoAutomatica();
             $dados['pontuacao_total'] = $pontuacao['total'];
@@ -264,17 +296,11 @@ class Inscricao extends Component
         ];
     }
 
-    public function voltarEtapa()
-    {
-        if ($this->etapaAtual > 1) {
-            $this->etapaAtual--;
-        }
-    }
+    public function voltarEtapa() { if ($this->etapaAtual > 1) $this->etapaAtual--; }
 
     public function updated($propertyName)
     {
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
-        
         if (str_starts_with($propertyName, 'respostas.')) {
             $this->validateOnly($propertyName, $regrasFinais);
         } elseif (array_key_exists($propertyName, $regrasFinais)) {
@@ -282,10 +308,7 @@ class Inscricao extends Component
         }
     }
 
-    public function updatedDataNascimento()
-    {
-        $this->atualizarDisponibilidade();
-    }
+    public function updatedDataNascimento() { $this->atualizarDisponibilidade(); }
 
     public function atualizarDisponibilidade()
     {
@@ -300,6 +323,7 @@ class Inscricao extends Component
         if (!$this->estado || !$this->data_nascimento) return;
 
         $idade = Carbon::parse($this->data_nascimento)->age;
+        $ofertasValidas = $this->getOfertasValidas();
         
         $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])
             ->whereHas('ciclos', function($q) {
@@ -313,7 +337,7 @@ class Inscricao extends Component
             })
             ->with(['unidades' => function($q) {
                 $q->whereIn('status', ['Ativa', 'ativa', '1', 1, true]);
-            }])
+            }, 'turnosVinculados'])
             ->get();
 
         $unidadesDisponiveisList = collect();
@@ -323,6 +347,20 @@ class Inscricao extends Component
                 if (!$curso->permite_estado_diferente && $unidade->estado !== $this->estado) {
                     continue;
                 }
+
+                // CASCATA INTELIGENTE: Só mostra a unidade se existir ao menos UM turno com vaga
+                if ($this->use_vacancy_limit && $ofertasValidas !== null) {
+                    $temVagaNaUnidade = false;
+                    foreach ($curso->turnosVinculados as $turno) {
+                        $key = "{$unidade->id}-{$curso->id}-{$turno->id}";
+                        if (isset($ofertasValidas[$key])) {
+                            $temVagaNaUnidade = true;
+                            break;
+                        }
+                    }
+                    if (!$temVagaNaUnidade) continue;
+                }
+
                 $unidadesDisponiveisList->put($unidade->id, $unidade->nome);
             }
         }
@@ -350,8 +388,9 @@ class Inscricao extends Component
         if (!$unidadeId || !$this->data_nascimento) return;
 
         $idade = Carbon::parse($this->data_nascimento)->age;
+        $ofertasValidas = $this->getOfertasValidas();
 
-        $cursosDb = Curso::query()
+        $cursosDb = Curso::with('turnosVinculados')
             ->whereIn('status', ['Ativo', 'ativo', '1', 1, true])
             ->whereHas('ciclos', function($q) {
                 $q->where('ciclos.id', $this->cicloAtivoId);
@@ -373,6 +412,20 @@ class Inscricao extends Component
             if (!$curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) {
                 continue;
             }
+
+            // CASCATA INTELIGENTE: Só mostra o Curso se existir ao menos UM turno com vaga para esta Unidade
+            if ($this->use_vacancy_limit && $ofertasValidas !== null) {
+                $temVagaNesteCurso = false;
+                foreach ($curso->turnosVinculados as $turno) {
+                    $key = "{$unidadeId}-{$curso->id}-{$turno->id}";
+                    if (isset($ofertasValidas[$key])) {
+                        $temVagaNesteCurso = true;
+                        break;
+                    }
+                }
+                if (!$temVagaNesteCurso) continue;
+            }
+
             $this->cursosDisponiveis[$curso->id] = $curso->nome;
         }
 
@@ -389,9 +442,18 @@ class Inscricao extends Component
 
         if (!$cursoId) return;
 
-        $curso = Curso::find($cursoId);
+        $curso = Curso::with('turnosVinculados')->find($cursoId);
+        $ofertasValidas = $this->getOfertasValidas();
+
         if ($curso) {
-            $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
+            foreach ($curso->turnosVinculados as $turno) {
+                // CASCATA INTELIGENTE: Só mostra o Turno se a oferta final tiver vagas!
+                if ($this->use_vacancy_limit && $ofertasValidas !== null) {
+                    $key = "{$this->unidade}-{$cursoId}-{$turno->id}";
+                    if (!isset($ofertasValidas[$key])) continue;
+                }
+                $this->turnosDisponiveis[$turno->id] = $turno->nome;
+            }
             
             if (count($this->turnosDisponiveis) === 1) {
                 $this->turno = array_key_first($this->turnosDisponiveis);
@@ -399,9 +461,6 @@ class Inscricao extends Component
         }
     }
 
-    // ====================================================================================
-    // MOTOR DE PONTUAÇÃO (TWO-PASS EVALUATION)
-    // ====================================================================================
     private function calcularPontuacaoAutomatica() 
     {
         $scoreBase = 0;
@@ -413,21 +472,15 @@ class Inscricao extends Component
         $regras = $ciclo ? $ciclo->regras_pontuacao : [];
 
         if (is_string($regras)) $regras = json_decode($regras, true) ?? [];
-        if (is_string($regras)) $regras = json_decode($regras, true) ?? [];
         if (empty($regras) || !is_array($regras)) return ['total' => 0, 'detalhes' => null];
 
-        // Closure para avaliar uma condição cruzando a regra vs as respostas do aluno
         $avaliarCondicao = function($regra) {
-            // Se a regra é "Global" (Todos), ela não tem campo/valor para checar, a condição é aprovada automaticamente
-            if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') {
-                return true; 
-            }
+            if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') return true; 
 
             $campo = trim($regra['campo'] ?? '');
             $operador = trim($regra['operador'] ?? '=');
             $valorResposta = null;
 
-            // Mapeamento Blindado
             if ($campo === 'idade' && !empty($this->data_nascimento)) {
                 $valorResposta = Carbon::parse($this->data_nascimento)->age;
             } elseif ($campo === 'curso_id') {
@@ -466,67 +519,47 @@ class Inscricao extends Component
             return false;
         };
 
-        // PASSAGEM 1: Calcular apenas as Regras "Padrão" para obter a Base e o Nº de Acertos
         foreach ($regras as $regra) {
             $tipo = $regra['tipo_regra'] ?? 'padrao';
-            
-            if ($tipo === 'padrao') {
-                if ($avaliarCondicao($regra)) {
-                    $pontos = (float) ($regra['pontos'] ?? 0);
-                    $scoreBase += $pontos;
-                    $acertosPadrao++;
-                    
+            if ($tipo === 'padrao' && $avaliarCondicao($regra)) {
+                $pontos = (float) ($regra['pontos'] ?? 0);
+                $scoreBase += $pontos;
+                $acertosPadrao++;
+                
+                $detalhes['auditoria_detalhada'][] = [
+                    'tipo_regra' => 'padrao', 'campo_avaliado' => $regra['campo'], 'resposta_dada' => "Condição atendida", 'pontos_ganhos' => $pontos, 'condicao' => "{$regra['operador']} {$regra['valor']}"
+                ];
+            }
+        }
+
+        foreach ($regras as $regra) {
+            $tipo = $regra['tipo_regra'] ?? 'padrao';
+            $escopo = $regra['escopo'] ?? 'especifico';
+            if ($tipo !== 'padrao' && $avaliarCondicao($regra)) {
+                $multiplicador = (float) ($regra['pontos'] ?? 0);
+                $pontosGanhos = 0;
+                $motivo = "";
+
+                if ($tipo === 'bonus_por_acerto') {
+                    $pontosGanhos = $multiplicador * $acertosPadrao; 
+                    $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
+                } elseif ($tipo === 'multiplicador_percentual') {
+                    $pontosGanhos = $scoreBase * ($multiplicador / 100); 
+                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
+                }
+
+                if ($pontosGanhos > 0) {
+                    $scoreBonus += $pontosGanhos;
                     $detalhes['auditoria_detalhada'][] = [
-                        'tipo_regra' => 'padrao',
-                        'campo_avaliado' => $regra['campo'],
-                        'resposta_dada' => "Condição atendida",
-                        'pontos_ganhos' => $pontos,
-                        'condicao' => "{$regra['operador']} {$regra['valor']}"
+                        'tipo_regra' => 'especial', 'campo_avaliado' => ($escopo === 'todos') ? 'Regra Global' : $regra['campo'], 'resposta_dada' => "Benefício Ativado", 'pontos_ganhos' => $pontosGanhos, 'condicao' => $motivo
                     ];
                 }
             }
         }
 
-        // PASSAGEM 2: Aplicar Regras Especiais (Bônus e Multiplicadores) baseadas no resultado da Passagem 1
-        foreach ($regras as $regra) {
-            $tipo = $regra['tipo_regra'] ?? 'padrao';
-            $escopo = $regra['escopo'] ?? 'especifico';
-            
-            if ($tipo !== 'padrao') {
-                if ($avaliarCondicao($regra)) {
-                    $multiplicador = (float) ($regra['pontos'] ?? 0);
-                    $pontosGanhos = 0;
-                    $motivo = "";
-
-                    if ($tipo === 'bonus_por_acerto') {
-                        $pontosGanhos = $multiplicador * $acertosPadrao; // Ex: 5 pts x 3 acertos base
-                        $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
-                    } elseif ($tipo === 'multiplicador_percentual') {
-                        $pontosGanhos = $scoreBase * ($multiplicador / 100); // Ex: 10% sobre a base de 50
-                        $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
-                    }
-
-                    if ($pontosGanhos > 0) {
-                        $scoreBonus += $pontosGanhos;
-                        
-                        $alvoDescritivo = ($escopo === 'todos') ? 'Regra Global (Todos os Campos)' : $regra['campo'];
-                        
-                        $detalhes['auditoria_detalhada'][] = [
-                            'tipo_regra' => 'especial',
-                            'campo_avaliado' => $alvoDescritivo,
-                            'resposta_dada' => "Benefício Ativado",
-                            'pontos_ganhos' => $pontosGanhos,
-                            'condicao' => $motivo
-                        ];
-                    }
-                }
-            }
-        }
-
         $totalFinal = $scoreBase + $scoreBonus;
-
         if ($totalFinal > 0) {
-            $detalhes['motivo_auditoria'] = "Avaliação automática (Formulário). Score Base: {$scoreBase} pts. Score Bônus: {$scoreBonus} pts. Total Consolidado: {$totalFinal} pts.";
+            $detalhes['motivo_auditoria'] = "Avaliação automática. Base: {$scoreBase} pts. Bônus: {$scoreBonus} pts. Total: {$totalFinal} pts.";
         } else {
             $detalhes = null; 
         }
