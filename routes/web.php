@@ -88,10 +88,15 @@ Route::middleware('auth')->group(function () {
         ->name('ciclos.regras')
         ->where('id', '[0-9]+');
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas'); 
+    
+    // A ROTA DE EDIÇÃO VEM PRIMEIRO!
+    Route::get('/ciclos/{id}/editar', \App\Modules\Period\UI\Livewire\PeriodEdit::class)->name('ciclos.edit');
+
+    // A ROTA DE DETALHES (COM O SLUG CURINGA) VEM DEPOIS!
     Route::get('/ciclos/{id}/{slug?}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)
         ->name('ciclos.show')
         ->where('id', '[0-9]+');
-
+        
     // --- 8. Formulários Dinâmicos ---
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)
