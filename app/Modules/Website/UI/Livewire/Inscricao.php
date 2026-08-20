@@ -186,6 +186,7 @@ class Inscricao extends Component
 
     public function avancarEtapa()
     {
+        // 1. Validações padrão de campos obrigatórios (Front-end/Formulário)
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
         
         $this->validate($regrasFinais, [
@@ -193,6 +194,31 @@ class Inscricao extends Component
             'respostas.*.required' => 'Este campo é obrigatório.'
         ]);
 
+        // =========================================================
+        // ETAPA 4: TRAVA DE OVERBOOKING (CONCORRÊNCIA EM TEMPO REAL)
+        // =========================================================
+        if ($this->etapaAtual === 1 && $this->temVagasDisponiveis && $this->use_vacancy_limit) {
+            $ofertasValidas = $this->getOfertasValidas();
+            
+            // Verifica se a combinação escolhida pelo aluno ainda está na lista de válidas
+            if ($ofertasValidas !== null && $this->unidade && $this->curso && $this->turno) {
+                $key = "{$this->unidade}-{$this->curso}-{$this->turno}";
+                
+                if (!isset($ofertasValidas[$key])) {
+                    // A vaga foi ocupada enquanto ele preenchia os dados!
+                    $this->addError('curso', 'As vagas para esta opção acabaram de se esgotar! Por favor, escolha outro curso, turno ou unidade.');
+                    $this->addError('turno', 'Vagas esgotadas.');
+                    
+                    // Recarrega as opções disponíveis na tela, sumindo com a opção esgotada
+                    $this->atualizarDisponibilidade(); 
+                    
+                    // Trava a execução, impedindo que a inscrição seja salva com essa combinação
+                    return; 
+                }
+            }
+        }
+
+        // 2. Verifica se é um "Lead" (Sem vagas para a idade dele logo de cara)
         if ($this->etapaAtual === 1) {
             if (!$this->temVagasDisponiveis && $this->data_nascimento && $this->estado) {
                 $this->salvarProgresso('Lead'); 
@@ -202,8 +228,10 @@ class Inscricao extends Component
             }
         }
 
+        // 3. Salva o rascunho (ou a inscrição final)
         $this->salvarProgresso();
 
+        // 4. Avança a página ou finaliza
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {            
