@@ -1,7 +1,7 @@
 <div class="p-6 max-w-4xl mx-auto font-sans relative">
     
     <x-page-header 
-        title="Simulador de Integração (Mock)" 
+        title="Simulador de Integração em Lote" 
         icon="ph ph-magic-wand"
         badge="Ambiente de Testes">
     </x-page-header>
@@ -12,39 +12,49 @@
             <i class="text-4xl text-purpura-600 dark:text-purpura-400 ph ph-database"></i>
         </div>
         
-        <h3 class="text-xl font-black text-gray-800 dark:text-white mb-2">Simular Importação do Protheus</h3>
-        <p class="text-gray-500 text-sm mb-8 max-w-2xl mx-auto">
-            Este botão simula a carga de dados que futuramente será feita de forma automática. Ele criará: <br>
-            <b>1 Curso, 1 Turma, 1 Professor, 1 Aluno, 1 Período (com 3 fases) e 3 Critérios de Avaliação</b>.
+        <h3 class="text-xl font-black text-gray-800 dark:text-white mb-2">Simular Importação Aleatória</h3>
+        <p class="text-gray-500 text-sm mb-6 max-w-2xl mx-auto">
+            Defina quantas avaliações (Estudantes + Matrículas) deseja gerar. O sistema irá embaralhar os cursos e turmas já existentes ou criar novos se necessário para preencher as matrizes.
         </p>
 
         @if(!$ambienteGerado)
-            <div class="flex justify-center">
-                <button wire:click="gerarAmbienteCompleto" wire:loading.attr="disabled" class="px-8 py-3 bg-ponkan-500 hover:bg-ponkan-600 text-white font-black rounded-lg shadow-sm transition flex items-center justify-center gap-2">
-                    <span wire:loading.remove><i class="ph-bold ph-rocket-launch"></i> Injetar Dados Fictícios</span>
-                    <span wire:loading><i class="ph ph-spinner animate-spin"></i> Processando...</span>
+            <div class="flex flex-col items-center justify-center gap-4 max-w-sm mx-auto">
+                <div class="w-full text-left">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Quantidade de Injeções</label>
+                    <input type="number" wire:model="quantidadeInjecao" min="1" max="100" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 focus:border-purpura-500 shadow-sm text-center font-black text-lg py-3">
+                    @error('quantidadeInjecao') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                </div>
+
+                <button wire:click="gerarAmbienteCompleto" wire:loading.attr="disabled" class="w-full py-3.5 bg-ponkan-500 hover:bg-ponkan-600 text-white font-black rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                    <span wire:loading.remove><i class="ph-bold ph-rocket-launch text-lg"></i> Injetar Dados Fictícios</span>
+                    <span wire:loading><i class="ph ph-spinner animate-spin text-lg"></i> Processando BD...</span>
                 </button>
             </div>
         @else
-            <div class="bg-green-50 border border-green-200 p-6 rounded-xl text-left max-w-2xl mx-auto">
-                <h4 class="text-green-800 font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="ph-fill ph-check-circle text-2xl"></i> Dados Injetados com Sucesso!
-                </h4>
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 p-6 rounded-xl text-left max-w-3xl mx-auto">
+                <div class="flex justify-between items-center mb-4 border-b border-green-200 dark:border-green-800/50 pb-4">
+                    <h4 class="text-green-800 dark:text-green-400 font-bold text-lg flex items-center gap-2">
+                        <i class="ph-fill ph-check-circle text-2xl"></i> {{ $quantidadeInjecao }} Registros Injetados!
+                    </h4>
+                    <button wire:click="$set('ambienteGerado', false)" class="text-sm font-bold text-green-700 dark:text-green-500 hover:underline">Gerar Mais</button>
+                </div>
                 
-                <p class="text-sm text-green-700 mb-4">As matrizes em branco já estão no banco de dados. Utilize as credenciais abaixo para testar as telas de resposta seguindo as permissões:</p>
+                <p class="text-sm text-green-700 dark:text-green-500 mb-4">Abaixo estão as credenciais dos estudantes gerados. A senha padrão para todos é <b>senha123</b>.</p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white p-4 rounded-lg border border-green-100 shadow-sm">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Acesso do Estudante</span>
-                        <p class="text-sm text-gray-800"><b>E-mail:</b> {{ $credenciais['estudante']['login'] }}</p>
-                        <p class="text-sm text-gray-800 mt-1"><b>Senha:</b> {{ $credenciais['estudante']['senha'] }}</p>
-                    </div>
-
-                    <div class="bg-white p-4 rounded-lg border border-green-100 shadow-sm">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Acesso do Professor</span>
-                        <p class="text-sm text-gray-800"><b>E-mail:</b> {{ $credenciais['professor']['login'] }}</p>
-                        <p class="text-sm text-gray-800 mt-1"><b>Senha:</b> {{ $credenciais['professor']['senha'] }}</p>
-                    </div>
+                <div class="max-h-64 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                    @foreach($alunosGerados as $aluno)
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-100 dark:border-green-800/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-2">
+                            <div>
+                                <span class="block text-sm font-bold text-gray-900 dark:text-white">{{ $aluno['nome'] }}</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 font-mono">{{ $aluno['login'] }}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2 py-1 rounded">
+                                    {{ $aluno['turma'] }}
+                                </span>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         @endif
