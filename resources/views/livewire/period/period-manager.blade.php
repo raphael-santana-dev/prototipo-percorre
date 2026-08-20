@@ -228,12 +228,12 @@
                             </div>
                         </div>
 
-                        <!-- Seleção de Cursos do Processo Seletivo -->
+                        <!-- Seleção de Cursos Globais do Processo Seletivo -->
                         <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700 mb-4">
                             <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos ofertados neste Ciclo
+                                <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos disponíveis globalmente
                             </label>
-                            <div class="grid grid-cols-1 gap-2 p-3 border border-gray-200 rounded-lg sm:grid-cols-2 bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-48 overflow-y-auto">
+                            <div class="grid grid-cols-1 gap-2 p-3 border border-gray-200 rounded-lg sm:grid-cols-2 bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-48 overflow-y-auto custom-scrollbar">
                                 @forelse($cursosDisponiveis as $curso)
                                     <label class="flex items-center gap-2 p-2 transition-colors border border-transparent rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
                                         <input type="checkbox" wire:model="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
@@ -245,7 +245,65 @@
                                     <p class="text-sm text-gray-500 col-span-full dark:text-gray-400">Nenhum curso ativo encontrado. Cadastre-os primeiro.</p>
                                 @endforelse
                             </div>
-                            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Apenas os cursos marcados acima aparecerão no formulário público de inscrição deste semestre.</p>
+                        </div>
+
+                        <!-- MATRIZ DE VAGAS LIMITADAS (NOVO) -->
+                        <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700 mb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 m-0">
+                                    <i class="ph ph-users-three text-purpura-500"></i> Distribuição de Limite de Vagas
+                                </label>
+                                <button type="button" wire:click="addOferta" class="px-3 py-1 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 dark:bg-purpura-900/30 dark:text-purpura-400 text-[10px] font-bold uppercase rounded border border-purpura-200 dark:border-purpura-800 transition flex items-center gap-1">
+                                    <i class="ph-bold ph-plus"></i> Adicionar Oferta
+                                </button>
+                            </div>
+                            
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+                                Você pode definir o limite de alunos que podem ser "Aprovados/Selecionados" por curso, unidade e turno neste ciclo. Se você não adicionar um limite aqui, o sistema considerará vagas "Ilimitadas" para a combinação se o recurso de trava for ativado no formulário.
+                            </p>
+
+                            <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                                @forelse($ofertasVagas as $index => $oferta)
+                                    <div class="grid grid-cols-12 gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm relative group">
+                                        <div class="col-span-12 md:col-span-3">
+                                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Unidade</label>
+                                            <select wire:model="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1.5 focus:ring-purpura-500">
+                                                <option value="">Selecione...</option>
+                                                @foreach($unidadesDisponiveis as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-span-12 md:col-span-4">
+                                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Curso</label>
+                                            <select wire:model="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1.5 focus:ring-purpura-500">
+                                                <option value="">Selecione...</option>
+                                                @foreach($cursosDisponiveis as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-span-12 md:col-span-3">
+                                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Turno</label>
+                                            <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1.5 focus:ring-purpura-500">
+                                                <option value="">Selecione...</option>
+                                                @foreach($turnosDisponiveis as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-span-10 md:col-span-2">
+                                            <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Vagas</label>
+                                            <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1.5 focus:ring-purpura-500 text-center font-bold">
+                                        </div>
+                                        
+                                        <!-- Botão Flutuante de Remover Oferta -->
+                                        <button type="button" wire:click="removeOferta({{ $index }})" class="absolute -right-2 -top-2 w-6 h-6 bg-red-100 text-red-600 border border-red-200 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100 md:opacity-100" title="Remover Vaga">
+                                            <i class="ph-bold ph-x text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                @empty
+                                    <div class="p-6 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                                        <i class="ph ph-users-three text-3xl text-gray-400 mb-2"></i>
+                                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum limite de vagas registrado para este ciclo.</p>
+                                        <p class="text-xs text-gray-500 mt-1">Todas as inscrições obedecerão às regras gerais de perfil.</p>
+                                    </div>
+                                @endforelse
+                            </div>
                         </div>
 
                         <!-- Seleção de Status do CRM -->
@@ -274,11 +332,11 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400 ml-7">Isso desativará outros ciclos para evitar conflitos no formulário.</p>
 
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
-                            <button type="button" wire:click="fecharModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                            <button type="button" wire:click="fecharModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700 transition">
                                 Cancelar
                             </button>
-                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
-                                Salvar Ciclo
+                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition flex items-center gap-2">
+                                <i class="ph-bold ph-floppy-disk"></i> Salvar Ciclo
                             </button>
                         </div>
                     </form>
