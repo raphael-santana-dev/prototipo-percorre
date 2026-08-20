@@ -157,7 +157,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('gestao-educacional.avalicao.responder', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Responder::class);
         
         Livewire::component('gestao-educacional.avalicao.relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class);
-
+        Livewire::component('gestao-educacional.periodo-avaliacao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class);
+        Livewire::component('gestao-educacional.periodo-avaliacao.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class);
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;

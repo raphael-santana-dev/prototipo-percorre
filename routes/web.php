@@ -128,6 +128,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dev/mock-avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('dev.mock-avaliacoes');
     Route::get('/avaliacoes/relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class)->name('avaliacoes.relatorios');
+
+    Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
+    Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');
+    Route::get('/avaliacoes/periodos/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.edit');
 });
 
 // ==========================================
