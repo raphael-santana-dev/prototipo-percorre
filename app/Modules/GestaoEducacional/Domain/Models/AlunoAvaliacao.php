@@ -5,10 +5,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\Student\Domain\Models\Student;
 use App\Models\Turma; // Ajuste o namespace da Turma conforme o seu projeto
+use App\Traits\RegistraAuditoria;
 
 class AlunoAvaliacao extends Model
 {
     use SoftDeletes;
+    use RegistraAuditoria;
     protected $table = 'aluno_avaliacoes';
     protected $fillable = ['periodo_id', 'student_id', 'turma_id', 'fase', 'status', 'data_resposta', 'hora_resposta'];
 

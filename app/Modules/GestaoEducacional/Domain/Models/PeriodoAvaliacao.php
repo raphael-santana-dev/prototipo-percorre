@@ -3,10 +3,12 @@ namespace App\Modules\GestaoEducacional\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\RegistraAuditoria;
 
 class PeriodoAvaliacao extends Model
 {
     use SoftDeletes;
+    use RegistraAuditoria;
     protected $table = 'periodos_avaliacao';
     protected $fillable = ['ano', 'ciclo', 'data_inicio', 'data_fim', 'status', 'trava_fases'];
 

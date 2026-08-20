@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\Student\Domain\Models\Student;
+use App\Traits\RegistraAuditoria;
 
 class Matricula extends Model
 {
     use SoftDeletes;
+    use RegistraAuditoria;
     
     protected $table = 'matriculas';
     
