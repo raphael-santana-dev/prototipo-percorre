@@ -124,8 +124,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/automacoes/create', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.create');
     Route::get('/automacoes/{id}', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoDetails::class)->name('automacoes.show');
     Route::get('/automacoes/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.edit');
-
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
+
+    Route::get('/dev/mock-avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('dev.mock-avaliacoes');
 });
 
 // ==========================================
