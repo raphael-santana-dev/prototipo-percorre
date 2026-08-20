@@ -132,6 +132,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
     Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');
     Route::get('/avaliacoes/periodos/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.edit');
+
+    Route::get('/matriculas', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Listagem::class)->name('matriculas.index');
+    Route::get('/matriculas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.create');
+    Route::get('/matriculas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.edit');
+
+    Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
+    Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
+    Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
 });
 
 // ==========================================

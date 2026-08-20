@@ -29,10 +29,27 @@ class Turma extends Model
         return $this->belongsToMany(Matricula::class, 'matricula_turma', 'turma_id', 'matricula_id');
     }
 
-    // --- ADICIONE ESTE BLOCO AQUI ---
-    // Relacionamento com o Curso
+    // Relacionamento com Curso
     public function curso()
     {
         return $this->belongsTo(Curso::class, 'curso_id');
+    }
+
+    // Relacionamento com Unidade
+    public function unidade()
+    {
+        return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
+    }
+
+    // Relacionamento com Turno
+    public function turno()
+    {
+        return $this->belongsTo(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_id');
+    }
+
+    // Relacionamento com Ciclo Letivo
+    public function ciclo()
+    {
+        return $this->belongsTo(Ciclo::class, 'ciclo_id');
     }
 }
