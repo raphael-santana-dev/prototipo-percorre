@@ -127,6 +127,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
 
     Route::get('/dev/mock-avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('dev.mock-avaliacoes');
+    Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');
 });
 
 // ==========================================

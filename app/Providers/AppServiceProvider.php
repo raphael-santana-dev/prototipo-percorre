@@ -153,7 +153,8 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('auditoria.auditoria-details', \App\Modules\Auditoria\UI\Livewire\AuditoriaDetails::class);
         Livewire::component('gestao-educacional.gerador-mock', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class);
-        
+        Livewire::component('gestao-educacional.avalicao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class);
+
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;
