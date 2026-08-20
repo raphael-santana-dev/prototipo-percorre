@@ -31,7 +31,7 @@ class Listagem extends Component
 
     public function render()
     {
-        // 1. Subquery inteligente: Pega apenas 1 registro (a Fase 1) para representar a Matriz inteira
+        // 1. Subquery inteligente: Pega apenas 1 registro (a Fase 1) para representar a Matriz
         $queryIdsUnicos = AlunoAvaliacao::selectRaw('MIN(id)')
             ->whereNull('deleted_at')
             ->groupBy('periodo_id', 'turma_id', 'student_id');
@@ -39,18 +39,17 @@ class Listagem extends Component
         $query = AlunoAvaliacao::with(['student', 'turma', 'periodo'])
             ->whereIn('id', $queryIdsUnicos);
 
-        // 2. Isolamento de Perfil (Multiguard & Roles)
-        $isStudent = auth()->guard('student')->check() || (auth()->check() && auth()->user()->hasRole('aluno|estudante'));
-        $isProfessor = auth()->check() && auth()->user()->hasRole('professor');
+        // 2. Isolamento de Perfil Limpo (Sem tentar ler roles de quem não tem)
+        $isStudent = auth()->guard('student')->check();
+        $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor');
 
         if ($isStudent) {
             // Aluno só vê as próprias avaliações
-            $studentId = auth()->guard('student')->check() ? auth()->guard('student')->id() : auth()->id();
-            $query->where('student_id', $studentId);
+            $query->where('student_id', auth()->guard('student')->id());
         } elseif ($isProfessor) {
             // Professor só vê alunos das turmas dele
             $turmasDoProfessor = DB::table('professor_turma')
-                ->where('user_id', auth()->id())
+                ->where('user_id', auth()->guard('web')->id())
                 ->pluck('turma_id');
             $query->whereIn('turma_id', $turmasDoProfessor);
         }
@@ -73,8 +72,11 @@ class Listagem extends Component
             $query->orderBy('id', 'desc');
         }
 
+        // Layout dinâmico com base no guard
+        $layout = $isStudent ? 'components.layouts.student-app' : 'components.layouts.app';
+
         return view('livewire.gestao-educacional.avaliacao.listagem', [
             'registros' => $query->paginate($this->porPagina)
-        ])->layout('components.layouts.app', ['title' => 'Minhas Avaliações']);
+        ])->layout($layout, ['title' => 'Minhas Avaliações']);
     }
 }
