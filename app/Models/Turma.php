@@ -26,4 +26,11 @@ class Turma extends Model
     {
         return $this->belongsToMany(Matricula::class, 'matricula_turma', 'turma_id', 'matricula_id');
     }
+
+    // --- ADICIONE ESTE BLOCO AQUI ---
+    // Relacionamento com o Curso
+    public function curso()
+    {
+        return $this->belongsTo(Curso::class, 'curso_id');
+    }
 }

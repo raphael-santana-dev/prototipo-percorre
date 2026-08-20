@@ -136,6 +136,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth:web,student')->group(function () {
     Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');
     Route::get('/dev/avaliacoes/{periodo}/{turma}/{student}/responder', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Responder::class)->name('avaliacoes.responder');
+    Route::get('/avaliacoes/{periodo}/{turma}/{student}/pdf', [\App\Modules\GestaoEducacional\Http\Controllers\AvaliacaoPdfController::class, 'exportar'])->name('avaliacoes.pdf');
 });
 
 // ==========================================

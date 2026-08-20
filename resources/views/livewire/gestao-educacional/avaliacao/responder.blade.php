@@ -6,6 +6,12 @@
         badge="Formulário">
         
         <x-slot name="actions">
+            <!-- Botão Novo de PDF -->
+            <a href="{{ route('avaliacoes.pdf', ['periodo' => $periodo_id, 'turma' => $turma_id, 'student' => $student_id]) }}" target="_blank" class="px-4 py-2 text-sm font-bold border rounded-lg text-white bg-ponkan-500 hover:bg-ponkan-600 border-ponkan-600 transition shadow-sm flex items-center gap-2">
+                <i class="ph-bold ph-printer text-lg"></i> Imprimir Matriz
+            </a>
+            
+            <!-- Botão Voltar que já existia -->
             <a href="{{ route('avaliacoes.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
                 <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
