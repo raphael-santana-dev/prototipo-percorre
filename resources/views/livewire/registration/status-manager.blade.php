@@ -1,10 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
-        </div>
-    @endif
 
     {{-- CABEÇALHO UNIFICADO --}}
     <x-page-header 
@@ -49,7 +43,6 @@
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="inline-flex px-3 py-1 text-[10px] font-bold rounded-full shadow-sm uppercase tracking-wider" 
                         style="background-color: {{ $status->cor ?? '#9CA3AF' }}; color: #ffffff;">
-                        {{ $status->nome }}
                     </span>
                 </td>
                 

@@ -54,7 +54,7 @@ class RegistrationDetails extends Component
         $this->inscricao->save();
 
         $this->inscricao->refresh(); 
-        session()->flash('sucesso', 'Status atualizado com sucesso! ' . ($this->inscricao->student_id && strtolower($statusNovo->nome) === 'aprovado' ? 'Cadastro de Estudante gerado e vinculado.' : ''));
+        $this->dispatch('sucesso', msg: 'Status atualizado com sucesso! ' . ($this->inscricao->student_id && strtolower($statusNovo->nome) === 'aprovado' ? 'Cadastro de Estudante gerado e vinculado.' : ''));
     }
 
     public function render()

@@ -134,13 +134,13 @@ class PermissionManager extends Component
         }
 
         $this->fecharModal();
-        session()->flash('sucesso', $this->permissionId ? 'Permissão atualizada!' : 'Permissões cadastradas com sucesso!');
+        $this->dispatch('sucesso', msg: $this->permissionId ? 'Permissão atualizada!' : 'Permissões cadastradas com sucesso!');
     }
 
     public function excluir($id)
     {
         Permission::findOrFail($id)->delete();
-        session()->flash('sucesso', 'Permissão excluída com sucesso.');
+        $this->dispatch('sucesso', msg: 'Permissão excluída com sucesso.');
     }
 
     public function getHeadersProperty()

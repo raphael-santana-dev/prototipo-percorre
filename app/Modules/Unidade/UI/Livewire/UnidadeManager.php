@@ -107,7 +107,7 @@ class UnidadeManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Unidade atualizada!' : 'Unidade cadastrada!');
+        $this->dispatch('sucesso', msg: $this->isEditMode ? 'Unidade atualizada!' : 'Unidade cadastrada!');
     }
 
     public function edit(UnidadeService $service, int $id) 
@@ -140,7 +140,7 @@ class UnidadeManager extends Component
     public function delete(UnidadeService $service, int $id)
     {
         $service->deletarUnidade($id);
-        session()->flash('success', 'Unidade movida para a lixeira.');
+        $this->dispatch('sucesso', msg: 'Unidade movida para a lixeira.');
     }
 
     private function resetInputFields() 

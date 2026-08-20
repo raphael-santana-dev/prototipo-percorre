@@ -38,6 +38,10 @@ class StudentManager extends Component
 
     public array $breadcrumbs = [];
 
+    public $filtro_busca = '';
+    public $filtro_unidade = '';
+    public $filtro_status = '';
+
     public function mount()
     {
         // Garante que apenas quem tem a permissão pode acessar a tela
@@ -53,6 +57,19 @@ class StudentManager extends Component
         abort_if(!auth()->user()->can('estudante.criar'), 403);
         $this->resetInputFields();
         $this->showModal = true;
+    }
+
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_busca', 'filtro_unidade', 'filtro_status'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_busca', 'filtro_unidade', 'filtro_status']);
+        $this->resetPage();
     }
 
     public function edit(int $id)
@@ -113,14 +130,14 @@ class StudentManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', 'Estudante salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Estudante salvo com sucesso!');
     }
 
     public function delete(int $id)
     {
         abort_if(!auth()->user()->can('estudante.excluir'), 403);
         Student::findOrFail($id)->delete();
-        session()->flash('success', 'Estudante excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Estudante excluído com sucesso!');
     }
 
     public function getHeadersProperty()
@@ -173,6 +190,15 @@ class StudentManager extends Component
     public function render()
     {
         $query = Student::query()->with('unidade')->apenasVinculosPermitidos();
+
+        $query->when($this->filtro_busca, function($q) {
+            $q->where(function($sub) {
+                $sub->where('name', 'ilike', '%' . $this->filtro_busca . '%')
+                    ->orWhere('email', 'ilike', '%' . $this->filtro_busca . '%');
+            });
+        })
+        ->when($this->filtro_unidade, fn($q) => $q->where('unidade_id', $this->filtro_unidade))
+        ->when($this->filtro_status !== '', fn($q) => $q->where('is_active', $this->filtro_status));
 
         // Aplica a ordenação no banco de dados
         if ($this->ordenacaoCampo) {

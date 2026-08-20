@@ -25,10 +25,12 @@ class Login extends Component
 
         if (Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
             session()->regenerate();
+            session()->flash('sucesso', 'Bem-vindo(a) de volta!');
             return redirect()->intended('/dashboard'); // Rota que criaremos no futuro
         }
 
         $this->addError('email', 'As credenciais fornecidas estão incorretas.');
+        $this->dispatch('erro', msg: 'E-mail ou senha incorretos. Tente novamente.');
     }
 
     public function render()

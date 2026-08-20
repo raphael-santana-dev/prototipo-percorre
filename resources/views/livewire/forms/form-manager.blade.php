@@ -1,10 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
-        </div>
-    @endif
 
     <x-page-header 
         title="Gerenciamento de Formulários" 

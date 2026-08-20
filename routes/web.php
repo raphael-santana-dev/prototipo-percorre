@@ -122,8 +122,33 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/automacoes', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class)->name('automacoes.index');
     Route::get('/automacoes/create', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.create');
-
+    Route::get('/automacoes/{id}', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoDetails::class)->name('automacoes.show');
+    Route::get('/automacoes/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.edit');
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
+
+    Route::get('/dev/mock-avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('dev.mock-avaliacoes');
+    Route::get('/avaliacoes/relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class)->name('avaliacoes.relatorios');
+
+    Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
+    Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');
+    Route::get('/avaliacoes/periodos/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.edit');
+
+    Route::get('/matriculas', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Listagem::class)->name('matriculas.index');
+    Route::get('/matriculas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.create');
+    Route::get('/matriculas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.edit');
+
+    Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
+    Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
+    Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
+});
+
+// ==========================================
+// ROTAS COMPARTILHADAS (ADMIN, PROFESSORES E ESTUDANTES)
+// ==========================================
+Route::middleware('auth:web,student')->group(function () {
+    Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');
+    Route::get('/dev/avaliacoes/{periodo}/{turma}/{student}/responder', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Responder::class)->name('avaliacoes.responder');
+    Route::get('/avaliacoes/{periodo}/{turma}/{student}/pdf', [\App\Modules\GestaoEducacional\Http\Controllers\AvaliacaoPdfController::class, 'exportar'])->name('avaliacoes.pdf');
 });
 
 // ==========================================

@@ -141,7 +141,7 @@ class FeatureManager extends Component
         }
 
         $this->fecharModal();
-        session()->flash('sucesso', $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
+        $this->dispatch('sucesso', msg: $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
     }
 
     public function excluir($id)
@@ -151,7 +151,7 @@ class FeatureManager extends Component
         $feature->delete();
         
         Cache::forget("feature_status_{$featureName}");
-        session()->flash('sucesso', 'Feature excluída com sucesso.');
+        $this->dispatch('sucesso', msg: 'Feature excluída com sucesso.');
     }
 
     public function toggleStatus($id)

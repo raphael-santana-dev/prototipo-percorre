@@ -13,12 +13,20 @@ class TemplateManager extends Component
     use WithPagination, ComPadraoListagem;
 
     public array $breadcrumbs = [];
+    public $filtro_busca = '';
+
+    public function updating($nomePropriedade) { if ($nomePropriedade === 'filtro_busca') $this->resetPage(); }
+    
+    public function limparFiltros() {
+        $this->reset(['filtro_busca']);
+        $this->resetPage();
+    }
 
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
-        $this->permiteGrid = true;
+        $this->permiteGrid = false;
     }
 
     public function getHeadersProperty()
@@ -45,6 +53,10 @@ class TemplateManager extends Component
     public function render()
     {
         $query = EmailTemplate::query();
+        $query->when($this->filtro_busca, function($q) {
+            $q->where('nome', 'ilike', '%' . $this->filtro_busca . '%')
+            ->orWhere('assunto', 'ilike', '%' . $this->filtro_busca . '%');
+        });
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);

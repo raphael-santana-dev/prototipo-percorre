@@ -149,7 +149,7 @@ class UserManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', 'Usuário e vínculos salvos com sucesso!');
+        $this->dispatch('sucesso', msg: 'Usuário e vínculos salvos com sucesso!');
     }
 
     public function edit(int $id)
@@ -176,16 +176,16 @@ class UserManager extends Component
     {
         $user = User::findOrFail($id);
         if ($user->id === auth()->id()) {
-            session()->flash('error', 'Você não pode excluir a sua própria conta.');
+            $this->dispatch('erro', msg:  'Você não pode excluir a sua própria conta.');
             return;
         }
         if ($user->hasRole('dev')) {
-            session()->flash('error', 'Usuários com perfil DEV não podem ser excluídos.');
+            $this->dispatch('erro', msg:  'Usuários com perfil DEV não podem ser excluídos.');
             return;
         }
         $user->delete();
         $this->resetInputFields();
-        session()->flash('success', 'Usuário excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Usuário excluído com sucesso!');
     }
 
     private function resetInputFields()

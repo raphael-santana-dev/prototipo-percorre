@@ -58,7 +58,7 @@ class RoleManager extends Component
         $role = Role::findOrFail($id);
         
         if ($role->name === 'dev' && !auth()->user()->hasRole('dev')) {
-            session()->flash('error', 'A Role DEV não pode ser alterada.');
+            $this->dispatch('erro', msg: 'A Role DEV não pode ser alterada.');
             return;
         }
 
@@ -99,7 +99,7 @@ class RoleManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Grupo atualizado!' : 'Grupos cadastrados com sucesso!');
+        $this->dispatch('sucesso', msg: $this->isEditMode ? 'Grupo atualizado!' : 'Grupos cadastrados com sucesso!');
     }
 
     public function delete(int $id)
@@ -107,12 +107,12 @@ class RoleManager extends Component
         $role = Role::findOrFail($id);
         
         if (in_array($role->name, ['dev', 'admin'])) {
-            session()->flash('error', 'Grupos base do sistema não podem ser excluídos.');
+            $this->dispatch('erro', msg: 'Grupos base do sistema não podem ser excluídos.');
             return;
         }
 
         $role->delete();
-        session()->flash('success', 'Grupo excluído com sucesso.');
+        $this->dispatch('sucesso', msg: 'Grupo excluído com sucesso.');
     }
 
     private function resetInputFields()

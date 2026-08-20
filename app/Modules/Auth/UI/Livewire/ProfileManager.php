@@ -44,7 +44,8 @@ class ProfileManager extends Component
 
         // Dispara um evento para o navegador atualizar o nome na Navbar instantaneamente (sem F5)
         $this->dispatch('profile-updated');
-        session()->flash('success_profile', 'Seus dados foram atualizados com sucesso!');
+        $this->dispatch('sucesso', msg: 'Seus dados foram atualizados com sucesso!');
+
     }
 
     public function updatePassword()
@@ -68,7 +69,7 @@ class ProfileManager extends Component
         ]);
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
-        session()->flash('success_password', 'Senha alterada com segurança!');
+        $this->dispatch('sucesso', msg: 'Senha alterada com segurança!');
     }
 
     public function render()

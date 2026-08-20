@@ -78,10 +78,10 @@ class TurnoManager extends Component
 
         if ($this->isEditMode) {
             $service->atualizarTurno($this->turnoId, $dados);
-            session()->flash('success', 'Turno atualizado com sucesso!');
+            $this->dispatch('sucesso', msg: 'Turno atualizado com sucesso!');
         } else {
             $service->criarTurno($dados);
-            session()->flash('success', 'Turno criado com sucesso!');
+            $this->dispatch('sucesso', msg: 'Turno criado com sucesso!');
         }
 
         $this->closeModal();
@@ -108,7 +108,7 @@ class TurnoManager extends Component
         abort_if(!auth()->user()->can('turno.excluir'), 403);
         
         $service->deletarTurno($id);
-        session()->flash('success', 'Turno excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Turno excluído com sucesso!');
     }
 
     private function resetInputFields()

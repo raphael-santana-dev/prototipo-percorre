@@ -29,10 +29,19 @@ class StepManager extends Component
 
     public array $breadcrumbs = [];
 
+    public $filtro_busca = '';
+
     public function mount() 
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    public function updating($nomePropriedade) { if ($nomePropriedade === 'filtro_busca') $this->resetPage(); }
+    
+    public function limparFiltros() {
+        $this->reset(['filtro_busca']);
+        $this->resetPage();
     }
 
     public function openModal()
@@ -84,7 +93,7 @@ class StepManager extends Component
 
         $this->showModal = false;
         $this->resetInputFields();
-        session()->flash('success', $this->isEditMode ? 'Etapa atualizada com sucesso!' : 'Etapa cadastrada com sucesso!');
+        $this->dispatch('sucesso', msg: $this->isEditMode ? 'Etapa atualizada com sucesso!' : 'Etapa cadastrada com sucesso!');
     }
 
     public function delete(int $id)
@@ -93,12 +102,12 @@ class StepManager extends Component
 
         // Bloqueio de segurança
         if ($step->numero === 1) {
-            session()->flash('error', 'A Etapa 1 é obrigatória para o funcionamento das inscrições e não pode ser excluída.');
+            $this->dispatch('erro', msg:  'A Etapa 1 é obrigatória para o funcionamento das inscrições e não pode ser excluída.');
             return;
         }
 
         $step->delete();
-        session()->flash('success', 'Etapa excluída com sucesso!');
+        $this->dispatch('sucesso', msg: 'Etapa excluída com sucesso!');
     }
 
     private function resetInputFields()
@@ -118,7 +127,7 @@ class StepManager extends Component
 
         // Bloqueio de segurança
         if ($step->numero === 1 && !auth()->user()->hasRole('dev')) {
-            session()->flash('error', 'A Etapa 1 é padrão do sistema e só pode ser editada por desenvolvedores.');
+            $this->dispatch('erro', msg:  'A Etapa 1 é padrão do sistema e só pode ser editada por desenvolvedores.');
             return;
         }
         

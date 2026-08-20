@@ -36,9 +36,15 @@
                     </span>
                 </td>
                 <td class="px-4 py-3">
-                    <div class="text-sm text-gray-600 font-medium truncate max-w-xs">
-                        <i class="ph ph-layout"></i> {{ $regra->template->nome ?? 'Template Excluído' }}
-                    </div>
+                    @if($regra->template)
+                        <button wire:click="previewTemplate({{ $regra->template_id }})" class="group flex items-center gap-1.5 text-sm text-gray-600 font-medium truncate max-w-xs hover:text-purpura-600 transition outline-none">
+                            <i class="ph ph-layout text-gray-400 group-hover:text-purpura-500 transition-colors"></i>
+                            <span class="truncate border-b border-dashed border-transparent group-hover:border-purpura-300 transition-colors">{{ $regra->template->nome }}</span>
+                            <i class="ph-bold ph-eye text-[11px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </button>
+                    @else
+                        <span class="text-sm text-red-500 font-medium"><i class="ph ph-warning-circle"></i> Template Excluído</span>
+                    @endif
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap">
                     <!-- Toggle de Status Customizado -->
@@ -48,7 +54,13 @@
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra?') || event.stopImmediatePropagation()">
+                        <a href="{{ route('automacoes.show', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50" title="Ver Histórico de Disparos">
+                            <i class="text-lg ph ph-chart-line-up"></i>
+                        </a>
+                        <a href="{{ route('automacoes.edit', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar Regra">
+                            <i class="text-lg ph ph-pencil-simple"></i>
+                        </a>
+                        <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra de automação permanentemente?') || event.stopImmediatePropagation()">
                             <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>

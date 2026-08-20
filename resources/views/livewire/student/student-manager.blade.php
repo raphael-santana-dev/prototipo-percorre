@@ -1,10 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
-        </div>
-    @endif
 
     <x-page-header 
         title="Gerenciamento de Estudantes" 
@@ -19,6 +13,31 @@
                     <i class="ph ph-plus text-lg"></i> Novo Aluno
                 </button>
             @endcan
+        </x-slot>
+
+        <x-slot name="filters">
+            <div class="flex gap-2">
+                <input wire:model.live.debounce.300ms="filtro_busca" type="text" placeholder="Buscar nome ou e-mail..." class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 w-56">
+                
+                <select wire:model.live="filtro_unidade" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todas as Unidades</option>
+                    @foreach($unidades as $unidade)
+                        <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="filtro_status" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Status...</option>
+                    <option value="1">Ativos</option>
+                    <option value="0">Inativos</option>
+                </select>
+
+                @if($filtro_busca !== '' || $filtro_unidade !== '' || $filtro_status !== '')
+                    <button wire:click="limparFiltros" class="px-3 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
+                        <i class="ph-bold ph-x"></i> Limpar
+                    </button>
+                @endif
+            </div>
         </x-slot>
 
     </x-page-header>

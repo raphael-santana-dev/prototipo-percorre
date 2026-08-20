@@ -79,6 +79,12 @@ class ImportacaoManager extends Component
         }
     }
 
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_tipo', 'filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim']);
+        $this->resetPage();
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -297,6 +303,8 @@ class ImportacaoManager extends Component
         }
         $this->dispatch('sucesso', msg: 'Arquivo não encontrado ou geração não concluída.');
     }
+
+    
 
     public function render()
     {

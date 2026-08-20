@@ -59,12 +59,12 @@ class FormManager extends Component
         );
 
         $this->modalAberto = false;
-        session()->flash('sucesso', 'Formulário salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Formulário salvo com sucesso!');
     }
 
     public function excluir($id) {
         Formulario::findOrFail($id)->delete();
-        session()->flash('sucesso', 'Formulário excluído.');
+        $this->dispatch('sucesso', msg: 'Formulário excluído.');
     }
 
     public function getHeadersProperty() {

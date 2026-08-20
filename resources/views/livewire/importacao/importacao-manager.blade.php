@@ -1,10 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('sucesso'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('sucesso') }}
-        </div>
-    @endif
 
     <x-page-header 
         title="Gerenciador de Integrações (I/O)" 
@@ -97,6 +91,14 @@
                     </label>
                     <input type="datetime-local" wire:model.live="filtro_data_fim" @focus="initEnd" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
+
+                @if($filtro_tipo !== '' || $filtro_status !== '' || $filtro_usuario !== '' || $filtro_data_inicio !== '' || $filtro_data_fim !== '')
+                    <div class="md:col-span-12 flex justify-end mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                            <i class="ph-bold ph-x"></i> Limpar Filtros
+                        </button>
+                    </div>
+                @endif
             </div>
         </x-slot>
 

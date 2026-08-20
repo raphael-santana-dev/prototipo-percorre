@@ -139,7 +139,9 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('comunicacao.automacao-form', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class);
         Livewire::component('comunicacao.automacao-manager', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class);
+        Livewire::component('comunicacao.automacao-details', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoDetails::class);
 
+        //AutomacaoDetails
         Livewire::component('comunicacao.email-log-manager', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class);
 
         // Força a rota de atualização do Livewire a usar o middleware web de sessões
@@ -148,7 +150,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Livewire::component('auditoria.auditoria-manager', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class);
+
+        Livewire::component('auditoria.auditoria-details', \App\Modules\Auditoria\UI\Livewire\AuditoriaDetails::class);
+        Livewire::component('gestao-educacional.gerador-mock', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class);
+        Livewire::component('gestao-educacional.avalicao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class);
+        Livewire::component('gestao-educacional.avalicao.responder', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Responder::class);
         
+        Livewire::component('gestao-educacional.avalicao.relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class);
+        Livewire::component('gestao-educacional.periodo-avaliacao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class);
+        Livewire::component('gestao-educacional.periodo-avaliacao.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class);
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;

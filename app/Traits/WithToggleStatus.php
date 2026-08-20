@@ -29,7 +29,7 @@ trait WithToggleStatus
 
         // Atualiza o registro alvo
         $registro->update([$coluna => $novoStatus]);
-
-        session()->flash('sucesso', 'Status atualizado com sucesso.');
+        
+        $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
     }
 }

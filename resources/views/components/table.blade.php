@@ -8,38 +8,42 @@
 ])
 
 <div>
-    {{-- BARRA DE CONTROLS SUPERIOR --}}
     @if (count($registros) > 10 || $permiteGrid)
-        <div class="flex flex-wrap items-center justify-between p-3 mb-4 bg-white border border-gray-100 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+        <!-- REMOVIDO o bg-white, shadow e bordas. Deixamos apenas flexbox e margem inferior -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
             
-            @if (count($registros) > 10)
-            <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-gray-500 dark:text-gray-400">Mostrar</span>
-                <select wire:model.live="porPagina" class="py-1.5 text-sm border-gray-200 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-purpura-500">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-                <span class="text-sm font-bold text-gray-500 dark:text-gray-400">registos</span>
+            <div>
+                @if (count($registros) > 10)
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400">Mostrar</span>
+                    <select wire:model.live="porPagina" class="py-1.5 text-sm border-gray-200 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-purpura-500 shadow-sm">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400">registros</span>
+                </div>
+                @endif
             </div>
-            @endif
 
-            {{-- BOTÕES DE ALTERNÂNCIA (GRID/LISTA) --}}
             @if($permiteGrid)
-                <div class="flex items-center p-1 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-700">
-                    <button wire:click="alternarModoExibicao('grid')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'grid' ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                <!-- A "pílula" cinza que engloba os botões -->
+                <div class="inline-flex items-center p-1 bg-gray-100 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                    
+                    <button wire:click="alternarModoExibicao('grid')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'grid' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
                         <i class="text-base ph ph-squares-four"></i> Grid
                     </button>
-                    <button wire:click="alternarModoExibicao('lista')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'lista' ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                    
+                    <button wire:click="alternarModoExibicao('lista')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'lista' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
                         <i class="text-base ph ph-list-dashes"></i> Lista
                     </button>
+                    
                 </div>
             @endif
         </div>
     @endif
 
-    {{-- CONTEÚDO PRINCIPAL --}}
     @if($modoExibicao === 'lista')
         <div class="overflow-hidden transition-colors duration-300 bg-white border border-gray-100 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
             

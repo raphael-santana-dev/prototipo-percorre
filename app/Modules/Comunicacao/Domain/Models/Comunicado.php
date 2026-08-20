@@ -3,9 +3,12 @@
 namespace App\Modules\Comunicacao\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class Comunicado extends Model
 {
+    
+    use RegistraAuditoria;
     protected $table = 'comunicados';
     protected $guarded = [];
     protected $casts = [

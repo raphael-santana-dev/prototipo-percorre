@@ -34,6 +34,10 @@ class PeriodManager extends Component
 
     public array $cursosSelecionados = []; 
     public array $statusSelecionados = [];
+
+    public $filtro_ano = '';
+    public $filtro_semestre = '';
+    public $filtro_status = '';
     
     public function mount()
     {
@@ -54,6 +58,19 @@ class PeriodManager extends Component
             'data_fim' => 'required|date|after:data_inicio',
             'status' => 'boolean',
         ];
+    }
+
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_ano', 'filtro_semestre', 'filtro_status'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_ano', 'filtro_semestre', 'filtro_status']);
+        $this->resetPage();
     }
 
     public function duplicar(int $id)
@@ -93,7 +110,7 @@ class PeriodManager extends Component
             $novoCampo->save();
         }
 
-        session()->flash('sucesso', 'Ciclo e formulário duplicados com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo e formulário duplicados com sucesso!');
     }
 
     public function showQuickView(int $id)
@@ -226,7 +243,7 @@ class PeriodManager extends Component
         $cicloSalvo->statusPipeline()->sync($syncStatus);
 
         $this->fecharModal();
-        session()->flash('sucesso', 'Ciclo salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo salvo com sucesso!');
     }
 
     public function getHeadersProperty()
@@ -246,9 +263,17 @@ class PeriodManager extends Component
     {
         $query = Ciclo::query()->withCount('inscricoes');
         
+        // Aplicação dos Filtros
+        $query->when($this->filtro_ano, fn($q) => $q->where('ano', $this->filtro_ano))
+              ->when($this->filtro_semestre, fn($q) => $q->where('semestre', $this->filtro_semestre))
+              ->when($this->filtro_status !== '', fn($q) => $q->where('status', $this->filtro_status));
+        
         // Busca os cursos ativos para exibir no modal
         $cursosDisponiveis = Curso::where('status', 'Ativo')->orderBy('nome')->get();
         $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
+        
+        // Pega todos os anos únicos que já existem no banco de dados para montar o Select
+        $anosDisponiveis = Ciclo::select('ano')->distinct()->orderBy('ano', 'desc')->pluck('ano');
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -261,7 +286,8 @@ class PeriodManager extends Component
         return view('livewire.period.period-manager', [
             'registros' => $ciclos,
             'cursosDisponiveis' => $cursosDisponiveis,
-            'statusDisponiveis' => $statusDisponiveis
+            'statusDisponiveis' => $statusDisponiveis,
+            'anosDisponiveis' => $anosDisponiveis
         ]);
     }
 }

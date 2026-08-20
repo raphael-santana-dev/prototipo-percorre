@@ -1,7 +1,7 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     
     <x-page-header 
-        title="Monitor / Fila de E-mails" 
+        title="Fila de E-mails" 
         icon="ph ph-envelope-open"
         badge=""
         :breadcrumbs="$breadcrumbs">
@@ -20,6 +20,14 @@
                     <option value="comunicado">Envio Manual/Campanha</option>
                     <option value="automacao">Automação de Sistema</option>
                 </select>
+
+                @if($filtro_status !== '' || $filtro_origem !== '')
+                    <div class="md:col-span-12 flex justify-end mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                            <i class="ph-bold ph-x"></i> Limpar Filtros
+                        </button>
+                    </div>
+                @endif
             </div>
         </x-slot>
 

@@ -12,6 +12,42 @@
             </a>
         </x-slot>
 
+        <x-slot name="filters">
+            <div class="flex gap-2 items-center flex-wrap">
+                
+                <select wire:model.live="filtro_template" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 max-w-[180px] truncate">
+                    <option value="">Todos os Templates</option>
+                    @if(isset($templatesDisponiveis))
+                        @foreach($templatesDisponiveis as $tpl)
+                            <option value="{{ $tpl->id }}">{{ $tpl->nome }}</option>
+                        @endforeach
+                    @endif
+                </select>
+
+                <select wire:model.live="filtro_status" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Status...</option>
+                    <option value="pendente">Agendados/Fila</option>
+                    <option value="enviando">Enviando</option>
+                    <option value="concluido">Concluídos</option>
+                    <option value="erro">Com Erro</option>
+                </select>
+
+                <div class="flex items-center bg-white border border-gray-300 rounded-md shadow-sm px-2 overflow-hidden focus-within:ring-1 focus-within:ring-purpura-500 focus-within:border-purpura-500">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase mr-1">De</span>
+                    <input wire:model.live="filtro_data_inicio" type="date" class="border-0 text-sm p-1.5 focus:ring-0 text-gray-700 bg-transparent cursor-pointer">
+                    <div class="w-px h-4 bg-gray-200 mx-1"></div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase mr-1">Até</span>
+                    <input wire:model.live="filtro_data_fim" type="date" class="border-0 text-sm p-1.5 focus:ring-0 text-gray-700 bg-transparent cursor-pointer">
+                </div>
+
+                @if($filtro_status !== '' || $filtro_template !== '' || $filtro_data_inicio !== '' || $filtro_data_fim !== '')
+                    <button wire:click="limparFiltros" class="px-3 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
+                        <i class="ph-bold ph-x"></i> Limpar
+                    </button>
+                @endif
+            </div>
+        </x-slot>
+
     </x-page-header>
 
     {{-- O Poller atualiza a tela para vermos se um "Pendente" virou "Concluído" --}}

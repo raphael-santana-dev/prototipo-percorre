@@ -55,7 +55,7 @@
 
     <!-- 5. Barra de Filtros (Slot com CSS customizável) -->
     @if(isset($filters))
-        <div {{ $filters->attributes->merge(['class' => 'p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700']) }}>
+        <div {{ $filters->attributes->merge(['class' => 'py-4 mb-4 border-b border-gray-200 dark:border-gray-700']) }}>
             {{ $filters }}
         </div>
     @endif
