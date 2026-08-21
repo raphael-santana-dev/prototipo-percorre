@@ -49,6 +49,7 @@ class DynamicFields extends Component
         'bg_size' => 'cover', 
         'form_width' => 'max-w-4xl',
         'translucent_card' => false,
+        'use_vacancy_limit' => false,
     ];
 
     public string $contextoTipo; // 'ciclo' ou 'formulario'

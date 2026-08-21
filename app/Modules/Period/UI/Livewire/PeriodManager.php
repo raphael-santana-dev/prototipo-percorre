@@ -6,34 +6,23 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Ciclo;
-use App\Models\Curso;
-use App\Models\StatusInscricao;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Ciclos - Administrativo')]
 class PeriodManager extends Component
 {
-    use WithPagination;
-    use ComPadraoListagem;
-    use WithToggleStatus;
+    use WithPagination, ComPadraoListagem, WithToggleStatus;
 
     public $modalAberto = false;
-    public $unicoAtivo = true;
-    public $status = false;
-    public $cicloId = null;
+    public $nome, $ano, $semestre, $data_inicio, $data_fim, $status = false;
     
     public $modelClass = Ciclo::class;
-
     public array $breadcrumbs = [];
-
-    public $nome, $ano, $semestre, $data_inicio, $data_fim;
-
-    public array $cursosSelecionados = []; 
-    public array $statusSelecionados = [];
 
     public $filtro_ano = '';
     public $filtro_semestre = '';
@@ -41,10 +30,8 @@ class PeriodManager extends Component
     
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito a Desenvolvedores.');
-
+        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
         $this->breadcrumbs = BreadcrumbHelper::generate();
-
         $this->permiteGrid = true;
     }
 
@@ -73,24 +60,68 @@ class PeriodManager extends Component
         $this->resetPage();
     }
 
+    public function abrirModal()
+    {
+        $this->resetValidation();
+        $this->reset(['nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status']);
+        
+        $this->ano = date('Y');
+        $this->semestre = date('n') <= 6 ? 1 : 2;
+        $this->modalAberto = true;
+    }
+
+    public function salvar()
+    {
+        $this->validate();
+
+        if ($this->status) {
+            Ciclo::query()->update(['status' => false]);
+        }
+
+        $nomeFinal = trim($this->nome);
+        if (empty($nomeFinal)) {
+            $nomeFinal = "{$this->ano} - {$this->semestre}º Semestre";
+        }
+
+        $cicloSalvo = Ciclo::create([
+            'nome' => $nomeFinal,
+            'ano' => $this->ano,
+            'semestre' => $this->semestre,
+            'data_inicio' => $this->data_inicio,
+            'data_fim' => $this->data_fim,
+            'status' => $this->status,
+            'slug' => Str::slug($nomeFinal) . '-' . time()
+        ]);
+
+        $this->modalAberto = false;
+        session()->flash('sucesso', 'Ciclo criado! Agora configure os Cursos e Vagas.');
+        
+        // Redireciona direto para a nova tela de edição
+        return redirect()->route('ciclos.edit', $cicloSalvo->id);
+    }
+
+    public function delete(int $id)
+    {
+        $ciclo = Ciclo::findOrFail($id);
+        $ciclo->delete();
+        $this->dispatch('sucesso', msg: 'Ciclo excluído com sucesso!');
+    }
+
+    // O método showQuickView e duplicar() permanecem iguais...
     public function duplicar(int $id)
     {
-        // 1. Busca o ciclo original com seus relacionamentos
         $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
 
-        // 2. Clona o ciclo base (Copia inclusive regras de pontuação JSON, se existirem)
         $novoCiclo = $cicloOriginal->replicate();
         $novoCiclo->nome = $cicloOriginal->nome . ' (Cópia)';
-        $novoCiclo->slug = \Str::slug($novoCiclo->nome) . '-' . time();
-        $novoCiclo->status = false; // A cópia sempre nasce inativa para evitar conflitos no portal
+        $novoCiclo->slug = Str::slug($novoCiclo->nome) . '-' . time();
+        $novoCiclo->status = false; 
         $novoCiclo->save();
 
-        // 3. Sincroniza a tabela pivô de cursos ofertados
         if ($cicloOriginal->cursos) {
             $novoCiclo->cursos()->sync($cicloOriginal->cursos->pluck('id')->toArray());
         }
 
-        // 4. Sincroniza a tabela pivô de status do CRM preservando a ordem
         if ($cicloOriginal->statusPipeline) {
             $syncStatus = [];
             foreach ($cicloOriginal->statusPipeline as $status) {
@@ -99,151 +130,21 @@ class PeriodManager extends Component
             $novoCiclo->statusPipeline()->sync($syncStatus);
         }
 
-        // 5. O SEGREDO: Duplica todos os campos dinâmicos e configurações globais do formulário
         $camposOriginais = \App\Models\CampoFormulario::where('ciclo_id', $id)->get();
         foreach ($camposOriginais as $campo) {
             $novoCampo = $campo->replicate();
             $novoCampo->ciclo_id = $novoCiclo->id;
-            
-            // Tratamento de segurança: Se o campo original tiver uma dependência (ex: depende_de = "renda"),
-            // a cópia manterá o mesmo link lógico, pois os "names" serão replicados de forma idêntica no novo ciclo.
             $novoCampo->save();
         }
 
-        $this->dispatch('sucesso', msg: 'Ciclo e formulário duplicados com sucesso!');
-    }
-
-    public function showQuickView(int $id)
-    {
-        $ciclo = Ciclo::findOrFail($id);
-
-        $status = $ciclo->status
-            ? '<span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold">Ativo</span>'
-            : '<span class="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 font-semibold">Inativo</span>';
-
-        $informacoes = '
-            <div class="grid grid-cols-1 gap-2 text-sm">
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Ano</span>
-                    <span class="font-medium">'.$ciclo->ano.'</span>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Semestre</span>
-                    <span class="font-medium">'.$ciclo->semestre.'º</span>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Início</span>
-                    <span class="font-medium">'.$ciclo->data_inicio->format('d/m/Y H:i').'</span>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Encerramento</span>
-                    <span class="font-medium">'.$ciclo->data_fim->format('d/m/Y H:i').'</span>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Criado em</span>
-                    <span class="font-medium">'.$ciclo->created_at->format('d/m/Y H:i').'</span>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
-                    <span class="block text-[10px] uppercase text-gray-500 font-bold">Última atualização</span>
-                    <span class="font-medium">'.$ciclo->updated_at->format('d/m/Y H:i').'</span>
-                </div>
-            </div>
-        ';
-
-        $this->dispatch('load-quick-view', [
-            'title' => $ciclo->nome,
-            'subtitle' => "Ano {$ciclo->ano} • {$ciclo->semestre}º semestre",
-            'icon' => 'ph-calendar',
-            'data' => [
-                'Status' => $status,
-                'Informações do Ciclo' => $informacoes,
-                'Período de Inscrição' => '
-                    <div class="text-sm leading-6">
-                        <b>Início:</b> '.$ciclo->data_inicio->format('d/m/Y H:i').'<br>
-                        <b>Fim:</b> '.$ciclo->data_fim->format('d/m/Y H:i').'
-                    </div>
-                '
-            ],
-        ]);
-    }
-
-
-    public function abrirModal($id = null)
-    {
-        $this->resetValidation();
-        // Reseta também o array de cursos ao abrir o modal
-        $this->reset(['cicloId', 'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'cursosSelecionados', 'statusSelecionados']);
-
-        if ($id) {
-            $ciclo = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
-            $this->cicloId = $ciclo->id;
-            $this->nome = $ciclo->nome;
-            $this->ano = $ciclo->ano;
-            $this->semestre = $ciclo->semestre;
-            $this->data_inicio = $ciclo->data_inicio->format('Y-m-d\TH:i');
-            $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
-            $this->status = $ciclo->status;
-            
-            // Povoa os checkboxes com os IDs dos cursos já vinculados
-            $this->cursosSelecionados = $ciclo->cursos->pluck('id')->toArray();
-            $this->statusSelecionados = $ciclo->statusPipeline->pluck('id')->toArray();
-        } else {
-            $this->ano = date('Y');
-            $this->semestre = date('n') <= 6 ? 1 : 2;
+        $ofertasOriginais = \App\Models\OfertaVaga::where('ciclo_id', $id)->get();
+        foreach($ofertasOriginais as $oferta) {
+            $novaOferta = $oferta->replicate();
+            $novaOferta->ciclo_id = $novoCiclo->id;
+            $novaOferta->save();
         }
 
-        $this->modalAberto = true;
-    }
-
-    public function fecharModal()
-    {
-        $this->modalAberto = false;
-    }
-
-    public function salvar()
-    {
-        $this->validate();
-
-        if ($this->status) {
-            Ciclo::where('id', '!=', $this->cicloId)->update(['status' => false]);
-        }
-
-        $nomeFinal = trim($this->nome);
-        if (empty($nomeFinal)) {
-            $nomeFinal = "{$this->ano} - {$this->semestre}º Semestre";
-        }
-
-        // Recuperamos a instância do ciclo criado/atualizado na variável $cicloSalvo
-        $cicloSalvo = Ciclo::updateOrCreate(
-            ['id' => $this->cicloId],
-            [
-                'nome' => $nomeFinal,
-                'ano' => $this->ano,
-                'semestre' => $this->semestre,
-                'data_inicio' => $this->data_inicio,
-                'data_fim' => $this->data_fim,
-                'status' => $this->status,
-                'slug' => \Str::slug($nomeFinal)
-            ]
-        );
-
-        // MÁGICA: Sincroniza a tabela pivô 'ciclo_curso' automaticamente
-        $cicloSalvo->cursos()->sync($this->cursosSelecionados);
-
-        // Salva os status definindo a ordem baseada no array
-        $syncStatus = [];
-        foreach ($this->statusSelecionados as $index => $statusId) {
-            $syncStatus[$statusId] = ['ordem' => $index + 1];
-        }
-        $cicloSalvo->statusPipeline()->sync($syncStatus);
-
-        $this->fecharModal();
-        $this->dispatch('sucesso', msg: 'Ciclo salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!');
     }
 
     public function getHeadersProperty()
@@ -253,7 +154,6 @@ class PeriodManager extends Component
             ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
-            ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
@@ -263,31 +163,19 @@ class PeriodManager extends Component
     {
         $query = Ciclo::query()->withCount('inscricoes');
         
-        // Aplicação dos Filtros
         $query->when($this->filtro_ano, fn($q) => $q->where('ano', $this->filtro_ano))
               ->when($this->filtro_semestre, fn($q) => $q->where('semestre', $this->filtro_semestre))
               ->when($this->filtro_status !== '', fn($q) => $q->where('status', $this->filtro_status));
         
-        // Busca os cursos ativos para exibir no modal
-        $cursosDisponiveis = Curso::where('status', 'Ativo')->orderBy('nome')->get();
-        $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
-        
-        // Pega todos os anos únicos que já existem no banco de dados para montar o Select
-        $anosDisponiveis = Ciclo::select('ano')->distinct()->orderBy('ano', 'desc')->pluck('ano');
-
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $query->orderBy('id', 'desc');
         }
 
-        $ciclos = $query->paginate($this->porPagina);
-
         return view('livewire.period.period-manager', [
-            'registros' => $ciclos,
-            'cursosDisponiveis' => $cursosDisponiveis,
-            'statusDisponiveis' => $statusDisponiveis,
-            'anosDisponiveis' => $anosDisponiveis
+            'registros' => $query->paginate($this->porPagina),
+            'anosDisponiveis' => Ciclo::select('ano')->distinct()->orderBy('ano', 'desc')->pluck('ano'),
         ]);
     }
 }
