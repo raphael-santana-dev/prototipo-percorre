@@ -34,6 +34,16 @@ class Ciclo extends Model
         return $this->belongsToMany(Curso::class, 'ciclo_curso');
     }
 
+    public function unidades()
+    {
+        return $this->belongsToMany(\App\Modules\Unidade\Domain\Models\Unidade::class, 'ciclo_unidade', 'ciclo_id', 'unidade_id');
+    }
+
+    public function turnos()
+    {
+        return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'ciclo_turno', 'ciclo_id', 'turno_id');
+    }
+
     public function statusPipeline()
     {
         return $this->belongsToMany(StatusInscricao::class, 'ciclo_status_inscricao')
