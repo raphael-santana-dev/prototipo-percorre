@@ -353,30 +353,30 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
+        // 1. FILTRO MESTRE: Busca os Cursos marcados no Dossiê, cujas Unidades e Turnos também foram marcados!
         $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])
-            ->whereHas('ciclos', function($q) {
-                $q->where('ciclos.id', $this->cicloAtivoId);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade);
-            })
-            ->with(['unidades' => function($q) {
-                $q->whereIn('status', ['Ativa', 'ativa', '1', 1, true]);
-            }, 'turnosVinculados'])
+            ->whereHas('ciclos', fn($q) => $q->where('ciclos.id', $this->cicloAtivoId))
+            ->where(fn($q) => $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade))
+            ->where(fn($q) => $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade))
+            ->with([
+                'unidades' => function($q) {
+                    // Traz apenas as unidades que o admin ativou para este ciclo
+                    $q->whereIn('status', ['Ativa', 'ativa', '1', 1, true])
+                      ->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
+                }, 
+                'turnosVinculados' => function($q) {
+                    // Traz apenas os turnos que o admin ativou para este ciclo
+                    $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
+                }
+            ])
             ->get();
 
         $unidadesDisponiveisList = collect();
         
         foreach($cursosValidos as $curso) {
             foreach($curso->unidades as $unidade) {
-                if (!$curso->permite_estado_diferente && $unidade->estado !== $this->estado) {
-                    continue;
-                }
+                if (!$curso->permite_estado_diferente && $unidade->estado !== $this->estado) continue;
 
-                // CASCATA INTELIGENTE: Só mostra a unidade se existir ao menos UM turno com vaga
                 if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                     $temVagaNaUnidade = false;
                     foreach ($curso->turnosVinculados as $turno) {
@@ -418,30 +418,21 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
 
-        $cursosDb = Curso::with('turnosVinculados')
+        $cursosDb = Curso::with(['turnosVinculados' => function($q) {
+                $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
+            }])
             ->whereIn('status', ['Ativo', 'ativo', '1', 1, true])
-            ->whereHas('ciclos', function($q) {
-                $q->where('ciclos.id', $this->cicloAtivoId);
-            })
-            ->whereHas('unidades', function ($q) use ($unidadeId) {
-                $q->where('unidades.id', $unidadeId);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade);
-            })
+            ->whereHas('ciclos', fn($q) => $q->where('ciclos.id', $this->cicloAtivoId))
+            ->whereHas('unidades', fn ($q) => $q->where('unidades.id', $unidadeId))
+            ->where(fn($q) => $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade))
+            ->where(fn($q) => $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade))
             ->get();
 
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
         foreach ($cursosDb as $curso) {
-            if (!$curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) {
-                continue;
-            }
+            if (!$curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) continue;
 
-            // CASCATA INTELIGENTE: Só mostra o Curso se existir ao menos UM turno com vaga para esta Unidade
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $temVagaNesteCurso = false;
                 foreach ($curso->turnosVinculados as $turno) {
@@ -470,12 +461,15 @@ class Inscricao extends Component
 
         if (!$cursoId) return;
 
-        $curso = Curso::with('turnosVinculados')->find($cursoId);
+        // Busca apenas os turnos que o administrador marcou no Explorer para o Ciclo
+        $curso = Curso::with(['turnosVinculados' => function($q) {
+            $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
+        }])->find($cursoId);
+        
         $ofertasValidas = $this->getOfertasValidas();
 
         if ($curso) {
             foreach ($curso->turnosVinculados as $turno) {
-                // CASCATA INTELIGENTE: Só mostra o Turno se a oferta final tiver vagas!
                 if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                     $key = "{$this->unidade}-{$cursoId}-{$turno->id}";
                     if (!isset($ofertasValidas[$key])) continue;

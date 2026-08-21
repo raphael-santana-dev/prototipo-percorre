@@ -9,7 +9,6 @@ use App\Models\Ciclo;
 use App\Models\Curso;
 use App\Models\StatusInscricao;
 use App\Models\OfertaVaga;
-use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Editar Ciclo - Administrativo')]
@@ -17,13 +16,20 @@ class PeriodEdit extends Component
 {
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
     
+    // Arrays de Relacionamentos do Ciclo
+    public array $unidadesSelecionadas = []; 
     public array $cursosSelecionados = []; 
+    public array $turnosSelecionados = []; 
     public array $statusSelecionados = [];
     public array $ofertasVagas = [];
 
+    // Controles do Explorer (macOS Style)
+    public $activeUnidadeId = null;
+    public $activeCursoId = null;
+
     public function mount($id)
     {
-        $ciclo = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
+        $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos', 'statusPipeline'])->findOrFail($id);
         
         $this->cicloId = $ciclo->id;
         $this->nome = $ciclo->nome;
@@ -33,7 +39,10 @@ class PeriodEdit extends Component
         $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
         $this->status = $ciclo->status;
         
+        // Povoa as marcações salvas
+        $this->unidadesSelecionadas = $ciclo->unidades->pluck('id')->map(fn($v) => (string)$v)->toArray();
         $this->cursosSelecionados = $ciclo->cursos->pluck('id')->map(fn($v) => (string)$v)->toArray();
+        $this->turnosSelecionados = $ciclo->turnos->pluck('id')->map(fn($v) => (string)$v)->toArray();
         $this->statusSelecionados = $ciclo->statusPipeline->pluck('id')->map(fn($v) => (string)$v)->toArray();
 
         $ofertas = OfertaVaga::where('ciclo_id', $id)->get();
@@ -47,7 +56,19 @@ class PeriodEdit extends Component
         }
     }
 
-    // A MÁGICA DA CASCATA: Reseta os campos filhos se o pai for alterado
+    // --- MÉTODOS DO EXPLORER ---
+    public function setActiveUnidade($id)
+    {
+        $this->activeUnidadeId = $id;
+        $this->activeCursoId = null; // Reseta a terceira coluna
+    }
+
+    public function setActiveCurso($id)
+    {
+        $this->activeCursoId = $id;
+    }
+
+    // --- MÉTODOS DE VAGAS ---
     public function updatedOfertasVagas($value, $name)
     {
         $parts = explode('.', $name);
@@ -62,12 +83,6 @@ class PeriodEdit extends Component
                 $this->ofertasVagas[$index]['turno_id'] = '';
             }
         }
-    }
-
-    public function toggleTodosCursos()
-    {
-        $todos = Curso::where('status', 'Ativo')->pluck('id')->map(fn($v) => (string)$v)->toArray();
-        $this->cursosSelecionados = (count($this->cursosSelecionados) === count($todos)) ? [] : $todos;
     }
 
     public function toggleTodosStatus()
@@ -87,6 +102,7 @@ class PeriodEdit extends Component
         $this->ofertasVagas = array_values($this->ofertasVagas);
     }
 
+    // --- SALVAMENTO ---
     public function salvar()
     {
         $this->validate([
@@ -111,7 +127,10 @@ class PeriodEdit extends Component
             'status' => $this->status,
         ]);
 
+        // Sincroniza todas as tabelas pivô
+        $cicloSalvo->unidades()->sync($this->unidadesSelecionadas);
         $cicloSalvo->cursos()->sync($this->cursosSelecionados);
+        $cicloSalvo->turnos()->sync($this->turnosSelecionados);
 
         $syncStatus = [];
         foreach ($this->statusSelecionados as $index => $statusId) {
@@ -138,7 +157,6 @@ class PeriodEdit extends Component
 
     public function render()
     {
-        // Eager load pesado para permitir a filtragem em cascata no frontend sem onerar o banco
         return view('livewire.period.period-edit', [
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
             'cursosDb' => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
