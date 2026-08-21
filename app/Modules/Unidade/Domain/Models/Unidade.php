@@ -29,4 +29,10 @@ class Unidade extends Model
     {
         return $this->belongsToMany(Curso::class, 'curso_unidade');
     }
+
+    // Relacionamento com os Ciclos (Processos Seletivos)
+    public function ciclos()
+    {
+        return $this->belongsToMany(\App\Models\Ciclo::class, 'ciclo_unidade', 'unidade_id', 'ciclo_id');
+    }
 }
