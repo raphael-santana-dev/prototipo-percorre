@@ -104,11 +104,14 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('period.dynamic-fields', \App\Modules\Period\UI\Livewire\DynamicFields::class);
         Livewire::component('period.step-manager', \App\Modules\Period\UI\Livewire\StepManager::class);
         Livewire::component('period.period-details', \App\Modules\Period\UI\Livewire\PeriodDetails::class);
+        Livewire::component('period.period-edit', \App\Modules\Period\UI\Livewire\PeriodEdit::class);
+        Livewire::component('period.regras-manager', \App\Modules\Period\UI\Livewire\RegrasManager::class);
+
         Livewire::component('registration.registration-manager', \App\Modules\Registration\UI\Livewire\RegistrationManager::class);
         Livewire::component('registration.status-manager', \App\Modules\Registration\UI\Livewire\StatusManager::class); // <- NOVO
         Livewire::component('registration.registration-details', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class);
         Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
-        Livewire::component('period.regras-manager', \App\Modules\Period\UI\Livewire\RegrasManager::class);
+        
 
         // Website e Alunos
         Livewire::component('website.home', \App\Modules\Website\UI\Livewire\Home::class);
@@ -159,6 +162,14 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('gestao-educacional.avalicao.relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class);
         Livewire::component('gestao-educacional.periodo-avaliacao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class);
         Livewire::component('gestao-educacional.periodo-avaliacao.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class);
+        
+        Livewire::component('gestao-educacional.matriculas.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Listagem::class);
+        Livewire::component('gestao-educacional.matriculas.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class);
+
+        Livewire::component('gestao-educacional.turmas.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class);
+        Livewire::component('gestao-educacional.turmas.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class);
+        
+
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;
