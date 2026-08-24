@@ -25,7 +25,7 @@ class Student extends Authenticatable
         'cpf',
         'slug',
         'is_aprendiz',
-        'empresa_codigo',
+        'empresa_id',
         'gestor_id'
     ];
 
@@ -49,5 +49,10 @@ class Student extends Authenticatable
     public function gestor()
     {
         return $this->belongsTo(\App\Modules\Company\Domain\Models\CompanyUser::class, 'gestor_id');
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(\App\Modules\Company\Domain\Models\Empresa::class, 'empresa_id');
     }
 }

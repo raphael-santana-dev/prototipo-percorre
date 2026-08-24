@@ -12,15 +12,7 @@ class CompanyUser extends Authenticatable
 
     protected $table = 'company_users';
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'documento',
-        'empresa_codigo',
-        'tipo_acesso',
-        'is_active',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'documento', 'empresa_id', 'tipo_acesso', 'is_active'];
 
     protected $hidden = [
         'password',
@@ -32,4 +24,9 @@ class CompanyUser extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
     ];
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
 }

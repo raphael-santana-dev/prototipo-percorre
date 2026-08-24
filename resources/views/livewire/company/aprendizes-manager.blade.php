@@ -40,7 +40,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @forelse($aprendizes as $aluno)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <tr wire:key="aluno-{{ $aluno->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                             <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
                                 {{ $aluno->name }}
                             </td>

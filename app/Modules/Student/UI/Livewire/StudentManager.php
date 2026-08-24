@@ -33,6 +33,9 @@ class StudentManager extends Component
     public bool $is_active = true;
     public ?int $unidade_id = null;
 
+    public $is_aprendiz = false;
+    public $empresa_id = null;
+
     public string $statusColumn = 'is_active';
     public $modelClass = Student::class;
 
@@ -83,6 +86,10 @@ class StudentManager extends Component
         $this->email = $student->email;
         $this->is_active = $student->is_active;
         $this->unidade_id = $student->unidade_id;
+
+        // Carrega dados de Aprendizagem
+        $this->is_aprendiz = $student->is_aprendiz;
+        $this->empresa_id = $student->empresa_id;
         
         $this->isEditMode = true;
         $this->showModal = true;
@@ -99,7 +106,8 @@ class StudentManager extends Component
         $rules = [
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:students,email' . ($this->studentId ? ',' . $this->studentId : ''),
-            'unidade_id' => 'required|exists:unidades,id', // Para aluno, a unidade é obrigatória
+            'unidade_id' => 'required|exists:unidades,id',
+            'empresa_id' => 'required_if:is_aprendiz,true', // Validação Condicional
         ];
 
         if (!$this->isEditMode) {
@@ -108,7 +116,9 @@ class StudentManager extends Component
             $rules['password'] = 'string|min:6';
         }
 
-        $this->validate($rules);
+        $this->validate($rules, [
+            'empresa_id.required_if' => 'Selecione uma empresa para vincular o aprendiz.'
+        ]);
 
         $data = [
             'name' => $this->name,
@@ -116,6 +126,8 @@ class StudentManager extends Component
             'is_active' => $this->is_active,
             'unidade_id' => $this->unidade_id,
             'slug' => Str::slug($this->name),
+            'is_aprendiz' => $this->is_aprendiz,
+            'empresa_id' => $this->is_aprendiz ? $this->empresa_id : null, // Se não for aprendiz, remove a empresa
         ];
 
         if (!empty($this->password)) {
@@ -153,7 +165,7 @@ class StudentManager extends Component
 
     public function showQuickDetails(int $id)
     {
-        $student = Student::with('unidade')->findOrFail($id);
+        $student = Student::with(['unidade', 'empresa'])->findOrFail($id);
         
         $statusHtml = $student->is_active 
             ? '<span class="text-green-600 font-bold">Matrícula Ativa</span>' 
@@ -163,6 +175,7 @@ class StudentManager extends Component
             'Nome do Aluno' => $student->name,
             'E-mail de Acesso' => $student->email,
             'Unidade Sede' => $student->unidade?->nome ?? 'Não alocado',
+            'Programa Aprendiz' => $student->is_aprendiz ? '<span class="text-indigo-600 font-bold">' . ($student->empresa?->nome_fantasia ?? 'Sem Empresa') . '</span>' : 'Não',
             'Status' => $statusHtml,
             'Data da Matrícula' => $student->created_at->format('d/m/Y H:i'),
         ];
@@ -183,13 +196,18 @@ class StudentManager extends Component
         $this->password = '';
         $this->is_active = true;
         $this->unidade_id = auth()->user()->unidades->first()->id ?? null;
+        
+        // Limpa os campos de aprendizagem
+        $this->is_aprendiz = false;
+        $this->empresa_id = null;
+
         $this->isEditMode = false;
         $this->resetErrorBag();
     }
 
     public function render()
     {
-        $query = Student::query()->with('unidade')->apenasVinculosPermitidos();
+        $query = Student::query()->with(['unidade', 'empresa'])->apenasVinculosPermitidos();
 
         $query->when($this->filtro_busca, function($q) {
             $q->where(function($sub) {
@@ -221,9 +239,15 @@ class StudentManager extends Component
 
         $estudantes = $query->paginate($this->porPagina);
 
+        // Busca todas as empresas ativas para o dropdown do Modal
+        $empresas = \App\Modules\Company\Domain\Models\Empresa::where('is_active', true)
+                  ->orderBy('nome_fantasia')
+                  ->get();
+
         return view('livewire.student.student-manager', [
             'registros' => $estudantes,
             'unidades' => Unidade::orderBy('nome')->get(),
+            'empresas' => $empresas,
         ]);
     }
 }

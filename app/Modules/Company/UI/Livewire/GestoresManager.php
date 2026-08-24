@@ -47,7 +47,7 @@ class GestoresManager extends Component
             $empresaUser = Auth::guard('company')->user();
             
             // Garante que só pode editar usuários da mesma empresa
-            $gestor = CompanyUser::where('empresa_codigo', $empresaUser->empresa_codigo)
+            $gestor = CompanyUser::where('empresa_id', $empresaUser->empresa_id)
                 ->where('tipo_acesso', 'gestor_avaliador')
                 ->findOrFail($id);
 
@@ -99,7 +99,7 @@ class GestoresManager extends Component
             'name' => $this->name,
             'email' => $this->email,
             'documento' => preg_replace('/\D/', '', $this->documento),
-            'empresa_codigo' => $usuario->empresa_codigo,
+            'empresa_id' => $usuario->empresa_id,
             'tipo_acesso' => 'gestor_avaliador',
             'is_active' => $this->is_active,
         ];
@@ -118,7 +118,7 @@ class GestoresManager extends Component
     public function excluir($id)
     {
         $usuario = Auth::guard('company')->user();
-        $gestor = CompanyUser::where('empresa_codigo', $usuario->empresa_codigo)
+        $gestor = CompanyUser::where('empresa_id', $usuario->empresa_id)
             ->where('tipo_acesso', 'gestor_avaliador')
             ->findOrFail($id);
             
@@ -130,7 +130,7 @@ class GestoresManager extends Component
     {
         $usuario = Auth::guard('company')->user();
 
-        $gestores = CompanyUser::where('empresa_codigo', $usuario->empresa_codigo)
+        $gestores = CompanyUser::where('empresa_id', $usuario->empresa_id)
             ->where('tipo_acesso', 'gestor_avaliador')
             ->where(function($query) {
                 $query->where('name', 'ilike', '%' . $this->busca . '%')
