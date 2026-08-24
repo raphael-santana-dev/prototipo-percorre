@@ -169,6 +169,11 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('gestao-educacional.turmas.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class);
         Livewire::component('gestao-educacional.turmas.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class);
         
+        // Acesso de empresas
+        Livewire::component('company.aprendiz-manager', \App\Modules\Company\UI\Livewire\AprendizManager::class);
+        Livewire::component('company.dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class);
+        Livewire::component('company.gestores-manager', \App\Modules\Company\UI\Livewire\GestoresManager::class);
+        
 
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {

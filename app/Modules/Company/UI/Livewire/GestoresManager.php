@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Modules\Company\Domain\Models\CompanyUser;
 
+use Illuminate\Validation\Rule;
+
 #[Layout('components.layouts.company')]
 #[Title('Gerenciar Equipe de Avaliadores')]
 class GestoresManager extends Component
@@ -63,8 +65,32 @@ class GestoresManager extends Component
     {
         $this->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:company_users,email,' . $this->gestorId,
-            'documento' => 'required|string|max:20', // Pode ser melhorado com validação real de CPF
+            'email' => [
+                'required',
+                'email',
+                // O uso do Rule::unique resolve o bug do Postgres, pois ele ignora o ID se for nulo
+                Rule::unique('company_users', 'email')->ignore($this->gestorId) 
+            ],
+            'documento' => [
+                'required',
+                'string',
+                // Validação Matemática Real de CPF
+                function ($attribute, $value, $fail) {
+                    $c = preg_replace('/\D/', '', $value); // Remove tudo que não for número
+                    
+                    if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) {
+                        return $fail('O CPF informado é inválido.');
+                    }
+                    for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+                        return $fail('O CPF informado é inválido.');
+                    }
+                    for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) {
+                        return $fail('O CPF informado é inválido.');
+                    }
+                }
+            ],
         ]);
 
         $usuario = Auth::guard('company')->user();
@@ -78,9 +104,9 @@ class GestoresManager extends Component
             'is_active' => $this->is_active,
         ];
 
-        // Se for cadastro novo, gera uma senha padrão (No futuro, pode ser disparado um e-mail com senha aleatória)
+        // Se for cadastro novo, gera uma senha padrão
         if (!$this->gestorId) {
-            $dados['password'] = Hash::make('mudar123'); // Senha provisória padrão
+            $dados['password'] = \Illuminate\Support\Facades\Hash::make('mudar123');
         }
 
         CompanyUser::updateOrCreate(['id' => $this->gestorId], $dados);
