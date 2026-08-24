@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Modules\Company\Domain\Models\CompanyUser;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.company')]
 #[Title('Gerenciar Equipe de Avaliadores')]
 class GestoresManager extends Component
 {

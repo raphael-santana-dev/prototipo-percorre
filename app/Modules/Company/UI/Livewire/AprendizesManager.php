@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Modules\Student\Domain\Models\Student;
 use App\Modules\Company\Domain\Models\CompanyUser;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.company')]
 #[Title('Meus Aprendizes')]
 class AprendizesManager extends Component
 {

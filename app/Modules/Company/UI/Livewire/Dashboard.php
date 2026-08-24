@@ -7,7 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\Auth;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.company')]
 #[Title('Portal da Empresa - Dashboard')]
 class Dashboard extends Component
 {
