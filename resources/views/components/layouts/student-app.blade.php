@@ -56,10 +56,7 @@
                             <span class="text-sm font-bold">{{ auth('student')->user()->name }}</span>
                         </a>
                         
-                        <!-- Botão Sair Vermelho -->
-                        <button x-data @click="$dispatch('logout')" class="px-5 py-2 text-sm font-bold text-white transition-transform transform rounded shadow-sm bg-[#ef4444] hover:bg-[#dc2626] hover:-translate-y-0.5 ml-2">
-                            Sair
-                        </button>
+                        <livewire:portal.auth.logout-button />
                     </div>
 
                 </div>
@@ -113,14 +110,10 @@
 
             <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
                 <button @click="drawerOpen = false" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300">Fechar</button>
-                <button x-data @click="$dispatch('logout')" class="px-4 py-2 text-sm font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 shadow-sm">
-                    Sair
-                </button>
+                <livewire:portal.auth.logout-button cssClass="px-4 py-2 w-full text-sm font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 shadow-sm text-center" />
             </div>
         </div>
     </div>
-
-    <livewire:portal.auth.logout-button />
 
     <main class="py-10">
         <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
