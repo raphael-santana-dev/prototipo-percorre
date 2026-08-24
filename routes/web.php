@@ -145,6 +145,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
     Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
+
+    // --- 13. Empresas (Integração) ---
+    Route::get('/empresas', \App\Modules\Company\UI\Livewire\EmpresaManager::class)->name('empresas.index');
+    Route::get('/empresas/{id}', \App\Modules\Company\UI\Livewire\EmpresaDetalhes::class)->name('empresas.show')->where('id', '[0-9]+');
 });
 
 // ==========================================
