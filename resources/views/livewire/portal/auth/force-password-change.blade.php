@@ -51,13 +51,10 @@
             
             {{-- O botão de sair permite que ele desista e saia do sistema --}}
             <div class="text-center mt-4">
-                <button type="button" wire:click="$dispatch('logout')" class="text-xs font-bold text-gray-500 hover:text-red-500 transition">
+                <button type="button" wire:click="logout" class="text-xs font-bold text-gray-500 hover:text-red-500 transition">
                     Sair e fazer isso depois
                 </button>
             </div>
         </form>
     </div>
-    
-    {{-- O ouvinte invisível de logout do Portal --}}
-    <livewire:portal.auth.logout-button />
 </div>

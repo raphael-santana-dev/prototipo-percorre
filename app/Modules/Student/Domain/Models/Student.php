@@ -14,7 +14,7 @@ use App\Traits\RegistraAuditoria;
 
 class Student extends Authenticatable implements CanResetPasswordContract
 {
-    use HasFactory, Notifiable, FiltraPorVinculo, CanResetPassword, HasApiTokens;
+    use HasFactory, Notifiable, FiltraPorVinculo, CanResetPassword;
     use RegistraAuditoria;
 
     public $moduloPermissao = 'students';

@@ -179,7 +179,9 @@ class AppServiceProvider extends ServiceProvider
         
         Livewire::component('auth.forgot-password',  \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class);
         Livewire::component('auth.force-change',  \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class);
+        Livewire::component('auth.reset-password',  \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class);
 
+        
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;

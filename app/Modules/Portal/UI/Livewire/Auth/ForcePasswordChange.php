@@ -15,7 +15,23 @@ class ForcePasswordChange extends Component
 {
     public string $password = '';
     public string $password_confirmation = '';
+    public function logout()
+    {
+        if (\Illuminate\Support\Facades\Auth::guard('student')->check()) {
+            \Illuminate\Support\Facades\Auth::guard('student')->logout();
+        }
+        if (\Illuminate\Support\Facades\Auth::guard('company')->check()) {
+            \Illuminate\Support\Facades\Auth::guard('company')->logout();
+        }
+        if (\Illuminate\Support\Facades\Auth::guard('web')->check()) {
+            \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        }
 
+        session()->invalidate();
+        session()->regenerateToken();
+
+        return redirect()->route('portal.login');
+    }
     public function salvar()
     {
         // 1. Validação de Senha Forte

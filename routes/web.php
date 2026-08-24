@@ -1,6 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
+// ==========================================
+// IMPORTAÇÕES
+// ==========================================
 use App\Modules\Auth\UI\Livewire\Login;
 use App\Modules\Dashboard\UI\Livewire\Dashboard;
 use App\Modules\FeatureToggle\UI\Livewire\FeatureManager;
@@ -18,141 +22,125 @@ use App\Modules\Period\UI\Livewire\StepManager;
 use App\Modules\Period\UI\Livewire\DynamicFields;
 
 // ==========================================
-// ROTAS PÚBLICAS
+// 1. ROTAS PÚBLICAS E RECUPERAÇÃO DE SENHA
 // ==========================================
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
-Route::get('/login', Login::class)->name('login')->middleware('guest');
 
-// Rota pública de respostas de formulários
+// Respostas de Formulários Públicos
 Route::get('/f/{id}/{slug?}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
     ->name('formularios.publico')
     ->where('id', '[0-9]+');
 
+// Rotas de Redefinição de Senha (Precisam estar no escopo global de nomes)
+Route::middleware('guest:student,company,web')->group(function () {
+    Route::get('/redefinir-senha/{token}', \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class)->name('password.reset');
+});
+
 // ==========================================
-// PAINEL ADMINISTRATIVO (Autenticado)
+// 2. PORTAL UNIFICADO E LOGIN (Visitantes)
+// ==========================================
+// Login do Administrador
+Route::get('/login', Login::class)->name('login')->middleware('guest');
+
+// Portal Externo (Alunos e Empresas)
+Route::prefix('portal')->name('portal.')->middleware('guest:student,company')->group(function () {
+    Route::get('/login', PortalLogin::class)->name('login');
+    Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
+});
+
+// ==========================================
+// 3. SEGURANÇA GLOBAL (Usuários Logados)
+// ==========================================
+Route::middleware('auth:web,student,company')->group(function () {
+    Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
+        ->name('password.force-change');
+});
+
+// ==========================================
+// 4. PAINEL ADMINISTRATIVO (Auth: Web)
 // ==========================================
 Route::middleware('auth')->group(function () {
     
-    // --- 1. Dashboard e Perfil ---
+    // --- Dashboard e Perfil ---
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
 
-    // --- 2. Configurações e ACL ---
+    // --- Configurações e ACL ---
     Route::get('/features', FeatureManager::class)->name('features.index');
     Route::get('/roles', RoleManager::class)->name('roles.index');
     Route::get('/permissions', PermissionManager::class)->name('permissions.index');
-    Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)
-        ->name('roles.permissions')
-        ->where('roleId', '[0-9]+');
+    Route::get('/roles/{roleId}/permissions', RolePermissionManager::class)->name('roles.permissions')->where('roleId', '[0-9]+');
     
-    // --- 3. Usuários Corporativos ---
+    // --- Gestão de Usuários Corporativos ---
     Route::get('/users', UserManager::class)->name('users.index');
-    Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)
-        ->name('users.extra-permissions')
-        ->where('userId', '[0-9]+');
-    Route::get('/users/{id}/{slug?}', \App\Modules\Corporate\UI\Livewire\UserDetails::class)
-        ->name('users.show')
-        ->where('id', '[0-9]+');
+    Route::get('/users/{userId}/extra-permissions', UserExtraPermissionManager::class)->name('users.extra-permissions')->where('userId', '[0-9]+');
+    Route::get('/users/{id}/{slug?}', \App\Modules\Corporate\UI\Livewire\UserDetails::class)->name('users.show')->where('id', '[0-9]+');
 
-    // --- 4. Estudantes ---
+    // --- Gestão de Estudantes ---
     Route::get('/estudantes', \App\Modules\Student\UI\Livewire\StudentManager::class)->name('students.index');
-    Route::get('/estudantes/{id}/{slug?}', \App\Modules\Student\UI\Livewire\StudentDetails::class)
-        ->name('students.show')
-        ->where('id', '[0-9]+');
+    Route::get('/estudantes/{id}/{slug?}', \App\Modules\Student\UI\Livewire\StudentDetails::class)->name('students.show')->where('id', '[0-9]+');
 
-    // --- 5. Cadastros Base (Unidades, Turnos e Cursos) ---
+    // --- Cadastros Base (Instituição) ---
     Route::get('/turnos', TurnoManager::class)->name('turnos.index');
     Route::get('/unidades', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class)->name('unidades.index');
-    Route::get('/unidades/{id}/{slug?}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)
-        ->name('unidades.show')
-        ->where('id', '[0-9]+');
+    Route::get('/unidades/{id}/{slug?}', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class)->name('unidades.show')->where('id', '[0-9]+');
     Route::get('/cursos', \App\Modules\Curso\UI\Livewire\CursoManager::class)->name('cursos.index');
-    Route::get('/cursos/{id}/{slug?}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)
-        ->name('cursos.show')
-        ->where('id', '[0-9]+');
+    Route::get('/cursos/{id}/{slug?}', \App\Modules\Curso\UI\Livewire\CursoDetalhes::class)->name('cursos.show')->where('id', '[0-9]+');
 
-    // --- 6. Inscrições e CRM ---
-    Route::get('/inscricoes', \App\Modules\Registration\UI\Livewire\RegistrationManager::class)->name('inscricoes.index'); // Corrigido erro de digitação ("incricoes")
+    // --- Empresas Parceiras (Integração) ---
+    Route::get('/empresas', \App\Modules\Company\UI\Livewire\EmpresaManager::class)->name('empresas.index');
+    Route::get('/empresas/{id}', \App\Modules\Company\UI\Livewire\EmpresaDetalhes::class)->name('empresas.show')->where('id', '[0-9]+');
+
+    // --- Inscrições, Ciclos e CRM ---
+    Route::get('/inscricoes', \App\Modules\Registration\UI\Livewire\RegistrationManager::class)->name('inscricoes.index');
     Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status-inscricoes.index'); 
-    Route::get('/inscricoes/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class)
-        ->name('inscricoes.show')
-        ->where('id', '[0-9]+');
-
-    // --- 7. Ciclos (Semestres e Regras) ---
+    Route::get('/inscricoes/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class)->name('inscricoes.show')->where('id', '[0-9]+');
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
-    Route::get('/ciclos/crm/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)
-        ->name('ciclos.crm')
-        ->where('id', '[0-9]+');
-    Route::get('/ciclos/regras/{id}/{slug?}', \App\Modules\Period\UI\Livewire\RegrasManager::class)
-        ->name('ciclos.regras')
-        ->where('id', '[0-9]+');
+    Route::get('/ciclos/crm/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm')->where('id', '[0-9]+');
+    Route::get('/ciclos/regras/{id}/{slug?}', \App\Modules\Period\UI\Livewire\RegrasManager::class)->name('ciclos.regras')->where('id', '[0-9]+');
     Route::get('/etapas', StepManager::class)->name('ciclos.etapas'); 
-    
-    // A ROTA DE EDIÇÃO VEM PRIMEIRO!
     Route::get('/ciclos/{id}/editar', \App\Modules\Period\UI\Livewire\PeriodEdit::class)->name('ciclos.edit');
-
-    // A ROTA DE DETALHES (COM O SLUG CURINGA) VEM DEPOIS!
-    Route::get('/ciclos/{id}/{slug?}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)
-        ->name('ciclos.show')
-        ->where('id', '[0-9]+');
+    Route::get('/ciclos/{id}/{slug?}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show')->where('id', '[0-9]+');
         
-    // --- 8. Formulários Dinâmicos ---
+    // --- Formulários Dinâmicos ---
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
-    Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)
-        ->name('formularios.respostas.show')
-        ->where('id', '[0-9]+');
-    Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)
-        ->name('formularios.show')
-        ->where('id', '[0-9]+');
+    Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');
+    Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show')->where('id', '[0-9]+');
+    Route::get('/construtor/{tipo}/{id}/{slug?}', \App\Modules\Period\UI\Livewire\DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
 
-    // --- 9. Construtor de Campos Dinâmicos ---
-    Route::get('/construtor/{tipo}/{id}/{slug?}', \App\Modules\Period\UI\Livewire\DynamicFields::class)
-        ->name('construtor.campos')
-        ->where('id', '[0-9]+');
-
-    // --- 10. Auditoria e Logs ---
-    Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
-    
-    // --- 11. Importações/Exportações ---
-    Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
-
-    // --- 12. Comunicação (Templates e Automação) ---
+    // --- Comunicação e Automações ---
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');
     Route::get('/templates/create', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.create');
     Route::get('/templates/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.edit');
-
     Route::get('/comunicados', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::class)->name('comunicados.index');
     Route::get('/comunicados/create', \App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoForm::class)->name('comunicados.create');
-
     Route::get('/automacoes', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class)->name('automacoes.index');
     Route::get('/automacoes/create', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.create');
     Route::get('/automacoes/{id}', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoDetails::class)->name('automacoes.show');
     Route::get('/automacoes/{id}/edit', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class)->name('automacoes.edit');
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
 
+    // --- Gestão Educacional (Matrículas, Turmas e Avaliações) ---
     Route::get('/dev/mock-avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('dev.mock-avaliacoes');
     Route::get('/avaliacoes/relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class)->name('avaliacoes.relatorios');
-
     Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
     Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');
     Route::get('/avaliacoes/periodos/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.edit');
-
     Route::get('/matriculas', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Listagem::class)->name('matriculas.index');
     Route::get('/matriculas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.create');
     Route::get('/matriculas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Matricula\Detalhes::class)->name('matriculas.edit');
-
     Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
     Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
 
-    // --- 13. Empresas (Integração) ---
-    Route::get('/empresas', \App\Modules\Company\UI\Livewire\EmpresaManager::class)->name('empresas.index');
-    Route::get('/empresas/{id}', \App\Modules\Company\UI\Livewire\EmpresaDetalhes::class)->name('empresas.show')->where('id', '[0-9]+');
+    // --- Sistema, Auditoria e Importações ---
+    Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
+    Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
 });
 
 // ==========================================
-// ROTAS COMPARTILHADAS (ADMIN, PROFESSORES E ESTUDANTES)
+// 5. ROTAS COMPARTILHADAS (Admin e Estudante)
 // ==========================================
 Route::middleware('auth:web,student')->group(function () {
     Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');
@@ -161,51 +149,19 @@ Route::middleware('auth:web,student')->group(function () {
 });
 
 // ==========================================
-// ÁREA DAS EMPRESAS E GESTORES (Mundo Externo)
+// 6. ÁREA EXTERNA: EMPRESAS (Auth: Company)
 // ==========================================
-Route::prefix('empresa')->name('company.')->group(function () {
-    
-    // Rotas protegidas (Apenas empresas autenticadas)
-    Route::middleware('auth:company')->group(function () {
-        
-        Route::get('/dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class)->name('dashboard');
-        Route::get('/avaliadores', \App\Modules\Company\UI\Livewire\GestoresManager::class)->name('gestores');
-        Route::get('/aprendizes', \App\Modules\Company\UI\Livewire\AprendizesManager::class)->name('aprendizes');
-        
-    });
-    
+Route::prefix('empresa')->name('company.')->middleware('auth:company')->group(function () {
+    Route::get('/dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class)->name('dashboard');
+    Route::get('/avaliadores', \App\Modules\Company\UI\Livewire\GestoresManager::class)->name('gestores');
+    Route::get('/aprendizes', \App\Modules\Company\UI\Livewire\AprendizesManager::class)->name('aprendizes');
 });
 
 // ==========================================
-// ÁREA DOS ALUNOS
+// 7. ÁREA EXTERNA: ALUNOS (Auth: Student)
 // ==========================================
-Route::prefix('alunos')->name('student.')->group(function () {
-    // Alunos logados
-    Route::middleware('auth:student')->group(function () {
-        Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
-        Route::get('/meu-perfil', \App\Modules\Student\UI\Livewire\ProfileManager::class)->name('profile');
-        Route::get('/biblioteca', StudentLibrary::class)
-            ->name('library')
-            ->middleware('feature:alunos.biblioteca');
-    });
-});
-
-// ==========================================
-// PORTAL DE ACESSO UNIFICADO (Alunos e Empresas)
-// ==========================================
-Route::prefix('portal')->name('portal.')->group(function () {
-    // Só acessa o login se NÃO estiver logado como estudante E não estiver logado como empresa
-    Route::middleware('guest:student,company')->group(function () {
-        Route::get('/login', PortalLogin::class)->name('login');
-
-        Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
-    });
-});
-
-// ==========================================
-// ROTAS GLOBAIS DE SEGURANÇA (Interceptações)
-// ==========================================
-Route::middleware('auth:web,student,company')->group(function () {
-    Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
-        ->name('password.force-change');
+Route::prefix('alunos')->name('student.')->middleware('auth:student')->group(function () {
+    Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
+    Route::get('/meu-perfil', \App\Modules\Student\UI\Livewire\ProfileManager::class)->name('profile');
+    Route::get('/biblioteca', StudentLibrary::class)->name('library')->middleware('feature:alunos.biblioteca');
 });
