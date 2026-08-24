@@ -24,6 +24,9 @@ class Student extends Authenticatable
         'unidade_id',
         'cpf',
         'slug',
+        'is_aprendiz',
+        'empresa_codigo',
+        'gestor_id'
     ];
 
     protected $hidden = [
@@ -35,10 +38,16 @@ class Student extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'is_aprendiz' => 'boolean',
     ];
 
     public function unidade()
     {
         return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
+    }
+
+    public function gestor()
+    {
+        return $this->belongsTo(\App\Modules\Company\Domain\Models\CompanyUser::class, 'gestor_id');
     }
 }

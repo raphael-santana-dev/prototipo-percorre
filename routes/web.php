@@ -9,7 +9,7 @@ use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
-use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
+use App\Modules\Portal\UI\Livewire\Auth\Login as PortalLogin;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
@@ -157,15 +157,25 @@ Route::middleware('auth:web,student')->group(function () {
 });
 
 // ==========================================
+// ÁREA DAS EMPRESAS E GESTORES (Mundo Externo)
+// ==========================================
+Route::prefix('empresa')->name('company.')->group(function () {
+    
+    // Rotas protegidas (Apenas empresas autenticadas)
+    Route::middleware('auth:company')->group(function () {
+        
+        Route::get('/dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class)->name('dashboard');
+        Route::get('/avaliadores', \App\Modules\Company\UI\Livewire\GestoresManager::class)->name('gestores');
+        Route::get('/aprendizes', \App\Modules\Company\UI\Livewire\AprendizesManager::class)->name('aprendizes');
+        
+    });
+    
+});
+
+// ==========================================
 // ÁREA DOS ALUNOS
 // ==========================================
 Route::prefix('alunos')->name('student.')->group(function () {
-    
-    // Visitantes (não logados como alunos)
-    Route::middleware('guest:student')->group(function () {
-        Route::get('/login', StudentLogin::class)->name('login');
-    });
-
     // Alunos logados
     Route::middleware('auth:student')->group(function () {
         Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
@@ -173,5 +183,15 @@ Route::prefix('alunos')->name('student.')->group(function () {
         Route::get('/biblioteca', StudentLibrary::class)
             ->name('library')
             ->middleware('feature:alunos.biblioteca');
+    });
+});
+
+// ==========================================
+// PORTAL DE ACESSO UNIFICADO (Alunos e Empresas)
+// ==========================================
+Route::prefix('portal')->name('portal.')->group(function () {
+    // Só acessa o login se NÃO estiver logado como estudante E não estiver logado como empresa
+    Route::middleware('guest:student,company')->group(function () {
+        Route::get('/login', PortalLogin::class)->name('login');
     });
 });

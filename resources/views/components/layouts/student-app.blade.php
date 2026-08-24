@@ -120,7 +120,7 @@
         </div>
     </div>
 
-    <livewire:student.auth.logout-button />
+    <livewire:portal.auth.logout-button />
 
     <main class="py-10">
         <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
