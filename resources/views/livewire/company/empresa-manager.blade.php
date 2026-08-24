@@ -33,10 +33,10 @@
         :ordenacaoCampo="$ordenacaoCampo"
         :ordenacaoDirecao="$ordenacaoDirecao"
         :permiteGrid="$permiteGrid"
-        :modoExibicao="'table'">
+        :modoExibicao="$modoExibicao">
 
         @forelse ($registros as $empresa)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <tr wire:key="empresa-{{ $empresa->id }}" class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
                     #{{ $empresa->id }}
@@ -85,6 +85,9 @@
                 </td>
             </tr>
         @endforelse
+
+        {{-- SLOT DE SEGURANÇA: Se o componente forçar grid, desenha vazio e não quebra a tela --}}
+        <x-slot name="gridSlot"></x-slot>
 
     </x-table>
 </div>

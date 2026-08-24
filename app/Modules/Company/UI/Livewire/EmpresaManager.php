@@ -31,6 +31,9 @@ class EmpresaManager extends Component
         ];
         
         $this->permiteGrid = false;
+        
+        // Usa a propriedade que já existe na trait, e setamos como 'lista' (padrão do seu x-table)
+        $this->modoExibicao = 'lista'; 
     }
 
     public function updatingFiltroBusca()
@@ -57,21 +60,25 @@ class EmpresaManager extends Component
 
     public function render()
     {
-        $query = Empresa::query()
-            ->when($this->filtro_busca, function($q) {
-                $q->where('razao_social', 'ilike', '%' . $this->filtro_busca . '%')
-                  ->orWhere('nome_fantasia', 'ilike', '%' . $this->filtro_busca . '%')
-                  ->orWhere('cnpj', 'like', '%' . preg_replace('/\D/', '', $this->filtro_busca) . '%');
-            });
+        $query = Empresa::query();
 
-        // Ordenação
-        if ($this->ordenacaoCampo) {
-            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
-        } else {
-            $query->orderBy('nome_fantasia', 'asc');
+        // Lógica de busca isolada e segura
+        if (!empty($this->filtro_busca)) {
+            $busca = $this->filtro_busca;
+            $query->where(function($q) use ($busca) {
+                $q->where('razao_social', 'ilike', '%' . $busca . '%')
+                  ->orWhere('nome_fantasia', 'ilike', '%' . $busca . '%')
+                  ->orWhere('cnpj', 'like', '%' . preg_replace('/\D/', '', $busca) . '%');
+            });
         }
 
-        // Traz também a contagem de aprendizes e gestores para mostrar badges na listagem
+        // Ordenação segura
+        $campo = $this->ordenacaoCampo ?: 'nome_fantasia';
+        $direcao = $this->ordenacaoDirecao ?: 'asc';
+        
+        $query->orderBy($campo, $direcao);
+
+        // Busca paginada
         $empresas = $query->withCount(['aprendizes', 'companyUsers'])->paginate($this->porPagina ?? 10);
 
         return view('livewire.company.empresa-manager', [
