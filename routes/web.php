@@ -197,6 +197,8 @@ Route::prefix('portal')->name('portal.')->group(function () {
     // Só acessa o login se NÃO estiver logado como estudante E não estiver logado como empresa
     Route::middleware('guest:student,company')->group(function () {
         Route::get('/login', PortalLogin::class)->name('login');
+
+        Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
     });
 });
 

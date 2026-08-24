@@ -173,7 +173,12 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('company.aprendizes-manager', \App\Modules\Company\UI\Livewire\AprendizesManager::class);
         Livewire::component('company.dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class);
         Livewire::component('company.gestores-manager', \App\Modules\Company\UI\Livewire\GestoresManager::class);
+
+        Livewire::component('company.empresas', \App\Modules\Company\UI\Livewire\EmpresaManager::class);
+        Livewire::component('company.empresas-detalhes', \App\Modules\Company\UI\Livewire\EmpresaDetalhes::class);
         
+        Livewire::component('auth.forgot-password',  \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class);
+        Livewire::component('auth.force-change',  \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class);
 
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {

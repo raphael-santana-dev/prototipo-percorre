@@ -7,11 +7,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\FiltraPorVinculo;
 
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use Illuminate\Auth\Passwords\CanResetPassword;
+
 use App\Traits\RegistraAuditoria;
 
-class Student extends Authenticatable
+class Student extends Authenticatable implements CanResetPasswordContract
 {
-    use HasFactory, Notifiable, FiltraPorVinculo;
+    use HasFactory, Notifiable, FiltraPorVinculo, CanResetPassword, HasApiTokens;
     use RegistraAuditoria;
 
     public $moduloPermissao = 'students';
