@@ -106,9 +106,13 @@
                     <h3 class="font-bold text-gray-900 flex items-center gap-2">
                         <i class="ph-fill ph-users-three text-lg text-purpura-500"></i> Últimas Inscrições
                     </h3>
-                    <a href="{{ route('inscricoes.index', ['filtroCurso' => $this->curso->id]) }}" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 hover:underline bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
-                        Ver base completa &rarr;
-                    </a>
+                    @if(feature('inscricao.listar'))
+                        @if(auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.listar'))
+                            <a href="{{ route('inscricoes.index', ['filtroCurso' => $this->curso->id]) }}" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 hover:underline bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                Ver base completa &rarr;
+                            </a>
+                        @endif
+                    @endif
                 </div>
                 
                 <div class="divide-y divide-gray-100">
