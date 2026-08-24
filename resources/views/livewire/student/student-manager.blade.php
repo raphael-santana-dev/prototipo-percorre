@@ -70,6 +70,12 @@
                     @else
                         <span class="text-xs text-gray-400 italic">Sem Unidade</span>
                     @endif
+
+                    @if($student->is_aprendiz)
+                        <div class="mt-1 flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800 w-max">
+                            <i class="ph-fill ph-buildings"></i> {{ $student->empresa->nome_fantasia ?? 'Sem Empresa' }}
+                        </div>
+                    @endif
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
@@ -123,10 +129,16 @@
                         <span class="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">#{{ $student->id }}</span>
                     </div>
                     
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 min-h-[32px]">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-3 min-h-[48px]">
                         <i class="ph-fill ph-envelope-simple"></i> {{ $student->email }}<br>
+                        
                         @if($student->unidade)
-                            <i class="ph-fill ph-map-pin text-purpura-500 mt-1"></i> {{ $student->unidade->nome }}
+                            <i class="ph-fill ph-map-pin text-purpura-500 mt-1"></i> {{ $student->unidade->nome }}<br>
+                        @endif
+                        
+                        {{-- APLICANDO A BADGE NO MOBILE TAMBÉM --}}
+                        @if($student->is_aprendiz)
+                            <i class="ph-fill ph-buildings text-indigo-500 mt-1"></i> {{ $student->empresa->nome_fantasia ?? 'Sem Empresa' }}
                         @endif
                     </div>
                     
@@ -209,12 +221,31 @@
                                 @error('unidade_id') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
-                            <div class="sm:col-span-2 pt-2">
-                                <label class="flex items-center gap-2 cursor-pointer">
+                            {{-- AJAXUSTADO O LAYOUT (FLEX COL) PARA OS SWITCHES NÃO ENCAVALAREM --}}
+                            <div class="sm:col-span-2 pt-2 flex flex-col gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer w-max">
                                     <input type="checkbox" wire:model="is_active" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                                     <span class="text-sm font-bold text-gray-900 dark:text-gray-300">Matrícula Ativa</span>
                                 </label>
+
+                                <label class="flex items-center gap-2 cursor-pointer w-max">
+                                    <input type="checkbox" wire:model.live="is_aprendiz" class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600">
+                                    <span class="text-sm font-bold text-indigo-700 dark:text-indigo-400">Aluno do Programa Aprendiz?</span>
+                                </label>
                             </div>
+                        </div>
+
+                        <div class="sm:col-span-2 p-4 bg-indigo-50 border border-indigo-100 rounded-lg dark:bg-indigo-900/10 dark:border-indigo-800" x-show="$wire.is_aprendiz" x-cloak>
+                            <label class="block mb-1 text-sm font-bold text-indigo-900 dark:text-indigo-300">
+                                <i class="ph-fill ph-buildings"></i> Empresa Vinculada <span class="text-red-500">*</span>
+                            </label>
+                            <select wire:model="empresa_id" class="w-full mt-1 border-indigo-200 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                                <option value="">Selecione a empresa parceira...</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}">{{ $empresa->nome_fantasia ?? $empresa->razao_social }}</option>
+                                @endforeach
+                            </select>
+                            @error('empresa_id') <span class="block mt-1 text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">

@@ -46,6 +46,10 @@ return [
             'driver' => 'session',
             'provider' => 'students',
         ],
+        'company' => [
+            'driver' => 'session',
+            'provider' => 'companies',
+        ],
     ],
 
     /*
@@ -74,11 +78,10 @@ return [
             'driver' => 'eloquent',
             'model' => App\Modules\Student\Domain\Models\Student::class,
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'companies' => [
+            'driver' => 'eloquent',
+            'model' => App\Modules\Company\Domain\Models\CompanyUser::class,
+        ],
     ],
 
     /*
@@ -109,6 +112,12 @@ return [
         ],
         'students' => [
             'provider' => 'students',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'company_users' => [
+            'provider' => 'company_users',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,

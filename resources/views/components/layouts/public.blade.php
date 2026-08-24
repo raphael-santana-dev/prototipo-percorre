@@ -83,7 +83,7 @@
                             <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors border border-white/25 rounded-full hover:bg-white/10">
                                 Acesso Restrito
                             </a>
-                            <a href="{{ route('student.login') }}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm">
+                            <a href="{{ route('portal.login') }}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm">
                                 <i class="mr-1 ph-bold ph-graduation-cap text-sm"></i> Sou Estudante
                             </a>
                         </div>
@@ -121,7 +121,7 @@
                     <i class="text-base ph ph-lock-key"></i> Acesso Restrito
                 </a>
                 
-                <a href="{{ route('student.login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
+                <a href="{{ route('portal.login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
                     <i class="text-base ph ph-graduation-cap"></i> Sou Estudante
                 </a>
             </div>

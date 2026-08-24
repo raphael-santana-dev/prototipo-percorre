@@ -37,8 +37,8 @@ use App\Modules\Curso\Domain\Repositories\CursoRepositoryInterface;
 use App\Modules\Curso\Infrastructure\Persistence\EloquentCursoRepository;
 
 // Portal do Aluno
-use App\Modules\Student\UI\Livewire\Auth\Login as StudentLogin;
-use App\Modules\Student\UI\Livewire\Auth\LogoutButton as StudentLogout;
+use App\Modules\Portal\UI\Livewire\Auth\Login as PortalLogin;
+use App\Modules\Portal\UI\Livewire\Auth\LogoutButton as PortalLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
@@ -120,8 +120,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.student-details', \App\Modules\Student\UI\Livewire\StudentDetails::class);
 
         // Portal do Aluno (Auth Isolada)
-        Livewire::component('student.auth.login', StudentLogin::class);
-        Livewire::component('student.auth.logout-button', StudentLogout::class);
+        Livewire::component('portal.auth.login', PortalLogin::class);
+        Livewire::component('portal.auth.logout-button', PortalLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
         Livewire::component('student.library', StudentLibrary::class);
         Livewire::component('student.profile-manager', \App\Modules\Student\UI\Livewire\ProfileManager::class);
@@ -169,7 +169,19 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('gestao-educacional.turmas.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class);
         Livewire::component('gestao-educacional.turmas.detalhes', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class);
         
+        // Acesso de empresas
+        Livewire::component('company.aprendizes-manager', \App\Modules\Company\UI\Livewire\AprendizesManager::class);
+        Livewire::component('company.dashboard', \App\Modules\Company\UI\Livewire\Dashboard::class);
+        Livewire::component('company.gestores-manager', \App\Modules\Company\UI\Livewire\GestoresManager::class);
 
+        Livewire::component('company.empresas', \App\Modules\Company\UI\Livewire\EmpresaManager::class);
+        Livewire::component('company.empresas-detalhes', \App\Modules\Company\UI\Livewire\EmpresaDetalhes::class);
+        
+        Livewire::component('auth.forgot-password',  \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class);
+        Livewire::component('auth.force-change',  \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class);
+        Livewire::component('auth.reset-password',  \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class);
+
+        
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;

@@ -38,7 +38,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label for="password" class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
-                        <a href="#" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 dark:text-purpura-400">Esqueceu a senha?</a>
+                        <a href="{{route('portal.password.request')}}" class="text-xs font-bold text-purpura-600 hover:text-purpura-700 dark:text-purpura-400">Esqueceu a senha?</a>
                     </div>
                     <div class="relative">
                         <i class="absolute text-gray-400 transform -translate-y-1/2 left-4 top-1/2 ph ph-lock-key text-lg"></i>

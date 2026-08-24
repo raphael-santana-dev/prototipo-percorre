@@ -19,14 +19,14 @@
             
             <div class="text-center pb-2">
                 <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" alt="Logo" class="h-12 mx-auto mb-6 lg:hidden filter brightness-0 dark:invert">
-                <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white">Portal do Aluno</h2>
+                <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white">Portal de Acesso</h2>
                 <p class="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">Insira seu e-mail e senha para acessar</p>
             </div>
             
             <form wire:submit="authenticate" class="space-y-6 mt-8">
                 
                 <div>
-                    <label for="email" class="block text-sm font-bold text-gray-700 dark:text-gray-300">E-mail do Aluno</label>
+                    <label for="email" class="block text-sm font-bold text-gray-700 dark:text-gray-300">E-mail/CPF/CNPJ</label>
                     <div class="relative mt-2">
                         <i class="absolute text-gray-400 transform -translate-y-1/2 left-4 top-1/2 ph ph-envelope-simple text-lg"></i>
                         <input id="email" type="email" wire:model="email" class="w-full pl-12 py-3 bg-white border border-gray-200 rounded-xl shadow-sm focus:border-ponkan-500 focus:ring-2 focus:ring-ponkan-500/20 dark:bg-gray-900 dark:border-gray-700 dark:text-white transition-all" placeholder="seu@email.com" required autofocus>
@@ -37,7 +37,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label for="password" class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha</label>
-                        <a href="#" class="text-xs font-bold text-ponkan-600 hover:text-ponkan-700 dark:text-ponkan-400">Esqueceu a senha?</a>
+                        <a href="{{route('portal.password.request')}}" class="text-xs font-bold text-ponkan-600 hover:text-ponkan-700 dark:text-ponkan-400">Esqueceu a senha?</a>
                     </div>
                     <div class="relative">
                         <i class="absolute text-gray-400 transform -translate-y-1/2 left-4 top-1/2 ph ph-lock-key text-lg"></i>
