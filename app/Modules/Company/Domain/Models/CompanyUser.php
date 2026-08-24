@@ -12,7 +12,7 @@ class CompanyUser extends Authenticatable
 
     protected $table = 'company_users';
 
-    protected $fillable = ['name', 'email', 'password', 'documento', 'empresa_id', 'tipo_acesso', 'is_active'];
+    protected $fillable = ['name', 'email', 'password', 'documento', 'empresa_id', 'tipo_acesso', 'is_active', 'must_change_password'];
 
     protected $hidden = [
         'password',
@@ -23,6 +23,7 @@ class CompanyUser extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'must_change_password' => 'boolean'
     ];
 
     public function empresa()

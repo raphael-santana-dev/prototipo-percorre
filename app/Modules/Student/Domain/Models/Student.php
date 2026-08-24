@@ -26,7 +26,8 @@ class Student extends Authenticatable
         'slug',
         'is_aprendiz',
         'empresa_id',
-        'gestor_id'
+        'gestor_id',
+        'must_change_password'
     ];
 
     protected $hidden = [
@@ -39,6 +40,7 @@ class Student extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
         'is_aprendiz' => 'boolean',
+        'must_change_password' => 'boolean'
     ];
 
     public function unidade()

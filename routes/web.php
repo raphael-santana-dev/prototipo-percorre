@@ -199,3 +199,11 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::get('/login', PortalLogin::class)->name('login');
     });
 });
+
+// ==========================================
+// ROTAS GLOBAIS DE SEGURANÇA (Interceptações)
+// ==========================================
+Route::middleware('auth:web,student,company')->group(function () {
+    Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
+        ->name('password.force-change');
+});
