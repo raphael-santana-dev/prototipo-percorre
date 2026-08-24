@@ -36,7 +36,8 @@ class CursoManager extends Component
 
     public function mount() 
     {
-        abort_if(!auth()->user()->can('curso.listar'), 403);
+        abort_if(!feature('curso.listar'), 403, 'O módulo de cursos está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.listar'), 403, 'Você não tem permissão para listar cursos.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
@@ -44,15 +45,26 @@ class CursoManager extends Component
 
     public function openModal() 
     {
+        abort_if(!feature('curso.criar'), 403, 'A criação de novos cursos está desativada no momento.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.criar'), 403, 'Você não tem permissão para criar cursos.');
+        
         $this->resetInputFields();
         $this->showModal = true;
     }
 
     public function save(CursoService $service) 
     {
+        if ($this->isEditMode) {
+            abort_if(!feature('curso.editar'), 403, 'A edição de cursos está desativada no momento.');
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.editar'), 403, 'Você não tem permissão para editar cursos.');
+        } else {
+            abort_if(!feature('curso.criar'), 403, 'A criação de novos cursos está desativada no momento.');
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.criar'), 403, 'Você não tem permissão para criar cursos.');
+        }
+
         $this->validate([
             'nome' => 'required|string|max:255',
-            'status' => 'required', // Regra flexibilizada para evitar falhas silenciosas
+            'status' => 'required',
             'min_idade' => 'nullable|integer|min:0',
             'max_idade' => 'nullable|integer|gt:min_idade',
             'permite_estado_diferente' => 'boolean',
@@ -75,7 +87,6 @@ class CursoManager extends Component
             $cursoId = $cursoCriado->id;
         }
 
-        // Sincroniza Unidades e Turnos via DDD
         $service->sincronizarRelacionamentos($cursoId, $this->unidadesSelecionadas, $this->turnosSelecionados);
 
         $this->showModal = false;
@@ -83,23 +94,21 @@ class CursoManager extends Component
         $this->dispatch('sucesso', msg: $this->isEditMode ? 'Curso atualizado!' : 'Curso cadastrado!');
     }
 
-    // 3. Atualizando o Edit
     public function edit(CursoService $service, int $id) 
     {
+        abort_if(!feature('curso.editar'), 403, 'A edição de cursos está desativada no momento.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.editar'), 403, 'Você não tem permissão para editar cursos.');
+
         $this->resetInputFields();
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
         
         $this->cursoId = $curso->id;
         $this->nome = $curso->nome;
-
-        // CORREÇÃO: Traduz o '1' do banco para a palavra 'Ativo' para casar com o select do formulário
         $this->status = in_array($curso->status, ['1', 1, true, 'Ativo', 'ativo']) ? 'Ativo' : 'Inativo';
-        
         $this->min_idade = $curso->min_idade;
         $this->max_idade = $curso->max_idade;
         $this->permite_estado_diferente = $curso->permite_estado_diferente;
-        
         $this->unidadesSelecionadas = $curso->unidades->pluck('id')->toArray();
         $this->turnosSelecionados = $curso->turnosVinculados->pluck('id')->toArray();
         
@@ -109,6 +118,9 @@ class CursoManager extends Component
 
     public function delete(CursoService $service, int $id)
     {
+        abort_if(!feature('curso.excluir'), 403, 'A exclusão de cursos está desativada no momento.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.excluir'), 403, 'Você não tem permissão para excluir cursos.');
+        
         $service->deletarCurso($id);
         $this->dispatch('sucesso', msg: 'Curso movido para a lixeira.');
     }
@@ -123,6 +135,9 @@ class CursoManager extends Component
 
     public function showQuickView(CursoService $service, int $id)
     {
+        abort_if(!feature('curso.visualizar'), 403, 'A visualização de detalhes está desativada.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.visualizar'), 403, 'Você não tem permissão para visualizar o cursos.');
+
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
 
@@ -155,17 +170,14 @@ class CursoManager extends Component
 
     public function render(CursoService $service) 
     {
-        // 1. Iniciamos o construtor de consultas
         $query = \App\Models\Curso::query();
 
-        // 2. Aplicamos a ordenação dinâmica da Trait 'ComPadraoListagem'
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
-            $query->orderBy('id', 'desc'); // Ordenação padrão
+            $query->orderBy('id', 'desc');
         }
 
-        // 3. Paginamos os resultados direto no banco de dados
         $cursos = $query->paginate($this->porPagina);
 
         return view('livewire.curso.curso-manager', [
