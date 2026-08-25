@@ -12,7 +12,8 @@ class Feature extends Model
         'module',
         'name',
         'description',
-        'is_active'
+        'is_active',
+        'slug'
     ];
 
     protected $casts = [

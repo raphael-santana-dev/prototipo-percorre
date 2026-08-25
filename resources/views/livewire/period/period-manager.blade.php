@@ -9,9 +9,11 @@
         :metricas="$metricas ?? null">
         
         <x-slot name="actions">
-            <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Novo Ciclo
-            </button>
+            @if(feature('ciclo.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.criar')))
+                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Novo Ciclo
+                </button>
+            @endif
         </x-slot>
 
         <x-slot name="filters">
@@ -81,43 +83,41 @@
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                        <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
-                        <span class="text-[10px] font-bold {{ $ciclo->status ? 'text-green-600' : 'text-gray-400' }}">
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <div class="flex items-center gap-2">
+                            <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                            <span class="text-[10px] font-bold {{ $ciclo->status ? 'text-green-600' : 'text-gray-400' }}">
+                                {{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}
+                            </span>
+                        </div>
+                    @else
+                        <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
                             {{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}
                         </span>
-                    </div>
+                    @endif
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-lg ph ph-info"></i>
-                        </button>
+                        <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         
-                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
+                        @if(feature('ciclo.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.visualizar')))
+                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições"><i class="text-lg ph ph-eye"></i></a>
+                        @endif
 
-                        <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar Ciclo e Campos" onclick="confirm('Deseja realmente criar uma cópia exata deste ciclo, incluindo todos os campos do formulário?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-copy"></i>
-                        </button>
+                        @if(feature('ciclo.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.criar')))
+                            <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar Ciclo e Campos"><i class="text-lg ph ph-copy"></i></button>
+                        @endif
                         
-                        <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo Completo">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </a>
-                        
-                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
-                            <i class="text-lg ph ph-list-dashes"></i>
-                        </a>
+                        @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                            <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo Completo"><i class="text-lg ph ph-pencil-simple"></i></a>
+                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário"><i class="text-lg ph ph-list-dashes"></i></a>
+                            <a href="{{ route('ciclos.regras', ['id' => $ciclo->id, 'slug' => $ciclo->slug]) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600" title="Regras de Pontuação"><i class="text-lg ph ph-star"></i></a>
+                        @endif
 
-                        <a href="{{ route('ciclos.regras', ['id' => $ciclo->id, 'slug' => $ciclo->slug]) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600" title="Regras de Pontuação">
-                            <i class="text-lg ph ph-star"></i>
-                        </a>
-
-                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('ciclo.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.excluir')))
+                            <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?')"><i class="text-lg ph ph-trash"></i></button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -146,30 +146,36 @@
                         <i class="ph-fill ph-users"></i> {{ $ciclo->inscricoes_count ?? 0 }} inscrições registradas
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                        <div>
+                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                            @else
+                                <span class="px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
+                                    {{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}
+                                </span>
+                            @endif
+                        </div>
                         
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                                <i class="text-lg ph ph-info"></i>
-                            </button>
-                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições">
-                                <i class="text-lg ph ph-eye"></i>
-                            </a>
-                            <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar Ciclo e Campos" onclick="confirm('Deseja realmente criar uma cópia exata deste ciclo?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-copy"></i>
-                            </button>
-                            <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Ciclo Completo">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </a>
-                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Formulário (Perguntas)">
-                                <i class="text-lg ph ph-list-dashes"></i>
-                            </a>
-                            <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600" title="Regras de Pontuação">
-                                <i class="text-lg ph ph-star"></i>
-                            </a>
-                            <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Ciclo" onclick="confirm('Excluir permanentemente este ciclo do sistema?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-info"></i></button>
+                            
+                            @if(feature('ciclo.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.visualizar')))
+                                <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-eye"></i></a>
+                            @endif
+
+                            @if(feature('ciclo.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.criar')))
+                                <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-copy"></i></button>
+                            @endif
+
+                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-pencil-simple"></i></a>
+                                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-list-dashes"></i></a>
+                                <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-star"></i></a>
+                            @endif
+
+                            @if(feature('ciclo.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.excluir')))
+                                <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 dark:hover:bg-gray-600"><i class="text-lg ph ph-trash"></i></button>
+                            @endif
                         </div>
                     </div>
                 </div>

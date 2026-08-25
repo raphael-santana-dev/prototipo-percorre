@@ -36,6 +36,7 @@ class FeatureService
      */
     public function create(string $module, string $name, string $description): Feature
     {
+        $slug = \Illuminate\Support\Str::slug($name);
         $feature = Feature::firstOrCreate(
             ['name' => strtolower($name)],
             ['module' => strtolower($module), 'description' => $description, 'is_active' => false, 'slug' => $slug]

@@ -30,7 +30,8 @@ class PeriodManager extends Component
     
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
+        abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403, 'Acesso restrito.');
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -62,6 +63,9 @@ class PeriodManager extends Component
 
     public function abrirModal()
     {
+        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403, 'Sem permissão');
+
         $this->resetValidation();
         $this->reset(['nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status']);
         
@@ -72,6 +76,8 @@ class PeriodManager extends Component
 
     public function salvar()
     {
+        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403, 'Sem permissão');
         $this->validate();
 
         if ($this->status) {
@@ -102,14 +108,17 @@ class PeriodManager extends Component
 
     public function delete(int $id)
     {
+        abort_if(!feature('ciclo.excluir'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
         $ciclo = Ciclo::findOrFail($id);
         $ciclo->delete();
         $this->dispatch('sucesso', msg: 'Ciclo excluído com sucesso!');
     }
 
-    // O método showQuickView e duplicar() permanecem iguais...
     public function duplicar(int $id)
     {
+        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
         $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
 
         $novoCiclo = $cicloOriginal->replicate();

@@ -17,7 +17,8 @@ class CursoDetalhes extends Component
 
     public function mount(int $id)
     {
-        abort_if(!auth()->user()->can('curso.listar'), 403);
+        abort_if(!feature('curso.visualizar'), 403, 'O módulo de visualização de cursos está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.visualizar'), 403, 'Você não tem acesso aos detalhes do curso.');
         $this->cursoId = $id; 
     }
 

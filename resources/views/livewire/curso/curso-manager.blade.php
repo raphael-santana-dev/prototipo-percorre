@@ -8,9 +8,11 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Novo Curso
-            </button>
+            @if(feature('curso.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.criar')))
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Novo Curso
+                </button>
+            @endif
         </x-slot>
 
     </x-page-header>
@@ -37,38 +39,47 @@
                     @endif
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap">
-                    <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
-                    <div class="text-[10px] mt-1 font-bold {{ $curso->status ? 'text-green-600' : 'text-gray-500' }}">
-                        {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
-                    </div>
+                    @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))
+                        <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
+                        <div class="text-[10px] mt-1 font-bold {{ $curso->status ? 'text-green-600' : 'text-gray-500' }}">
+                            {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
+                        </div>
+                    @else
+                        {{-- Se a feature estiver desligada OU ele não tiver permissão, vê apenas o emblema --}}
+                        <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $curso->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
+                            {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
+                        </span>
+                    @endif
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <!-- Botão de Quick View -->
-                        <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-lg ph ph-info"></i>
-                        </button>
-                        
-                        <!-- Botão de Full View -->
-                        <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
+                        @if(feature('curso.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.visualizar')))
+                            <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <i class="text-lg ph ph-info"></i>
+                            </button>
+                            
+                            <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
+                        @endif
 
-                        <!-- Editar e Excluir -->
-                        <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                            <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
+
+                        @if(feature('curso.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.excluir')))
+                            <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
                 <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                    <p class="font-semibold">Nenhum formulário encontrado.</p>
-                    <p class="text-xs mt-1">Crie seu primeiro formulário customizado agora mesmo.</p>
+                    <p class="font-semibold">Nenhum curso encontrado.</p>
                 </td>
             </tr>
         @endforelse
@@ -96,23 +107,34 @@
                         @endif
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
+                        
+                        <div>
+                            @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))
+                                <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
+                            @else
+                                <span class="px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border {{ $curso->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
+                                    {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
+                                </span>
+                            @endif
+                        </div>
+
                         <div class="flex items-center gap-1">
-                            <a href="{{ route('formularios.show', $curso->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
-                                <i class="text-lg ph ph-eye"></i>
-                            </a>
-                            <a href="{{ route('formularios.publico', $curso->slug) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors hover:text-blue-500 rounded hover:bg-blue-50 dark:hover:bg-blue-900/50" title="Ver Formulário Público">
-                                <i class="text-lg ph ph-arrow-square-in"></i>
-                            </a>
-                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $curso->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
-                                <i class="text-lg ph ph-list-dashes"></i>
-                            </a>
-                            <button wire:click="abrirModal({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="excluir({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if(feature('curso.visualizar'))
+                                <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes">
+                                    <i class="text-lg ph ph-eye"></i>
+                                </a>
+                            @endif
+                            
+                            @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                                <button wire:click="abrirModal({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+
+                            @if(feature('curso.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.excluir')))
+                                <button wire:click="excluir({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Curso" onclick="confirm('Excluir este curso permanentemente?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>
