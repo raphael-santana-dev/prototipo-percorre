@@ -84,10 +84,10 @@
                 @endphp
                 
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <span class="px-2.5 py-1 text-xs font-mono font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded">#{{ str_pad($resp->id, 5, '0', STR_PAD_LEFT) }}</span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-300">
+                    <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-300">
                         {{ $resp->created_at->format('d/m/Y \à\s H:i') }}
                     </td>
                     
@@ -102,18 +102,18 @@
                                 }
                                 $valStr = empty(trim($valStr)) ? '-' : $valStr;
                             @endphp
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 max-w-[250px] truncate" title="{{ $valStr }}">
+                            <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 max-w-[250px] truncate" title="{{ $valStr }}">
                                 {{ $valStr }}
                             </td>
                         @endforeach
                     @else
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-4 py-2.5 whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
                                 <i class="ph-fill ph-check-circle"></i> Respondido até Etapa {{ $resp->etapa_parada }}
                             </span>
                         </td>
 
-                        <td class="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-10">
+                        <td class="px-4 py-2.5 whitespace-nowrap text-right sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50 transition-colors shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] z-10">
                             @if(feature('formulario.respostas') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.respostas')))
                                 <a href="{{ route('formularios.respostas.show', $resp->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-purpura-600 bg-purpura-50 rounded-lg hover:bg-purpura-100 transition dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50">
                                     <i class="ph-bold ph-file-text text-lg"></i> Ler Completo

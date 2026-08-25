@@ -24,7 +24,7 @@
         @forelse($registros as $av)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-purpura-100 text-purpura-600 flex items-center justify-center font-bold text-xs shrink-0">
                             {{ substr($av->student->name ?? 'A', 0, 1) }}
@@ -36,14 +36,14 @@
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-700 dark:text-gray-300 text-sm">{{ $av->turma->nome ?? 'Turma N/A' }}</div>
                     <div class="text-[11px] text-purpura-600 font-bold mt-0.5 uppercase tracking-wider">
                         Ciclo {{ $av->periodo->ciclo ?? '-' }}
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-medium">
                     Ano Referência: <span class="font-bold text-gray-800 dark:text-gray-200">{{ $av->periodo->ano ?? '-' }}</span>
                 </td>
                 

@@ -38,20 +38,20 @@
         @forelse ($registros as $empresa)
             <tr wire:key="empresa-{{ $empresa->id }}" class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
                     #{{ $empresa->id }}
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $empresa->nome_fantasia ?? $empresa->razao_social }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ $empresa->razao_social }}</div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap font-mono text-sm text-gray-700 dark:text-gray-300">
+                <td class="px-4 py-2.5 whitespace-nowrap font-mono text-sm text-gray-700 dark:text-gray-300">
                     {{ preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', str_pad($empresa->cnpj, 14, '0', STR_PAD_LEFT)) }}
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         @if($empresa->is_active)
                             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
@@ -70,7 +70,7 @@
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-right">
+                <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <a href="{{ route('empresas.show', $empresa->id) }}" class="inline-flex items-center justify-center p-2 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes e Vínculos">
                         <i class="text-xl ph-bold ph-caret-right"></i>
                     </a>

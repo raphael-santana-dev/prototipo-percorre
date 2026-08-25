@@ -26,13 +26,13 @@
         
         @forelse($registros as $regra)
             <tr class="hover:bg-gray-50 transition-colors duration-200">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500">
                     #{{ $regra->id }}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="text-sm font-bold text-gray-900">{{ $regra->nome }}</div>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="px-2.5 py-1 text-[11px] font-bold rounded-md bg-blue-50 text-blue-700 border border-blue-200">
                         <i class="ph-fill ph-lightning text-blue-500 mr-1"></i> {{ $regra->evento_gatilho }}
                     </span>
@@ -48,7 +48,7 @@
                         <span class="text-sm text-red-500 font-medium"><i class="ph ph-warning-circle"></i> Template Excluído</span>
                     @endif
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
                         <button wire:click="toggleStatus({{ $regra->id }})" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purpura-500 {{ $regra->status ? 'bg-green-500' : 'bg-gray-300' }}">
                             <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform {{ $regra->status ? 'translate-x-6' : 'translate-x-1' }}"></span>

@@ -31,20 +31,20 @@
         @forelse($registros as $periodo)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="font-black text-gray-800 dark:text-white text-lg">{{ $periodo->ano }}</span>
                     <span class="text-xs font-bold text-purpura-600 uppercase tracking-wider ml-1">Ciclo {{ $periodo->ciclo }}</span>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap font-mono text-sm text-gray-600 dark:text-gray-400">
+                <td class="px-4 py-2.5 whitespace-nowrap font-mono text-sm text-gray-600 dark:text-gray-400">
                     {{ \Carbon\Carbon::parse($periodo->data_inicio)->format('d/m/Y') }} à {{ \Carbon\Carbon::parse($periodo->data_fim)->format('d/m/Y') }}
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center font-bold text-indigo-600 dark:text-indigo-400">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center font-bold text-indigo-600 dark:text-indigo-400">
                     {{ $periodo->fases_count }} Fase(s)
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     @if($periodo->status === '1')
                         <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-wider border border-green-200 dark:border-green-800">Aberto</span>
                     @else

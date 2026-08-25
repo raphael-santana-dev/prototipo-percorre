@@ -38,10 +38,10 @@
         
         @forelse($registros as $template)
             <tr class="hover:bg-gray-50 transition-colors duration-200">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500">
                     #{{ $template->id }}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="text-sm font-bold text-gray-900">{{ $template->nome }}</div>
                 </td>
                 <td class="px-4 py-3">

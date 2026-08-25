@@ -44,17 +44,17 @@
             
             @forelse($registros as $log)
                 <tr class="hover:bg-gray-50 transition-colors duration-200">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">
+                    <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500">
                         #{{ $log->id }}
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <div class="text-sm font-bold text-gray-900">{{ $log->destinatario }}</div>
                     </td>
                     <td class="px-4 py-3">
                         <div class="text-sm font-bold text-gray-800 truncate max-w-xs" title="{{ $log->assunto }}">{{ $log->assunto }}</div>
                         <div class="text-[10px] uppercase font-bold text-gray-400 mt-0.5"><i class="ph ph-tag"></i> {{ $log->origem }}</div>
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <div class="text-sm text-gray-700">
                             <i class="ph ph-calendar-plus text-gray-400"></i> {{ $log->data_agendamento ? $log->data_agendamento->format('d/m/Y H:i') : 'Imediato' }}
                         </div>
@@ -64,7 +64,7 @@
                             </div>
                         @endif
                     </td>
-                    <td class="px-4 py-3 whitespace-nowrap">
+                    <td class="px-4 py-2.5 whitespace-nowrap">
                         <span class="px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border 
                             {{ $log->status === 'pendente' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : '' }}
                             {{ $log->status === 'enviado' ? 'bg-green-100 text-green-800 border-green-200' : '' }}

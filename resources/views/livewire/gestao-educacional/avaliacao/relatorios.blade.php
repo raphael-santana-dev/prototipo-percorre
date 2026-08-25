@@ -53,25 +53,25 @@
         @forelse($registros as $av)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-900 dark:text-white text-sm">{{ $av->student->name ?? 'Removido' }}</div>
                     <div class="text-[11px] text-gray-500 font-mono">{{ $av->student->cpf ?? '-' }}</div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-700 dark:text-gray-300 text-sm">{{ $av->turma->nome ?? 'N/A' }}</div>
                     <div class="text-[11px] text-purpura-600 font-bold mt-0.5 uppercase tracking-wider">
                         Ano {{ $av->periodo->ano }} - C{{ $av->periodo->ciclo }}
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     <span class="inline-block px-3 py-1 bg-gray-100 border border-gray-200 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 font-black text-sm rounded shadow-sm">
                         {{ $av->mediaParcial }}
                     </span>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     <span class="inline-block px-3 py-1 bg-purpura-50 border border-purpura-100 text-purpura-700 dark:bg-purpura-900/30 dark:border-purpura-800 dark:text-purpura-400 font-black text-sm rounded shadow-sm">
                         {{ $av->mediaFinal }}
                     </span>

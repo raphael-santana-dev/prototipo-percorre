@@ -31,22 +31,22 @@
         @forelse($registros as $matricula)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="font-black text-purpura-600 dark:text-purpura-400 text-md">{{ $matricula->numero_matricula }}</span>
                 </td>
 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-800 dark:text-white text-sm">{{ $matricula->student->name ?? 'Estudante Removido' }}</div>
                     <div class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $matricula->student->cpf ?? '-' }}</div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-700 dark:text-gray-300 text-sm truncate max-w-[250px]" title="{{ $matricula->curso->nome ?? 'N/A' }}">
                         {{ $matricula->curso->nome ?? 'N/A' }}
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     @php
                         $cores = [
                             'ativa' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
