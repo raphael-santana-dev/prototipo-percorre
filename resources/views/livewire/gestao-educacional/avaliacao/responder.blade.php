@@ -176,9 +176,4 @@
             </div>
         </div>
     @endif
-
-    {{-- TOAST --}}
-    <div x-data="{ show: false, msg: '' }" @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);" x-show="show" x-transition class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle"></i> <span x-text="msg"></span>
-    </div>
 </div>

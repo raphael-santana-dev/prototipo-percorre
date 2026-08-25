@@ -13,11 +13,6 @@
         </div>
         
         <div class="p-6 sm:p-8">
-            @if (session()->has('success_profile'))
-                <div class="flex items-center gap-2 p-4 mb-6 rounded-lg text-pistache-700 bg-pistache-100">
-                    <i class="text-lg ph-bold ph-check-circle"></i> {{ session('success_profile') }}
-                </div>
-            @endif
 
             <form wire:submit="updateProfile" class="flex flex-col gap-6 sm:flex-row">
                 <div class="flex flex-col items-center justify-start sm:w-1/4">

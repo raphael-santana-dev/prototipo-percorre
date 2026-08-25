@@ -63,15 +63,4 @@
             </div>
         @endif
     </div>
-
-    {{-- TOAST SYSTEM GLOBAL --}}
-    <div x-data="{ show: false, msg: '', type: 'sucesso' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; type = 'sucesso'; setTimeout(() => show = false, 3500);"
-        @erro.window="show = true; msg = $event.detail.msg; type = 'erro'; setTimeout(() => show = false, 4500);"
-        x-show="show" x-transition
-        :class="type === 'sucesso' ? 'bg-green-600' : 'bg-red-600'"
-        class="fixed bottom-8 right-8 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph" :class="type === 'sucesso' ? 'ph-check-circle' : 'ph-warning-circle'"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>

@@ -1,16 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-
-    @if (session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('success') }}
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-red-100 bg-red-500 font-medium shadow-sm">
-            <i class="ph ph-warning text-lg"></i> {{ session('error') }}
-        </div>
-    @endif
-
     <x-page-header 
         title="Permissões Extras" 
         icon="ph ph-shield-plus"

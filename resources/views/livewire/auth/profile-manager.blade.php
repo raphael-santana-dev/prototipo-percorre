@@ -5,13 +5,6 @@
         <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">Detalhes do Perfil</h1>
     </div>
 
-    @if (session()->has('success_profile') || session()->has('success_password'))
-        <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" class="mb-6 p-4 rounded-xl text-emerald-800 bg-emerald-100 flex items-center gap-3 border border-emerald-200">
-            <i class="text-xl ph-fill ph-check-circle"></i> 
-            <span class="font-medium">{{ session('success_profile') ?? session('success_password') }}</span>
-        </div>
-    @endif
-
     <div class="flex flex-col lg:flex-row gap-8 items-start">
         
         <!-- ========================================== -->

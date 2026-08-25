@@ -159,13 +159,4 @@
         </div>
 
     </div>
-
-    {{-- TOAST PARA A COPIA DE VARIÁVEL --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 2000);"
-        x-show="show" x-transition
-        class="fixed bottom-8 right-8 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl z-[200] flex items-center gap-2 font-bold text-sm" x-cloak>
-        <i class="ph-bold ph-check text-green-400 text-lg"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>
