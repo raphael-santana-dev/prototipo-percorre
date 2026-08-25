@@ -46,9 +46,13 @@
                         @error('email') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                     </div>
                     <div class="flex justify-end pt-2">
-                        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg bg-ponkan-500 hover:bg-ponkan-600 transition-colors shadow-sm">
-                            Atualizar Meus Dados
-                        </button>
+                        @if(feature('estudante.perfil'))
+                            <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg bg-ponkan-500 hover:bg-ponkan-600 transition-colors shadow-sm">
+                                Atualizar Meus Dados
+                            </button>
+                        @else
+                            <span class="text-xs font-bold text-red-500 py-2.5">A edição de perfil está bloqueada pelo sistema.</span>
+                        @endif
                     </div>
                 </div>
             </form>
@@ -88,9 +92,13 @@
                 </div>
                 
                 <div class="flex justify-start pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
-                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg bg-gray-900 hover:bg-gray-800 dark:bg-purpura-600 dark:hover:bg-purpura-500">
-                        Gravar Nova Senha
-                    </button>
+                    @if(feature('estudante.perfil'))
+                        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg bg-gray-900 hover:bg-gray-800 dark:bg-purpura-600 dark:hover:bg-purpura-500">
+                            Gravar Nova Senha
+                        </button>
+                    @else
+                        <span class="text-xs font-bold text-red-500 py-2.5">A edição de senha está bloqueada. Procure a secretaria.</span>
+                    @endif
                 </div>
             </form>
         </div>

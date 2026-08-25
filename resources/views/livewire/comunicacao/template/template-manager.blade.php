@@ -6,11 +6,13 @@
         badge=""
         :breadcrumbs="$breadcrumbs">
 
-        <x-slot name="actions">
-            <a href="{{ route('templates.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
-                <i class="ph ph-plus text-lg"></i> Novo Template
-            </a>
-        </x-slot>
+        @if(feature('template.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('templates.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
+                    <i class="ph ph-plus text-lg"></i> Novo Template
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="flex gap-2">
@@ -47,12 +49,16 @@
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
-                        <a href="{{ route('templates.edit', $template->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </a>
-                        <button wire:click="excluir({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir este template permanentemente?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('template.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.editar')))
+                            <a href="{{ route('templates.edit', $template->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </a>
+                        @endif
+                        @if(feature('template.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.excluir')))
+                            <button wire:click="excluir({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir este template permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>

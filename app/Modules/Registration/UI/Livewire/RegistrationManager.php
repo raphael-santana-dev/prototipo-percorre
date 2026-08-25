@@ -43,7 +43,8 @@ class RegistrationManager extends Component
     
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403);
+        abort_if(!feature('inscricao.listar'), 403, 'O módulo de inscrições está desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.listar'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
 
@@ -167,6 +168,9 @@ class RegistrationManager extends Component
 
     public function salvarStatusEmLote()
     {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
         
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -202,6 +206,9 @@ class RegistrationManager extends Component
 
     public function alterarStatusLoteRapido($statusId)
     {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+
         if (count($this->selecionadas) === 0) return;
         
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -234,7 +241,8 @@ class RegistrationManager extends Component
     // ==========================================
     public function recalcularScoresGlobais()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
         $atualizados = 0;
         
@@ -374,7 +382,8 @@ class RegistrationManager extends Component
 
     public function gerarRankingGlobal()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         // Pega APENAS os ciclos ATIVOS
         $ciclos = \App\Models\Ciclo::where('status', true)

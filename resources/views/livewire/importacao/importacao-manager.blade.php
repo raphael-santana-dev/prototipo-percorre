@@ -102,57 +102,64 @@
             </div>
         </x-slot>
 
+       
         <x-slot name="actions">
             
             {{-- EXPORTAR --}}
-            <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
-                <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                    <i class="text-lg ph ph-export"></i> Exportar Dados <i class="ph ph-caret-down"></i>
-                </button>
-                <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
-                    <div class="py-1">
-                        <button wire:click="solicitarExportacao('inscricoes', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
-                            Base de Dados de Inscrições
-                        </button>
-                        <button wire:click="solicitarExportacao('usuarios', 'csv')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
-                            Lista de Usuários Internos
-                        </button>
-                        <button wire:click="solicitarExportacao('campos', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
-                            Estrutura de Formulários
-                        </button>
+            @if(feature('importacao.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.exportar')))
+                <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
+                    <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
+                        <i class="text-lg ph ph-export"></i> Exportar Dados <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
+                        <div class="py-1">
+                            <button wire:click="solicitarExportacao('inscricoes', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
+                                Base de Dados de Inscrições
+                            </button>
+                            <button wire:click="solicitarExportacao('usuarios', 'csv')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
+                                Lista de Usuários Internos
+                            </button>
+                            <button wire:click="solicitarExportacao('campos', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
+                                Estrutura de Formulários
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
 
-            {{-- TEMPLATES AGORA COM AS 5 OPÇÕES --}}
-            <div x-data="{ openTemplate: false }" class="relative inline-block text-left mr-2">
-                <button @click="openTemplate = !openTemplate" @click.away="openTemplate = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                    <i class="text-lg ph ph-download-simple"></i> Planilhas Modelo <i class="ph ph-caret-down"></i>
-                </button>
-                <div x-show="openTemplate" x-cloak class="absolute right-0 w-64 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
-                    <div class="py-1">
-                        <button wire:click="baixarTemplate('inscricoes')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Inscrições
-                        </button>
-                        <button wire:click="baixarTemplate('usuarios')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Usuários Internos
-                        </button>
-                        <button wire:click="baixarTemplate('campos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Blocos de Formulário
-                        </button>
-                        <button wire:click="baixarTemplate('unidades')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Sedes / Unidades
-                        </button>
-                        <button wire:click="baixarTemplate('cursos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                            <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Cursos Ativos
-                        </button>
+
+            {{-- IMPORTAR / TEMPLATES --}}
+            @if(feature('importacao.acessar') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.acessar')))
+                <div x-data="{ openTemplate: false }" class="relative inline-block text-left mr-2">
+                    <button @click="openTemplate = !openTemplate" @click.away="openTemplate = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
+                        <i class="text-lg ph ph-download-simple"></i> Planilhas Modelo <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div x-show="openTemplate" x-cloak class="absolute right-0 w-64 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
+                        <div class="py-1">
+                            <button wire:click="baixarTemplate('inscricoes')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Inscrições
+                            </button>
+                            <button wire:click="baixarTemplate('usuarios')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Usuários Internos
+                            </button>
+                            <button wire:click="baixarTemplate('campos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Blocos de Formulário
+                            </button>
+                            <button wire:click="baixarTemplate('unidades')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Sedes / Unidades
+                            </button>
+                            <button wire:click="baixarTemplate('cursos')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
+                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Cursos Ativos
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            
 
-            <button wire:click="abrirModalUpload" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
-                <i class="ph ph-upload-simple text-lg"></i> Nova Importação
-            </button>
+                <button wire:click="abrirModalUpload" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
+                    <i class="ph ph-upload-simple text-lg"></i> Nova Importação
+                </button>
+            @endif
         </x-slot>
 
     </x-page-header>

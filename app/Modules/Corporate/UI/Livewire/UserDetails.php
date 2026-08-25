@@ -15,7 +15,8 @@ class UserDetails extends Component
 
     public function mount(int $id)
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403);
+        abort_if(!feature('usuario.visualizar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.visualizar'), 403);
         $this->user = User::with(['roles', 'permissions', 'unidades'])->findOrFail($id);
     }
 

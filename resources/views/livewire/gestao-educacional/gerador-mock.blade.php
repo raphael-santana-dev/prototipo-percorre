@@ -25,10 +25,14 @@
                     @error('quantidadeInjecao') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
                 </div>
 
-                <button wire:click="gerarAmbienteCompleto" wire:loading.attr="disabled" class="w-full py-3.5 bg-ponkan-500 hover:bg-ponkan-600 text-white font-black rounded-lg shadow-sm transition flex items-center justify-center gap-2">
-                    <span wire:loading.remove><i class="ph-bold ph-rocket-launch text-lg"></i> Injetar Dados Fictícios</span>
-                    <span wire:loading><i class="ph ph-spinner animate-spin text-lg"></i> Processando BD...</span>
-                </button>
+                @if(feature('ferramenta.mock') && (auth()->user()->hasRole('dev') || auth()->user()->can('ferramenta.mock')))
+                    <button wire:click="gerarAmbienteCompleto" wire:loading.attr="disabled" class="w-full py-3.5 bg-ponkan-500 hover:bg-ponkan-600 text-white font-black rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                        <span wire:loading.remove><i class="ph-bold ph-rocket-launch text-lg"></i> Injetar Dados Fictícios</span>
+                        <span wire:loading><i class="ph ph-spinner animate-spin text-lg"></i> Processando BD...</span>
+                    </button>
+                @else
+                    <div class="p-4 bg-red-50 text-red-600 rounded-lg">Acesso negado para gerar dados.</div>
+                @endif
             </div>
         @else
             <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 p-6 rounded-xl text-left max-w-3xl mx-auto">

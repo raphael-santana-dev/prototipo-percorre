@@ -29,6 +29,9 @@ class PeriodEdit extends Component
 
     public function mount($id)
     {
+        abort_if(!feature('ciclo.editar'), 403, 'Edição de ciclos desativada.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+
         $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos', 'statusPipeline'])->findOrFail($id);
         
         $this->cicloId = $ciclo->id;
@@ -105,6 +108,9 @@ class PeriodEdit extends Component
     // --- SALVAMENTO ---
     public function salvar()
     {
+        abort_if(!feature('ciclo.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        
         $this->validate([
             'nome' => 'nullable|string|max:255',
             'ano' => 'required|integer',

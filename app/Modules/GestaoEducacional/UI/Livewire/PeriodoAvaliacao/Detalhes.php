@@ -21,6 +21,9 @@ class Detalhes extends Component
     public function mount($id = null)
     {
         if ($id) {
+            abort_if(!feature('periodo_avaliacao.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.editar'), 403);
+
             $periodo = PeriodoAvaliacao::with('fases', 'criterios')->findOrFail($id);
             
             $this->periodoId = $periodo->id;
@@ -38,8 +41,10 @@ class Detalhes extends Component
 
             // Verifica se já existem avaliações. Se sim, bloqueia alterar critérios e fases.
             $this->avaliacoesGeradas = AlunoAvaliacao::where('periodo_id', $this->periodoId)->exists();
-
         } else {
+            abort_if(!feature('periodo_avaliacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.criar'), 403);
+
             $this->calcularProximoCiclo();
             $this->fases = [['fase' => '1', 'responsavel' => '1']]; 
         }
@@ -87,6 +92,14 @@ class Detalhes extends Component
 
     public function salvar()
     {
+        if ($this->periodoId) {
+            abort_if(!feature('periodo_avaliacao.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.editar'), 403);
+        } else {
+            abort_if(!feature('periodo_avaliacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.criar'), 403);
+        }
+        
         $this->validate([
             'data_inicio' => 'required|date',
             'data_fim' => 'required|date|after:data_inicio',

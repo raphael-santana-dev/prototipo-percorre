@@ -1,15 +1,15 @@
 <div class="p-6 max-w-4xl mx-auto font-sans relative">
     
-    <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
-        <div>
-            <a href="{{ route('automacoes.index') }}" class="text-purpura-600 hover:text-purpura-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para Regras
+    <x-page-header 
+        title="{{ $automacaoId ? 'Editar Gatilho de Automação' : 'Configurar Gatilho de Automação' }}" 
+        icon="ph ph-lightning"
+        badge="">
+        <x-slot name="actions">
+            <a href="{{ route('automacoes.index') }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
+                <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
-            <h2 class="text-2xl font-bold text-gray-900 mt-1">
-                {{ $automacaoId ? 'Editar Gatilho de Automação' : 'Configurar Gatilho de Automação' }}
-            </h2>
-        </div>
-    </div>
+        </x-slot>
+    </x-page-header>
 
     <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
         <form wire:submit.prevent="salvar" class="space-y-6">
@@ -60,9 +60,11 @@
 
             <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
                 <a href="{{ route('automacoes.index') }}" class="px-5 py-2.5 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancelar</a>
-                <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
-                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Automação
-                </button>
+                @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Automação
+                    </button>
+                @endif
             </div>
         </form>
     </div>

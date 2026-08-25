@@ -48,13 +48,14 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                    {{-- A Rota será criada na Etapa 4, por enquanto deixamos o link preparado --}}
-                    <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" 
-                       wire:navigate
-                       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 text-xs font-bold rounded-lg transition shadow-sm border border-indigo-200 dark:border-indigo-800">
-                        <i class="ph-bold ph-pencil-simple text-sm"></i>
-                        Acessar Matriz
-                    </a>
+                    @if(feature('avaliacao.responder'))
+                        <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" 
+                        wire:navigate
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 text-xs font-bold rounded-lg transition shadow-sm border border-indigo-200 dark:border-indigo-800">
+                            <i class="ph-bold ph-pencil-simple text-sm"></i>
+                            Acessar Matriz
+                        </a>
+                    @endif
                 </td>
             </tr>
         @empty

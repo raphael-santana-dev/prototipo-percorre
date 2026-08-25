@@ -7,11 +7,13 @@
         :breadcrumbs="$breadcrumbs"
         :metricas="$metricas">
         
-        <x-slot name="actions">
-            <a href="{{ route('automacoes.edit', $automacao->id) }}" class="flex items-center gap-2 px-4 py-2 text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 font-bold text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
-                <i class="ph ph-pencil-simple text-lg"></i> Editar Regra
-            </a>
-        </x-slot>
+        @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
+            <x-slot name="actions">
+                <a href="{{ route('automacoes.edit', $automacao->id) }}" class="flex items-center gap-2 px-4 py-2 text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 font-bold text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <i class="ph ph-pencil-simple text-lg"></i> Editar Regra
+                </a>
+            </x-slot>
+        @endif
 
         <!-- Filtros do Histórico -->
         <x-slot name="filters">

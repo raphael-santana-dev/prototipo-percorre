@@ -1,14 +1,15 @@
 <div class="p-6 max-w-[900px] mx-auto font-sans relative">
     
-    <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
-        <div>
-            <a href="{{ route('comunicados.index') }}" class="text-purpura-600 hover:text-purpura-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para Histórico
+    <x-page-header 
+        title="Configurar Disparo de E-mail" 
+        icon="ph ph-paper-plane-tilt"
+        badge="">
+        <x-slot name="actions">
+            <a href="{{ route('comunicados.index') }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
+                <i class="ph-bold ph-arrow-left"></i> Voltar para Histórico
             </a>
-            <h2 class="text-2xl font-bold text-gray-900 mt-1">Configurar Disparo de E-mail</h2>
-            <p class="text-xs text-gray-500 mt-1">Selecione o template e defina os destinatários e regras de envio.</p>
-        </div>
-    </div>
+        </x-slot>
+    </x-page-header>
 
     <!-- Script Alpine de Tags de Email -->
     <script>
@@ -240,14 +241,16 @@
             <div class="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-100">
                 <a href="{{ route('comunicados.index') }}" class="px-5 py-2.5 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancelar</a>
                 
-                @if($tipo_envio === 'agendado')
-                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-gray-800 hover:bg-gray-900 transition flex items-center gap-2">
-                        <i class="ph-bold ph-calendar-plus text-lg"></i> Agendar Envio
-                    </button>
-                @else
-                    <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-green-600 hover:bg-green-700 transition flex items-center gap-2">
-                        <i class="ph-bold ph-paper-plane-tilt text-lg"></i> Salvar e Enviar Agora
-                    </button>
+                @if(feature('comunicado.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('comunicado.criar')))
+                    @if($tipo_envio === 'agendado')
+                        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-gray-800 hover:bg-gray-900 transition flex items-center gap-2">
+                            <i class="ph-bold ph-calendar-plus text-lg"></i> Agendar Envio
+                        </button>
+                    @else
+                        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-green-600 hover:bg-green-700 transition flex items-center gap-2">
+                            <i class="ph-bold ph-paper-plane-tilt text-lg"></i> Salvar e Enviar Agora
+                        </button>
+                    @endif
                 @endif
             </div>
         </form>

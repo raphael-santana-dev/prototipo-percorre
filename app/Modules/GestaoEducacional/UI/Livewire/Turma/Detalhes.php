@@ -20,6 +20,14 @@ class Detalhes extends Component
 
     public function mount($id = null)
     {
+        if ($id) {
+            abort_if(!feature('turma.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
+        } else {
+            abort_if(!feature('turma.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
+        }
+
         // Carrega dependências estruturais do banco de dados direto das tabelas base
         $this->ciclos = DB::table('ciclos')->select('id', 'nome', 'ano', 'semestre')->orderBy('ano', 'desc')->get();
         $this->cursos = DB::table('cursos')->select('id', 'nome')->where('status', 'Ativo')->orderBy('nome')->get();
@@ -47,6 +55,14 @@ class Detalhes extends Component
 
     public function salvar()
     {
+        if ($this->turmaId) {
+            abort_if(!feature('turma.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
+        } else {
+            abort_if(!feature('turma.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
+        }
+        
         $this->validate([
             'nome' => 'required|string|max:255',
             'ano' => 'required|digits:4',

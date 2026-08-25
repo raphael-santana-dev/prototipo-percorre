@@ -66,7 +66,9 @@ class ImportacaoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Você não possui permissão para gerenciar importações.');
+        abort_if(!feature('importacao.acessar'), 403, 'Módulo de integrações desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403, 'Acesso restrito.');
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
     }
@@ -257,6 +259,8 @@ class ImportacaoManager extends Component
 
     public function excluirImportacao($id)
     {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+        
         $importacao = Importacao::findOrFail($id);
         if ($importacao->arquivo_caminho) Storage::disk('local')->delete($importacao->arquivo_caminho);
         if ($importacao->arquivo_gerado_caminho) Storage::disk('local')->delete($importacao->arquivo_gerado_caminho);
@@ -274,6 +278,9 @@ class ImportacaoManager extends Component
 
     public function solicitarExportacao($tipoDado, $formato = 'xlsx')
     {
+        abort_if(!feature('importacao.exportar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
+
         $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
             $this->dispatch('sucesso', msg: 'Sua fila está cheia. Aguarde as gerações atuais terminarem.');

@@ -16,10 +16,11 @@ class ResponseDetails extends Component
     public RespostaFormulario $resposta;
     public Formulario $formulario;
 
-    // REMOVEMOS A VARIÁVEL PUBLIC $camposPorEtapa DAQUI
-
     public function mount($id)
     {
+        abort_if(!feature('formulario.respostas'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
+
         $this->resposta = RespostaFormulario::findOrFail($id);
         $this->formulario = Formulario::findOrFail($this->resposta->formulario_id);
     }

@@ -16,14 +16,10 @@ class UnidadeDetalhes extends Component
 
     public function mount(int $id, UnidadeService $service)
     {
-        // Trava de segurança original mantida
-        // abort_if(!auth()->user()->can('unidade.listar'), 403);
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('unidade.visualizar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
         
-        // Busca a unidade passando pelo Service (DDD)
         $this->unidade = $service->buscarPorId($id);
-        
-        // Carrega as relações (Eager Loading) para a View (Quick View e Detalhes)
         $this->unidade->load(['cursos']);
     }
 

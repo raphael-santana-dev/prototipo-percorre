@@ -54,9 +54,11 @@
                 <a href="{{ route('roles.index') }}" class="px-5 py-2.5 text-sm font-bold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
                     Cancelar
                 </a>
-                <button type="submit" class="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
-                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Permissões
-                </button>
+                @if(feature('acl.role.permissoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.permissoes')))
+                    <button type="submit" class="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Permissões
+                    </button>
+                @endif
             </div>
         </form>
     </div>

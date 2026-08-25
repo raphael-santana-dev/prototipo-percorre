@@ -18,6 +18,12 @@ class Relatorios extends Component
     public $periodoFiltro = '';
     public $turmaFiltro = '';
 
+    public function mount()
+    {
+        abort_if(!feature('relatorio.acessar'), 403, 'Relatórios desativados.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('relatorio.acessar'), 403);
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -63,6 +69,9 @@ class Relatorios extends Component
 
     public function exportarCSV()
     {
+        abort_if(!feature('relatorio.exportar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('relatorio.exportar'), 403);
+        
         $registros = $this->getQueryBase()->get();
         $csvFileName = 'relatorio_avaliacoes_' . date('Ymd_His') . '.csv';
 

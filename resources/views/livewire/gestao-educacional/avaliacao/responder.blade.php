@@ -123,10 +123,12 @@
 
             @if($podeEditarGeral)
                 <div class="p-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                    <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-lg"></i>
-                        Salvar Respostas
-                    </button>
+                    @if(feature('avaliacao.responder'))
+                        <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
+                            <i class="ph-bold ph-floppy-disk text-lg"></i>
+                            Salvar Respostas
+                        </button>
+                    @endif
                 </div>
             @endif
         </div>

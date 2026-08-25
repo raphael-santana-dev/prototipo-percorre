@@ -46,9 +46,8 @@ class UnidadeManager extends Component
 
     public function mount() 
     { 
-        // Mantivemos a sua trava de segurança original
-        // abort_if(!auth()->user()->can('unidade.listar'), 403); 
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('unidade.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.listar'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
 
@@ -57,12 +56,22 @@ class UnidadeManager extends Component
 
     public function openModal() 
     {
+        abort_if(!feature('unidade.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.criar'), 403);
         $this->resetInputFields();
         $this->showModal = true;
     }
 
     public function save(UnidadeService $service) 
     {
+        if ($this->isEditMode) {
+            abort_if(!feature('unidade.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.editar'), 403);
+        } else {
+            abort_if(!feature('unidade.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.criar'), 403);
+        }
+
         $this->validate([
             'nome' => 'required|string|max:255',
             'cep' => 'required|string|max:10',
@@ -112,6 +121,9 @@ class UnidadeManager extends Component
 
     public function edit(UnidadeService $service, int $id) 
     {
+        abort_if(!feature('unidade.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.editar'), 403);
+
         $this->resetInputFields();
         $unidade = $service->buscarPorId($id);
         $unidade->load('cursos'); 
@@ -139,6 +151,9 @@ class UnidadeManager extends Component
 
     public function delete(UnidadeService $service, int $id)
     {
+        abort_if(!feature('unidade.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.excluir'), 403);
+
         $service->deletarUnidade($id);
         $this->dispatch('sucesso', msg: 'Unidade movida para a lixeira.');
     }
@@ -152,6 +167,9 @@ class UnidadeManager extends Component
 
     public function showQuickView(UnidadeService $service, int $id)
     {
+        abort_if(!feature('unidade.visualizar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
+        
         $unidade = $service->buscarPorId($id);
         $unidade->load('cursos'); // Carrega a quantidade de cursos
 
@@ -184,7 +202,8 @@ class UnidadeManager extends Component
 
     public function toggleStatus($id)
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('unidade.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.editar'), 403);
         
         $unidade = \App\Modules\Unidade\Domain\Models\Unidade::findOrFail($id);
         

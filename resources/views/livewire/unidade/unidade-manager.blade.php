@@ -6,11 +6,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Nova Unidade
-            </button>
-        </x-slot>
+        @if(feature('unidade.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.criar')))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Nova Unidade
+                </button>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -51,21 +53,27 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-lg ph ph-info"></i>
-                        </button>
-                        
-                        <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
+                        @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
+                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <i class="text-lg ph ph-info"></i>
+                            </button>
+                            
+                            <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
+                        @endif
 
-                        <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
+                        @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
+                            <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
 
-                        <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('unidade.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.excluir')))
+                            <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -94,25 +102,35 @@
 
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div>
-                            <x-toggle :status="$unidade->status === 'Ativa'" action="toggleStatus({{ $unidade->id }})" />
-                            <div class="text-[10px] mt-1 font-bold {{ $unidade->status === 'Ativa' ? 'text-green-600' : 'text-gray-500' }}">
-                                {{ $unidade->status === 'Ativa' ? 'ATIVA' : 'INATIVA' }}
-                            </div>
+                            @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
+                                <x-toggle :status="$unidade->status === 'Ativa'" action="toggleStatus({{ $unidade->id }})" />
+                                <div class="text-[10px] mt-1 font-bold {{ $unidade->status === 'Ativa' ? 'text-green-600' : 'text-gray-500' }}">
+                                    {{ $unidade->status === 'Ativa' ? 'ATIVA' : 'INATIVA' }}
+                                </div>
+                            @endif
                         </div>
                         
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                                <i class="text-lg ph ph-info"></i>
-                            </button>
-                            <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
-                                <i class="text-lg ph ph-eye"></i>
-                            </a>
-                            <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()" title="Excluir">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
+                                <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                    <i class="text-lg ph ph-info"></i>
+                                </button>
+                                <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                    <i class="text-lg ph ph-eye"></i>
+                                </a>
+                            @endif
+
+                            @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
+                                <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+
+                            @if(feature('unidade.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.excluir')))
+                                <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()" title="Excluir">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>

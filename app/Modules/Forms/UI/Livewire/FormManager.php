@@ -28,11 +28,22 @@ class FormManager extends Component
     public array $breadcrumbs = [];
 
     public function mount() {
+        abort_if(!feature('formulario.listar'), 403, 'Módulo de formulários desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.listar'), 403, 'Acesso restrito.');
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
 
     public function abrirModal($id = null) {
+        if ($id) {
+            abort_if(!feature('formulario.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.editar'), 403);
+        } else {
+            abort_if(!feature('formulario.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
+        }
+
         $this->resetValidation();
         $this->reset(['formId', 'titulo', 'descricao']);
         if ($id) {
@@ -46,6 +57,14 @@ class FormManager extends Component
     }
 
     public function salvar() {
+        if ($this->formId) {
+            abort_if(!feature('formulario.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.editar'), 403);
+        } else {
+            abort_if(!feature('formulario.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
+        }
+
         $this->validate(['titulo' => 'required|min:3']);
 
         Formulario::updateOrCreate(
@@ -63,8 +82,17 @@ class FormManager extends Component
     }
 
     public function excluir($id) {
+        abort_if(!feature('formulario.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.excluir'), 403);
+
         Formulario::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Formulário excluído.');
+    }
+
+    public function toggleStatus($id) {
+        abort_if(!feature('formulario.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.editar'), 403);
+        $this->traitToggleStatus($id);
     }
 
     public function getHeadersProperty() {

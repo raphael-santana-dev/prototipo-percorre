@@ -33,14 +33,16 @@
         }
     </style>
 
-    <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
-        <div>
-            <a href="{{ route('templates.index') }}" class="text-purpura-600 hover:text-purpura-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para Listagem
+   <x-page-header 
+        title="{{ $templateId ? 'Editar' : 'Criar Novo' }} Template de E-mail" 
+        icon="ph ph-layout"
+        badge="">
+        <x-slot name="actions">
+            <a href="{{ route('templates.index') }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
+                <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
-            <h2 class="text-2xl font-bold text-gray-900 mt-1">{{ $templateId ? 'Editar' : 'Criar Novo' }} Template de E-mail</h2>
-        </div>
-    </div>
+        </x-slot>
+    </x-page-header>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
@@ -105,9 +107,11 @@
 
                     <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
                         <a href="{{ route('templates.index') }}" class="px-5 py-2.5 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancelar</a>
-                        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
-                            <i class="ph-bold ph-floppy-disk text-lg"></i> {{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}
-                        </button>
+                        @if(feature('template.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.editar')))
+                            <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
+                                <i class="ph-bold ph-floppy-disk text-lg"></i> {{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}
+                            </button>
+                        @endif
                     </div>
                 </form>
             </div>

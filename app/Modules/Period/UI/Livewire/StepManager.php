@@ -33,7 +33,9 @@ class StepManager extends Component
 
     public function mount() 
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('etapa.listar'), 403, 'Módulo de etapas desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.listar'), 403, 'Acesso restrito.');
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
@@ -46,6 +48,9 @@ class StepManager extends Component
 
     public function openModal()
     {
+        abort_if(!feature('etapa.criar'), 403, 'Criação de etapas desativada.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.criar'), 403, 'Acesso restrito.');
+
         $this->resetInputFields();
         
         // Busca o maior número de etapa já cadastrado
@@ -70,6 +75,14 @@ class StepManager extends Component
 
     public function save()
     {
+        if ($this->isEditMode) {
+            abort_if(!feature('etapa.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.editar'), 403);
+        } else {
+            abort_if(!feature('etapa.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.criar'), 403);
+        }
+
         $this->validate([
             'nome' => 'required|string|max:255',
             'numero' => 'required|integer|min:1',
@@ -98,6 +111,9 @@ class StepManager extends Component
 
     public function delete(int $id)
     {
+        abort_if(!feature('etapa.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.excluir'), 403);
+
         $step = Etapa::findOrFail($id);
 
         // Bloqueio de segurança
@@ -122,6 +138,9 @@ class StepManager extends Component
 
     public function edit(int $id)
     {
+        abort_if(!feature('etapa.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('etapa.editar'), 403);
+        
         $this->resetInputFields();
         $step = Etapa::findOrFail($id);
 

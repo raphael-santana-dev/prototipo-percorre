@@ -4,12 +4,14 @@
         title="Gestão de Matrículas" 
         icon="ph ph-identification-card"
         badge="Secretaria">
-        
-        <x-slot name="actions">
-            <a href="{{ route('matriculas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-plus text-lg"></i> Nova Matrícula
-            </a>
-        </x-slot>
+
+        @if(feature('matricula.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('matriculas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-plus text-lg"></i> Nova Matrícula
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="w-full md:w-1/3 relative">
@@ -60,12 +62,16 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
-                    <a href="{{ route('matriculas.edit', $matricula->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Matrícula">
-                        <i class="text-xl ph ph-pencil-simple"></i>
-                    </a>
-                    <button wire:click="excluir({{ $matricula->id }})" wire:confirm="Isso apagará a matrícula deste aluno. Deseja continuar?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                    @if(feature('matricula.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.editar')))
+                        <a href="{{ route('matriculas.edit', $matricula->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Matrícula">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </a>
+                    @endif
+                    @if(feature('matricula.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.excluir')))
+                        <button wire:click="excluir({{ $matricula->id }})" wire:confirm="Isso apagará a matrícula deste aluno. Deseja continuar?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    @endif
                 </td>
             </tr>
         @empty

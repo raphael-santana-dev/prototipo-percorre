@@ -33,6 +33,9 @@ class ComunicadoManager extends Component
 
     public function mount()
     {
+        abort_if(!feature('comunicado.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.listar'), 403);
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = false;
     }
@@ -51,6 +54,9 @@ class ComunicadoManager extends Component
 
     public function excluir($id)
     {
+        abort_if(!feature('comunicado.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.excluir'), 403);
+        
         $comunicado = Comunicado::findOrFail($id);
         
         // Impede excluir se estiver no meio do envio

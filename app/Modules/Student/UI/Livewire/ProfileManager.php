@@ -33,6 +33,7 @@ class ProfileManager extends Component
 
     public function updateProfile()
     {
+        abort_if(!feature('estudante.perfil'), 403, 'A edição de dados está temporariamente suspensa.');
         $student = auth('student')->user();
 
         $this->validate([
@@ -52,6 +53,8 @@ class ProfileManager extends Component
 
     public function updatePassword()
     {
+        abort_if(!feature('estudante.perfil'), 403, 'A alteração de senha está temporariamente suspensa.');
+        
         $this->validate([
             'current_password' => ['required', 'string'],
             'new_password' => ['required', 'string', 'min:6', 'confirmed'],

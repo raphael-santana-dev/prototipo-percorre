@@ -35,19 +35,26 @@ class StatusManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('status.listar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.listar'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
     {
+        abort_if(!feature('status.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+
         $this->resetInputFields();
         $this->showModal = true;
     }
 
     public function edit(int $id)
     {
+        abort_if(!feature('status.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+
         $this->resetInputFields();
         $status = StatusInscricao::findOrFail($id);
         
@@ -61,13 +68,13 @@ class StatusManager extends Component
 
     public function save()
     {
-        // $this->validate([
-        //     'nome' => 'required|string|max:255|unique:status_inscricoes,nome,' . $this->statusId,
-        //     'descricao' => 'nullable|string|max:500',
-        // ], [
-        //     'nome.required' => 'O nome do status é obrigatório.',
-        //     'nome.unique' => 'Este status já está cadastrado.',
-        // ]);
+        if ($this->isEditMode) {
+            abort_if(!feature('status.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+        } else {
+            abort_if(!feature('status.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+        }
 
         $data = [
             'nome' => $this->nome,
@@ -89,6 +96,9 @@ class StatusManager extends Component
 
     public function delete(int $id)
     {
+        abort_if(!feature('status.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
+
         StatusInscricao::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Status excluído com sucesso!');
     }

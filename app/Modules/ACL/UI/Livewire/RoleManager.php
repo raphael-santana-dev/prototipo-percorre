@@ -29,13 +29,17 @@ class RoleManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403);
+        abort_if(!feature('acl.role.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.listar'), 403, 'Acesso restrito.');
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
 
     public function openModal()
     {
+        abort_if(!feature('acl.role.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.criar'), 403);
+
         $this->resetInputFields();
         $this->items = [['name' => '']];
         $this->showModal = true;
@@ -54,6 +58,9 @@ class RoleManager extends Component
 
     public function edit(int $id)
     {
+        abort_if(!feature('acl.role.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.editar'), 403);
+
         $this->resetInputFields();
         $role = Role::findOrFail($id);
         
@@ -71,6 +78,14 @@ class RoleManager extends Component
 
     public function save()
     {
+        if ($this->isEditMode) {
+            abort_if(!feature('acl.role.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.editar'), 403);
+        } else {
+            abort_if(!feature('acl.role.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.criar'), 403);
+        }
+
         $this->validate([
             'items.*.name' => 'required|string|min:3|max:255',
         ], [
@@ -104,6 +119,9 @@ class RoleManager extends Component
 
     public function delete(int $id)
     {
+        abort_if(!feature('acl.role.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.excluir'), 403);
+        
         $role = Role::findOrFail($id);
         
         if (in_array($role->name, ['dev', 'admin'])) {

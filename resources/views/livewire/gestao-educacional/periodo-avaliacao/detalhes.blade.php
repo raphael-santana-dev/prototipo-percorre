@@ -144,9 +144,11 @@
         </div>
 
         <div class="flex justify-end pt-4">
-            <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Configuração
-            </button>
+            @if(feature('periodo_avaliacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.editar')))
+                <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Configuração
+                </button>
+            @endif
         </div>
     </form>
 </div>

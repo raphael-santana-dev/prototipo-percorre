@@ -24,8 +24,17 @@ class GeradorMock extends Component
     public $quantidadeInjecao = 1; // Input do usuário
     public $alunosGerados = []; // Guarda as credenciais geradas no loop
 
+    public function mount()
+    {
+        abort_if(!feature('ferramenta.mock'), 403, 'Gerador desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ferramenta.mock'), 403, 'Acesso exclusivo para desenvolvimento.');
+    }
+
     public function gerarAmbienteCompleto()
     {
+        abort_if(!feature('ferramenta.mock'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ferramenta.mock'), 403);
+        
         $this->validate([
             'quantidadeInjecao' => 'required|integer|min:1|max:100'
         ]);

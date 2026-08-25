@@ -15,9 +15,9 @@ class StudentDetails extends Component
 
     public function mount(int $id)
     {
-        abort_if(!auth()->user()->can('estudante.listar'), 403);
+        abort_if(!feature('estudante.visualizar'), 403, 'Acesso às fichas desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.visualizar'), 403);
         
-        // Filtramos para garantir que ele não acesse via URL um aluno de outra unidade
         $this->student = Student::with('unidade')->apenasVinculosPermitidos()->findOrFail($id);
     }
 

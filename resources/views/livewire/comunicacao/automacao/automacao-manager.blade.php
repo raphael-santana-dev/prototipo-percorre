@@ -6,11 +6,13 @@
         badge=""
         :breadcrumbs="$breadcrumbs">
 
-        <x-slot name="actions">
-            <a href="{{ route('automacoes.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold text-sm">
-                <i class="ph ph-plus text-lg"></i> Nova Regra
-            </a>
-        </x-slot>
+        @if(feature('automacao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('automacoes.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold text-sm">
+                    <i class="ph ph-plus text-lg"></i> Nova Regra
+                </a>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -47,22 +49,31 @@
                     @endif
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap">
-                    <!-- Toggle de Status Customizado -->
-                    <button wire:click="toggleStatus({{ $regra->id }})" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purpura-500 {{ $regra->status ? 'bg-green-500' : 'bg-gray-300' }}">
-                        <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform {{ $regra->status ? 'translate-x-6' : 'translate-x-1' }}"></span>
-                    </button>
+                    @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
+                        <button wire:click="toggleStatus({{ $regra->id }})" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purpura-500 {{ $regra->status ? 'bg-green-500' : 'bg-gray-300' }}">
+                            <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform {{ $regra->status ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                        </button>
+                    @else
+                        <span class="w-2 h-2 rounded-full {{ $regra->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                    @endif
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
-                        <a href="{{ route('automacoes.show', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50" title="Ver Histórico de Disparos">
-                            <i class="text-lg ph ph-chart-line-up"></i>
-                        </a>
-                        <a href="{{ route('automacoes.edit', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar Regra">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </a>
-                        <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra de automação permanentemente?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('automacao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.visualizar')))
+                            <a href="{{ route('automacoes.show', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50" title="Ver Histórico de Disparos">
+                                <i class="text-lg ph ph-chart-line-up"></i>
+                            </a>
+                        @endif
+                        @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
+                            <a href="{{ route('automacoes.edit', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar Regra">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </a>
+                        @endif
+                        @if(feature('automacao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.excluir')))
+                            <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra de automação permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>

@@ -13,6 +13,13 @@ class Listagem extends Component
 
     public $busca = '';
 
+    public function mount()
+    {
+        abort_if(!feature('turma.listar'), 403, 'Módulo de turmas desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.listar'), 403, 'Acesso restrito.');
+        $this->permiteGrid = false;
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -28,6 +35,9 @@ class Listagem extends Component
 
     public function excluir($id)
     {
+        abort_if(!feature('turma.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.excluir'), 403);
+        
         $turma = Turma::withCount('matriculas')->findOrFail($id);
         
         if ($turma->matriculas_count > 0) {

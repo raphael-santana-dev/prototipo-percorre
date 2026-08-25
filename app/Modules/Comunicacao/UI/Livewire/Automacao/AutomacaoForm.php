@@ -28,17 +28,31 @@ class AutomacaoForm extends Component
     public function mount($id = null)
     {
         if ($id) {
+            abort_if(!feature('automacao.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+
             $automacao = Automacao::findOrFail($id);
             $this->automacaoId = $automacao->id;
             $this->nome = $automacao->nome;
             $this->evento_gatilho = $automacao->evento_gatilho;
             $this->template_id = $automacao->template_id;
             $this->status = $automacao->status;
+        } else {
+            abort_if(!feature('automacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
     }
 
     public function salvar()
     {
+        if ($this->automacaoId) {
+            abort_if(!feature('automacao.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+        } else {
+            abort_if(!feature('automacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
+        }
+        
         $this->validate([
             'nome' => 'required|string|max:255',
             'evento_gatilho' => 'required|string',

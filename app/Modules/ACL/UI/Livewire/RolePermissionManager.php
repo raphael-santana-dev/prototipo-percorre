@@ -20,7 +20,8 @@ class RolePermissionManager extends Component
 
     public function mount(int $roleId)
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso restrito.');
+        abort_if(!feature('acl.role.permissoes'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
 
         $role = Role::findOrFail($roleId);
         $this->roleId = $role->id;

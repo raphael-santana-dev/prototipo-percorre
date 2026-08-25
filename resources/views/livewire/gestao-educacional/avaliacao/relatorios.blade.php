@@ -5,13 +5,15 @@
         icon="ph ph-chart-polar"
         badge="Indicadores"
         :metricas="$metricas">
-        
-        <x-slot name="actions">
-            <button wire:click="exportarCSV" class="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-microsoft-excel-logo text-lg"></i>
-                Exportar CSV
-            </button>
-        </x-slot>
+
+        @if(feature('relatorio.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('relatorio.exportar')))
+            <x-slot name="actions">
+                <button wire:click="exportarCSV" class="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-microsoft-excel-logo text-lg"></i>
+                    Exportar CSV
+                </button>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -76,9 +78,11 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                    <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Matriz Completa">
-                        <i class="text-xl ph ph-eye"></i>
-                    </a>
+                    @if(feature('avaliacao.responder') && (auth()->user()->hasRole('dev') || auth()->user()->can('avaliacao.responder')))
+                        <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Matriz Completa">
+                            <i class="text-xl ph ph-eye"></i>
+                        </a>
+                    @endif
                 </td>
             </tr>
         @empty

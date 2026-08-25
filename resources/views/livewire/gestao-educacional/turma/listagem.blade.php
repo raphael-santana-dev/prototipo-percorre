@@ -5,11 +5,13 @@
         icon="ph ph-chalkboard"
         badge="Acadêmico">
         
-        <x-slot name="actions">
-            <a href="{{ route('turmas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-plus text-lg"></i> Nova Turma
-            </a>
-        </x-slot>
+        @if(feature('turma.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('turmas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-plus text-lg"></i> Nova Turma
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="w-full md:w-1/3 relative">
@@ -60,12 +62,16 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
-                    <a href="{{ route('turmas.edit', $turma->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Turma">
-                        <i class="text-xl ph ph-pencil-simple"></i>
-                    </a>
-                    <button wire:click="excluir({{ $turma->id }})" wire:confirm="Tem certeza que deseja excluir esta turma?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                    @if(feature('turma.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.editar')))
+                        <a href="{{ route('turmas.edit', $turma->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Turma">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </a>
+                    @endif
+                    @if(feature('turma.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.excluir')))
+                        <button wire:click="excluir({{ $turma->id }})" wire:confirm="Tem certeza que deseja excluir esta turma?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    @endif
                 </td>
             </tr>
         @empty

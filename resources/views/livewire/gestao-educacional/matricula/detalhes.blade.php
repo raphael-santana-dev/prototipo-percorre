@@ -84,9 +84,11 @@
             </div>
             
             <div class="flex justify-end pt-2">
-                <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Matrícula
-                </button>
+                @if(feature('matricula.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.editar')))
+                    <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Matrícula
+                    </button>
+                @endif
             </div>
         </div>
 

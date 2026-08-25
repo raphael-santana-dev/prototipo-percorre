@@ -6,11 +6,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Nova Etapa
-            </button>
-        </x-slot>
+        @if(feature('etapa.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('etapa.criar')))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Nova Etapa
+                </button>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="flex gap-2">
@@ -52,12 +54,16 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
-                            <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if(feature('etapa.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('etapa.editar')))
+                                <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Etapa">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+                            @if(feature('etapa.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('etapa.excluir')))
+                                <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Etapa" onclick="confirm('Tem certeza que deseja excluir esta etapa?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         @else
                             <span class="px-2 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded uppercase tracking-wider dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">Etapa Fixa</span>
                         @endif
@@ -89,12 +95,16 @@
                     <div class="flex items-center justify-end mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div class="flex items-center gap-1">
                             @if($etapa->numero !== 1 || auth()->user()->hasRole('dev'))
-                                <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600">
-                                    <i class="text-lg ph ph-pencil-simple"></i>
-                                </button>
-                                <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta etapa?') || event.stopImmediatePropagation()">
-                                    <i class="text-lg ph ph-trash"></i>
-                                </button>
+                                @if(feature('etapa.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('etapa.editar')))
+                                    <button wire:click="edit({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600">
+                                        <i class="text-lg ph ph-pencil-simple"></i>
+                                    </button>
+                                @endif
+                                @if(feature('etapa.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('etapa.excluir')))
+                                    <button wire:click="delete({{ $etapa->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta etapa?') || event.stopImmediatePropagation()">
+                                        <i class="text-lg ph ph-trash"></i>
+                                    </button>
+                                @endif
                             @else
                                 <span class="px-2 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded uppercase tracking-wider dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">Etapa Fixa</span>
                             @endif
