@@ -63,7 +63,7 @@
             </div>
         </div>
 
-        <!-- BOTTOMBAR BRANCA -->
+        <!-- BOTTOMBAR BRANCA (DESKTOP) -->
         <nav class="hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-30 transition-colors duration-300">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center h-12 gap-1 lg:gap-2">
@@ -71,6 +71,10 @@
                         <i class="text-lg ph ph-books"></i> Meus Cursos
                     </a>
                     
+                    <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
+                        <i class="text-lg ph ph-clipboard-text"></i> Avaliações
+                    </a>
+
                     @feature('alunos.biblioteca')
                         <a href="{{ route('student.library') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
                             <i class="text-lg ph ph-library"></i> Biblioteca
@@ -103,6 +107,14 @@
                 <a href="{{ route('student.dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
                     <i class="text-lg ph ph-books"></i> Meus Cursos
                 </a>
+                <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
+                    <i class="text-lg ph ph-clipboard-text"></i> Avaliações
+                </a>
+                @feature('alunos.biblioteca')
+                    <a href="{{ route('student.library') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
+                        <i class="text-lg ph ph-library"></i> Biblioteca
+                    </a>
+                @endfeature
                 <a href="{{ route('student.profile') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
                     <i class="text-lg ph ph-user-circle"></i> Meu Perfil
                 </a>

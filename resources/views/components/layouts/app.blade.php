@@ -135,6 +135,7 @@
                                     </button>
                                     <!-- O menu abre ao lado (left-full) -->
                                     <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-48 dark:bg-gray-800 dark:border-gray-700" x-cloak>
+                                        <a href="{{ route('avaliacoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Responder</a>
                                         <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Listar Períodos</a>
                                         <a href="{{ route('avaliacoes.periodos.create') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Novo Período</a>
                                         <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Relatórios</a>
