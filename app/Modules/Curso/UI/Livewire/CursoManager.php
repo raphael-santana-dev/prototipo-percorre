@@ -24,8 +24,6 @@ class CursoManager extends Component
     public ?int $cursoId = null;
     public string $nome = '';
     public string $status = 'Ativo';
-    public ?int $min_idade = null;
-    public ?int $max_idade = null;
     public bool $permite_estado_diferente = false;
 
     public array $unidadesSelecionadas = [];
@@ -65,8 +63,6 @@ class CursoManager extends Component
         $this->validate([
             'nome' => 'required|string|max:255',
             'status' => 'required',
-            'min_idade' => 'nullable|integer|min:0',
-            'max_idade' => 'nullable|integer|gt:min_idade',
             'permite_estado_diferente' => 'boolean',
         ]);
 
@@ -74,8 +70,6 @@ class CursoManager extends Component
             'nome' => $this->nome,
             'slug' => \Illuminate\Support\Str::slug($this->nome),
             'status' => $this->status,
-            'min_idade' => $this->min_idade,
-            'max_idade' => $this->max_idade,
             'permite_estado_diferente' => $this->permite_estado_diferente,
         ];
 
@@ -106,8 +100,6 @@ class CursoManager extends Component
         $this->cursoId = $curso->id;
         $this->nome = $curso->nome;
         $this->status = in_array($curso->status, ['1', 1, true, 'Ativo', 'ativo']) ? 'Ativo' : 'Inativo';
-        $this->min_idade = $curso->min_idade;
-        $this->max_idade = $curso->max_idade;
         $this->permite_estado_diferente = $curso->permite_estado_diferente;
         $this->unidadesSelecionadas = $curso->unidades->pluck('id')->toArray();
         $this->turnosSelecionados = $curso->turnosVinculados->pluck('id')->toArray();
@@ -127,7 +119,7 @@ class CursoManager extends Component
 
     private function resetInputFields() 
     {
-        $this->reset(['cursoId', 'nome', 'min_idade', 'max_idade', 'isEditMode', 'unidadesSelecionadas', 'turnosSelecionados']);
+        $this->reset(['cursoId', 'nome', 'isEditMode', 'unidadesSelecionadas', 'turnosSelecionados']);
         $this->status = 'Ativo';
         $this->permite_estado_diferente = false;
         $this->resetErrorBag();
@@ -141,8 +133,6 @@ class CursoManager extends Component
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
 
-        $idadeMin = $curso->min_idade ? $curso->min_idade . ' anos' : 'Livre';
-        $idadeMax = $curso->max_idade ? $curso->max_idade . ' anos' : 'Sem limite';
         $restricao = $curso->permite_estado_diferente ? 'Aceita alunos de outros Estados' : 'Apenas residentes do Estado local';
 
         $this->dispatch('load-quick-view', [
@@ -151,7 +141,6 @@ class CursoManager extends Component
             'icon' => 'ph-graduation-cap',
             'data' => [
                 'Slug / URL' => $curso->slug,
-                'Regras de Idade' => $idadeMin . ' até ' . $idadeMax,
                 'Restrição Geográfica' => $restricao,
                 'Disponibilidade' => $curso->unidades->count() . ' unidades | ' . $curso->turnosVinculados->count() . ' turnos',
                 'Mais Detalhes' => '<a href="'.route('cursos.show', $curso->id).'" class="font-bold text-purpura-600 hover:underline">Ver Página Completa</a>'
@@ -162,7 +151,6 @@ class CursoManager extends Component
     public function getHeadersProperty() {
         return [
             ['key' => 'id', 'label' => 'Nome do Curso', 'sortable' => true],
-            ['key' => 'min_idade', 'label' => 'Regras de Idade', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];

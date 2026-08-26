@@ -167,59 +167,70 @@
 
                 <div class="space-y-4">
                     @forelse($ofertasVagas as $index => $oferta)
-                        <div class="grid grid-cols-12 gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm relative group">
+                        <div class="p-5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm relative group">
                             
-                            {{-- CASCATA 1: UNIDADE --}}
-                            <div class="col-span-12 md:col-span-3">
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">1. Unidade</label>
-                                <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500">
-                                    <option value="">Selecione...</option>
-                                    @foreach($unidadesDb as $u) 
-                                        @if(in_array((string)$u->id, $unidadesSelecionadas))
-                                            <option value="{{ $u->id }}">{{ $u->nome }}</option> 
-                                        @endif
-                                    @endforeach
-                                </select>
-                            </div>
-                            
-                            {{-- CASCATA 2: CURSO (Filtra por Unidade E Cursos Marcados no Explorer) --}}
-                            <div class="col-span-12 md:col-span-4">
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">2. Curso</label>
-                                <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
-                                    <option value="">Selecione...</option>
-                                    @if($oferta['unidade_id'])
-                                        @foreach($cursosDb as $c)
-                                            @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
-                                                <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                            {{-- LINHA 1: CASCATA UNIDADE / CURSO / TURNO --}}
+                            <div class="grid grid-cols-12 gap-4 mb-4">
+                                <div class="col-span-12 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">1. Unidade</label>
+                                    <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500">
+                                        <option value="">Selecione...</option>
+                                        @foreach($unidadesDb as $u) 
+                                            @if(in_array((string)$u->id, $unidadesSelecionadas))
+                                                <option value="{{ $u->id }}">{{ $u->nome }}</option> 
                                             @endif
                                         @endforeach
-                                    @endif
-                                </select>
-                            </div>
-                            
-                            {{-- CASCATA 3: TURNO (Filtra por Curso E Turnos Marcados no Explorer) --}}
-                            <div class="col-span-12 md:col-span-3">
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">3. Turno</label>
-                                <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
-                                    <option value="">Selecione...</option>
-                                    @if($oferta['curso_id'])
-                                        @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
-                                        @if($cursoSelecionado)
-                                            @foreach($cursoSelecionado->turnosVinculados as $t)
-                                                @if(in_array((string)$t->id, $turnosSelecionados))
-                                                    <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-span-12 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">2. Curso</label>
+                                    <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
+                                        <option value="">Selecione...</option>
+                                        @if($oferta['unidade_id'])
+                                            @foreach($cursosDb as $c)
+                                                @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
+                                                    <option value="{{ $c->id }}">{{ $c->nome }}</option>
                                                 @endif
                                             @endforeach
                                         @endif
-                                    @endif
-                                </select>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-span-12 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">3. Turno</label>
+                                    <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
+                                        <option value="">Selecione...</option>
+                                        @if($oferta['curso_id'])
+                                            @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
+                                            @if($cursoSelecionado)
+                                                @foreach($cursoSelecionado->turnosVinculados as $t)
+                                                    @if(in_array((string)$t->id, $turnosSelecionados))
+                                                        <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            @endif
+                                        @endif
+                                    </select>
+                                </div>
                             </div>
 
-                            {{-- VAGAS --}}
-                            <div class="col-span-10 md:col-span-2">
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Total de Vagas</label>
-                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 text-center font-black text-purpura-600 dark:text-purpura-400">
+                            {{-- LINHA 2: CONFIGURAÇÕES DA OFERTA (VAGAS E IDADES) --}}
+                            <div class="grid grid-cols-12 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <div class="col-span-12 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Limite de Vagas (Aprovados)</label>
+                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400">
+                                </div>
+                                <div class="col-span-6 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Idade Mínima</label>
+                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-semibold">
+                                </div>
+                                <div class="col-span-6 md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Idade Máxima</label>
+                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Sem limite" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-semibold">
+                                </div>
                             </div>
+
                             @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                                 <button type="button" wire:click="removeOferta({{ $index }})" class="absolute -right-2 -top-2 w-8 h-8 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
                                     <i class="ph-bold ph-trash text-sm"></i>
@@ -229,8 +240,8 @@
                     @empty
                         <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
                             <i class="ph ph-warning-circle text-4xl text-gray-400 mb-2"></i>
-                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">Sem limite de vagas</p>
-                            <p class="text-xs text-gray-500 mb-4 max-w-lg mx-auto">Para definir o limite de alunos aprovados por unidade e curso neste ciclo, adicione uma oferta no botão acima.</p>
+                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">Sem limite de vagas ou idade configurada</p>
+                            <p class="text-xs text-gray-500 mb-4 max-w-lg mx-auto">Para definir o limite de alunos aprovados ou restringir idades por unidade e curso neste ciclo, adicione uma oferta no botão acima.</p>
                         </div>
                     @endforelse
                 </div>

@@ -19,8 +19,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'gestao_empresarial_erp',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde', 'noite'],
-                'min_idade' => 15,
-                'max_idade' => 29,
                 'permite_estado_diferente' => false,
             ],
 
@@ -29,8 +27,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'programacao_web',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde', 'noite'],
-                'min_idade' => 15,
-                'max_idade' => 29,
                 'permite_estado_diferente' => true,
             ],
 
@@ -39,8 +35,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'power_bi',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde', 'noite'],
-                'min_idade' => 16,
-                'max_idade' => 35,
                 'permite_estado_diferente' => true,
             ],
 
@@ -49,8 +43,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'zendesk',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde'],
-                'min_idade' => 16,
-                'max_idade' => 35,
                 'permite_estado_diferente' => true,
             ],
 
@@ -69,8 +61,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'suporte_ti',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde'],
-                'min_idade' => 15,
-                'max_idade' => 29,
                 'permite_estado_diferente' => true,
             ],
 
@@ -79,8 +69,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'ciberseguranca',
                 'status' => 'Ativo',
                 'turnos' => ['tarde', 'noite'],
-                'min_idade' => 17,
-                'max_idade' => 35,
                 'permite_estado_diferente' => true,
             ],
 
@@ -89,8 +77,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'digital_commerce_shopify',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde'],
-                'min_idade' => 16,
-                'max_idade' => 29,
                 'permite_estado_diferente' => true,
             ],
 
@@ -99,8 +85,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'protheus_instalacao_config',
                 'status' => 'Ativo',
                 'turnos' => ['tarde', 'noite'],
-                'min_idade' => 18,
-                'max_idade' => 40,
                 'permite_estado_diferente' => true,
             ],
 
@@ -109,8 +93,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'marketing_digital',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde'],
-                'min_idade' => 15,
-                'max_idade' => 17,
                 'permite_estado_diferente' => false,
             ],
 
@@ -119,8 +101,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'analise_dados_ia_sustentabilidade',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde', 'noite'],
-                'min_idade' => 18,
-                'max_idade' => 35,
                 'permite_estado_diferente' => true,
             ],
 
@@ -129,8 +109,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'sustentabilidade_digital',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde'],
-                'min_idade' => 16,
-                'max_idade' => 29,
                 'permite_estado_diferente' => true,
             ],
         ];

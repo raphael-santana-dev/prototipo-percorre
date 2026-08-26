@@ -55,6 +55,8 @@ class PeriodEdit extends Component
                 'curso_id' => $oferta->curso_id,
                 'turno_id' => $oferta->turno_id,
                 'vagas' => $oferta->vagas,
+                'idade_min' => $oferta->idade_min,
+                'idade_max' => $oferta->idade_max,
             ];
         }
     }
@@ -96,7 +98,7 @@ class PeriodEdit extends Component
 
     public function addOferta()
     {
-        $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0];
+        $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null];
     }
 
     public function removeOferta($index)
@@ -153,6 +155,8 @@ class PeriodEdit extends Component
                     'curso_id' => $oferta['curso_id'],
                     'turno_id' => $oferta['turno_id'],
                     'vagas' => (int) ($oferta['vagas'] ?? 0),
+                    'idade_min' => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null, // <-- NOVO
+                    'idade_max' => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null, // <-- NOVO
                 ]);
             }
         }

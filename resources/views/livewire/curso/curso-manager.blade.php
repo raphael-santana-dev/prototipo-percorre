@@ -31,13 +31,6 @@
                     <div class="font-bold text-gray-900 dark:text-white">{{ $curso->nome }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">Slug: {{ $curso->slug }}</div>
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-300">
-                    @if($curso->min_idade || $curso->max_idade)
-                        {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
-                    @else
-                        <span class="text-gray-400">Livre</span>
-                    @endif
-                </td>
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))
                         <x-toggle :status="$curso->status" action="toggleStatus({{ $curso->id }})" />
@@ -90,13 +83,6 @@
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-sm font-bold text-gray-900 dark:text-white truncate pr-2">{{ $curso->nome }}</div>
                         <span class="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">#{{ $curso->id }}</span>
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 min-h-[32px]">
-                        @if($curso->min_idade || $curso->max_idade)
-                            {{ $curso->min_idade ?? 'Livre' }} a {{ $curso->max_idade ?? 'Sem limite' }} anos
-                        @else
-                            <span class="text-gray-400">Livre</span>
-                        @endif
                     </div>
                     <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                         <span>Aceita fora do Estado?</span>
@@ -161,18 +147,6 @@
                                 <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Curso <span class="text-red-500">*</span></label>
                                 <input type="text" wire:model="nome" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                 @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Idade Mínima</label>
-                                <input type="number" wire:model="min_idade" placeholder="Opcional" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('min_idade') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Idade Máxima</label>
-                                <input type="number" wire:model="max_idade" placeholder="Opcional" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('max_idade') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
                             <div class="md:col-span-2">

@@ -22,16 +22,6 @@
                 <span class="px-3 py-1 bg-red-100 text-red-700 font-bold text-xs rounded-full border border-red-200">INATIVO</span>
             @endif
         </x-slot>
-
-        <!-- Slot Inferior (Grid de Metadados) -->
-        <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Idade Mínima</span>
-            <span class="block text-base font-bold text-gray-900">{{ $this->curso->min_idade ?? '--' }} <span class="text-sm font-normal text-gray-400">anos</span></span>
-        </div>
-        <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Idade Máxima</span>
-            <span class="block text-base font-bold text-gray-900">{{ $this->curso->max_idade ?? '--' }} <span class="text-sm font-normal text-gray-400">anos</span></span>
-        </div>
         <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Aceita Fora do Estado</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">{{ $this->curso->permite_estado_diferente ? 'Sim' : 'Não' }}</span>
