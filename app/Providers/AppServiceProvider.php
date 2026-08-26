@@ -101,7 +101,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Processos Seletivos, Ciclos e Status
         Livewire::component('period.period-manager', \App\Modules\Period\UI\Livewire\PeriodManager::class);
-        Livewire::component('period.dynamic-fields', \App\Modules\Period\UI\Livewire\DynamicFields::class);
+        Livewire::component('period.dynamic-fields', \App\Modules\FormBuilder\UI\Livewire\DynamicFields::class);
         Livewire::component('period.step-manager', \App\Modules\Period\UI\Livewire\StepManager::class);
         Livewire::component('period.period-details', \App\Modules\Period\UI\Livewire\PeriodDetails::class);
         Livewire::component('period.period-edit', \App\Modules\Period\UI\Livewire\PeriodEdit::class);
@@ -181,6 +181,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('auth.force-change',  \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class);
         Livewire::component('auth.reset-password',  \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class);
 
+        Livewire::component('form.builder', \App\Modules\FormBuilder\UI\Livewire\Hub::class);
         
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {

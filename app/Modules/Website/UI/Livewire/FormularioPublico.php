@@ -22,27 +22,85 @@ class FormularioPublico extends Component
     public int $totalEtapas = 1;
     public bool $finalizado = false;
 
+    // Propriedades do Gatekeeper de Segurança
+    public bool $bloqueado = false;
+    public string $mensagemBloqueio = '';
+    public string $iconeBloqueio = 'ph-lock-key';
+    public bool $exibirBotaoLogin = false;
+
     // Guardará as configurações globais (Fundo, Cor, Opacidade)
     public array $formSettings = [];
 
     public function mount($id, $slug)
     {
-        // CORREÇÃO AQUI: Forçando a ordenação Matemática vinda do Banco de Dados
         $this->formulario = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('id', $id)->where('status', true)->firstOrFail();
         
         $this->camposDinamicos = $this->formulario->campos;
         
-        $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
-        $this->carregarOpcoesSistemaInicial();
-        
-        // Carrega o Papel de Parede Global se existir
+        // Carrega o Papel de Parede Global mesmo se for bloquear o acesso (mantém a estética)
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
         if ($cfg && $cfg->configuracoes) {
             $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
         }
 
+        // ==========================================
+        // GATEKEEPER: REGRAS DE TEMPO E ACESSO
+        // ==========================================
+        $agora = now();
+        
+        // 1. Regra de Tempo
+        if ($this->formulario->data_inicio && $agora->lt($this->formulario->data_inicio)) {
+            $this->bloquearAcesso('Este formulário estará disponível para respostas a partir de ' . $this->formulario->data_inicio->format('d/m/Y \à\s H:i') . '.', 'ph-calendar-plus');
+            return;
+        }
+        if ($this->formulario->data_fim && $agora->gt($this->formulario->data_fim)) {
+            $this->bloquearAcesso('O período para responder este formulário já foi encerrado.', 'ph-clock-countdown');
+            return;
+        }
+
+        // 2. Regra de Privacidade (Restrição de Usuários)
+        if (!$this->formulario->acesso_livre) {
+            
+            // Ninguém está logado
+            if (!auth('web')->check() && !auth('student')->check() && !auth('company')->check()) {
+                $this->bloquearAcesso('Este formulário é restrito. Você precisa fazer login para acessar.', 'ph-identification-badge', true);
+                return;
+            }
+
+            // Exige apenas Alunos
+            if ($this->formulario->apenas_estudantes) {
+                if (!auth('student')->check()) {
+                    $this->bloquearAcesso('Acesso negado. Apenas alunos do instituto podem responder a este formulário.', 'ph-student');
+                    return;
+                }
+            } 
+            // Exige Funcionários/Administração (Roles)
+            else {
+                $rolesPermitidas = is_string($this->formulario->roles_permitidas) ? json_decode($this->formulario->roles_permitidas, true) : ($this->formulario->roles_permitidas ?? []);
+                
+                if (!empty($rolesPermitidas)) {
+                    if (!auth('web')->check()) {
+                        $this->bloquearAcesso('Acesso negado. Formulário restrito a colaboradores internos.', 'ph-shield-warning');
+                        return;
+                    }
+
+                    $user = auth('web')->user();
+                    if (!$user->hasRole('dev') && !$user->hasAnyRole($rolesPermitidas)) {
+                        $this->bloquearAcesso('Seu nível de acesso não possui permissão para visualizar este formulário.', 'ph-hand-waving');
+                        return;
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // SUCESSO: INICIALIZA O FORMULÁRIO NORMALMENTE
+        // ==========================================
+        $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
+        $this->carregarOpcoesSistemaInicial();
+        
         // Inicializa os campos nas respostas
         foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
             if (!isset($this->respostas[$campo->name])) {
@@ -53,6 +111,14 @@ class FormularioPublico extends Component
                 }
             }
         }
+    }
+
+    private function bloquearAcesso(string $mensagem, string $icone, bool $exibeBotaoLogin = false)
+    {
+        $this->bloqueado = true;
+        $this->mensagemBloqueio = $mensagem;
+        $this->iconeBloqueio = $icone;
+        $this->exibirBotaoLogin = $exibeBotaoLogin;
     }
 
     public function carregarOpcoesSistemaInicial()
@@ -79,20 +145,13 @@ class FormularioPublico extends Component
         }
     }
 
-    // Exigência do Livewire 3 para evitar o "MissingRulesException"
-    public function rules()
-    {
-        return [];
-    }
+    public function rules() { return []; }
 
-    // Motor Inteligente de Validação
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
 
         foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
-            
-            // Verifica Condicionais: Se o campo estiver oculto, não valida!
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
                 $val = strtolower(trim((string)$valorGatilho));
@@ -112,7 +171,6 @@ class FormularioPublico extends Component
                         $condicaoAtendida = in_array($val, $arrayAlvos);
                         break;
                 }
-
                 if (!$condicaoAtendida) continue; 
             }
 
@@ -123,23 +181,19 @@ class FormularioPublico extends Component
             if ($campo->subtipo === 'email') $ruleStr[] = 'email';
             if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
             if ($campo->subtipo === 'date') $ruleStr[] = 'date';
-
             if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
             if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
 
             if (!empty($campo->regras_validacao)) {
                 $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
             }
-            
             if (!empty($ruleStr)) {
                 $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
             }
         }
-
         return $regras;
     }
 
-    // Validação em Tempo Real
     public function updated($propertyName)
     {
         if (str_starts_with($propertyName, 'respostas.')) {
@@ -164,32 +218,25 @@ class FormularioPublico extends Component
                     if ($campoAlterado->subtipo === 'unidade') {
                         $this->cursosDisponiveis = [];
                         $this->turnosDisponiveis = [];
-                        
                         if ($valorId) {
                             $this->cursosDisponiveis = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
                                 ->whereHas('unidades', function ($q) use ($valorId) {
                                     $q->where('unidades.id', $valorId);
                                 })->pluck('nome', 'id')->toArray();
                         }
-                        
-                        // Zera filhos
                         $cursoField = $this->camposDinamicos->where('tipo', 'system')->firstWhere('subtipo', 'curso');
                         if ($cursoField) $this->respostas[$cursoField->name] = '';
-                        
                         $turnoField = $this->camposDinamicos->where('tipo', 'system')->firstWhere('subtipo', 'turno');
                         if ($turnoField) $this->respostas[$turnoField->name] = '';
                     } 
                     elseif ($campoAlterado->subtipo === 'curso') {
                         $this->turnosDisponiveis = [];
-                        
                         if ($valorId) {
                             $curso = \App\Models\Curso::find($valorId);
                             if ($curso && method_exists($curso, 'turnosVinculados')) {
                                 $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
                             }
                         }
-                        
-                        // Zera turno
                         $turnoField = $this->camposDinamicos->where('tipo', 'system')->firstWhere('subtipo', 'turno');
                         if ($turnoField) $this->respostas[$turnoField->name] = '';
                     }
@@ -202,7 +249,6 @@ class FormularioPublico extends Component
     {
         $regras = $this->regrasPorEtapa($this->etapaAtual);
 
-        // Só executa o validate() se existirem regras para a etapa
         if (!empty($regras)) {
             $this->validate($regras, [
                 'respostas.*.required' => 'Este campo é obrigatório.',

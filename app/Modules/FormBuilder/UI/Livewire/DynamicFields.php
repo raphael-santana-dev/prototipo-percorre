@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Period\UI\Livewire;
+namespace App\Modules\FormBuilder\UI\Livewire;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -383,7 +383,7 @@ class DynamicFields extends Component
             
         $camposPorEtapa = $camposCadastrados->groupBy('etapa');
 
-        return view('livewire.period.dynamic-fields', [
+        return view('livewire.form-builder.dynamic-fields', [
             'camposCadastrados' => $camposCadastrados,
             'camposPorEtapa' => $camposPorEtapa
         ])->layout('components.layouts.app', ['title' => 'Construtor de Formulário']);
