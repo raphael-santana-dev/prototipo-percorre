@@ -24,6 +24,14 @@ class Detalhes extends Component
 
     public function mount($id = null)
     {
+        if ($id) {
+            abort_if(!feature('matricula.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
+        } else {
+            abort_if(!feature('matricula.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
+        }
+
         $this->estudantes = Student::select('id', 'name', 'cpf')->orderBy('name')->get();
         $this->cursos = DB::table('cursos')->select('id', 'nome')->where('status', 'Ativo')->orderBy('nome')->get();
         $this->unidades = DB::table('unidades')->select('id', 'nome')->where('status', 'Ativa')->orderBy('nome')->get();
@@ -50,6 +58,14 @@ class Detalhes extends Component
 
     public function salvar()
     {
+        if ($this->matriculaId) {
+            abort_if(!feature('matricula.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
+        } else {
+            abort_if(!feature('matricula.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
+        }
+        
         $this->validate([
             'numero_matricula' => 'required|string|unique:matriculas,numero_matricula,' . $this->matriculaId,
             'student_id' => 'required|exists:students,id',

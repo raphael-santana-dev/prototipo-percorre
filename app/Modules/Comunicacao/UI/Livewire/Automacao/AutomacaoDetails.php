@@ -22,6 +22,9 @@ class AutomacaoDetails extends Component
 
     public function mount($id)
     {
+        abort_if(!feature('automacao.visualizar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.visualizar'), 403);
+        
         $this->automacao = Automacao::with('template')->findOrFail($id);
         $this->breadcrumbs = BreadcrumbHelper::generate('Histórico: ' . $this->automacao->nome);
     }

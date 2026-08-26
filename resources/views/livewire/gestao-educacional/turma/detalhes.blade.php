@@ -86,9 +86,11 @@
                 </div>
 
                 <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Turma
-                    </button>
+                    @if(feature('turma.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.editar')))
+                        <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
+                            <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Turma
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>

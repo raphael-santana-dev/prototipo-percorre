@@ -32,16 +32,18 @@
                 </span>
 
                 {{-- CONTROLE DE STATUS RÁPIDO --}}
-                <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
-                    <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors">
-                        @foreach($todosStatus as $status)
-                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
-                        @endforeach
-                    </select>
-                    <button wire:click="atualizarStatus" class="px-2.5 py-1 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-[10px] uppercase tracking-wider rounded transition-colors shadow-sm">
-                        Mover
-                    </button>
-                </div>
+                @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
+                        <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors">
+                            @foreach($todosStatus as $status)
+                                <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                            @endforeach
+                        </select>
+                        <button wire:click="atualizarStatus" class="px-2.5 py-1 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-[10px] uppercase tracking-wider rounded transition-colors shadow-sm">
+                            Mover
+                        </button>
+                    </div>
+                @endif
             </div>
         </x-slot>
 

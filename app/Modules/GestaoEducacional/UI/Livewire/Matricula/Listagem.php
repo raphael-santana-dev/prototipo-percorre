@@ -13,6 +13,13 @@ class Listagem extends Component
 
     public $busca = '';
 
+    public function mount()
+    {
+        abort_if(!feature('matricula.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.listar'), 403, 'Acesso restrito.');
+        $this->permiteGrid = false;
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -28,6 +35,9 @@ class Listagem extends Component
 
     public function excluir($id)
     {
+        abort_if(!feature('matricula.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.excluir'), 403);
+        
         $matricula = Matricula::findOrFail($id);
         $matricula->delete();
         $this->dispatch('sucesso', msg: 'Matrícula excluída e vínculo com o aluno removido.');

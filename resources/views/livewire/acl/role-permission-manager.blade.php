@@ -1,11 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-
-    @if (session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-6 font-medium rounded-md shadow-sm text-pistache-100 bg-pistache-500">
-            <i class="text-lg ph ph-check-circle"></i> {{ session('success') }}
-        </div>
-    @endif
-
     <x-page-header 
         title="Gerenciar Permissões: {{ strtoupper($roleName) }}" 
         icon="ph ph-shield-check"
@@ -54,20 +47,12 @@
                 <a href="{{ route('roles.index') }}" class="px-5 py-2.5 text-sm font-bold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
                     Cancelar
                 </a>
-                <button type="submit" class="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
-                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Permissões
-                </button>
+                @if(feature('acl.role.permissoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.permissoes')))
+                    <button type="submit" class="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Permissões
+                    </button>
+                @endif
             </div>
         </form>
     </div>
-    
-    {{-- TOAST SYSTEM --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
-    </div>
-
 </div>

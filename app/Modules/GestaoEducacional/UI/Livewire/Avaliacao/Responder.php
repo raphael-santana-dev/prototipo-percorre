@@ -35,6 +35,8 @@ class Responder extends Component
 
     public function mount($periodo, $turma, $student)
     {
+        abort_if(!feature('avaliacao.responder'), 403, 'A resposta de matrizes está desativada no momento.');
+
         $this->periodo_id = $periodo;
         $this->turma_id = $turma;
         $this->student_id = $student;
@@ -122,6 +124,8 @@ class Responder extends Component
 
     public function salvar()
     {
+        abort_if(!feature('avaliacao.responder'), 403);
+        
         foreach ($this->avaliacoesFases as $av) {
             $fase = $av->fase;
 

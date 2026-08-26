@@ -18,6 +18,9 @@ class RegrasManager extends Component
 
     public function mount($id, ?string $slug = null)
     {
+        abort_if(!feature('ciclo.regras'), 403, 'Construtor de regras desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403, 'Acesso restrito.');
+
         $this->ciclo = Ciclo::findOrFail($id);
         
         $regrasDb = is_string($this->ciclo->regras_pontuacao) 
@@ -78,6 +81,9 @@ class RegrasManager extends Component
 
     public function salvar()
     {
+        abort_if(!feature('ciclo.regras'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403);
+        
         $rules = [
             'regras.*.tipo_regra' => 'required|in:padrao,bonus_por_acerto,multiplicador_percentual',
             'regras.*.escopo' => 'nullable|in:todos,especifico',

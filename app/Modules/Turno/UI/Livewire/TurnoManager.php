@@ -37,14 +37,15 @@ class TurnoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->can('turno.listar'), 403, 'Acesso restrito.');
-
+        abort_if(!feature('turno.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.listar'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
     {
-        abort_if(!auth()->user()->can('turno.criar'), 403);
+        abort_if(!feature('turno.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.criar'), 403);
         $this->resetInputFields();
         $this->showModal = true;
     }
@@ -58,9 +59,11 @@ class TurnoManager extends Component
     public function save(TurnoService $service)
     {
         if ($this->isEditMode) {
-            abort_if(!auth()->user()->can('turno.editar'), 403);
+            abort_if(!feature('turno.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.editar'), 403);
         } else {
-            abort_if(!auth()->user()->can('turno.criar'), 403);
+            abort_if(!feature('turno.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.criar'), 403);
         }
 
         $this->validate([
@@ -89,7 +92,8 @@ class TurnoManager extends Component
 
     public function edit(TurnoService $service, int $id)
     {
-        abort_if(!auth()->user()->can('turno.editar'), 403);
+        abort_if(!feature('turno.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.editar'), 403);
         
         $turno = $service->buscarPorId($id);
         
@@ -105,7 +109,8 @@ class TurnoManager extends Component
 
     public function delete(TurnoService $service, int $id)
     {
-        abort_if(!auth()->user()->can('turno.excluir'), 403);
+        abort_if(!feature('turno.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.excluir'), 403);
         
         $service->deletarTurno($id);
         $this->dispatch('sucesso', msg: 'Turno excluído com sucesso!');
@@ -148,5 +153,12 @@ class TurnoManager extends Component
         return view('livewire.turno.turno-manager', [
             'registros' => $turnos,
         ]);
+    }
+
+    public function toggleStatus($id)
+    {
+        abort_if(!feature('turno.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turno.editar'), 403);
+        $this->traitToggleStatus($id);
     }
 }

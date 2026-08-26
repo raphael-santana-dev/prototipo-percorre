@@ -23,6 +23,9 @@ class UserExtraPermissionManager extends Component
 
     public function mount(int $userId)
     {
+        abort_if(!feature('usuario.permissoes_extras'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
+
         $user = User::findOrFail($userId);
         
         // Bloqueia se um ADMIN tentar editar as permissões extras de um DEV
@@ -49,6 +52,9 @@ class UserExtraPermissionManager extends Component
 
     public function save()
     {
+        abort_if(!feature('usuario.permissoes_extras'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
+        
         $user = User::findOrFail($this->userId);
         $syncData = [];
         $currentUser = auth()->user();

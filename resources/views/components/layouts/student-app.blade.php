@@ -123,5 +123,6 @@
 
     <livewire:components.quick-view-drawer />
     @livewireScripts
+    <x-toast />
 </body>
 </html>

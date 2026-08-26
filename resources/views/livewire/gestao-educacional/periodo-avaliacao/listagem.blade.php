@@ -5,11 +5,13 @@
         icon="ph ph-calendar-check"
         badge="Configurações">
         
-        <x-slot name="actions">
-            <a href="{{ route('avaliacoes.periodos.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-plus text-lg"></i> Novo Período
-            </a>
-        </x-slot>
+        @if(feature('periodo_avaliacao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('avaliacoes.periodos.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-plus text-lg"></i> Novo Período
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="w-full md:w-1/3 relative">
@@ -29,20 +31,20 @@
         @forelse($registros as $periodo)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="font-black text-gray-800 dark:text-white text-lg">{{ $periodo->ano }}</span>
                     <span class="text-xs font-bold text-purpura-600 uppercase tracking-wider ml-1">Ciclo {{ $periodo->ciclo }}</span>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap font-mono text-sm text-gray-600 dark:text-gray-400">
+                <td class="px-4 py-2.5 whitespace-nowrap font-mono text-sm text-gray-600 dark:text-gray-400">
                     {{ \Carbon\Carbon::parse($periodo->data_inicio)->format('d/m/Y') }} à {{ \Carbon\Carbon::parse($periodo->data_fim)->format('d/m/Y') }}
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center font-bold text-indigo-600 dark:text-indigo-400">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center font-bold text-indigo-600 dark:text-indigo-400">
                     {{ $periodo->fases_count }} Fase(s)
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     @if($periodo->status === '1')
                         <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-wider border border-green-200 dark:border-green-800">Aberto</span>
                     @else
@@ -51,12 +53,16 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
-                    <a href="{{ route('avaliacoes.periodos.edit', $periodo->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Configurar Período">
-                        <i class="text-xl ph ph-gear"></i>
-                    </a>
-                    <button wire:click="excluir({{ $periodo->id }})" wire:confirm="Tem certeza que deseja excluir?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                    @if(feature('periodo_avaliacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.editar')))
+                        <a href="{{ route('avaliacoes.periodos.edit', $periodo->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Configurar Período">
+                            <i class="text-xl ph ph-gear"></i>
+                        </a>
+                    @endif
+                    @if(feature('periodo_avaliacao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.excluir')))
+                        <button wire:click="excluir({{ $periodo->id }})" wire:confirm="Tem certeza que deseja excluir?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    @endif
                 </td>
             </tr>
         @empty

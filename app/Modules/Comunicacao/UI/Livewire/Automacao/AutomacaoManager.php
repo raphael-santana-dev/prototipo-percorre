@@ -16,7 +16,9 @@ class AutomacaoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('automacao.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.listar'), 403);
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = false;
     }
@@ -65,6 +67,9 @@ class AutomacaoManager extends Component
     // Função de Alternância de Status (Toggle)
     public function toggleStatus($id)
     {
+        abort_if(!feature('automacao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+
         $automacao = Automacao::findOrFail($id);
         $automacao->status = !$automacao->status;
         $automacao->save();
@@ -74,6 +79,9 @@ class AutomacaoManager extends Component
 
     public function excluir($id)
     {
+        abort_if(!feature('automacao.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.excluir'), 403);
+        
         Automacao::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Regra de automação excluída.');
     }

@@ -7,11 +7,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Novo Turno
-            </button>
-        </x-slot>
+        @if(feature('turno.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.criar')))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Novo Turno
+                </button>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -53,13 +55,13 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        @can('turno.editar')
+                        @if(feature('turno.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.editar')))
                             <button wire:click="edit({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endcan
                         
-                        @can('turno.excluir')
+                        @if(feature('turno.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.excluir')))
                             <button wire:click="delete({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()" title="Excluir">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
@@ -96,13 +98,13 @@
                         </div>
                         
                         <div class="flex items-center gap-1">
-                            @can('turno.editar')
+                            @if(feature('turno.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.editar')))
                                 <button wire:click="edit({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
                             @endcan
                             
-                            @can('turno.excluir')
+                            @if(feature('turno.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.excluir')))
                                 <button wire:click="delete({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()" title="Excluir">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>

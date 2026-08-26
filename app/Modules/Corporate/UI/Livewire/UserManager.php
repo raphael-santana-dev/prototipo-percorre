@@ -47,7 +47,9 @@ class UserManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
+        abort_if(!feature('usuario.listar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.listar'), 403);
+
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -102,6 +104,14 @@ class UserManager extends Component
 
     public function save()
     {
+        if ($this->isEditMode) {
+            abort_if(!feature('usuario.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.editar'), 403);
+        } else {
+            abort_if(!feature('usuario.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.criar'), 403);
+        }
+        
         $rules = [
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),

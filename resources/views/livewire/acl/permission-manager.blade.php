@@ -6,11 +6,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Nova Permissão
-            </button>
-        </x-slot>
+        @if(feature('acl.permissao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.permissao.criar')))
+            <x-slot name="actions">
+                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Nova Permissão
+                </button>
+            </x-slot>
+        @endif
 
         {{-- FILTROS INTEGRADOS AO HEADER --}}
         <x-slot name="filters" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -61,12 +63,16 @@
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('acl.permissao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.permissao.editar')))
+                            <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
+                        @if(feature('acl.permissao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.permissao.excluir')))
+                            <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -178,13 +184,4 @@
             </div>
         </div>
     @endif
-    
-    {{-- TOAST SYSTEM --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>

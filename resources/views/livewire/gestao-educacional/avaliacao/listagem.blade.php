@@ -24,7 +24,7 @@
         @forelse($registros as $av)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-purpura-100 text-purpura-600 flex items-center justify-center font-bold text-xs shrink-0">
                             {{ substr($av->student->name ?? 'A', 0, 1) }}
@@ -36,25 +36,26 @@
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-700 dark:text-gray-300 text-sm">{{ $av->turma->nome ?? 'Turma N/A' }}</div>
                     <div class="text-[11px] text-purpura-600 font-bold mt-0.5 uppercase tracking-wider">
                         Ciclo {{ $av->periodo->ciclo ?? '-' }}
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-medium">
                     Ano Referência: <span class="font-bold text-gray-800 dark:text-gray-200">{{ $av->periodo->ano ?? '-' }}</span>
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                    {{-- A Rota será criada na Etapa 4, por enquanto deixamos o link preparado --}}
-                    <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" 
-                       wire:navigate
-                       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 text-xs font-bold rounded-lg transition shadow-sm border border-indigo-200 dark:border-indigo-800">
-                        <i class="ph-bold ph-pencil-simple text-sm"></i>
-                        Acessar Matriz
-                    </a>
+                    @if(feature('avaliacao.responder'))
+                        <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" 
+                        wire:navigate
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 text-xs font-bold rounded-lg transition shadow-sm border border-indigo-200 dark:border-indigo-800">
+                            <i class="ph-bold ph-pencil-simple text-sm"></i>
+                            Acessar Matriz
+                        </a>
+                    @endif
                 </td>
             </tr>
         @empty

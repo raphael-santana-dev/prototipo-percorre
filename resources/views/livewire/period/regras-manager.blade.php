@@ -8,12 +8,13 @@
             <h2 class="text-2xl font-bold text-gray-900 mt-1">Construtor de Regras de Pontuação</h2>
             <p class="text-gray-500 text-sm">Definindo pontuação automatizada para o ciclo: <span class="font-bold text-purpura-600">{{ $ciclo->nome }}</span></p>
         </div>
-        
-        <div class="flex items-center gap-3">
-            <button wire:click="salvar" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Todas as Regras
-            </button>
-        </div>
+        @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+            <div class="flex items-center gap-3">
+                <button wire:click="salvar" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Todas as Regras
+                </button>
+            </div>
+        @endif
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -125,9 +126,11 @@
                             </div>
                             
                             <div class="flex-none pb-[1px]">
-                                <button type="button" wire:click="removeRegra({{ $index }})" class="h-[38px] px-3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 rounded-md transition" title="Remover Regra">
-                                    <i class="ph-bold ph-trash"></i>
-                                </button>
+                                @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+                                    <button type="button" wire:click="removeRegra({{ $index }})" class="h-[38px] px-3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 rounded-md transition" title="Remover Regra">
+                                        <i class="ph-bold ph-trash"></i>
+                                    </button>
+                                @endif
                             </div>
                         </div>
 
@@ -149,9 +152,11 @@
             </div>
 
             <div class="mt-12 border-t border-dashed border-gray-300 pt-6 text-center">
-                <button type="button" wire:click="addRegra" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-full shadow-sm transition inline-flex items-center gap-2 text-sm">
-                    <i class="ph-bold ph-plus-circle text-lg"></i> Adicionar Nova Regra
-                </button>
+                @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
+                    <button type="button" wire:click="addRegra" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-full shadow-sm transition inline-flex items-center gap-2 text-sm">
+                        <i class="ph-bold ph-plus-circle text-lg"></i> Adicionar Nova Regra
+                    </button>
+                @endif
             </div>
 
         </div>

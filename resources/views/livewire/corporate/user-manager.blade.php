@@ -1,15 +1,5 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('success') }}
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-red-100 bg-red-500 font-medium shadow-sm">
-            <i class="ph ph-warning text-lg"></i> {{ session('error') }}
-        </div>
-    @endif
+
 
     <x-page-header 
         title="Usuários" 
@@ -17,12 +7,14 @@
         badge=""
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
-
-        <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Novo Usuário
-            </button>
-        </x-slot>
+        
+        @if(feature('usuario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.criar')))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Novo Usuário
+                </button>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -65,15 +57,19 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                            <i class="text-lg ph ph-info"></i>
-                        </button>
-                        <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
-                        <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
+                        @if(feature('usuario.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.visualizar')))
+                            <button wire:click="showQuickDetails({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                <i class="text-lg ph ph-info"></i>
+                            </button>
+                            <a href="{{ route('users.show', $user->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
+                        @endif
+                        @if(feature('usuario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.editar')))
+                            <button wire:click="edit({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Usuário">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
                         @if($user->id !== auth()->id() && !$user->hasRole('dev'))
                             <button wire:click="delete({{ $user->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Usuário" onclick="confirm('Excluir este usuário permanentemente?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>

@@ -123,10 +123,12 @@
 
             @if($podeEditarGeral)
                 <div class="p-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                    <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-lg"></i>
-                        Salvar Respostas
-                    </button>
+                    @if(feature('avaliacao.responder'))
+                        <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
+                            <i class="ph-bold ph-floppy-disk text-lg"></i>
+                            Salvar Respostas
+                        </button>
+                    @endif
                 </div>
             @endif
         </div>
@@ -174,9 +176,4 @@
             </div>
         </div>
     @endif
-
-    {{-- TOAST --}}
-    <div x-data="{ show: false, msg: '' }" @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);" x-show="show" x-transition class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle"></i> <span x-text="msg"></span>
-    </div>
 </div>

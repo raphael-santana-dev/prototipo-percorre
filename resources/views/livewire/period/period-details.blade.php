@@ -29,7 +29,9 @@
 
             <!-- TOGGLE DE STATUS -->
             <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-                <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
+                @endif
                 <span class="text-xs font-bold uppercase {{ $ciclo->status ? 'text-emerald-600' : 'text-red-500' }}">
                     {{ $ciclo->status ? 'Ativo' : 'Encerrado' }}
                 </span>
@@ -50,26 +52,30 @@
             @forelse($ciclo->cursos as $curso)
                 <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 border-l-4 border-l-orange-400 rounded-md text-sm font-bold text-gray-700 shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                     {{ $curso->nome }}
-                    <button wire:click="removerCurso({{ $curso->id }})" class="text-gray-400 hover:text-red-500 transition-colors focus:outline-none ml-1">
-                        <i class="ph-bold ph-x"></i>
-                    </button>
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button wire:click="removerCurso({{ $curso->id }})" class="text-gray-400 hover:text-red-500 transition-colors focus:outline-none ml-1">
+                            <i class="ph-bold ph-x"></i>
+                        </button>
+                    @endif
                 </div>
             @empty
                 <p class="text-sm text-gray-500 italic mr-2">Nenhum curso ofertado.</p>
             @endforelse
 
             <!-- Adicionar Novo Curso (Discreto) -->
-            <div class="flex items-center gap-2 ml-auto">
-                <select wire:model="cursoSelecionado" class="border-gray-300 rounded-md text-xs py-1.5 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm w-48 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Adicionar novo curso...</option>
-                    @foreach($cursosDisponiveis as $c)
-                        <option value="{{ $c->id }}">{{ $c->nome }}</option>
-                    @endforeach
-                </select>
-                <button wire:click="adicionarCurso" class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-bold rounded-md shadow-sm transition text-xs dark:bg-gray-600">
-                    Vincular
-                </button>
-            </div>
+            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                <div class="flex items-center gap-2 ml-auto">
+                    <select wire:model="cursoSelecionado" class="border-gray-300 rounded-md text-xs py-1.5 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm w-48 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">Adicionar novo curso...</option>
+                        @foreach($cursosDisponiveis as $c)
+                            <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="adicionarCurso" class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-bold rounded-md shadow-sm transition text-xs dark:bg-gray-600">
+                        Vincular
+                    </button>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -80,16 +86,18 @@
         <h3 class="text-xl font-extrabold text-gray-900 dark:text-white">Tabela de Inscrições</h3>
         
         <div class="flex items-center gap-2">
-            <button wire:click="recalcularPontuacoes" 
-                    wire:confirm="Processar scores dos alunos Deste Ciclo?"
-                    class="flex items-center px-3 py-1.5 gap-2 bg-yellow-50 border border-yellow-200 text-yellow-700 font-bold rounded-lg text-xs shadow-sm">
-                <i class="ph-bold ph-calculator"></i> Recalcular Scores
-            </button>
-            <button wire:click="gerarRanking" 
-                    wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
-                    class="flex items-center px-3 py-1.5 gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded-lg text-xs shadow-sm">
-                <i class="ph-bold ph-medal"></i> Gerar Ranking
-            </button>
+            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                <button wire:click="recalcularPontuacoes" 
+                        wire:confirm="Processar scores dos alunos Deste Ciclo?"
+                        class="flex items-center px-3 py-1.5 gap-2 bg-yellow-50 border border-yellow-200 text-yellow-700 font-bold rounded-lg text-xs shadow-sm">
+                    <i class="ph-bold ph-calculator"></i> Recalcular Scores
+                </button>
+                <button wire:click="gerarRanking" 
+                        wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
+                        class="flex items-center px-3 py-1.5 gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded-lg text-xs shadow-sm">
+                    <i class="ph-bold ph-medal"></i> Gerar Ranking
+                </button>
+            @endif
         </div>
     </div>
 
@@ -113,29 +121,31 @@
         </button>
     </div>
 
-    {{-- BOTÕES DE SELEÇÃO RÁPIDA DE LOTE --}}
-    <div class="flex justify-end items-center mb-4 gap-2">
-        <span class="text-xs font-bold text-gray-500 uppercase">Selecionar rápido:</span>
-        <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold">10</button>
-        <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold">50</button>
-    </div>
+    @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+        {{-- BOTÕES DE SELEÇÃO RÁPIDA DE LOTE --}}
+        <div class="flex justify-end items-center mb-4 gap-2">
+            <span class="text-xs font-bold text-gray-500 uppercase">Selecionar rápido:</span>
+            <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold">10</button>
+            <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold">50</button>
+        </div>
 
-    @if(count($selecionadas) > 0)
-    <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-4 flex justify-between items-center shadow-sm">
-        <div class="flex items-center">
-            <span class="font-bold text-indigo-800">{{ count($selecionadas) }} selecionadas</span>
-            <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 hover:underline">Limpar</button>
+        @if(count($selecionadas) > 0)
+        <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-4 flex justify-between items-center shadow-sm">
+            <div class="flex items-center">
+                <span class="font-bold text-indigo-800">{{ count($selecionadas) }} selecionadas</span>
+                <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 hover:underline">Limpar</button>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-indigo-800 uppercase">Mover para:</span>
+                @foreach($statusInscricoesDb as $status)
+                    <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-xs font-bold shadow-sm">
+                        {{ $status->nome }}
+                    </button>
+                @endforeach
+                <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-3 py-1 rounded text-xs font-bold">Modal</button>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-indigo-800 uppercase">Mover para:</span>
-            @foreach($statusInscricoesDb as $status)
-                <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-xs font-bold shadow-sm">
-                    {{ $status->nome }}
-                </button>
-            @endforeach
-            <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-3 py-1 rounded text-xs font-bold">Modal</button>
-        </div>
-    </div>
+        @endif
     @endif
 
     {{-- A TABELA EM SI --}}
@@ -149,7 +159,9 @@
 
         @forelse($registros as $inscricao)
             <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
-                <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded"></td>
+                @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                    <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded"></td>
+                @endif
                 <td class="px-4 py-2 font-medium text-gray-500 text-xs">#{{ $inscricao->id }}</td>
                 <td class="px-4 py-2"><div class="font-bold text-sm">{{ $inscricao->nome }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->cpf }}</div></td>
                 <td class="px-4 py-2"><div class="font-semibold text-sm">{{ $inscricao->curso->nome ?? '-' }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div></td>
@@ -217,15 +229,4 @@
         </div>
     </div>
     @endif
-
-    {{-- TOAST ALERTA --}}
-    <div x-data="{ show: false, msg: '', error: false }" 
-         @sucesso.window="show = true; msg = $event.detail.msg; error = false; setTimeout(() => show = false, 3500);" 
-         @erro.window="show = true; msg = $event.detail.msg; error = true; setTimeout(() => show = false, 4500);" 
-         x-show="show" x-transition 
-         class="fixed bottom-8 right-8 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" 
-         :class="error ? 'bg-red-600' : 'bg-green-600'" x-cloak>
-        <i class="text-2xl" :class="error ? 'ph ph-warning-circle' : 'ph ph-check-circle'"></i> 
-        <span x-text="msg"></span>
-    </div>
 </div>

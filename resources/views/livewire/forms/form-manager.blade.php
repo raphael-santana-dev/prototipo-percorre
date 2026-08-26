@@ -7,11 +7,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
-                <i class="ph ph-plus text-lg"></i> Novo Formulário
-            </button>
-        </x-slot>
+        @if(feature('formulario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.criar')))
+            <x-slot name="actions">
+                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
+                    <i class="ph ph-plus text-lg"></i> Novo Formulário
+                </button>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -34,7 +36,11 @@
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                        <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
+                        @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                            <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
+                        @else
+                            <span class="w-2 h-2 rounded-full {{ $form->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                        @endif
                         <span class="text-[10px] font-bold {{ $form->status ? 'text-green-600' : 'text-gray-400' }}">
                             {{ $form->status ? 'ATIVO' : 'INATIVO' }}
                         </span>
@@ -48,15 +54,20 @@
                         <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                             <i class="text-lg ph ph-arrow-square-in"></i>
                         </a>
-                        <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
-                            <i class="text-lg ph ph-list-dashes"></i>
-                        </a>
-                        <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
+                        @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                                <i class="text-lg ph ph-list-dashes"></i>
+                            </a>
+                            <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                                <i class="text-lg ph ph-pencil-simple"></i>
+                            </button>
+                        @endif
+                        
+                        @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
+                            <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
+                                <i class="text-lg ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -93,15 +104,19 @@
                             <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                                 <i class="text-lg ph ph-arrow-square-in"></i>
                             </a>
-                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
-                                <i class="text-lg ph ph-list-dashes"></i>
-                            </a>
-                            <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                                <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                                    <i class="text-lg ph ph-list-dashes"></i>
+                                </a>
+                                <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+                            @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
+                                <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -154,13 +169,4 @@
             </div>
         </div>
     @endif
-    
-    {{-- TOAST SYSTEM --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>

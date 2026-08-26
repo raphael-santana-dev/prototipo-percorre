@@ -5,11 +5,13 @@
         icon="ph ph-chalkboard"
         badge="Acadêmico">
         
-        <x-slot name="actions">
-            <a href="{{ route('turmas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="ph-bold ph-plus text-lg"></i> Nova Turma
-            </a>
-        </x-slot>
+        @if(feature('turma.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('turmas.create') }}" wire:navigate class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="ph-bold ph-plus text-lg"></i> Nova Turma
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="w-full md:w-1/3 relative">
@@ -29,14 +31,14 @@
         @forelse($registros as $turma)
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <span class="font-black text-gray-800 dark:text-white text-md block">{{ $turma->nome }}</span>
                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-0.5">
                         <i class="ph ph-clock"></i> {{ $turma->turno->nome ?? 'N/A' }} • Ano {{ $turma->ano }}
                     </span>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-700 dark:text-gray-300 text-sm truncate max-w-[200px]" title="{{ $turma->curso->nome ?? 'N/A' }}">
                         {{ $turma->curso->nome ?? 'N/A' }}
                     </div>
@@ -45,13 +47,13 @@
                     </div>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 font-black text-sm rounded shadow-sm">
                         <i class="ph-bold ph-users"></i> {{ $turma->matriculas_count }}
                     </span>
                 </td>
                 
-                <td class="px-4 py-3 whitespace-nowrap text-center">
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     @if($turma->status)
                         <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-wider border border-green-200 dark:border-green-800">Ativa</span>
                     @else
@@ -60,12 +62,16 @@
                 </td>
                 
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
-                    <a href="{{ route('turmas.edit', $turma->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Turma">
-                        <i class="text-xl ph ph-pencil-simple"></i>
-                    </a>
-                    <button wire:click="excluir({{ $turma->id }})" wire:confirm="Tem certeza que deseja excluir esta turma?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                        <i class="text-xl ph ph-trash"></i>
-                    </button>
+                    @if(feature('turma.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.editar')))
+                        <a href="{{ route('turmas.edit', $turma->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Turma">
+                            <i class="text-xl ph ph-pencil-simple"></i>
+                        </a>
+                    @endif
+                    @if(feature('turma.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('turma.excluir')))
+                        <button wire:click="excluir({{ $turma->id }})" wire:confirm="Tem certeza que deseja excluir esta turma?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
+                            <i class="text-xl ph ph-trash"></i>
+                        </button>
+                    @endif
                 </td>
             </tr>
         @empty

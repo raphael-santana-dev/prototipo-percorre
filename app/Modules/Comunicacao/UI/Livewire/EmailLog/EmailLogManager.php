@@ -25,7 +25,9 @@ class EmailLogManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
+        abort_if(!feature('email_log.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('email_log.listar'), 403);
+        
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = false;
     }

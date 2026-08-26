@@ -69,7 +69,7 @@
                                     </th>
                                 @else
                                     {{-- ADICIONADO whitespace-nowrap --}}
-                                    <th class="px-4 py-3 whitespace-nowrap {{ $header['class'] ?? '' }}">
+                                    <th class="px-4 py-2.5 whitespace-nowrap {{ $header['class'] ?? '' }}">
                                         {{ $header['label'] }}
                                     </th>
                                 @endif

@@ -6,11 +6,13 @@
         badge=""
         :breadcrumbs="$breadcrumbs">
 
-        <x-slot name="actions">
-            <a href="{{ route('comunicados.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold text-sm">
-                <i class="ph ph-plus text-lg"></i> Novo Disparo
-            </a>
-        </x-slot>
+        @if(feature('comunicado.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('comunicado.criar')))
+            <x-slot name="actions">
+                <a href="{{ route('comunicados.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold text-sm">
+                    <i class="ph ph-plus text-lg"></i> Novo Disparo
+                </a>
+            </x-slot>
+        @endif
 
         <x-slot name="filters">
             <div class="flex gap-2 items-center flex-wrap">
@@ -102,14 +104,16 @@
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
-                            @if($comunicado->status === 'pendente')
-                                <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Cancelar Agendamento" onclick="confirm('Tem certeza que deseja cancelar este envio?') || event.stopImmediatePropagation()">
-                                    <i class="text-lg ph ph-x-square"></i>
-                                </button>
-                            @else
-                                <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100" title="Excluir Histórico" onclick="confirm('Excluir este histórico?') || event.stopImmediatePropagation()">
-                                    <i class="text-lg ph ph-trash"></i>
-                                </button>
+                            @if(feature('comunicado.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('comunicado.excluir')))
+                                @if($comunicado->status === 'pendente')
+                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Cancelar Agendamento" onclick="confirm('Tem certeza que deseja cancelar este envio?') || event.stopImmediatePropagation()">
+                                        <i class="text-lg ph ph-x-square"></i>
+                                    </button>
+                                @else
+                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100" title="Excluir Histórico" onclick="confirm('Excluir este histórico?') || event.stopImmediatePropagation()">
+                                        <i class="text-lg ph ph-trash"></i>
+                                    </button>
+                                @endif
                             @endif
                         </div>
                     </td>
@@ -126,16 +130,5 @@
                 </tr>
             @endforelse
         </x-table>
-    </div>
-
-    {{-- TOAST SYSTEM GLOBAL --}}
-    <div x-data="{ show: false, msg: '', type: 'sucesso' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; type = 'sucesso'; setTimeout(() => show = false, 3500);"
-        @erro.window="show = true; msg = $event.detail.msg; type = 'erro'; setTimeout(() => show = false, 4500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        :class="type === 'sucesso' ? 'bg-green-600' : 'bg-red-600'"
-        class="fixed bottom-8 right-8 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph" :class="type === 'sucesso' ? 'ph-check-circle' : 'ph-warning-circle'"></i>
-        <span x-text="msg"></span>
     </div>
 </div>

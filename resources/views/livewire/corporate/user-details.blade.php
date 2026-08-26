@@ -29,9 +29,11 @@
                 </div>
                 
                 <div class="pb-2">
-                    <a href="{{ route('users.extra-permissions', $user->id) }}" class="flex items-center gap-2 px-4 py-2 text-sm font-bold border rounded-lg text-ponkan-500 border-ponkan-500 hover:bg-ponkan-50 transition-colors">
-                        <i class="ph-bold ph-shield-plus"></i> Gerir Permissões
-                    </a>
+                    @if(feature('usuario.permissoes_extras') && (auth()->user()->hasRole('dev') || auth()->user()->can('usuario.permissoes_extras')))
+                        <a href="{{ route('users.extra-permissions', $user->id) }}" class="flex items-center gap-2 px-4 py-2 text-sm font-bold border rounded-lg text-ponkan-500 border-ponkan-500 hover:bg-ponkan-50 transition-colors">
+                            <i class="ph-bold ph-shield-plus"></i> Gerir Permissões
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>

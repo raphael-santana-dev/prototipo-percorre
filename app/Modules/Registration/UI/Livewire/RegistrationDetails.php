@@ -18,6 +18,9 @@ class RegistrationDetails extends Component
 
     public function mount($id)
     {
+        abort_if(!feature('inscricao.visualizar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.visualizar'), 403);
+
         // Carrega a inscrição e seus relacionamentos
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         
@@ -27,7 +30,8 @@ class RegistrationDetails extends Component
     public function atualizarStatus()
     {
         // Garante que o usuário tem permissão para alterar status
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Você não tem permissão para alterar o status.');
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403, 'Você não tem permissão para alterar o status.');
 
         $statusNovo = StatusInscricao::find($this->status_selecionado);
         if (!$statusNovo) return;

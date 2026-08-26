@@ -13,6 +13,13 @@ class Listagem extends Component
 
     public $busca = '';
 
+    public function mount()
+    {
+        abort_if(!feature('periodo_avaliacao.listar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.listar'), 403, 'Acesso restrito.');
+        $this->permiteGrid = false;
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -28,6 +35,9 @@ class Listagem extends Component
 
     public function excluir($id)
     {
+        abort_if(!feature('periodo_avaliacao.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('periodo_avaliacao.excluir'), 403);
+        
         $periodo = PeriodoAvaliacao::withCount('fases')->findOrFail($id);
         
         if ($periodo->status === '1') {

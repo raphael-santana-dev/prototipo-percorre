@@ -7,11 +7,6 @@
         badge=""
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
-        
-        {{-- Opcional: Se a tela tiver botão de Nova Inscrição, seria aqui --}}
-        {{-- <x-slot name="actions">
-            <button class="...">Novo</button>
-        </x-slot> --}}
 
         {{-- FILTROS: O header renderiza a caixa branca, você só passa o Grid interno --}}
         <x-slot name="filters" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -83,34 +78,36 @@
     </x-page-header>
 
     {{-- BOTÕES DE SELEÇÃO RÁPIDA E BARRA DE LOTE --}}
-    <div class="flex justify-end items-center mb-4 gap-2">
-        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Selecionar rápido:</span>
-        <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 10</button>
-        <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 50</button>
-    </div>
-
-    @if(count($selecionadas) > 0)
-    <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-        <div class="flex items-center">
-            <span class="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
-            <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 hover:underline font-medium">Limpar seleção</button>
+    @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+        <div class="flex justify-end items-center mb-4 gap-2">
+            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Selecionar rápido:</span>
+            <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 10</button>
+            <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Os primeiros 50</button>
         </div>
-        
-        <div class="flex flex-wrap items-center justify-end gap-2">
-            <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase mr-1">Alterar status para:</span>
+
+        @if(count($selecionadas) > 0)
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+            <div class="flex items-center">
+                <span class="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
+                <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 hover:underline font-medium">Limpar seleção</button>
+            </div>
             
-            @foreach($statusInscricoesDb as $status)
-                <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
-                    {{ $status->nome }}
-                </button>
-            @endforeach
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase mr-1">Alterar status para:</span>
+                
+                @foreach($statusInscricoesDb as $status)
+                    <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
+                        {{ $status->nome }}
+                    </button>
+                @endforeach
 
-            <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-1 hidden md:block"></div>
-            <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition">
-                Ver no Modal
-            </button>
+                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-1 hidden md:block"></div>
+                <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition">
+                    Ver no Modal
+                </button>
+            </div>
         </div>
-    </div>
+        @endif
     @endif
 
     {{-- TABELA DE DADOS --}}
@@ -218,17 +215,21 @@
                 {{-- AÇÕES CORRIGIDAS (Com div flex e whitespace-nowrap) --}}
                 <td class="px-4 py-2.5 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
-                            <i class="text-xl ph ph-info"></i>
-                        </button>
+                        @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
+                            <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <i class="text-xl ph ph-info"></i>
+                            </button>
 
-                        <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                            <i class="text-xl ph ph-eye"></i>
-                        </a>
+                            <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                <i class="text-xl ph ph-eye"></i>
+                            </a>
+                        @endif
 
-                        <button wire:click="#" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
-                            <i class="text-xl ph ph-trash"></i>
-                        </button>
+                        @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
+                            <button wire:click="#" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
+                                <i class="text-xl ph ph-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -359,13 +360,4 @@
     <x-fab :actions="$this->fabActions"
     main-color="bg-gray-800 hover:bg-black" 
     sub-btn-bg="bg-indigo-50 hover:bg-indigo-100" />
-
-    {{-- TOAST --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>

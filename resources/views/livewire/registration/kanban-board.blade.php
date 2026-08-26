@@ -21,20 +21,22 @@
         </div>
 
         <!-- BARRA AÇÃO EM LOTE -->
-        <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak class="flex items-center gap-3 bg-white p-2 rounded-lg shadow-md border border-purpura-200">
-            <span class="text-sm font-bold text-purpura-700 ml-2">
-                <span x-text="count.length"></span> registros
-            </span>
-            <select wire:model="statusDestinoLote" class="text-sm border-gray-300 rounded-md py-1.5 focus:ring-purpura-500">
-                <option value="">Mover para coluna...</option>
-                @foreach($colunas as $col)
-                    <option value="{{ $col->id }}">{{ $col->nome }}</option>
-                @endforeach
-            </select>
-            <button wire:click="moverLote" class="bg-purpura-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-purpura-700 transition">
-                Mover Todos
-            </button>
-        </div>
+        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+            <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak class="flex items-center gap-3 bg-white p-2 rounded-lg shadow-md border border-purpura-200">
+                <span class="text-sm font-bold text-purpura-700 ml-2">
+                    <span x-text="count.length"></span> registros
+                </span>
+                <select wire:model="statusDestinoLote" class="text-sm border-gray-300 rounded-md py-1.5 focus:ring-purpura-500">
+                    <option value="">Mover para coluna...</option>
+                    @foreach($colunas as $col)
+                        <option value="{{ $col->id }}">{{ $col->nome }}</option>
+                    @endforeach
+                </select>
+                <button wire:click="moverLote" class="bg-purpura-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-purpura-700 transition">
+                    Mover Todos
+                </button>
+            </div>
+        @endif
     </div>
 
     <!-- AREA DO KANBAN -->

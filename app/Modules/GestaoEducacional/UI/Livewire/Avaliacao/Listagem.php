@@ -14,6 +14,11 @@ class Listagem extends Component
 
     public $busca = '';
 
+    public function mount()
+    {
+        abort_if(!feature('avaliacao.listar'), 403, 'Sistema de avaliações desativado temporariamente.');
+    }
+    
     public function getHeadersProperty()
     {
         return [

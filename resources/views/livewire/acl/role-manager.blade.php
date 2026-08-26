@@ -1,16 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    
-    @if (session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-pistache-100 bg-pistache-500 font-medium shadow-sm">
-            <i class="ph ph-check-circle text-lg"></i> {{ session('success') }}
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="flex items-center gap-2 p-4 mb-6 rounded-md text-red-100 bg-red-500 font-medium shadow-sm">
-            <i class="ph ph-warning text-lg"></i> {{ session('error') }}
-        </div>
-    @endif
-
     <x-page-header 
         title="Grupos" 
         icon="ph ph-shield-check"
@@ -18,11 +6,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        <x-slot name="actions">
-            <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                <i class="ph ph-plus text-lg"></i> Novos Grupos
-            </button>
-        </x-slot>
+        @if(feature('acl.role.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.criar')))
+            <x-slot name="actions">
+                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Novos Grupos
+                </button>
+            </x-slot>
+        @endif
 
     </x-page-header>
 
@@ -55,17 +45,23 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
-                            <i class="text-lg ph ph-key"></i>
-                        </a>
+                        @if(feature('acl.role.permissoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.permissoes')))
+                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
+                                <i class="text-lg ph ph-key"></i>
+                            </a>
+                        @endif
                         
                         @if(!in_array($role->name, ['dev', 'admin']))
-                            <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if(feature('acl.role.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.editar')))
+                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+                            @if(feature('acl.role.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.excluir')))
+                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         @endif
                     </div>
                 </td>

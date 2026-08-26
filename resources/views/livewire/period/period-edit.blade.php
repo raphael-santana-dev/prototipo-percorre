@@ -158,9 +158,11 @@
                             Defina os limites de vagas específicos. Os dropdowns abaixo só exibirão as opções que você marcou na Estrutura Acadêmica acima.
                         </p>
                     </div>
-                    <button type="button" wire:click="addOferta" class="px-4 py-2 bg-purpura-100 text-purpura-800 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 text-xs font-bold uppercase rounded-lg transition flex items-center gap-2 shadow-sm">
-                        <i class="ph-bold ph-plus text-sm"></i> Nova Oferta
-                    </button>
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="addOferta" class="px-4 py-2 bg-purpura-100 text-purpura-800 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 text-xs font-bold uppercase rounded-lg transition flex items-center gap-2 shadow-sm">
+                            <i class="ph-bold ph-plus text-sm"></i> Nova Oferta
+                        </button>
+                    @endif
                 </div>
 
                 <div class="space-y-4">
@@ -218,10 +220,11 @@
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Total de Vagas</label>
                                 <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 text-center font-black text-purpura-600 dark:text-purpura-400">
                             </div>
-                            
-                            <button type="button" wire:click="removeOferta({{ $index }})" class="absolute -right-2 -top-2 w-8 h-8 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
-                                <i class="ph-bold ph-trash text-sm"></i>
-                            </button>
+                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                <button type="button" wire:click="removeOferta({{ $index }})" class="absolute -right-2 -top-2 w-8 h-8 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
+                                    <i class="ph-bold ph-trash text-sm"></i>
+                                </button>
+                            @endif
                         </div>
                     @empty
                         <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">

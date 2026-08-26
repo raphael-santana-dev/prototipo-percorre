@@ -18,20 +18,35 @@ class TemplateForm extends Component
 
     public function mount($id = null)
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
-        $this->breadcrumbs = BreadcrumbHelper::generate();
+        
 
         if ($id) {
+            abort_if(!feature('template.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
+
             $template = EmailTemplate::findOrFail($id);
             $this->templateId = $template->id;
             $this->nome = $template->nome;
             $this->assunto = $template->assunto;
             $this->corpo = $template->corpo;
+        } else {
+            abort_if(!feature('template.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
         }
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function salvar()
     {
+        if ($this->templateId) {
+            abort_if(!feature('template.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
+        } else {
+            abort_if(!feature('template.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
+        }
+        
         $this->validate([
             'nome' => 'required|min:3|max:255',
             'assunto' => 'required|min:3|max:255',

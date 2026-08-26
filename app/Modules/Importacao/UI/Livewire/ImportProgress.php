@@ -9,6 +9,11 @@ class ImportProgress extends Component
 {
     public function render()
     {
+        if (!feature('importacao.acessar') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'))) {
+            return <<<'HTML'
+            <div></div>
+            HTML;
+        }
         // Busca apenas as importações do usuário logado que não terminaram
         $ativas = Importacao::where('user_id', auth()->id())
             ->whereIn('status', ['mapeamento', 'na_fila', 'processando'])

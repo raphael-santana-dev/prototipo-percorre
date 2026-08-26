@@ -8,11 +8,11 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            @can('estudante.criar')
+            @if(feature('estudante.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.criar')))
                 <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
                     <i class="ph ph-plus text-lg"></i> Novo Aluno
                 </button>
-            @endcan
+            @endif
         </x-slot>
 
         <x-slot name="filters">
@@ -80,7 +80,11 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                        <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                        @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
+                            <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                        @else
+                            <span class="w-2 h-2 rounded-full {{ $student->is_active ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                        @endif
                         <span class="text-[10px] font-bold {{ $student->is_active ? 'text-green-600' : 'text-gray-400' }}">
                             {{ $student->is_active ? 'ATIVO' : 'INATIVO' }}
                         </span>
@@ -89,25 +93,27 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                            <i class="text-lg ph ph-info"></i>
-                        </button>
+                        @if(feature('estudante.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.visualizar')))
+                            <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                <i class="text-lg ph ph-info"></i>
+                            </button>
 
-                        <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
+                            <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
+                        @endif
                         
-                        @can('estudante.editar')
+                        @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
                             <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
-                        @endcan
+                        @endif
                         
-                        @can('estudante.excluir')
+                        @if(feature('estudante.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.excluir')))
                             <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
-                        @endcan
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -144,32 +150,38 @@
                     
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div>
-                            <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                            @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
+                                <x-toggle :status="$student->is_active" action="toggleStatus({{ $student->id }})" />
+                                @else
+                                <span class="w-2 h-2 rounded-full {{ $student->is_active ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                            @endif
                             <div class="text-[10px] mt-1 font-bold {{ $student->is_active ? 'text-green-600' : 'text-gray-500' }}">
                                 {{ $student->is_active ? 'ATIVO' : 'INATIVO' }}
                             </div>
                         </div>
                     
                         <div class="flex items-center gap-1">
-                            <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
-                                <i class="text-lg ph ph-info"></i>
-                            </button>
+                            @if(feature('estudante.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.visualizar')))
+                                <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                    <i class="text-lg ph ph-info"></i>
+                                </button>
 
-                            <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
-                                <i class="text-lg ph ph-eye"></i>
-                            </a>
-                            
-                            @can('estudante.editar')
+                                <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                    <i class="text-lg ph ph-eye"></i>
+                                </a>
+                            @endif
+                        
+                            @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
                                 <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
-                            @endcan
-                            
-                            @can('estudante.excluir')
+                            @endif
+                        
+                            @if(feature('estudante.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.excluir')))
                                 <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
-                            @endcan
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -262,12 +274,4 @@
         </div>
     @endif
     
-    {{-- TOAST SYSTEM --}}
-    <div x-data="{ show: false, msg: '' }" 
-        @sucesso.window="show = true; msg = $event.detail.msg; setTimeout(() => show = false, 3500);"
-        x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-10"
-        class="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[200] flex items-center gap-3 font-bold" x-cloak>
-        <i class="text-2xl ph ph-check-circle text-white"></i>
-        <span x-text="msg"></span>
-    </div>
 </div>

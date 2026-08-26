@@ -32,8 +32,17 @@ class ComunicadoForm extends Component
     public $tipo_envio = 'imediato';
     public $data_agendamento = '';
 
+    public function mount()
+    {
+        abort_if(!feature('comunicado.criar'), 403, 'Módulo desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
+    }
+
     public function salvar()
     {
+        abort_if(!feature('comunicado.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
+        
         // 1. Limpeza dos e-mails manuais
         $this->destinatarios = array_filter(array_map('trim', $this->destinatarios));
         $this->cc = array_filter(array_map('trim', $this->cc));
