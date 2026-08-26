@@ -90,13 +90,12 @@ class GeradorMock extends Component
             // ==========================================
             for ($i = 0; $i < $this->quantidadeInjecao; $i++) {
                 
-                // Cria Estudante Único
+                // Cria Estudante Único (REMOVIDO O unidade_id AQUI, ESTAVA CAUSANDO O ERRO)
                 $alunoEmail = 'aluno.' . $faker->unique()->numerify('#####') . '@sistema.com';
                 $aluno = Student::create([
                     'name' => $faker->name, 
                     'email' => $alunoEmail,
                     'cpf' => $faker->unique()->numerify('###########'), 
-                    'unidade_id' => $unidadeId,
                     'is_active' => true,
                     'password' => Hash::make('senha123'),
                     'slug' => Str::slug($faker->name . '-' . Str::random(4))
