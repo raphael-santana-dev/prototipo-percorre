@@ -121,6 +121,54 @@
                             </div>
                         </div>
 
+                        <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
+                                <i class="text-lg ph ph-graduation-cap"></i> Educacional <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                            </button>
+                            <div x-show="open" x-transition.opacity class="absolute left-0 w-56 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                
+                                <!-- Dropdown Interno: Avaliações -->
+                                <div x-data="{ subOpen: false }" @click.away="subOpen = false" class="relative">
+                                    <button @click="subOpen = !subOpen" class="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                        Avaliações
+                                        <i class="ph ph-caret-right text-xs transition-transform duration-200" :class="{'rotate-90': subOpen}"></i>
+                                    </button>
+                                    <!-- O menu abre ao lado (left-full) -->
+                                    <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-48 dark:bg-gray-800 dark:border-gray-700" x-cloak>
+                                        <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Listar Períodos</a>
+                                        <a href="{{ route('avaliacoes.periodos.create') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Novo Período</a>
+                                        <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Relatórios</a>
+                                        <a href="{{ route('avaliacoes.gerador') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gerador Mock</a>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown Interno: Matrículas -->
+                                <div x-data="{ subOpen: false }" @click.away="subOpen = false" class="relative">
+                                    <button @click="subOpen = !subOpen" class="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                        Matrículas
+                                        <i class="ph ph-caret-right text-xs transition-transform duration-200" :class="{'rotate-90': subOpen}"></i>
+                                    </button>
+                                    <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-48 dark:bg-gray-800 dark:border-gray-700" x-cloak>
+                                        <a href="{{ route('matriculas.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Matrículas</a>
+                                        <a href="{{ route('matriculas.create') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Nova Matrícula</a>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown Interno: Turmas -->
+                                <div x-data="{ subOpen: false }" @click.away="subOpen = false" class="relative">
+                                    <button @click="subOpen = !subOpen" class="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                        Turmas
+                                        <i class="ph ph-caret-right text-xs transition-transform duration-200" :class="{'rotate-90': subOpen}"></i>
+                                    </button>
+                                    <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-48 dark:bg-gray-800 dark:border-gray-700" x-cloak>
+                                        <a href="{{ route('turmas.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Turmas</a>
+                                        <a href="{{ route('turmas.create') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Nova Turma</a>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
                         @role('dev|admin')
                         <div x-data="{ open: false }" @click.away="open = false" class="relative ml-auto">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
@@ -215,8 +263,52 @@
                         </div>
                     </div>
 
-                    <div class="px-3 py-2">
-                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
+                    <div x-data="{ open: false }" class="space-y-1">
+                        <button @click="open = !open" class="flex items-center justify-between w-full px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                            <span class="flex items-center gap-3"><i class="text-lg ph ph-graduation-cap"></i> Educacional</span>
+                            <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                        </button>
+                        <div x-show="open" class="pl-6 space-y-2 py-1" x-cloak>
+                            
+                            <!-- Acordeão Interno: Avaliações -->
+                            <div x-data="{ subOpen: false }" class="space-y-1">
+                                <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                    <span>Avaliações</span>
+                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>
+                                </button>
+                                <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
+                                    <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Listar Períodos</a>
+                                    <a href="{{ route('avaliacoes.periodos.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Novo Período</a>
+                                    <a href="{{ route('avaliacoes.relatorios') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Relatórios</a>
+                                    <a href="{{ route('avaliacoes.gerador') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Gerador Mock</a>
+                                </div>
+                            </div>
+
+                            <!-- Acordeão Interno: Matrículas -->
+                            <div x-data="{ subOpen: false }" class="space-y-1">
+                                <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                    <span>Matrículas</span>
+                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>
+                                </button>
+                                <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
+                                    <a href="{{ route('matriculas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Matrículas</a>
+                                    <a href="{{ route('matriculas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Matrícula</a>
+                                </div>
+                            </div>
+
+                            <!-- Acordeão Interno: Turmas -->
+                            <div x-data="{ subOpen: false }" class="space-y-1">
+                                <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                    <span>Turmas</span>
+                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>
+                                </button>
+                                <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
+                                    <a href="{{ route('turmas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Turmas</a>
+                                    <a href="{{ route('turmas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Turma</a>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
 
                     @role('dev|admin')
@@ -239,6 +331,10 @@
                             </div>
                         </div>
                     @endrole
+
+                    <div class="px-3 py-2">
+                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
+                    </div>
                 </div>
 
                 <div class="p-4 border-t border-gray-100 dark:border-gray-700">

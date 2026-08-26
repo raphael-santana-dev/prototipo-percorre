@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             StatusInscricaoBaseSeeder::class,
             UnidadesTesteSeeder::class,
             CursosTesteSeeder::class,
+            EmpresasSeeder::class, // <-- NOVO
+            PlanejamentoAcademicoSeeder::class, // <-- NOVO
         ]);
     }
 }

@@ -1,12 +1,17 @@
-<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+<div class="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
         
-        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 to-purpura-600"></div>
+        <!-- Logo -->
+        <div class="flex justify-start">
+            <div class="p-3 bg-[#461a63] rounded-xl flex items-center justify-center">
+                <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+            </div>
+        </div>
 
-        <div class="text-center">
-            <h2 class="text-2xl font-black text-gray-900 dark:text-white mt-4">Criar Nova Senha</h2>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Insira sua nova credencial de acesso seguro.
+        <div class="text-left mt-6">
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Criar Nova Senha</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Sua nova senha deve ser diferente das anteriores.
             </p>
         </div>
 
@@ -14,39 +19,33 @@
             
             <input type="hidden" wire:model="token">
 
-            <div>
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">E-mail</label>
-                <input wire:model="email" type="email" required readonly class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 sm:text-sm cursor-not-allowed dark:bg-gray-900/50 dark:border-gray-700">
-                @error('email') <span class="text-xs font-bold text-red-500 mt-1 block">{{ $message }}</span> @enderror
+            <!-- Input de E-mail (Somente leitura para redefinição) -->
+            <div class="hidden">
+                <input wire:model="email" type="email" required readonly class="appearance-none block w-full px-4 py-3.5 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-500 sm:text-sm cursor-not-allowed dark:bg-gray-800">
             </div>
 
-            <div>
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">Nova Senha</label>
-                <div class="mt-1 relative">
-                    <input wire:model.live="password" type="password" required class="appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-purpura-500 focus:border-purpura-500 sm:text-sm dark:bg-gray-700 dark:text-white">
+            <div class="space-y-4">
+                <div class="relative" x-data="{ show: false }">
+                    <input wire:model.live="password" :type="show ? 'text' : 'password'" required placeholder="Nova Senha" class="appearance-none block w-full px-4 py-3.5 border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-transparent sm:text-sm dark:bg-gray-800 dark:text-white transition-all">
+                    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <i class="ph text-xl" :class="show ? 'ph-eye-slash' : 'ph-eye'"></i>
+                    </button>
                 </div>
-                @error('password') <span class="text-xs font-bold text-red-500 mt-1 block">{{ $message }}</span> @enderror
-            </div>
+                @error('password') <span class="text-xs font-medium text-red-500 mt-1 block">{{ $message }}</span> @enderror
 
-            <div>
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">Confirmar Nova Senha</label>
-                <div class="mt-1 relative">
-                    <input wire:model.live="password_confirmation" type="password" required class="appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-purpura-500 focus:border-purpura-500 sm:text-sm dark:bg-gray-700 dark:text-white">
+                <div class="relative" x-data="{ show: false }">
+                    <input wire:model.live="password_confirmation" :type="show ? 'text' : 'password'" required placeholder="Confirmar Nova Senha" class="appearance-none block w-full px-4 py-3.5 border border-gray-300 dark:border-gray-700 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-transparent sm:text-sm dark:bg-gray-800 dark:text-white transition-all">
+                    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <i class="ph text-xl" :class="show ? 'ph-eye-slash' : 'ph-eye'"></i>
+                    </button>
                 </div>
             </div>
 
-            <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-100 dark:border-gray-700">
-                <ul class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> No mínimo 8 caracteres</li>
-                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> Letras maiúsculas e minúsculas</li>
-                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> Pelo menos um número (0-9)</li>
-                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-green-500"></i> Pelo menos um símbolo (!@#$%)</li>
-                </ul>
+            <div class="pt-2">
+                <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg text-sm font-bold text-white bg-[#461a63] hover:bg-purpura-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purpura-500 transition-colors shadow-sm">
+                    Redefinir Senha
+                </button>
             </div>
-
-            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-purpura-600 hover:bg-purpura-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purpura-500">
-                Redefinir Senha
-            </button>
         </form>
     </div>
 </div>
