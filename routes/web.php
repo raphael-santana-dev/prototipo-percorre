@@ -19,7 +19,8 @@ use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
 use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\Period\UI\Livewire\StepManager;
-use App\Modules\Period\UI\Livewire\DynamicFields;
+use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
+use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
 
 // ==========================================
 // 1. ROTAS PÚBLICAS E RECUPERAÇÃO DE SENHA
@@ -107,8 +108,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');
     Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show')->where('id', '[0-9]+');
-    Route::get('/construtor/{tipo}/{id}/{slug?}', \App\Modules\Period\UI\Livewire\DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
-
+    Route::get('/construtor/{tipo}/{id}/{slug?}', DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
+    Route::get('/form-builder', FormBuilderHub::class)->name('formbuilder.hub');
     // --- Comunicação e Automações ---
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');
     Route::get('/templates/create', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.create');

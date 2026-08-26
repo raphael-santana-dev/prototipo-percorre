@@ -68,14 +68,14 @@ class PlanejamentoAcademicoSeeder extends Seeder
         $this->inserirOferta($cicloId, 'zendesk', 'santo_amaro_sp', 'Santo Amaro -  RUA ISABEL SCHMIDT, 349 SANTO AMARO. METRÔ ADOLFO PINHEIRO (UNISA)', 'Sábado', 50);
     }
 
-    private function inserirOferta($cicloId, $cursoSlug, $unidadeSlug, $unidadeNomePlanilha, $turnoNome, $vagas)
+    // Adicionamos os parâmetros $idadeMin e $idadeMax na assinatura
+    private function inserirOferta($cicloId, $cursoSlug, $unidadeSlug, $unidadeNomePlanilha, $turnoNome, $vagas, $idadeMin = null, $idadeMax = null)
     {
         $cursoId = DB::table('cursos')->where('slug', $cursoSlug)->value('id');
         $turnoId = DB::table('turnos')->where('nome', $turnoNome)->value('id');
         
         $unidadeId = DB::table('unidades')->where('slug', $unidadeSlug)->value('id');
         
-        // Se a unidade (ex: Santo Amaro) não existir nos seeders base, cria agora com o nome exato
         if (!$unidadeId) {
             $unidadeId = DB::table('unidades')->insertGetId([
                 'nome' => $unidadeNomePlanilha,
@@ -87,23 +87,21 @@ class PlanejamentoAcademicoSeeder extends Seeder
         }
 
         if ($cursoId && $unidadeId && $turnoId) {
-            // 1. Cria a Oferta de Vagas (Migration: ofertas_vagas)
             DB::table('ofertas_vagas')->insertOrIgnore([
                 'ciclo_id' => $cicloId,
                 'curso_id' => $cursoId,
                 'unidade_id' => $unidadeId,
                 'turno_id' => $turnoId,
                 'vagas' => $vagas,
+                'idade_min' => $idadeMin, // <-- SALVANDO AQUI
+                'idade_max' => $idadeMax, // <-- SALVANDO AQUI
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 2. Relacionamentos do Ciclo (Ciclo x Unidade, Ciclo x Turno, Ciclo x Curso)
             DB::table('ciclo_unidade')->insertOrIgnore(['ciclo_id' => $cicloId, 'unidade_id' => $unidadeId]);
             DB::table('ciclo_turno')->insertOrIgnore(['ciclo_id' => $cicloId, 'turno_id' => $turnoId]);
             DB::table('ciclo_curso')->insertOrIgnore(['ciclo_id' => $cicloId, 'curso_id' => $cursoId]);
-
-            // 3. Relacionamentos do Curso (Curso x Unidade, Curso x Turno)
             DB::table('curso_unidade')->insertOrIgnore(['curso_id' => $cursoId, 'unidade_id' => $unidadeId]);
             DB::table('curso_turno')->insertOrIgnore(['curso_id' => $cursoId, 'turno_id' => $turnoId]);
         }

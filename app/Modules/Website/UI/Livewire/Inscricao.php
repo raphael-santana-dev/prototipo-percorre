@@ -353,44 +353,34 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
-        // 1. FILTRO MESTRE: Busca os Cursos marcados no Dossiê, cujas Unidades e Turnos também foram marcados!
-        $cursosValidos = Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])
-            ->whereHas('ciclos', fn($q) => $q->where('ciclos.id', $this->cicloAtivoId))
-            ->where(fn($q) => $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade))
-            ->where(fn($q) => $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade))
-            ->with([
-                'unidades' => function($q) {
-                    // Traz apenas as unidades que o admin ativou para este ciclo
-                    $q->whereIn('status', ['Ativa', 'ativa', '1', 1, true])
-                      ->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
-                }, 
-                'turnosVinculados' => function($q) {
-                    // Traz apenas os turnos que o admin ativou para este ciclo
-                    $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
-                }
-            ])
+        // NOVO MOTOR DE BUSCA: Lendo as idades diretamente da tabela de Ofertas (ofertas_vagas)
+        $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
+            })
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
+            })
             ->get();
 
         $unidadesDisponiveisList = collect();
         
-        foreach($cursosValidos as $curso) {
-            foreach($curso->unidades as $unidade) {
-                if (!$curso->permite_estado_diferente && $unidade->estado !== $this->estado) continue;
+        foreach($ofertasDisponiveis as $oferta) {
+            // Verifica status do Curso e Unidade
+            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
+            if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true])) continue;
+            
+            // Verifica bloqueio de Estado (UF) do curso
+            if (!$oferta->curso->permite_estado_diferente && $oferta->unidade->estado !== $this->estado) continue;
 
-                if ($this->use_vacancy_limit && $ofertasValidas !== null) {
-                    $temVagaNaUnidade = false;
-                    foreach ($curso->turnosVinculados as $turno) {
-                        $key = "{$unidade->id}-{$curso->id}-{$turno->id}";
-                        if (isset($ofertasValidas[$key])) {
-                            $temVagaNaUnidade = true;
-                            break;
-                        }
-                    }
-                    if (!$temVagaNaUnidade) continue;
-                }
-
-                $unidadesDisponiveisList->put($unidade->id, $unidade->nome);
+            // Verifica a trava de vagas (overbooking)
+            if ($this->use_vacancy_limit && $ofertasValidas !== null) {
+                $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
+                if (!isset($ofertasValidas[$key])) continue;
             }
+
+            $unidadesDisponiveisList->put($oferta->unidade_id, $oferta->unidade->nome);
         }
 
         if ($unidadesDisponiveisList->count() > 0) {
@@ -418,34 +408,29 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
 
-        $cursosDb = Curso::with(['turnosVinculados' => function($q) {
-                $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
-            }])
-            ->whereIn('status', ['Ativo', 'ativo', '1', 1, true])
-            ->whereHas('ciclos', fn($q) => $q->where('ciclos.id', $this->cicloAtivoId))
-            ->whereHas('unidades', fn ($q) => $q->where('unidades.id', $unidadeId))
-            ->where(fn($q) => $q->whereNull('min_idade')->orWhere('min_idade', '<=', $idade))
-            ->where(fn($q) => $q->whereNull('max_idade')->orWhere('max_idade', '>=', $idade))
+        $ofertasDaUnidade = \App\Models\OfertaVaga::with(['curso', 'turno'])
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->where('unidade_id', $unidadeId)
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
+            })
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
+            })
             ->get();
 
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
-        foreach ($cursosDb as $curso) {
-            if (!$curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) continue;
+        foreach ($ofertasDaUnidade as $oferta) {
+            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
+            if (!$oferta->curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) continue;
 
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
-                $temVagaNesteCurso = false;
-                foreach ($curso->turnosVinculados as $turno) {
-                    $key = "{$unidadeId}-{$curso->id}-{$turno->id}";
-                    if (isset($ofertasValidas[$key])) {
-                        $temVagaNesteCurso = true;
-                        break;
-                    }
-                }
-                if (!$temVagaNesteCurso) continue;
+                $key = "{$unidadeId}-{$oferta->curso_id}-{$oferta->turno_id}";
+                if (!isset($ofertasValidas[$key])) continue;
             }
 
-            $this->cursosDisponiveis[$curso->id] = $curso->nome;
+            $this->cursosDisponiveis[$oferta->curso_id] = $oferta->curso->nome;
         }
 
         if (count($this->cursosDisponiveis) === 1) {
@@ -459,27 +444,33 @@ class Inscricao extends Component
         $this->turno = null;
         $this->turnosDisponiveis = [];
 
-        if (!$cursoId) return;
+        if (!$cursoId || !$this->unidade || !$this->data_nascimento) return;
 
-        // Busca apenas os turnos que o administrador marcou no Explorer para o Ciclo
-        $curso = Curso::with(['turnosVinculados' => function($q) {
-            $q->whereHas('ciclos', fn($sq) => $sq->where('ciclos.id', $this->cicloAtivoId));
-        }])->find($cursoId);
-        
+        $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
 
-        if ($curso) {
-            foreach ($curso->turnosVinculados as $turno) {
-                if ($this->use_vacancy_limit && $ofertasValidas !== null) {
-                    $key = "{$this->unidade}-{$cursoId}-{$turno->id}";
-                    if (!isset($ofertasValidas[$key])) continue;
-                }
-                $this->turnosDisponiveis[$turno->id] = $turno->nome;
+        $ofertasDoCurso = \App\Models\OfertaVaga::with('turno')
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->where('unidade_id', $this->unidade)
+            ->where('curso_id', $cursoId)
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
+            })
+            ->where(function($q) use ($idade) {
+                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
+            })
+            ->get();
+
+        foreach ($ofertasDoCurso as $oferta) {
+            if ($this->use_vacancy_limit && $ofertasValidas !== null) {
+                $key = "{$this->unidade}-{$cursoId}-{$oferta->turno_id}";
+                if (!isset($ofertasValidas[$key])) continue;
             }
-            
-            if (count($this->turnosDisponiveis) === 1) {
-                $this->turno = array_key_first($this->turnosDisponiveis);
-            }
+            $this->turnosDisponiveis[$oferta->turno_id] = $oferta->turno->nome;
+        }
+        
+        if (count($this->turnosDisponiveis) === 1) {
+            $this->turno = array_key_first($this->turnosDisponiveis);
         }
     }
 

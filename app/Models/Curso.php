@@ -5,17 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Modules\Unidade\Domain\Models\Unidade;
-use App\Modules\Turno\Domain\Models\Turno;
 use App\Traits\RegistraAuditoria;
 
 class Curso extends Model
 {
-    use HasFactory, SoftDeletes;
-    use RegistraAuditoria;
+    use HasFactory, SoftDeletes, RegistraAuditoria;
     
     protected $fillable = [
-        'nome', 'slug', 'status', 'turnos', 'min_idade', 'max_idade', 'permite_estado_diferente'
+        'nome', 'slug', 'status', 'turnos', 'permite_estado_diferente'
     ];
 
     protected $casts = [
