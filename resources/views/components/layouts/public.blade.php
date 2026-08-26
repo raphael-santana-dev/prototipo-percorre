@@ -84,7 +84,7 @@
                                 Acesso Restrito
                             </a>
                             <a href="{{ route('portal.login') }}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm">
-                                <i class="mr-1 ph-bold ph-graduation-cap text-sm"></i> Sou Estudante
+                                <i class="mr-1 ph-bold ph-graduation-cap text-sm"></i> Acesso Geral
                             </a>
                         </div>
                     </div>
