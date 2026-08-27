@@ -69,7 +69,7 @@
                         <a href="{{ route('formularios.respostas.show', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Ver Respostas Coletadas">
                             <i class="text-lg ph ph-database"></i>
                         </a>
-                        <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Acessar Formulário (Link)">
+                        <a href="{{ route('formularios.publico', ['slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Acessar Formulário (Link)">
                             <i class="text-lg ph ph-arrow-square-in"></i>
                         </a>
                         @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))

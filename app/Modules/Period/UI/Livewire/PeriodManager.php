@@ -27,6 +27,8 @@ class PeriodManager extends Component
     public $filtro_ano = '';
     public $filtro_semestre = '';
     public $filtro_status = '';
+
+    public bool $unicoAtivo = true;
     
     public function mount()
     {

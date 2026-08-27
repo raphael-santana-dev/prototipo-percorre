@@ -46,7 +46,11 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.listar'), 403, 'O módulo de inscrições está desativado.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.listar'), 403, 'Acesso restrito.');
 
-        $this->breadcrumbs = BreadcrumbHelper::generate();
+        $this->breadcrumbs = [
+            ['label' => 'Dashboard', 'url' => route('dashboard')],
+            ['label' => 'Processos Seletivos'],
+            ['label' => 'Inscrições', 'url' => route('inscricoes.index')],
+        ];
 
         $this->permiteGrid = true;
     }
