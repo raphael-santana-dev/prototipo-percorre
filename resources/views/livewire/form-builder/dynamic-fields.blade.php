@@ -475,8 +475,8 @@
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700">Opções de Resposta</label>
-                                    <p class="text-[10px] text-gray-500 mb-1.5">Separe as opções por vírgula.</p>
-                                    <textarea wire:model="opcoes" rows="3" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                                    <p class="text-[10px] text-gray-500 mb-1.5">Coloque **uma opção por linha** (Aperte Enter).</p>
+                                    <textarea wire:model="opcoes" rows="5" placeholder="Sim&#10;Não&#10;Talvez" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
                                 </div>
 
                                 @if(in_array($tipo, ['radio', 'check']))

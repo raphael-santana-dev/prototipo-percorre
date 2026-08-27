@@ -85,6 +85,16 @@
                                     @error('data_nascimento') <span class="text-red-500 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                 </div>
 
+                                <div class="col-span-12 md:col-span-6">
+                                    <label class="block text-sm font-semibold text-gray-800 mb-1">Celular / Telefone</label>
+                                    <input wire:model="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="w-full rounded-md border px-3 py-2 focus:outline-none focus:border-purpura-500 focus:ring-2 focus:ring-purpura-500/25 @if(!empty($celular)) border-green-500 bg-green-50 @else border-gray-300 bg-white @endif">
+                                </div>
+
+                                <div class="col-span-12 md:col-span-6">
+                                    <label class="block text-sm font-semibold text-gray-800 mb-1">Email <span class="text-red-500">*</span></label>
+                                    <input wire:model.live.debounce.300ms="email" type="email" placeholder="seu@exemplo.com" class="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purpura-500/25 focus:border-purpura-500 transition-colors @error('email') border-red-500 bg-red-50 @else @if(!empty($email)) border-green-500 bg-green-50 @else border-gray-300 bg-white @endif @enderror">
+                                    @error('email') <span class="text-red-500 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
+                                </div>
                                 <div class="col-span-6 mt-2">
                                     <label class="block text-sm font-semibold text-gray-800 mb-2">Pessoa com Deficiência (PcD)? <span class="text-red-500">*</span></label>
                                     <div class="flex gap-4">
@@ -114,18 +124,7 @@
                                     </div>
                                 @endif
 
-                                <div class="col-span-12 md:col-span-6">
-                                    <label class="block text-sm font-semibold text-gray-800 mb-1">Celular / Telefone</label>
-                                    <input wire:model="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="w-full rounded-md border px-3 py-2 focus:outline-none focus:border-purpura-500 focus:ring-2 focus:ring-purpura-500/25 @if(!empty($celular)) border-green-500 bg-green-50 @else border-gray-300 bg-white @endif">
-                                </div>
-
-                                <div class="col-span-12 md:col-span-6">
-                                    <label class="block text-sm font-semibold text-gray-800 mb-1">Email <span class="text-red-500">*</span></label>
-                                    <input wire:model.live.debounce.300ms="email" type="email" placeholder="seu@exemplo.com" class="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purpura-500/25 focus:border-purpura-500 transition-colors @error('email') border-red-500 bg-red-50 @else @if(!empty($email)) border-green-500 bg-green-50 @else border-gray-300 bg-white @endif @enderror">
-                                    @error('email') <span class="text-red-500 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
-                                </div>
-
-                                <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 mb-2 border-b pb-2">
+                                <div class="col-span-12 mt-6 pt-4 border-gray-200 mb-2 border-b pb-2">
                                     <h4 class="text-xl font-bold {{ $textoForm }}">Endereço e Seleção de Curso</h4>
                                 </div>
 

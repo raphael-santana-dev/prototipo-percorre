@@ -353,7 +353,6 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
-        // NOVO MOTOR DE BUSCA: Lendo as idades diretamente da tabela de Ofertas (ofertas_vagas)
         $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
             ->where(function($q) use ($idade) {
@@ -367,14 +366,11 @@ class Inscricao extends Component
         $unidadesDisponiveisList = collect();
         
         foreach($ofertasDisponiveis as $oferta) {
-            // Verifica status do Curso e Unidade
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true])) continue;
             
-            // Verifica bloqueio de Estado (UF) do curso
             if (!$oferta->curso->permite_estado_diferente && $oferta->unidade->estado !== $this->estado) continue;
 
-            // Verifica a trava de vagas (overbooking)
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
                 if (!isset($ofertasValidas[$key])) continue;
@@ -385,7 +381,11 @@ class Inscricao extends Component
 
         if ($unidadesDisponiveisList->count() > 0) {
             $this->temVagasDisponiveis = true;
-            $this->unidadesDisponiveis = $unidadesDisponiveisList->unique()->toArray();
+            // AQUI: Aplica a ordenação alfabética (.asort) mantendo o ID da unidade
+            $unidadesOrdenadas = $unidadesDisponiveisList->unique()->toArray();
+            asort($unidadesOrdenadas);
+            
+            $this->unidadesDisponiveis = $unidadesOrdenadas;
 
             if (count($this->unidadesDisponiveis) === 1) {
                 $this->unidade = array_key_first($this->unidadesDisponiveis);
@@ -417,8 +417,7 @@ class Inscricao extends Component
             ->where(function($q) use ($idade) {
                 $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
             })
-            ->orderBy('nome', asc)
-            ->get();
+            ->get(); // Removido o ->orderBy() daqui!
 
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
@@ -432,6 +431,11 @@ class Inscricao extends Component
             }
 
             $this->cursosDisponiveis[$oferta->curso_id] = $oferta->curso->nome;
+        }
+
+        // AQUI: Ordenação alfabética dos Cursos
+        if (!empty($this->cursosDisponiveis)) {
+            asort($this->cursosDisponiveis);
         }
 
         if (count($this->cursosDisponiveis) === 1) {

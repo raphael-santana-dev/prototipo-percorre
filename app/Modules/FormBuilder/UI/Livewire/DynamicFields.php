@@ -207,7 +207,7 @@ class DynamicFields extends Component
             if (isset($campo->opcoes['origem_bd'])) {
                 $this->opcoes = 'bd:' . $campo->opcoes['origem_bd'];
             } else {
-                $this->opcoes = implode(', ', $campo->opcoes);
+                $this->opcoes = implode("\n", $campo->opcoes);
             }
         } else {
             $this->opcoes = $campo->opcoes ?? '';
@@ -313,7 +313,8 @@ class DynamicFields extends Component
             if (str_starts_with(strtolower($opcoesLimpas), 'bd:')) {
                 $arrayOpcoes = ['origem_bd' => trim(substr($opcoesLimpas, 3))];
             } else {
-                $arrayOpcoes = array_map('trim', explode(',', $this->opcoes));
+                $linhas = explode("\n", $this->opcoes);
+                $arrayOpcoes = array_values(array_filter(array_map('trim', $linhas), fn($v) => $v !== ''));
             }
         }
 
