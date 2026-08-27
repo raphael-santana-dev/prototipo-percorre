@@ -193,9 +193,22 @@
                                                     </div>
 
                                                 @elseif($c->tipo === 'social')
-                                                    <div class="flex gap-2 justify-center py-2 pointer-events-none">
-                                                        <div class="w-8 h-8 rounded-full bg-gray-100 shadow-sm flex items-center justify-center text-gray-600"><i class="ph-fill ph-instagram-logo"></i></div>
-                                                        <div class="w-8 h-8 rounded-full bg-gray-100 shadow-sm flex items-center justify-center text-gray-600"><i class="ph-fill ph-facebook-logo"></i></div>
+                                                    @php $permitidasPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
+                                                    <div class="space-y-2 py-1 pointer-events-none w-full">
+                                                        @foreach($permitidasPreview as $redeKey)
+                                                            <div class="flex items-center bg-white border border-gray-300 rounded-md overflow-hidden shadow-sm">
+                                                                <div class="w-10 h-10 flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-600">
+                                                                    @if($redeKey === 'instagram') <i class="ph-fill ph-instagram-logo text-xl text-pink-500"></i>
+                                                                    @elseif($redeKey === 'facebook') <i class="ph-fill ph-facebook-logo text-xl text-blue-600"></i>
+                                                                    @elseif($redeKey === 'youtube') <i class="ph-fill ph-youtube-logo text-xl text-red-600"></i>
+                                                                    @elseif($redeKey === 'tiktok') <i class="ph-fill ph-tiktok-logo text-xl text-black"></i>
+                                                                    @elseif($redeKey === 'vsco') <i class="ph-fill ph-aperture text-xl text-gray-800"></i>
+                                                                    @elseif($redeKey === 'linkedin') <i class="ph-fill ph-linkedin-logo text-xl text-blue-700"></i>
+                                                                    @else <i class="ph-fill ph-link text-xl"></i> @endif
+                                                                </div>
+                                                                <div class="px-3 text-sm text-gray-400">@usuario ou link do perfil...</div>
+                                                            </div>
+                                                        @endforeach
                                                     </div>
                                                     
                                                 @elseif($c->tipo === 'rating')
@@ -287,7 +300,7 @@
                         <div>
                             <label class="block text-xs font-bold text-gray-800 mb-3">Escolha o Tipo de Bloco <span class="text-red-500">*</span></label>
                             
-                            <div class="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div class="space-y-4">
                                 
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
@@ -415,20 +428,26 @@
                                         <option value="datetime-local">Data e Hora</option>
                                     </select>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                
+                                @if($subtipo === 'number')
+                                <div class="grid grid-cols-2 gap-3 border-t border-gray-200 pt-3">
                                     <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Mínimo</label>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Mínimo</label>
                                         <input type="number" wire:model="tamanho_min" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máximo</label>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Máximo</label>
                                         <input type="number" wire:model="tamanho_max" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara (x-mask)</label>
-                                    <input type="text" wire:model="regex_mascara" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
+                                @endif
+
+                                @if($subtipo === 'text')
+                                <div class="border-t border-gray-200 pt-3">
+                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara Exata (x-mask)</label>
+                                    <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
                                 </div>
+                                @endif
                             </div>
 
                         {{-- SELETOR DE DISPOSIÇÃO ADICIONADO AQUI --}}
@@ -502,9 +521,26 @@
                             </div>
                         @elseif($tipo === 'social')
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                                <label class="block text-xs font-bold text-gray-700 mb-1">Listagem Social</label>
-                                <p class="text-[10px] text-gray-500 mb-1.5">Formato: <b>icone|link</b> (Um por linha)</p>
-                                <textarea wire:model="configuracoes.social_redes" rows="3" class="w-full text-xs font-mono rounded-lg border-gray-300" placeholder="instagram-logo|https://..."></textarea>
+                                <label class="block text-xs font-bold text-gray-900 mb-3">Redes Sociais Solicitadas</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    @php
+                                        $redesOpcoes = [
+                                            'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
+                                            'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
+                                            'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
+                                            'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
+                                            'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
+                                            'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
+                                        ];
+                                    @endphp
+                                    @foreach($redesOpcoes as $key => $rede)
+                                        <label class="flex items-center gap-2 cursor-pointer bg-white p-2 rounded border border-gray-200 shadow-sm hover:border-purpura-300">
+                                            <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                            <i class="ph-fill {{ $rede['icon'] }} text-lg"></i>
+                                            <span class="text-xs font-bold text-gray-700">{{ $rede['nome'] }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
                         @elseif($tipo === 'rating')
                             <div>
@@ -584,14 +620,16 @@
 
                         <div class="space-y-6">
                             
-                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para compartilhar)</label>
-                                <div class="flex items-center mt-2">
-                                    <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
-                                    <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
+                            @if($contextoTipo === 'formulario')
+                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                    <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para compartilhar)</label>
+                                    <div class="flex items-center mt-2">
+                                        <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
+                                        <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
+                                    </div>
+                                    @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                 </div>
-                                @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
-                            </div>
+                            @endif
 
                             <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
                                 <label class="block text-sm font-bold text-gray-800 mb-2">Upload de Imagem de Fundo</label>
@@ -611,27 +649,29 @@
                                 </div>
                                 @error('bg_image_upload') <span class="text-xs text-red-500 mt-2 block font-bold">{{ $message }}</span> @enderror
 
-                                <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
-                                    <div class="col-span-2">
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
-                                        <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                            <option value="cover">Preencher a Tela Toda (Cortar sobras)</option>
-                                            <option value="contain">Encaixar na Tela (Sem cortar)</option>
-                                            <option value="auto">Tamanho Original (Centralizado)</option>
-                                            <option value="repeat">Repetir como Textura (Mosaico)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor da Sobreposição</label>
-                                        <div class="flex items-center gap-2">
-                                            <input type="color" wire:model.live="formSettings.bg_color" class="w-12 h-8 rounded border border-gray-300 cursor-pointer p-0.5">
+                                @if($bg_image_upload || !empty($formSettings['bg_image']))
+                                    <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+                                        <div class="col-span-2">
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
+                                            <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
+                                                <option value="cover">Preencher a Tela Toda (Cortar sobras)</option>
+                                                <option value="contain">Encaixar na Tela (Sem cortar)</option>
+                                                <option value="auto">Tamanho Original (Centralizado)</option>
+                                                <option value="repeat">Repetir como Textura (Mosaico)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor da Sobreposição</label>
+                                            <div class="flex items-center gap-2">
+                                                <input type="color" wire:model.live="formSettings.bg_color" class="w-12 h-8 rounded border border-gray-300 cursor-pointer p-0.5">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
+                                            <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
                                         </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
-                                        <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                    </div>
-                                </div>
+                                @endif
                             </div>
 
                             <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">

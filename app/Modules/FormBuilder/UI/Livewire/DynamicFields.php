@@ -187,13 +187,7 @@ class DynamicFields extends Component
             $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
-        if ($campo->tipo === 'social') {
-            $lines = [];
-            foreach($config['redes'] ?? [] as $rede) {
-                $lines[] = $rede['nome'] . '|' . $rede['url'];
-            }
-            $this->configuracoes['social_redes'] = implode("\n", $lines);
-        }
+        
     }
 
     public function cancelarEdicao()
@@ -296,19 +290,6 @@ class DynamicFields extends Component
             
             $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $linhasStr)), fn($val) => $val !== ''));
             $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $colunasStr)), fn($val) => $val !== ''));
-        }
-        
-        if ($this->tipo === 'social') {
-            $redesLines = array_filter(explode("\n", $this->configuracoes['social_redes'] ?? ''));
-            $redes = [];
-            foreach($redesLines as $line) {
-                $parts = explode('|', $line);
-                if(count($parts) >= 2) {
-                    $redes[] = ['nome' => trim($parts[0]), 'url' => trim($parts[1])];
-                }
-            }
-            $configToSave['redes'] = $redes;
-            unset($configToSave['social_redes']);
         }
 
         if ($this->campoId) {
