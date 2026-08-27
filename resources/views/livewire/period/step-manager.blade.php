@@ -134,14 +134,20 @@
                         
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome da Etapa <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" placeholder="Ex: Análise de Documentos" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <input type="text" wire:model="nome" placeholder="Ex: Análise de Documentos" 
+                                class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white {{ $isInUse ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                {{ $isInUse ? 'readonly' : '' }}>
+                            @if($isInUse)
+                                <span class="block mt-1 text-[10px] text-amber-600 font-bold"><i class="ph-fill ph-warning-circle"></i> Bloqueado: Já existem campos ou formulários nesta etapa.</span>
+                            @endif
                             @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Ordem de Execução <span class="text-red-500">*</span></label>
-                            <input type="number" wire:model="numero" placeholder="Ex: 1" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Define em qual posição esta etapa aparecerá no funil.</p>
+                            <input type="number" wire:model="numero" placeholder="Ex: 1" 
+                                class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white {{ $isInUse ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                {{ $isInUse ? 'readonly' : '' }}>
                             @error('numero') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
