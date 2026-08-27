@@ -13,7 +13,6 @@ use App\Modules\ACL\UI\Livewire\PermissionManager;
 use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
-use App\Modules\Portal\UI\Livewire\Auth\Login as PortalLogin;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
@@ -41,11 +40,12 @@ Route::middleware('guest:student,company,web')->group(function () {
 // 2. PORTAL UNIFICADO E LOGIN (Visitantes)
 // ==========================================
 // Login do Administrador
-Route::get('/login', Login::class)->name('login')->middleware('guest');
+Route::get('/login', \App\Modules\Auth\UI\Livewire\Login::class)
+    ->name('login')
+    ->middleware('guest:web,student,company');
 
 // Portal Externo (Alunos e Empresas)
 Route::prefix('portal')->name('portal.')->middleware('guest:student,company')->group(function () {
-    Route::get('/login', PortalLogin::class)->name('login');
     Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
 });
 
