@@ -29,9 +29,8 @@ Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
 
 // Respostas de Formulários Públicos
-Route::get('/f/{id}/{slug?}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
-    ->name('formularios.publico')
-    ->where('id', '[0-9]+');
+Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
+    ->name('formularios.publico');
 
 // Rotas de Redefinição de Senha (Precisam estar no escopo global de nomes)
 Route::middleware('guest:student,company,web')->group(function () {
