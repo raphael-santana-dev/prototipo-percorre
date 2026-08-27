@@ -358,6 +358,6 @@
     @endif
 
     <x-fab :actions="$this->fabActions"
-    main-color="bg-gray-800 hover:bg-black" 
-    sub-btn-bg="bg-indigo-50 hover:bg-indigo-100" />
+    main-color="bg-purple-500 hover:bg-purple-900"
+    mainIcon="ph ph-plus" />
 </div>
