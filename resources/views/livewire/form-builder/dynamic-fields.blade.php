@@ -41,6 +41,31 @@
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
+            {{-- BARRA DE NAVEGAÇÃO DE PÁGINAS (TYPEFORM STYLE) --}}
+            <div class="flex items-center gap-2 mb-2 overflow-x-auto custom-scrollbar pb-2">
+                <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-purpura-600 hover:border-purpura-300">
+                    <i class="ph-bold ph-plus"></i> Adicionar Página
+                </button>
+                <div class="w-px h-6 bg-gray-300 mx-1 shrink-0"></div>
+                
+                @foreach($etapasDisponiveis as $et)
+                    <div class="shrink-0 flex items-center bg-white border border-gray-200 rounded-lg text-sm shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-purpura-500 focus-within:border-purpura-500 transition-all">
+                        <div class="px-3 py-2 border-r border-gray-100 text-gray-400 bg-gray-50">
+                            <i class="ph-fill ph-dots-six-vertical"></i>
+                        </div>
+                        <input type="text" 
+                               wire:change="atualizarNomeEtapa({{ $et->id }}, $event.target.value)" 
+                               value="{{ $et->nome }}" 
+                               class="w-32 border-none focus:ring-0 text-sm font-bold text-gray-700 px-3 py-2 bg-transparent">
+                        @if($etapasDisponiveis->count() > 1)
+                            <button wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
             <div class="relative w-full min-h-[600px] rounded-xl overflow-hidden bg-gray-100 shadow-inner">
                 
                 @if($previewBgUrl)
@@ -63,7 +88,11 @@
                                 
                                 <div class="flex items-center gap-3 mb-6">
                                     <span class="flex items-center justify-center w-7 h-7 text-sm font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                    <h3 class="text-xl font-bold {{ $textoForm }}">Etapa {{ $numEtapa }}</h3>
+                                    @php 
+                                        $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
+                                        $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                                    @endphp
+                                    <h3 class="text-xl font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
                                     <div class="flex-1 h-px ml-4 bg-gray-200"></div>
                                 </div>
                                 
@@ -193,20 +222,12 @@
                                                     </div>
 
                                                 @elseif($c->tipo === 'social')
-                                                    @php $permitidasPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
-                                                    <div class="space-y-2 py-1 pointer-events-none w-full">
-                                                        @foreach($permitidasPreview as $redeKey)
-                                                            <div class="flex items-center bg-white border border-gray-300 rounded-md overflow-hidden shadow-sm">
-                                                                <div class="w-10 h-10 flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-600">
-                                                                    @if($redeKey === 'instagram') <i class="ph-fill ph-instagram-logo text-xl text-pink-500"></i>
-                                                                    @elseif($redeKey === 'facebook') <i class="ph-fill ph-facebook-logo text-xl text-blue-600"></i>
-                                                                    @elseif($redeKey === 'youtube') <i class="ph-fill ph-youtube-logo text-xl text-red-600"></i>
-                                                                    @elseif($redeKey === 'tiktok') <i class="ph-fill ph-tiktok-logo text-xl text-black"></i>
-                                                                    @elseif($redeKey === 'vsco') <i class="ph-fill ph-aperture text-xl text-gray-800"></i>
-                                                                    @elseif($redeKey === 'linkedin') <i class="ph-fill ph-linkedin-logo text-xl text-blue-700"></i>
-                                                                    @else <i class="ph-fill ph-link text-xl"></i> @endif
-                                                                </div>
-                                                                <div class="px-3 text-sm text-gray-400">@usuario ou link do perfil...</div>
+                                                    @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
+                                                    <div class="flex flex-col gap-2 mt-2 pointer-events-none">
+                                                        @foreach($redesPreview as $rede)
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-lg ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
+                                                                <div class="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-md"></div>
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -279,12 +300,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Etapa e Posição</label>
+                            <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Página (Fase) e Posição</label>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <select wire:model.live="etapa" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700">
                                         @foreach($etapasDisponiveis as $et)
-                                            <option value="{{ $et->numero }}">Etapa {{ $et->numero }}</option>
+                                            <option value="{{ $et->numero }}">{{ $et->nome }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -300,7 +321,7 @@
                         <div>
                             <label class="block text-xs font-bold text-gray-800 mb-3">Escolha o Tipo de Bloco <span class="text-red-500">*</span></label>
                             
-                            <div class="space-y-4">
+                            <div class="space-y-4 pr-2">
                                 
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
@@ -450,7 +471,6 @@
                                 @endif
                             </div>
 
-                        {{-- SELETOR DE DISPOSIÇÃO ADICIONADO AQUI --}}
                         @elseif(in_array($tipo, ['select', 'radio', 'check']))
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                                 <div>
