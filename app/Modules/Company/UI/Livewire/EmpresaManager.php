@@ -26,7 +26,7 @@ class EmpresaManager extends Component
     {
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Secretaria', 'url' => '#'],
+            ['label' => 'Secretaria'],
             ['label' => 'Empresas Parceiras', 'url' => route('empresas.index')],
         ];
         

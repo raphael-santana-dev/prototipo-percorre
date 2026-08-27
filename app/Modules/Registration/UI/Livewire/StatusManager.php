@@ -12,6 +12,8 @@ use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
 
+use Illuminate\Support\Str;
+
 #[Layout('components.layouts.app')]
 #[Title('Status de Inscrição - Administrativo')]
 class StatusManager extends Component
