@@ -106,6 +106,11 @@ class DynamicFields extends Component
         if (in_array($tipo, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
              $this->name = 'ui_' . time(); 
         }
+
+        // Garante que o Livewire trate a variável como uma Lista (Array) desde o clique
+        if ($tipo === 'social') {
+            $this->configuracoes['redes_permitidas'] = [];
+        }
     }
 
     public function updatedLabel($valor)
@@ -187,7 +192,10 @@ class DynamicFields extends Component
             $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
-        
+        if ($campo->tipo === 'social') {
+            // Garante que as redes venham como array para marcar os checkboxes na tela
+            $this->configuracoes['redes_permitidas'] = $config['redes_permitidas'] ?? [];
+        }
     }
 
     public function cancelarEdicao()
@@ -290,6 +298,11 @@ class DynamicFields extends Component
             
             $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $linhasStr)), fn($val) => $val !== ''));
             $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $colunasStr)), fn($val) => $val !== ''));
+        }
+
+        if ($this->tipo === 'social') {
+            // Filtra os valores falsos e reordena as chaves do array para salvar limpo no banco
+            $configToSave['redes_permitidas'] = array_values(array_filter($this->configuracoes['redes_permitidas'] ?? []));
         }
 
         if ($this->campoId) {
