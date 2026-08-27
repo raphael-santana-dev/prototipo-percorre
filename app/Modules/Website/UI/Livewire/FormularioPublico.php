@@ -121,27 +121,18 @@ class FormularioPublico extends Component
             }
         }
 
-        // ==========================================
-        // INJEÇÃO DA "NECESSIDADE DE E-MAIL"
-        // ==========================================
-        if ($this->formulario->exigir_email && !auth()->check()) {
-            $emailField = new \App\Models\CampoFormulario([
-                'id' => 999999, // Fake ID
-                'name' => '_email_coletado',
-                'label' => 'Seu E-mail Institucional ou Pessoal',
-                'tipo' => 'text',
-                'subtipo' => 'email',
-                'obrigatorio' => true,
-                'etapa' => 1,
-                'ordem' => -1, // Fica no topo!
-                'largura' => 12,
-            ]);
-            $this->camposDinamicos->prepend($emailField);
-        }
-
-        // Inicializa o ambiente...
+        // Inicializa o ambiente e descobre o total de etapas
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         $this->carregarOpcoesSistemaInicial();
+        
+        // Inicializa o E-mail de forma segura e auto-preenche se o usuário já for conhecido
+        if ($this->formulario->exigir_email) {
+            $emailAutofill = '';
+            if (auth('web')->check()) $emailAutofill = auth('web')->user()->email;
+            elseif (auth('student')->check()) $emailAutofill = auth('student')->user()->email;
+            
+            $this->respostas['_email_coletado'] = $emailAutofill;
+        }
         
         foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
             if (!isset($this->respostas[$campo->name])) {
@@ -188,6 +179,11 @@ class FormularioPublico extends Component
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
+
+        // Validação obrigatória do e-mail na Etapa 1
+        if ($this->formulario->exigir_email && $etapa === 1) {
+            $regras['respostas._email_coletado'] = 'required|email';
+        }
 
         foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {

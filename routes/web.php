@@ -109,6 +109,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show')->where('id', '[0-9]+');
     Route::get('/construtor/{tipo}/{id}/{slug?}', DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
     Route::get('/form-builder', FormBuilderHub::class)->name('formbuilder.hub');
+    Route::get('/formularios/novo', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.create'); // NOVA ROTA
+    Route::get('/formularios/{id}/editar', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.edit'); // NOVA ROTA
+    
     // --- Comunicação e Automações ---
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');
     Route::get('/templates/create', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class)->name('templates.create');
@@ -137,6 +140,8 @@ Route::middleware('auth')->group(function () {
     // --- Sistema, Auditoria e Importações ---
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
+
+    
 });
 
 // ==========================================

@@ -417,6 +417,7 @@ class Inscricao extends Component
             ->where(function($q) use ($idade) {
                 $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
             })
+            ->orderBy('nome', asc)
             ->get();
 
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);

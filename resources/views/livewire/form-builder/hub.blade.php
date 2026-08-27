@@ -37,8 +37,8 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 flex-1">
                     Pesquisas de satisfação e formulários avulsos. Pode ser configurado com restrição de datas, usuários e níveis de acesso.
                 </p>
-                <a href="{{ route('formularios.index') }}" class="w-full py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-bold rounded-lg shadow-sm transition flex items-center justify-center gap-2">
-                    Gerenciar Formulários <i class="ph-bold ph-arrow-right"></i>
+                <a href="{{ route('formularios.create') }}" class="w-full py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-bold rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                    Criar Formulário Geral <i class="ph-bold ph-arrow-right"></i>
                 </a>
             </div>
         </div>

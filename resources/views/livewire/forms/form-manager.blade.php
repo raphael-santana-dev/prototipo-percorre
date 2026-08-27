@@ -7,13 +7,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        @if(feature('formulario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.criar')))
-            <x-slot name="actions">
-                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
+        <x-slot name="actions">
+            @if(feature('formulario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.criar')))
+                <a href="{{ route('formularios.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
                     <i class="ph ph-plus text-lg"></i> Novo Formulário
-                </button>
-            </x-slot>
-        @endif
+                </a>
+            @endif
+        </x-slot>
     </x-page-header>
 
     <x-table
@@ -80,6 +80,10 @@
                                 <i class="text-lg ph ph-gear"></i>
                             </button>
                         @endif
+
+                        <a href="{{ route('formularios.edit', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Configurações do Form">
+                            <i class="text-lg ph ph-gear"></i>
+                        </a>
                         
                         @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
                             <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Atenção: Ao excluir o formulário, todas as respostas vinculadas a ele também serão deletadas. Deseja continuar?') || event.stopImmediatePropagation()">
