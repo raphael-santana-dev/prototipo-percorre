@@ -125,15 +125,17 @@
                                                     <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
                                                 </div>
                                                 
-                                                <!-- PREVIEWS VISUAIS -->
+                                                <!-- PREVIEWS VISUAIS ATUALIZADOS -->
                                                 @if($c->tipo === 'text')
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
                                                         @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
                                                         @elseif(in_array($c->subtipo, ['date', 'datetime-local', 'date_range'])) <i class="ph ph-calendar-blank text-lg"></i>
                                                         @elseif($c->subtipo == 'time') <i class="ph ph-clock text-lg"></i>
                                                         @elseif($c->subtipo == 'number') <i class="ph ph-hash text-lg"></i>
+                                                        @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-lg text-green-600"></i>
+                                                        @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-lg text-blue-500"></i>
                                                         @else <i class="ph ph-text-t text-lg"></i> @endif
-                                                        <span class="truncate">Preenchimento ({{ $c->subtipo }})...</span>
+                                                        <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
                                                     </div>
                                                 
                                                 @elseif($c->tipo === 'select')
@@ -141,7 +143,6 @@
                                                         <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
                                                     </div>
                                                 
-                                                {{-- NOVA LÓGICA DE PREVIEW VERTICAL VS HORIZONTAL --}}
                                                 @elseif($c->tipo === 'radio' || $c->tipo === 'check')
                                                     <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
                                                         <div class="flex items-center gap-2 text-gray-600 text-sm">
@@ -326,8 +327,9 @@
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                        <!-- BOTÃO ATUALIZADO COM OS NOVOS TIPOS -->
+                                        <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                            <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Texto Curto</span>
                                         </button>
                                         <button type="button" wire:click="setTipo('text', 'date')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
@@ -447,6 +449,9 @@
                                         <option value="date">Data (Calendário)</option>
                                         <option value="time">Hora (Relógio)</option>
                                         <option value="datetime-local">Data e Hora</option>
+                                        <!-- OPÇÕES NOVAS INSERIDAS AQUI -->
+                                        <option value="money">Valor Monetário (R$)</option>
+                                        <option value="tel">Telefone / Celular</option>
                                     </select>
                                 </div>
                                 

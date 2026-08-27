@@ -232,14 +232,34 @@
                 </select>
                 
             @else
-                <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password']) ? $campo->subtipo : 'text' }}" 
-                    wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
-                    
-                    @if($campo->regex_mascara) x-mask="{{ $campo->regex_mascara }}" @endif
-                    @if($campo->tamanho_min && $campo->subtipo == 'number') min="{{ $campo->tamanho_min }}" @endif
-                    @if($campo->tamanho_max && $campo->subtipo == 'number') max="{{ $campo->tamanho_max }}" @endif
+                @if($campo->subtipo === 'money')
+                    <div class="relative w-full">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 font-bold sm:text-sm">R$</span>
+                        </div>
+                        <input type="text" 
+                            wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
+                            x-mask:dynamic="$money($input, ',', '.')" 
+                            class="w-full rounded-md border pl-10 pr-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror"
+                            placeholder="0,00">
+                    </div>
+                @else
+                    {{-- INPUTS PADRÃO E TELEFONE --}}
+                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ? $campo->subtipo : 'text' }}" 
+                        wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
+                        
+                        @if($campo->subtipo === 'tel')
+                            x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'"
+                            placeholder="(00) 00000-0000"
+                        @elseif($campo->regex_mascara) 
+                            x-mask="{{ $campo->regex_mascara }}" 
+                        @endif
 
-                    class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
+                        @if($campo->tamanho_min && $campo->subtipo == 'number') min="{{ $campo->tamanho_min }}" @endif
+                        @if($campo->tamanho_max && $campo->subtipo == 'number') max="{{ $campo->tamanho_max }}" @endif
+
+                        class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
+                @endif
             @endif
 
             @error('respostas.'.$campo->name) <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror
