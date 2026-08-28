@@ -98,6 +98,31 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
+            if ($this->importacao->tipo === 'inscricoes' && $linhaAtual > 0) {
+                // Carrega o usuário responsável pela importação (já que no Job rodando em background o auth() é vazio)
+                $usuario = $this->importacao->user; 
+                
+                \Illuminate\Support\Facades\DB::table('auditoria_logs')->insert([
+                    'tabela_alterada' => 'inscricoes',
+                    'registro_id' => null, // Null porque afetou vários registros
+                    'acao' => 'importacao_lote',
+                    'informacao_anterior' => null,
+                    'nova_informacao' => json_encode([
+                        'total_linhas_lidas' => $linhaAtual, 
+                        'falhas' => count($erros),
+                        'arquivo_origem' => $this->importacao->arquivo_nome
+                    ], JSON_UNESCAPED_UNICODE),
+                    'usuario_id' => $usuario ? $usuario->id : null,
+                    'usuario_nome' => $usuario ? $usuario->name : 'Sistema (Job)',
+                    'usuario_role' => $usuario ? ($usuario->getRoleNames()->first() ?? 'N/A') : 'Sistema',
+                    'usuario_login' => $usuario ? $usuario->email : 'N/A',
+                    'ip' => 'Processo Background',
+                    'navegador' => 'Módulo de Integração Universal',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
         } catch (\Throwable $e) {
             array_unshift($erros, [
                 'linha' => 'Crítico/Sistema', 
@@ -353,7 +378,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
+
+        $dadosFixos['origem'] = 'importacao';
         
-        Inscricao::create($dadosFixos);
+        Inscricao::withoutEvents(function () use ($dadosFixos) {
+            Inscricao::create($dadosFixos);
+        });
     }
 }

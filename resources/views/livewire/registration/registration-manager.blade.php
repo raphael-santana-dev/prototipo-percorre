@@ -135,6 +135,16 @@
                     <div class="font-bold text-gray-900 text-sm dark:text-white">{{ $inscricao->nome }}</div>
                     <div class="text-[11px] text-gray-400 dark:text-gray-500">{{ $inscricao->cpf }}</div>
                 </td>
+
+                <td class="px-4 py-2.5 text-center whitespace-nowrap">
+                    @if($inscricao->origem === 'importacao')
+                        <span class="px-2 py-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 rounded-full inline-flex items-center gap-1 shadow-sm"><i class="ph-bold ph-upload-simple"></i> Importação</span>
+                    @elseif($inscricao->origem === 'manual')
+                        <span class="px-2 py-1 text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 rounded-full inline-flex items-center gap-1 shadow-sm"><i class="ph-bold ph-hand-pointing"></i> Manual</span>
+                    @else
+                        <span class="px-2 py-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 rounded-full inline-flex items-center gap-1 shadow-sm"><i class="ph-bold ph-globe"></i> Formulário</span>
+                    @endif
+                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-semibold text-gray-700 text-sm dark:text-gray-300">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
@@ -285,9 +295,9 @@
 
                     <!-- Rodapé do Card (Info extra) -->
                     <div class="flex items-center justify-between mt-2">
-                        <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                            <i class="text-sm ph ph-graduation-cap"></i>
-                            <span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span>
+                        <div class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div class="flex items-center gap-1.5"><i class="text-sm ph ph-graduation-cap"></i><span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span></div>
+                            <div class="flex items-center gap-1.5 text-[10px]"><i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> Via {{ ucfirst($inscricao->origem) }}</div>
                         </div>
                         <div class="flex flex-col items-end gap-1">
                         <div class="text-xs font-bold text-gray-600 dark:text-gray-300">

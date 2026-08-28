@@ -244,6 +244,7 @@ class RegistrationManager extends Component
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
+            ['key' => 'origem', 'label' => 'Origem', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
             ['key' => 'pontuacao_total', 'label' => 'Score', 'sortable' => true, 'class' => 'text-center'],
