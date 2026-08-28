@@ -210,9 +210,15 @@
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
-                            <button wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-blue-600 transition-colors rounded hover:bg-blue-50 dark:hover:bg-gray-700" title="Ver Detalhes do Processamento">
+                            <button wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-gray-500 transition-colors rounded hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700" title="Ver Relatório">
                                 <i class="text-lg ph-fill ph-info"></i>
                             </button>
+
+                            @if(in_array($log->status, ['erro', 'erro_parcial']))
+                                <button wire:click="abrirModalReprocessar({{ $log->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700" title="Reprocessar Importação">
+                                    <i class="text-lg ph-bold ph-arrows-clockwise"></i>
+                                </button>
+                            @endif
 
                             @if($log->operacao === 'exportacao' && $log->status === 'concluido' && $log->arquivo_gerado_caminho)
                                 <button wire:click="baixarExportacao({{ $log->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Planilha Gerada">
@@ -495,6 +501,50 @@
                         @endif
                     </div>
                     
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- MODAL 4: ESCOLHA DE REPROCESSAMENTO -->
+    @if($modalReprocessarAberto)
+        <div class="fixed inset-0 z-[80] overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/70 backdrop-blur-sm" wire:click="$set('modalReprocessarAberto', false)"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                
+                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                    <h3 class="mb-4 text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 flex items-center gap-2">
+                        <i class="ph-bold ph-arrows-clockwise text-orange-500 text-xl"></i> Reprocessar Arquivo #{{ $importacaoReprocessarId }}
+                    </h3>
+                    
+                    <p class="text-sm text-gray-600 mb-6 font-medium">O arquivo original e o seu mapeamento de colunas estão salvos. Como você deseja executar o reprocessamento?</p>
+                    
+                    <div class="space-y-3">
+                        <button wire:click="reprocessar('tudo')" class="w-full text-left flex items-start gap-3 p-4 border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition rounded-xl group shadow-sm">
+                            <div class="bg-gray-50 group-hover:bg-blue-100 text-gray-400 group-hover:text-blue-600 p-2.5 rounded-lg shrink-0 transition">
+                                <i class="ph-bold ph-files text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-sm">Reprocessar Arquivo Completo</h4>
+                                <p class="text-xs text-gray-500 mt-1 font-medium leading-tight">O sistema lerá a planilha desde a primeira linha. Candidatos que já foram inseridos com sucesso serão ignorados automaticamente (Alerta de Duplicata).</p>
+                            </div>
+                        </button>
+
+                        <button wire:click="reprocessar('falhas')" class="w-full text-left flex items-start gap-3 p-4 border border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition rounded-xl group shadow-sm">
+                            <div class="bg-gray-50 group-hover:bg-orange-100 text-gray-400 group-hover:text-orange-600 p-2.5 rounded-lg shrink-0 transition">
+                                <i class="ph-bold ph-warning text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-sm">Reprocessar Apenas as Falhas</h4>
+                                <p class="text-xs text-gray-500 mt-1 font-medium leading-tight">Ideal para quando você já corrigiu a modelagem no Hub do Dev. O sistema pulará todas as linhas normais e tentará importar estritamente as numerações que alertaram erro na rodada anterior.</p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
+                        <button type="button" wire:click="$set('modalReprocessarAberto', false)" class="px-6 py-2.5 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">Cancelar Operação</button>
+                    </div>
                 </div>
             </div>
         </div>

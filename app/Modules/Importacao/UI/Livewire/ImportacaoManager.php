@@ -22,7 +22,9 @@ class ImportacaoManager extends Component
 
     public $modalUploadAberto = false;
     public $modalMapeamentoAberto = false;
-    public $modalDetalhesAberto = false; // Novo modal
+    public $modalDetalhesAberto = false;
+    public $modalReprocessarAberto = false;
+    public $importacaoReprocessarId = null;
 
     public $arquivo;
     public $tipoImportacao = 'inscricoes';
@@ -142,6 +144,59 @@ class ImportacaoManager extends Component
             fclose($file);
         };
         return response()->streamDownload($callback, $nomeArquivo, ['Content-Type' => 'text/csv']);
+    }
+
+    public function abrirModalReprocessar($id)
+    {
+        $this->importacaoReprocessarId = $id;
+        $this->modalReprocessarAberto = true;
+    }
+
+    public function reprocessar($modo)
+    {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+
+        $importacao = Importacao::findOrFail($this->importacaoReprocessarId);
+        $mapa = $importacao->mapeamento;
+
+        if ($modo === 'falhas') {
+            // Extrai do log antigo apenas as linhas que falharam
+            $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+            $linhasComErro = [];
+            
+            foreach ($erros as $erro) {
+                if (isset($erro['linha']) && is_numeric($erro['linha'])) {
+                    $linhasComErro[] = (int) $erro['linha'];
+                }
+            }
+
+            if (empty($linhasComErro)) {
+                $this->dispatch('erro', msg: 'Não encontramos linhas específicas com erro neste log para reprocessar de forma isolada.');
+                return;
+            }
+            
+            // Injeta as linhas a serem processadas no mapeamento (sem alterar a base de dados estrutural)
+            $mapa['linhas_reprocessar'] = array_values(array_unique($linhasComErro));
+        } else {
+            // Modo "Tudo" - Limpa o array de linhas alvo se existir de uma tentativa passada
+            if (isset($mapa['linhas_reprocessar'])) {
+                unset($mapa['linhas_reprocessar']);
+            }
+        }
+
+        // Reseta os status da importação como se ela tivesse acabado de ser enviada
+        $importacao->update([
+            'status' => 'na_fila',
+            'linhas_processadas' => 0,
+            'erro_mensagem' => null,
+            'mapeamento' => $mapa
+        ]);
+
+        $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes']);
+        $this->dispatch('sucesso', msg: 'A importação foi devolvida para a fila de processamento!');
+
+        // Despacha o Background Job
+        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
     }
 
     public function abrirModalUpload()

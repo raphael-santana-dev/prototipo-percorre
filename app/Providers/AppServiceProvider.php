@@ -118,7 +118,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('website.inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class);
         Livewire::component('student.student-manager', \App\Modules\Student\UI\Livewire\StudentManager::class);
         Livewire::component('student.student-details', \App\Modules\Student\UI\Livewire\StudentDetails::class);
-
+    
         // Portal do Aluno (Auth Isolada)
         Livewire::component('portal.auth.login', PortalLogin::class);
         Livewire::component('portal.auth.logout-button', PortalLogout::class);
@@ -134,6 +134,8 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('importacao.importacao-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class);
         Livewire::component('importacao.import-progress', \App\Modules\Importacao\UI\Livewire\ImportProgress::class);
+        Livewire::component('importacao.importacao-config-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoConfigManager::class);
+
 
         Livewire::component('comunicacao.template-form', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class);
         Livewire::component('comunicacao.template-manager', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class);

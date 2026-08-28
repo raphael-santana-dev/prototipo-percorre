@@ -42,9 +42,20 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             
             $registros = $this->extrairRegistrosLazy($caminhoAbsoluto, $formato);
             $mapeamento = $this->importacao->mapeamento ?? [];
+            
+            // Verifica se existe uma limitação de linhas (Modo: Reprocessar Apenas Falhas)
+            $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
             foreach ($registros as $linhaOriginal) {
                 $linhaAtual++;
+
+                // === LÓGICA DE SALTO DE REPROCESSAMENTO ===
+                if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
+                    if ($linhaAtual % 50 === 0) {
+                        $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+                    }
+                    continue; 
+                }
 
                 try {
                     $dadosLimpos = [];
@@ -61,8 +72,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     };
 
                 } catch (QueryException $e) {
-                    $isDuplicate = $e->getCode() === '23505'; // Unique violation
-                    $isNotNull = $e->getCode() === '23502';   // Not null violation
+                    $isDuplicate = $e->getCode() === '23505'; 
+                    $isNotNull = $e->getCode() === '23502';   
                     
                     if (!$isDuplicate) $errosCriticos++;
 
@@ -86,7 +97,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     ];
                 }
 
-                // O sistema só aborta se tiver 100+ erros CRÍTICOS (ignora os alertas de duplicatas na contagem de aborto)
                 if ($errosCriticos >= 100) {
                     throw new \Exception("Excesso de erros estruturais detectados (100+). Processamento abortado por segurança.");
                 }
@@ -126,7 +136,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     'updated_at' => now(),
                 ]);
             }
-            // ======================================
 
         } catch (\Throwable $e) {
             array_unshift($erros, [
@@ -171,7 +180,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
     private function processarCampo(array $dados, array $mapeamento)
     {
-        // ... Lógica mantida sem alterações ...
+        // ... (Mantido igual à sua Etapa 2) ...
         $cicloId = $mapeamento['ciclo_id'] ?? null;
         if (!$cicloId) throw new \Exception("ID do Ciclo ausente no mapeamento.");
         $label = trim($dados['nome do campo'] ?? $dados['label'] ?? '');
@@ -213,7 +222,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
     private function processarUsuario(array $dados)
     {
-        // ... Lógica mantida sem alterações ...
+        // ... (Mantido igual à sua Etapa 2) ...
         $cpfRaw = $dados['cpf'] ?? null;
         if (empty($cpfRaw)) throw new \Exception("A coluna 'CPF' é obrigatória.");
         $cpfLimpo = preg_replace('/[^0-9]/', '', $cpfRaw);
@@ -312,18 +321,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         if (!$registro && $permiteAutoCadastro && $config->auto_cadastro) {
                             $payload = $config->payload_padrao ?? [];
                             $payload[$campoBusca] = $termo;
-                            
-                            // === SALVAGUARDAS PARA COLUNAS NOT NULL ESTRUTURAIS ===
-                            // Garante que a coluna 'slug' seja sempre gerada para não quebrar o banco
-                            if (!isset($payload['slug'])) {
-                                $payload['slug'] = Str::slug($termo);
-                            }
-                            // Salvaguarda específica para a tabela de Turnos
-                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) {
-                                $payload['horario_inicio'] = '00:00:00';
-                            }
-                            // ======================================================
-
                             $registro = $ModelClass::create($payload);
                         }
 
@@ -338,8 +335,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         if (empty($dadosFixos['status_inscricao_id'])) {
             $dadosFixos['status_inscricao_id'] = 1; 
         }
-
-        // =========================================================================
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
