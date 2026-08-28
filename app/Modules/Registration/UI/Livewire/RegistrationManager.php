@@ -55,6 +55,22 @@ class RegistrationManager extends Component
         $this->permiteGrid = true;
     }
 
+    public function excluirInscricao($id)
+    {
+        abort_if(!feature('inscricao.excluir'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.excluir'), 403);
+
+        $inscricao = Inscricao::findOrFail($id);
+        $inscricao->delete();
+
+        // Se a inscrição excluída estivesse na lista de seleções em lote, removemos ela de lá
+        if (($key = array_search($id, $this->selecionadas)) !== false) {
+            unset($this->selecionadas[$key]);
+        }
+
+        $this->dispatch('sucesso', msg: 'Inscrição removida permanentemente com sucesso!');
+    }
+
     public function updating($nomePropriedade)
     {
         if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo', 'filtroNome', 'filtroStatus'])) {

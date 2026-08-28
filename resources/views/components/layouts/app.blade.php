@@ -328,8 +328,7 @@
                             <div x-data="{ subOpen: false }" class="space-y-1">
                                 <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                                     <span>Turmas</span>
-                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="rotate-180': subOpen}"></i>
-                                </button>
+                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>                                </button>
                                 <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
                                     <a href="{{ route('turmas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Turmas</a>
                                     @can('turma.criar') <a href="{{ route('turmas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Turma</a> @endcan

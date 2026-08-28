@@ -36,12 +36,15 @@ class ImportacaoManager extends Component
     public $mensagemErroAtual = '';
     public $arquivoErroAtual = '';
 
-    // NOVOS FILTROS
+    // Filtros
     public $filtro_tipo = '';
     public $filtro_status = '';
     public $filtro_usuario = '';
     public $filtro_data_inicio = '';
     public $filtro_data_fim = '';
+
+    // Mapeamento Dinâmico
+    public $camposDinamicosDisponiveis = [];
 
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
@@ -57,9 +60,9 @@ class ImportacaoManager extends Component
         'bairro' => 'Bairro',
         'cidade' => 'Cidade',
         'estado' => 'Estado (UF)',
-        'unidade_id' => 'Sede/Unidade (Nome da Unidade)',
-        'curso_id' => 'Curso (Nome do Curso)',
-        'turno_id' => 'Turno (Nome do Turno)',
+        'unidade_id' => 'Sede/Unidade (Exige ID)',
+        'curso_id' => 'Curso (Exige ID)',
+        'turno_id' => 'Turno (Exige ID)',
         'possui_deficiencia' => 'Possui Deficiência?',
         'natureza_deficiencia' => 'Natureza da Deficiência',
     ];
@@ -73,7 +76,6 @@ class ImportacaoManager extends Component
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
     }
 
-    // Reseta a paginação ao mudar qualquer filtro
     public function updating($nomePropriedade)
     {
         if (in_array($nomePropriedade, ['filtro_tipo', 'filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim'])) {
@@ -98,7 +100,6 @@ class ImportacaoManager extends Component
         ];
     }
 
-    // --- TEMPLATES PARA DOWNLOAD EXPANDIDOS (AGORA SÃO 5) ---
     public function baixarTemplate($tipo)
     {
         if ($tipo === 'inscricoes') {
@@ -106,13 +107,11 @@ class ImportacaoManager extends Component
             $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
             return $this->gerarCsv('modelo_importacao_inscricoes.csv', [$cabecalho, $exemplo]);
         }
-
         if ($tipo === 'usuarios') {
             $cabecalho = ['Nome Completo', 'E-mail', 'CPF', 'Senha', 'Grupo de Acesso', 'Permissões Extras'];
             $exemplo = ['João Silva', 'joao@email.com', '123.456.789-00', 'senha123', 'estudante', 'ver_aulas, editar_perfil'];
             return $this->gerarCsv('modelo_importacao_usuarios.csv', [$cabecalho, $exemplo]);
         }
-
         if ($tipo === 'campos') {
             $cabecalho = ['Etapa', 'Ordem', 'Nome do Campo', 'ID no Banco', 'Tipo', 'Subtipo', 'Largura', 'Obrigatório', 'Sempre Visível?', 'Regras de Exibição', 'Opções'];
             $exemplo1 = ['1', '1', 'Unidade de Interesse', 'unidade_id', 'system', 'unidade', '12', 'Sim', 'Sim', '', ''];
@@ -120,13 +119,11 @@ class ImportacaoManager extends Component
             $exemplo3 = ['1', '3', 'Qual rede social?', 'qual_rede', 'text', 'text', '12', 'Sim', 'Não', 'como_conheceu=Instagram', ''];
             return $this->gerarCsv('modelo_importacao_campos.csv', [$cabecalho, $exemplo1, $exemplo2, $exemplo3]);
         }
-
         if ($tipo === 'unidades') {
             $cabecalho = ['Nome da Unidade', 'Estado', 'Cidade', 'Status'];
             $exemplo = ['Unidade Paulista', 'SP', 'São Paulo', 'Ativa'];
             return $this->gerarCsv('modelo_importacao_unidades.csv', [$cabecalho, $exemplo]);
         }
-
         if ($tipo === 'cursos') {
             $cabecalho = ['Nome do Curso', 'Status', 'Idade Mínima', 'Idade Máxima', 'Permite Estado Diferente?'];
             $exemplo = ['Design Gráfico', 'Ativo', '16', '99', 'Não'];
@@ -149,7 +146,7 @@ class ImportacaoManager extends Component
 
     public function abrirModalUpload()
     {
-        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId']);
+        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis']);
         $this->modalUploadAberto = true;
     }
 
@@ -172,17 +169,25 @@ class ImportacaoManager extends Component
         $caminhoAbsoluto = Storage::disk('local')->path($caminho);
         
         $totalLinhas = 0;
+        $cabecalhosLidos = [];
         
         if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-            $reader = SimpleExcelReader::create($caminhoAbsoluto);
+            // Leitura Matemática de Delimitador para não quebrar colunas do Fillout
             if (strtolower($extensao) === 'csv') {
-                $cabecalhoRaw = file_get_contents($caminhoAbsoluto, false, null, 0, 250);
-                $reader->useDelimiter(strpos($cabecalhoRaw, ';') !== false ? ';' : ',');
+                $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+                $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+                $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
+            } else {
+                $reader = SimpleExcelReader::create($caminhoAbsoluto);
             }
-            $this->cabecalhos = $reader->getHeaders() ?? [];
+
+            $headers = $reader->getHeaders() ?? [];
+            foreach ($headers as $h) {
+                $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+            }
             $totalLinhas = $reader->getRows()->count();
         } else {
-            $this->cabecalhos = ['Dados Brutos (Mapeamento Automático)'];
+            $cabecalhosLidos = ['Dados Brutos'];
             $totalLinhas = 1; 
         }
 
@@ -199,41 +204,33 @@ class ImportacaoManager extends Component
         ]);
 
         $this->importacaoAtualId = $importacao->id;
+        $this->cabecalhos = $cabecalhosLidos;
+        
+        $this->reset('arquivo');
         $this->modalUploadAberto = false;
 
         if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-            $this->gerarAutoMapeamento();
+            $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
+                ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
+                ->pluck('label', 'name')
+                ->toArray();
+            
+            $this->inicializarMapeamentoManualmente();
             $this->modalMapeamentoAberto = true;
         } else {
             $this->iniciarImportacao(); 
         }
     }
 
-    private function gerarAutoMapeamento()
+    private function inicializarMapeamentoManualmente()
     {
-        $opcoesLabelMap = [];
-        foreach($this->opcoesMapeamento as $chave => $label) {
-            $opcoesLabelMap[Str::slug($label)] = $chave;
-        }
-
         $this->mapeamento = [];
-        foreach ($this->cabecalhos as $coluna) {
-            $slugColuna = Str::slug($coluna);
-            $destino = 'dados_dinamicos'; 
-            $tipo = 'texto';
-
-            if (isset($this->opcoesMapeamento[$slugColuna])) $destino = $slugColuna;
-            elseif (isset($opcoesLabelMap[$slugColuna])) $destino = $opcoesLabelMap[$slugColuna];
-            else {
-                if ($slugColuna === 'cpf') $destino = 'cpf';
-                if (str_contains($slugColuna, 'e-mail') || str_contains($slugColuna, 'email')) $destino = 'email';
-                if (str_contains($slugColuna, 'celular') || str_contains($slugColuna, 'telefone')) $destino = 'celular';
-            }
-
-            if (str_contains($slugColuna, 'data') && str_contains($slugColuna, 'nascimento')) $tipo = 'data';
-            elseif (str_contains($slugColuna, 'data') || str_contains($slugColuna, 'hora')) $tipo = 'data_hora';
-
-            $this->mapeamento[$coluna] = ['destino' => $destino, 'tipo' => $tipo];
+        foreach ($this->cabecalhos as $index => $coluna) {
+            $this->mapeamento[$index] = [
+                'coluna_nome' => $coluna, 
+                'destino' => 'ignorar', 
+                'tipo' => 'texto'
+            ];
         }
     }
 
@@ -241,7 +238,17 @@ class ImportacaoManager extends Component
     {
         $importacao = Importacao::findOrFail($this->importacaoAtualId);
         
-        $mapaFinal = $this->mapeamento;
+        $mapaFinal = [];
+        foreach($this->mapeamento as $map) {
+             // Limpa o payload: Só envia pro Job o que o usuário REALMENTE mapeou
+             if ($map['destino'] !== 'ignorar') {
+                 $mapaFinal[$map['coluna_nome']] = [
+                      'destino' => $map['destino'],
+                      'tipo' => $map['tipo']
+                 ];
+             }
+        }
+        
         if ($this->cicloSelecionadoId) {
             $mapaFinal['ciclo_id'] = $this->cicloSelecionadoId; 
         }
@@ -251,21 +258,30 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto']);
-        $this->dispatch('sucesso', msg: 'Importação adicionada à fila! O processamento ocorrerá em segundo plano.');
+        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis']);
+        $this->dispatch('sucesso', msg: 'Importação enviada para a fila com sucesso!');
         
-        \App\Jobs\ProcessarImportacaoUniversalJob::dispatch($importacao);
+        // Despacha a execução do Job APÓS o Livewire fechar o modal e atualizar o navegador
+        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
     }
 
     public function excluirImportacao($id)
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
         
-        $importacao = Importacao::findOrFail($id);
-        if ($importacao->arquivo_caminho) Storage::disk('local')->delete($importacao->arquivo_caminho);
-        if ($importacao->arquivo_gerado_caminho) Storage::disk('local')->delete($importacao->arquivo_gerado_caminho);
-        $importacao->delete();
-        $this->dispatch('sucesso', msg: 'Registro e arquivos removidos do servidor.');
+        $importacao = Importacao::find($id);
+        
+        if ($importacao) {
+            if ($importacao->arquivo_caminho) Storage::disk('local')->delete($importacao->arquivo_caminho);
+            if ($importacao->arquivo_gerado_caminho) Storage::disk('local')->delete($importacao->arquivo_gerado_caminho);
+            $importacao->delete();
+        }
+
+        if ($this->importacaoAtualId == $id) {
+            $this->reset(['modalMapeamentoAberto', 'importacaoAtualId', 'cabecalhos', 'mapeamento']);
+        }
+
+        $this->dispatch('sucesso', msg: 'Registro e arquivos cancelados/removidos do servidor.');
     }
 
     public function verErro($id)
@@ -297,7 +313,7 @@ class ImportacaoManager extends Component
             'total_linhas' => 0, 
         ]);
 
-        \App\Jobs\ProcessarExportacaoUniversalJob::dispatch($exportacao);
+        dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($exportacao))->afterResponse();
 
         $this->dispatch('sucesso', msg: 'Exportação solicitada com sucesso! O sistema está processando em background.');
     }
@@ -311,48 +327,29 @@ class ImportacaoManager extends Component
         $this->dispatch('sucesso', msg: 'Arquivo não encontrado ou geração não concluída.');
     }
 
-    
-
     public function render()
     {
         $query = Importacao::with('user');
         
-        // Aplicação dos Filtros
-        if (!empty($this->filtro_tipo)) {
-            $query->where('tipo', $this->filtro_tipo);
-        }
-        if (!empty($this->filtro_status)) {
-            $query->where('status', $this->filtro_status);
-        }
-        if (!empty($this->filtro_usuario)) {
-            $query->where('user_id', $this->filtro_usuario);
-        }
+        if (!empty($this->filtro_tipo)) $query->where('tipo', $this->filtro_tipo);
+        if (!empty($this->filtro_status)) $query->where('status', $this->filtro_status);
+        if (!empty($this->filtro_usuario)) $query->where('user_id', $this->filtro_usuario);
         
-        // Filtros de Data
         if (!empty($this->filtro_data_inicio)) {
             $query->where('created_at', '>=', str_replace('T', ' ', $this->filtro_data_inicio));
         }
         if (!empty($this->filtro_data_fim)) {
             $dataFim = str_replace('T', ' ', $this->filtro_data_fim);
-            if (strlen($dataFim) === 10) {
-                $dataFim .= ' 23:59:59';
-            } elseif (strlen($dataFim) === 16) { 
-                $dataFim .= ':59';
-            }
+            if (strlen($dataFim) === 10) $dataFim .= ' 23:59:59';
+            elseif (strlen($dataFim) === 16) $dataFim .= ':59';
             $query->where('created_at', '<=', $dataFim);
         }
 
-        if ($this->ordenacaoCampo) {
-            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
-        } else {
-            $query->orderBy('id', 'desc');
-        }
+        if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        else $query->orderBy('id', 'desc');
 
-        // CORREÇÃO: Busca os usuários consultando a tabela de importações de forma independente, 
-        // sem depender de relacionamentos no model User.
         $usuariosDisponiveis = User::whereIn('id', Importacao::select('user_id')->distinct())
-            ->orderBy('name')
-            ->pluck('name', 'id');
+            ->orderBy('name')->pluck('name', 'id');
 
         return view('livewire.importacao.importacao-manager', [
             'registros' => $query->paginate($this->porPagina),

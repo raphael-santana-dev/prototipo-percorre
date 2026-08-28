@@ -15,6 +15,7 @@ use App\Models\Importacao;
 use App\Models\User;
 use App\Models\CampoFormulario;
 use App\Models\Inscricao;
+use Illuminate\Database\QueryException;
 
 class ProcessarImportacaoUniversalJob implements ShouldQueue
 {
@@ -32,6 +33,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
     {
         $linhaAtual = 0;
         $erros = [];
+        $errosCriticos = 0;
 
         try {
             $this->importacao->update(['status' => 'processando']);
@@ -45,7 +47,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $linhaAtual++;
 
                 try {
-                    // LIMPEZA ANTI-BOM: Remove o caractere invisível que o Excel deixa e coloca tudo em minúsculo
                     $dadosLimpos = [];
                     foreach ($linhaOriginal as $key => $value) {
                         $cleanKey = strtolower(trim(str_replace("\xEF\xBB\xBF", '', $key)));
@@ -59,12 +60,30 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         default => throw new \Exception("Tipo de importação '{$this->importacao->tipo}' não implementado."),
                     };
 
-                } catch (\Throwable $e) {
-                    $erros[] = ['linha' => $linhaAtual, 'mensagem' => $e->getMessage()];
+                } catch (QueryException $e) {
+                    $isDuplicate = $e->getCode() === '23505'; // Código de violação de Unique Key no PostgreSQL
                     
-                    if (count($erros) >= 100) {
-                        throw new \Exception("Excesso de erros detectados (100+). Processamento abortado por segurança.");
-                    }
+                    if (!$isDuplicate) $errosCriticos++;
+
+                    $erros[] = [
+                        'linha' => $linhaAtual, 
+                        'tipo' => $isDuplicate ? 'Alerta (Duplicata)' : 'Erro de Banco',
+                        'mensagem' => $e->getMessage(),
+                        'amigavel' => $isDuplicate ? 'Candidato ignorado: CPF ou E-mail já está cadastrado no sistema.' : 'Erro interno ao salvar no banco de dados.'
+                    ];
+                } catch (\Throwable $e) {
+                    $errosCriticos++;
+                    $erros[] = [
+                        'linha' => $linhaAtual, 
+                        'tipo' => 'Erro de Dados',
+                        'mensagem' => $e->getMessage(),
+                        'amigavel' => $e->getMessage()
+                    ];
+                }
+
+                // O sistema só aborta se tiver 100+ erros CRÍTICOS (ignora os alertas de duplicatas na contagem de aborto)
+                if ($errosCriticos >= 100) {
+                    throw new \Exception("Excesso de erros estruturais detectados (100+). Processamento abortado por segurança.");
                 }
 
                 if ($linhaAtual % 50 === 0) {
@@ -80,7 +99,12 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             ]);
 
         } catch (\Throwable $e) {
-            array_unshift($erros, ['linha' => 'Crítico/Sistema', 'mensagem' => $e->getMessage()]);
+            array_unshift($erros, [
+                'linha' => 'Crítico/Sistema', 
+                'tipo' => 'Falha Crítica',
+                'mensagem' => $e->getMessage(),
+                'amigavel' => 'A importação falhou de maneira irrecuperável. Verifique se o arquivo está no formato correto.'
+            ]);
             $this->importacao->update([
                 'status' => 'erro', 
                 'erro_mensagem' => json_encode($erros, JSON_UNESCAPED_UNICODE)
@@ -115,10 +139,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         throw new \Exception("Formato de arquivo não suportado.");
     }
 
-    // =========================================================================
-    // PROCESSADORES (AGORA ACEITAM OS CABEÇALHOS AMIGÁVEIS!)
-    // =========================================================================
-
     private function processarCampo(array $dados, array $mapeamento)
     {
         $cicloId = $mapeamento['ciclo_id'] ?? null;
@@ -127,7 +147,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $label = trim($dados['nome do campo'] ?? $dados['label'] ?? '');
         if (empty($label)) throw new \Exception("A coluna 'Nome do Campo' (ou 'label') é obrigatória.");
 
-        // Se o Excel vier com a coluna "ID no Banco", usamos, senão usamos Slug do Título
         $name = trim($dados['id no banco'] ?? $dados['id no banco (name)'] ?? $dados['name'] ?? '');
         if (empty($name)) {
             $name = Str::slug($label, '_');
@@ -162,7 +181,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         if (!empty($opcoesRaw)) {
             if (str_starts_with(strtolower($opcoesRaw), 'bd:') || str_starts_with(strtolower($opcoesRaw), 'db:')) {
-                // Suporta db:unidade:ativas ou bd:unidade:ativas
                 $partes = explode(':', $opcoesRaw);
                 $opcoesArray = [
                     'origem_bd' => $partes[1] ?? '',
@@ -243,30 +261,38 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
     private function processarInscricao(array $linhaOriginal, array $mapeamento)
     {
-        // Aqui usamos a linha inteira crua porque o mapeamento se baseia nas colunas EXATAS enviadas pelo usuario
         $dadosFixos = [];
         $dadosDinamicos = [];
 
         foreach ($mapeamento as $colunaExcel => $config) {
-            if (!isset($linhaOriginal[$colunaExcel])) continue;
+            $colunaValida = is_array($config) && isset($config['coluna_nome']) ? $config['coluna_nome'] : $colunaExcel;
 
-            $destino = $config['destino'] ?? 'ignorar';
-            $tipoDado = $config['tipo'] ?? 'texto';
+            if (!isset($linhaOriginal[$colunaValida])) continue;
+
+            $destino = is_array($config) ? ($config['destino'] ?? 'ignorar') : $config;
+            $tipoDado = is_array($config) ? ($config['tipo'] ?? 'texto') : 'texto';
+            
             if ($destino === 'ignorar') continue;
             
-            $valor = trim($linhaOriginal[$colunaExcel]);
+            $valor = trim($linhaOriginal[$colunaValida]);
 
             if (!empty($valor) && in_array($tipoDado, ['data', 'data_hora'])) {
                 try {
                     $formatoSaida = $tipoDado === 'data' ? 'Y-m-d' : 'Y-m-d H:i:s';
                     $valor = \Carbon\Carbon::parse(str_replace('/', '-', $valor))->format($formatoSaida);
                 } catch (\Exception $e) {
-                    throw new \Exception("Data inválida na coluna '{$colunaExcel}': {$valor}");
+                    throw new \Exception("Data inválida na coluna '{$colunaValida}': {$valor}");
                 }
             }
+            elseif (!empty($valor) && $tipoDado === 'monetario') {
+                $valor = floatval(preg_replace('/[^0-9.]/', '', str_replace(',', '.', $valor)));
+            }
 
-            if ($destino === 'dados_dinamicos') {
-                $dadosDinamicos[Str::slug($colunaExcel, '_')] = $valor;
+            if (str_starts_with($destino, 'dinamico:')) {
+                $chaveDinamica = str_replace('dinamico:', '', $destino);
+                $dadosDinamicos[$chaveDinamica] = $valor;
+            } elseif ($destino === 'dados_dinamicos') {
+                $dadosDinamicos[Str::slug($colunaValida, '_')] = $valor;
             } else {
                 $dadosFixos[$destino] = $valor;
             }
@@ -276,8 +302,57 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             throw new \Exception("A linha não possui identificador básico (Nome ou CPF mapeado).");
         }
 
+        // PREVENÇÃO DE DUPLICATAS FANTASMAS (Força nulo se vier vazio)
+        if (empty($dadosFixos['cpf'])) $dadosFixos['cpf'] = null;
+        if (empty($dadosFixos['email'])) $dadosFixos['email'] = null;
+
+        // 1. Traduzir Curso
+        if (!empty($dadosFixos['curso_id'])) {
+            if (!is_numeric($dadosFixos['curso_id'])) {
+                $curso = \App\Models\Curso::where('nome', 'ilike', '%' . trim($dadosFixos['curso_id']) . '%')->first();
+                $dadosFixos['curso_id'] = $curso ? $curso->id : null;
+            }
+        } else {
+            $dadosFixos['curso_id'] = null; 
+        }
+
+        // 2. Traduzir Unidade
+        if (!empty($dadosFixos['unidade_id'])) {
+            if (!is_numeric($dadosFixos['unidade_id'])) {
+                $termoUnidade = trim($dadosFixos['unidade_id']);
+                if (str_contains($termoUnidade, '-')) {
+                    $partes = explode('-', $termoUnidade);
+                    $termoUnidade = trim(end($partes));
+                }
+                $unidade = \App\Modules\Unidade\Domain\Models\Unidade::where('nome', 'ilike', '%' . $termoUnidade . '%')->first();
+                $dadosFixos['unidade_id'] = $unidade ? $unidade->id : null;
+            }
+        } else {
+            $dadosFixos['unidade_id'] = null;
+        }
+
+        // 3. Traduzir Turno
+        if (!empty($dadosFixos['turno_id'])) {
+            if (!is_numeric($dadosFixos['turno_id'])) {
+                $turno = \App\Modules\Turno\Domain\Models\Turno::where('nome', 'ilike', trim($dadosFixos['turno_id']))->first();
+                $dadosFixos['turno_id'] = $turno ? $turno->id : null;
+            }
+        } else {
+            $dadosFixos['turno_id'] = null;
+        }
+
+        // 4. Traduzir Status
+        if (!empty($dadosFixos['status_inscricao_id'])) {
+            if (!is_numeric($dadosFixos['status_inscricao_id'])) {
+                $status = \App\Models\StatusInscricao::where('nome', 'ilike', trim($dadosFixos['status_inscricao_id']))->first();
+                $dadosFixos['status_inscricao_id'] = $status ? $status->id : 1; 
+            }
+        } else {
+            $dadosFixos['status_inscricao_id'] = 1; 
+        }
+
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
-        $dadosFixos['status_inscricao_id'] = 1; 
+        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         
         Inscricao::create($dadosFixos);
     }

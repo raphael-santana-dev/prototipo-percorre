@@ -336,29 +336,40 @@
                     </div>
                     
                     <div class="max-h-[50vh] overflow-y-auto custom-scrollbar pr-2 space-y-3">
-                        @foreach($cabecalhos as $coluna)
-                            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        @foreach($mapeamento as $index => $item)
+                            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200" wire:key="map-{{ $index }}">
                                 <div class="w-1/3 flex items-center gap-2">
                                     <i class="ph-fill ph-file-xls text-gray-400 text-xl"></i>
-                                    <span class="text-sm font-bold text-gray-700 truncate" title="{{ $coluna }}">{{ Str::limit($coluna, 25) }}</span>
+                                    <span class="text-sm font-bold text-gray-700 truncate" title="{{ $item['coluna_nome'] }}">{{ Str::limit($item['coluna_nome'], 25) }}</span>
                                 </div>
                                 <div class="text-gray-400"><i class="ph-bold ph-arrow-right"></i></div>
                                 <div class="w-1/3">
-                                    <select wire:model="mapeamento.{{ $coluna }}.destino" class="w-full text-xs font-bold rounded bg-white border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                    <select wire:model="mapeamento.{{ $index }}.destino" class="w-full text-xs font-bold rounded bg-white border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
                                         <option value="ignorar" class="text-red-500">-- Ignorar Coluna --</option>
-                                        <option value="dados_dinamicos" class="text-blue-600">-- Salvar como Dado Customizado (JSON) --</option>
+                                        <option value="dados_dinamicos" class="text-blue-600">-- Salvar no JSON Bruto Oculto --</option>
+                                        
                                         <optgroup label="Campos Nativos do Sistema">
                                             @foreach($opcoesMapeamento as $chave => $label)
                                                 <option value="{{ $chave }}">{{ $label }}</option>
                                             @endforeach
                                         </optgroup>
+
+                                        @if(!empty($camposDinamicosDisponiveis))
+                                            <optgroup label="Campos Customizados (Formulário)">
+                                                @foreach($camposDinamicosDisponiveis as $name => $label)
+                                                    <option value="dinamico:{{ $name }}">{{ $label }}</option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
                                     </select>
                                 </div>
                                 <div class="w-1/4">
-                                    <select wire:model="mapeamento.{{ $coluna }}.tipo" class="w-full text-xs font-medium rounded bg-white border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                        <option value="texto">Formato: Texto/Número</option>
+                                    <select wire:model="mapeamento.{{ $index }}.tipo" class="w-full text-xs font-medium rounded bg-white border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                        <option value="texto">Formato: Texto / Número</option>
                                         <option value="data">Formato: Data Simples</option>
                                         <option value="data_hora">Formato: Data e Hora</option>
+                                        <option value="monetario">Formato: Monetário (R$)</option>
+                                        <option value="booleano">Formato: Booleano (Sim/Não)</option>
                                     </select>
                                 </div>
                             </div>
@@ -390,11 +401,20 @@
                     <p class="text-xs text-gray-500 font-medium mb-4">Erros detectados durante o processamento do arquivo: <b>{{ $arquivoErroAtual }}</b></p>
                     
                     <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-[11px] h-64 overflow-y-auto custom-scrollbar shadow-inner">
-                        @php $erros = json_decode($mensagemErroAtual, true) ?? []; @endphp
+                        @php 
+                            $erros = json_decode($mensagemErroAtual, true) ?? []; 
+                            $isDev = auth()->user()->hasRole('dev');
+                        @endphp
+                        
                         @forelse($erros as $erro)
                             <div class="mb-2 border-b border-gray-700 pb-2">
-                                <span class="text-red-400 font-bold">[Linha {{ $erro['linha'] ?? 'Geral' }}]</span> 
-                                <span class="text-gray-300">{{ $erro['mensagem'] ?? 'Erro desconhecido' }}</span>
+                                <span class="{{ ($erro['tipo'] ?? '') == 'Alerta (Duplicata)' ? 'text-yellow-400' : 'text-red-400' }} font-bold">
+                                    [Linha {{ $erro['linha'] ?? 'Geral' }}]
+                                </span> 
+                                
+                                <span class="text-gray-300">
+                                    {{ $isDev ? ($erro['mensagem'] ?? 'Erro desconhecido') : ($erro['amigavel'] ?? $erro['mensagem'] ?? 'Falha ao processar o registro.') }}
+                                </span>
                             </div>
                         @empty
                             <div class="text-gray-500 italic">Nenhum log de erro legível encontrado.</div>
