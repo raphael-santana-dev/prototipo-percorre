@@ -22,7 +22,7 @@ class ImportacaoManager extends Component
 
     public $modalUploadAberto = false;
     public $modalMapeamentoAberto = false;
-    public $modalErroAberto = false;
+    public $modalDetalhesAberto = false; // Novo modal
 
     public $arquivo;
     public $tipoImportacao = 'inscricoes';
@@ -30,12 +30,12 @@ class ImportacaoManager extends Component
     public $ciclosDisponiveis = [];
 
     public $importacaoAtualId = null;
+    public $importacaoDetalhes = null; // Carrega a importação para o modal 3
+    public $permitirAutoCadastro = false; // Checkbox Etapa 2
+
     public $cabecalhos = [];
     public $mapeamento = [];
     
-    public $mensagemErroAtual = '';
-    public $arquivoErroAtual = '';
-
     // Filtros
     public $filtro_tipo = '';
     public $filtro_status = '';
@@ -96,7 +96,7 @@ class ImportacaoManager extends Component
             ['key' => 'arquivo', 'label' => 'Arquivo / Tipo', 'sortable' => false],
             ['key' => 'progresso', 'label' => 'Status e Progresso', 'sortable' => false, 'class' => 'w-64'],
             ['key' => 'data', 'label' => 'Data de Envio', 'sortable' => false],
-            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'w-24 text-right'],
+            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'w-32 text-right'],
         ];
     }
 
@@ -146,7 +146,7 @@ class ImportacaoManager extends Component
 
     public function abrirModalUpload()
     {
-        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis']);
+        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis', 'permitirAutoCadastro']);
         $this->modalUploadAberto = true;
     }
 
@@ -172,7 +172,6 @@ class ImportacaoManager extends Component
         $cabecalhosLidos = [];
         
         if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-            // Leitura Matemática de Delimitador para não quebrar colunas do Fillout
             if (strtolower($extensao) === 'csv') {
                 $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
                 $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
@@ -239,8 +238,10 @@ class ImportacaoManager extends Component
         $importacao = Importacao::findOrFail($this->importacaoAtualId);
         
         $mapaFinal = [];
+        // Injeta a configuração do checkbox na fila de dados da importação
+        $mapaFinal['config_auto_cadastro'] = $this->permitirAutoCadastro;
+
         foreach($this->mapeamento as $map) {
-             // Limpa o payload: Só envia pro Job o que o usuário REALMENTE mapeou
              if ($map['destino'] !== 'ignorar') {
                  $mapaFinal[$map['coluna_nome']] = [
                       'destino' => $map['destino'],
@@ -258,10 +259,9 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis']);
+        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro']);
         $this->dispatch('sucesso', msg: 'Importação enviada para a fila com sucesso!');
         
-        // Despacha a execução do Job APÓS o Livewire fechar o modal e atualizar o navegador
         dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
     }
 
@@ -280,16 +280,31 @@ class ImportacaoManager extends Component
         if ($this->importacaoAtualId == $id) {
             $this->reset(['modalMapeamentoAberto', 'importacaoAtualId', 'cabecalhos', 'mapeamento']);
         }
+        if ($this->importacaoDetalhes && $this->importacaoDetalhes->id == $id) {
+            $this->reset(['modalDetalhesAberto', 'importacaoDetalhes']);
+        }
 
         $this->dispatch('sucesso', msg: 'Registro e arquivos cancelados/removidos do servidor.');
     }
 
-    public function verErro($id)
+    public function verDetalhes($id)
     {
+        $this->importacaoDetalhes = Importacao::findOrFail($id);
+        $this->modalDetalhesAberto = true;
+    }
+
+    public function baixarArquivoOriginal($id)
+    {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+
         $importacao = Importacao::findOrFail($id);
-        $this->mensagemErroAtual = $importacao->erro_mensagem;
-        $this->arquivoErroAtual = $importacao->arquivo_nome;
-        $this->modalErroAberto = true;
+
+        if ($importacao->arquivo_caminho && Storage::disk('local')->exists($importacao->arquivo_caminho)) {
+            $nomeFinal = 'Original_' . ($importacao->arquivo_nome ?? 'planilha.csv');
+            return Storage::disk('local')->download($importacao->arquivo_caminho, $nomeFinal);
+        }
+
+        $this->dispatch('erro', msg: 'O arquivo original não foi encontrado ou já foi expurgado do servidor.');
     }
 
     public function solicitarExportacao($tipoDado, $formato = 'xlsx')

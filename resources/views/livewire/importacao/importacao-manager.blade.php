@@ -210,14 +210,12 @@
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
-                            @if(in_array($log->status, ['erro', 'erro_parcial']))
-                                <button wire:click="verErro({{ $log->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:bg-orange-50" title="Ver Relatório de Erros">
-                                    <i class="text-lg ph-fill ph-warning"></i>
-                                </button>
-                            @endif
+                            <button wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-blue-600 transition-colors rounded hover:bg-blue-50 dark:hover:bg-gray-700" title="Ver Detalhes do Processamento">
+                                <i class="text-lg ph-fill ph-info"></i>
+                            </button>
 
                             @if($log->operacao === 'exportacao' && $log->status === 'concluido' && $log->arquivo_gerado_caminho)
-                                <button wire:click="baixarExportacao({{ $log->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Planilha">
+                                <button wire:click="baixarExportacao({{ $log->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Planilha Gerada">
                                     <i class="text-lg ph-bold ph-download-simple"></i>
                                 </button>
                             @endif
@@ -306,6 +304,18 @@
                             @error('arquivo') <span class="text-xs text-red-500 mt-2 block font-bold text-center">{{ $message }}</span> @enderror
                         </div>
 
+                        @if($tipoImportacao === 'inscricoes')
+                            <label class="flex items-start gap-3 p-3 border border-purpura-200 bg-purpura-50/50 rounded-lg cursor-pointer hover:bg-purpura-50 transition">
+                                <div class="flex items-center h-5 mt-0.5">
+                                    <input type="checkbox" wire:model="permitirAutoCadastro" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-purpura-900 font-bold">Auto-cadastrar Vínculos Ausentes</span>
+                                    <span class="text-[10px] text-purpura-600 leading-tight mt-0.5">Se a sua planilha tiver um Curso, Unidade ou Turno que não exista no sistema, o sistema criará o cadastro deles automaticamente para você.</span>
+                                </div>
+                            </label>
+                        @endif
+
                         <div class="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-100">
                             <button type="button" wire:click="$set('modalUploadAberto', false)" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
                             <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
@@ -387,43 +397,104 @@
         </div>
     @endif
 
-    <!-- MODAL 3: RELATÓRIO DE ERROS -->
-    @if($modalErroAberto)
-        <div class="fixed inset-0 z-50 overflow-y-auto">
+    <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
+    @if($modalDetalhesAberto && $importacaoDetalhes)
+        <div class="fixed inset-0 z-[70] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalErroAberto', false)"></div>
+                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalDetalhesAberto', false)"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
                 
-                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
-                    <h3 class="mb-2 text-lg font-extrabold text-red-600 flex items-center gap-2 border-b border-gray-100 pb-3">
-                        <i class="ph-fill ph-warning-circle text-2xl"></i> Relatório de Falhas
-                    </h3>
-                    <p class="text-xs text-gray-500 font-medium mb-4">Erros detectados durante o processamento do arquivo: <b>{{ $arquivoErroAtual }}</b></p>
+                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
                     
-                    <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-[11px] h-64 overflow-y-auto custom-scrollbar shadow-inner">
+                    <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+                                <i class="ph-fill ph-file-text text-purpura-500"></i> Relatório de Operação #{{ $importacaoDetalhes->id }}
+                            </h3>
+                            <p class="text-xs text-gray-500 font-medium mt-1">Nome do Arquivo Original: <b class="text-gray-700">{{ $importacaoDetalhes->arquivo_nome ?? 'Integração sem arquivo' }}</b></p>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            @if($importacaoDetalhes->operacao === 'importacao')
+                                <button wire:click="baixarArquivoOriginal({{ $importacaoDetalhes->id }})" class="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-2 transition shadow-sm">
+                                    <i class="ph-bold ph-download-simple"></i> Baixar Original
+                                </button>
+                            @endif
+                            <button wire:click="$set('modalDetalhesAberto', false)" class="text-gray-400 hover:text-red-500 transition ml-2"><i class="text-2xl ph ph-x"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col justify-center">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Status Final</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded border {{ $importacaoDetalhes->status_visual['cor'] }} inline-flex items-center gap-1 w-max">
+                                <i class="{{ $importacaoDetalhes->status_visual['icone'] }}"></i> {{ $importacaoDetalhes->status_visual['label'] }}
+                            </span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Módulo Alvo</span>
+                            <span class="text-sm font-bold text-gray-900 uppercase tracking-wider">{{ $importacaoDetalhes->tipo }}</span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Progresso (Linhas)</span>
+                            <span class="text-lg font-bold text-gray-900">{{ number_format($importacaoDetalhes->linhas_processadas, 0, '', '.') }} <span class="text-sm text-gray-400">/ {{ number_format($importacaoDetalhes->total_linhas, 0, '', '.') }}</span></span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Data da Solicitação</span>
+                            <span class="text-sm font-bold text-gray-900">{{ $importacaoDetalhes->created_at->format('d/m/Y \à\s H:i') }}</span>
+                        </div>
+                    </div>
+
+                    <h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-1"><i class="ph-bold ph-terminal-window text-gray-400"></i> Eventos e Observações do Sistema</h4>
+                    <div class="bg-gray-900 text-gray-300 rounded-lg text-xs h-64 overflow-y-auto custom-scrollbar shadow-inner border border-gray-800">
                         @php 
-                            $erros = json_decode($mensagemErroAtual, true) ?? []; 
+                            $erros = json_decode($importacaoDetalhes->erro_mensagem, true) ?? []; 
                             $isDev = auth()->user()->hasRole('dev');
                         @endphp
                         
-                        @forelse($erros as $erro)
-                            <div class="mb-2 border-b border-gray-700 pb-2">
-                                <span class="{{ ($erro['tipo'] ?? '') == 'Alerta (Duplicata)' ? 'text-yellow-400' : 'text-red-400' }} font-bold">
-                                    [Linha {{ $erro['linha'] ?? 'Geral' }}]
-                                </span> 
-                                
-                                <span class="text-gray-300">
-                                    {{ $isDev ? ($erro['mensagem'] ?? 'Erro desconhecido') : ($erro['amigavel'] ?? $erro['mensagem'] ?? 'Falha ao processar o registro.') }}
-                                </span>
+                        @if(empty($erros) && $importacaoDetalhes->status === 'concluido')
+                            <div class="p-4 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
+                                <i class="ph-fill ph-check-circle text-4xl mb-2 text-green-500"></i>
+                                <span class="font-bold text-gray-400 text-sm">Operação Perfeita</span>
+                                Nenhum alerta, duplicata ou erro foi registrado durante o processamento.
                             </div>
-                        @empty
-                            <div class="text-gray-500 italic">Nenhum log de erro legível encontrado.</div>
-                        @endforelse
+                        @elseif(empty($erros))
+                            <div class="p-4 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
+                                <i class="ph-fill ph-hourglass-high text-4xl mb-2 text-gray-600"></i>
+                                Aguardando o processamento em background...
+                            </div>
+                        @else
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-gray-950 sticky top-0 border-b border-gray-700">
+                                    <tr>
+                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-16 text-center">Linha</th>
+                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-36">Classificação</th>
+                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400">O que aconteceu?</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800">
+                                    @foreach($erros as $erro)
+                                        @php
+                                            $tipoErro = $erro['tipo'] ?? 'Geral';
+                                            $corSelo = 'bg-red-500/20 text-red-400 border-red-500/30'; // Padrão Erro Crítico
+                                            if (str_contains($tipoErro, 'Alerta') || str_contains($tipoErro, 'Duplicata')) {
+                                                $corSelo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+                                            }
+                                        @endphp
+                                        <tr class="hover:bg-gray-800/50 transition-colors">
+                                            <td class="p-3 text-center text-gray-500 font-mono">[{{ $erro['linha'] ?? '-' }}]</td>
+                                            <td class="p-3">
+                                                <span class="px-2 py-0.5 border text-[10px] font-bold rounded {{ $corSelo }}">{{ $tipoErro }}</span>
+                                            </td>
+                                            <td class="p-3 font-medium text-gray-300">
+                                                {{ $isDev ? ($erro['mensagem'] ?? 'Erro desconhecido') : ($erro['amigavel'] ?? $erro['mensagem'] ?? 'Falha ao processar o registro.') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
                     </div>
-
-                    <div class="flex justify-end gap-3 pt-4 mt-4 border-t border-gray-100">
-                        <button type="button" wire:click="$set('modalErroAberto', false)" class="px-6 py-2 text-sm font-bold bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition">Fechar Detalhes</button>
-                    </div>
+                    
                 </div>
             </div>
         </div>
