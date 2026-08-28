@@ -306,8 +306,24 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 
                 if (!empty($dadosFixos[$coluna])) {
                     if (!is_numeric($dadosFixos[$coluna])) {
-                        $termo = trim($dadosFixos[$coluna]);
+                        $termoOriginal = trim($dadosFixos[$coluna]);
                         
+                        // =========================================================
+                        // FILTRO ANTI-LIXO (Limpa dados bagunçados de formulários)
+                        // =========================================================
+                        // 1. Remove tudo após a primeira quebra de linha oculta
+                        $termo = preg_replace('/[\r\n]+.*/s', '', $termoOriginal);
+                        // 2. Se o candidato marcou várias opções separadas por vírgula, pega só a primeira
+                        $termo = explode(',', $termo)[0];
+                        $termo = explode(';', $termo)[0];
+                        $termo = trim($termo);
+                        
+                        // 3. Trava final: impede cadastro de strings gigantes
+                        if (strlen($termo) > 80) {
+                            $termo = trim(substr($termo, 0, 80));
+                        }
+                        // =========================================================
+
                         if ($coluna === 'unidade_id' && str_contains($termo, '-')) {
                             $partes = explode('-', $termo);
                             $termo = trim(end($partes));
@@ -321,6 +337,14 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         if (!$registro && $permiteAutoCadastro && $config->auto_cadastro) {
                             $payload = $config->payload_padrao ?? [];
                             $payload[$campoBusca] = $termo;
+                            
+                            if (!isset($payload['slug'])) {
+                                $payload['slug'] = Str::slug($termo);
+                            }
+                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) {
+                                $payload['horario_inicio'] = '00:00:00';
+                            }
+
                             $registro = $ModelClass::create($payload);
                         }
 

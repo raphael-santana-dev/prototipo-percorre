@@ -405,31 +405,49 @@
 
     <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
     @if($modalDetalhesAberto && $importacaoDetalhes)
-        <div class="fixed inset-0 z-[70] overflow-y-auto">
+        <div class="fixed inset-0 z-[70] overflow-y-auto" x-data="{ fullscreen: false }">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalDetalhesAberto', false)"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
                 
-                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+                <div :class="fullscreen ? 'fixed inset-0 z-50 flex flex-col bg-white' : 'relative z-10 inline-block w-full max-w-5xl my-8 overflow-hidden text-left align-bottom transition-all transform bg-white shadow-2xl rounded-xl sm:align-middle'"
+                     class="px-4 pt-5 pb-4 sm:p-6">
                     
-                    <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4">
+                    @php 
+                        $erros = json_decode($importacaoDetalhes->erro_mensagem, true) ?? []; 
+                        $isDev = auth()->user()->hasRole('dev');
+                        
+                        $totalProcessado = $importacaoDetalhes->linhas_processadas;
+                        $totalFalhas = count($erros);
+                        $totalSucesso = max(0, $totalProcessado - $totalFalhas);
+                    @endphp
+
+                    <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4 shrink-0">
                         <div>
                             <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                                 <i class="ph-fill ph-file-text text-purpura-500"></i> Relatório de Operação #{{ $importacaoDetalhes->id }}
                             </h3>
-                            <p class="text-xs text-gray-500 font-medium mt-1">Nome do Arquivo Original: <b class="text-gray-700">{{ $importacaoDetalhes->arquivo_nome ?? 'Integração sem arquivo' }}</b></p>
+                            <p class="text-xs text-gray-500 font-medium mt-1">Nome do Arquivo: <b class="text-gray-700">{{ $importacaoDetalhes->arquivo_nome ?? 'Sem arquivo' }}</b></p>
                         </div>
                         <div class="flex gap-2 items-center">
                             @if($importacaoDetalhes->operacao === 'importacao')
                                 <button wire:click="baixarArquivoOriginal({{ $importacaoDetalhes->id }})" class="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-2 transition shadow-sm">
-                                    <i class="ph-bold ph-download-simple"></i> Baixar Original
+                                    <i class="ph-bold ph-download-simple"></i> Original
                                 </button>
                             @endif
-                            <button wire:click="$set('modalDetalhesAberto', false)" class="text-gray-400 hover:text-red-500 transition ml-2"><i class="text-2xl ph ph-x"></i></button>
+                            
+                            <!-- Botão Tela Cheia -->
+                            <button @click="fullscreen = !fullscreen" class="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition ml-1" title="Alternar Tela Cheia">
+                                <i class="text-2xl ph" :class="fullscreen ? 'ph-corners-in' : 'ph-corners-out'"></i>
+                            </button>
+                            <!-- Botão Fechar Modal -->
+                            <button wire:click="$set('modalDetalhesAberto', false)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition ml-1" title="Fechar Janela">
+                                <i class="text-2xl ph-bold ph-x"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 shrink-0">
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col justify-center">
                             <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Status Final</span>
                             <span class="text-xs font-bold px-2 py-0.5 rounded border {{ $importacaoDetalhes->status_visual['cor'] }} inline-flex items-center gap-1 w-max">
@@ -437,68 +455,66 @@
                             </span>
                         </div>
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Módulo Alvo</span>
-                            <span class="text-sm font-bold text-gray-900 uppercase tracking-wider">{{ $importacaoDetalhes->tipo }}</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Linhas Lidas</span>
+                            <span class="text-lg font-bold text-gray-900">{{ number_format($totalProcessado, 0, '', '.') }} <span class="text-[10px] text-gray-400 font-medium">/ {{ number_format($importacaoDetalhes->total_linhas, 0, '', '.') }}</span></span>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                            <span class="text-[10px] uppercase font-bold text-green-700 block mb-1">Sucessos (Inseridos)</span>
+                            <span class="text-lg font-bold text-green-800">{{ number_format($totalSucesso, 0, '', '.') }}</span>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-200">
+                            <span class="text-[10px] uppercase font-bold text-red-700 block mb-1">Alertas / Falhas</span>
+                            <span class="text-lg font-bold text-red-800">{{ number_format($totalFalhas, 0, '', '.') }}</span>
                         </div>
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Progresso (Linhas)</span>
-                            <span class="text-lg font-bold text-gray-900">{{ number_format($importacaoDetalhes->linhas_processadas, 0, '', '.') }} <span class="text-sm text-gray-400">/ {{ number_format($importacaoDetalhes->total_linhas, 0, '', '.') }}</span></span>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Data da Solicitação</span>
-                            <span class="text-sm font-bold text-gray-900">{{ $importacaoDetalhes->created_at->format('d/m/Y \à\s H:i') }}</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Data</span>
+                            <span class="text-sm font-bold text-gray-900">{{ $importacaoDetalhes->created_at->format('d/m/Y H:i') }}</span>
                         </div>
                     </div>
 
-                    <h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-1"><i class="ph-bold ph-terminal-window text-gray-400"></i> Eventos e Observações do Sistema</h4>
-                    <div class="bg-gray-900 text-gray-300 rounded-lg text-xs h-64 overflow-y-auto custom-scrollbar shadow-inner border border-gray-800">
-                        @php 
-                            $erros = json_decode($importacaoDetalhes->erro_mensagem, true) ?? []; 
-                            $isDev = auth()->user()->hasRole('dev');
-                        @endphp
-                        
-                        @if(empty($erros) && $importacaoDetalhes->status === 'concluido')
-                            <div class="p-4 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
-                                <i class="ph-fill ph-check-circle text-4xl mb-2 text-green-500"></i>
-                                <span class="font-bold text-gray-400 text-sm">Operação Perfeita</span>
-                                Nenhum alerta, duplicata ou erro foi registrado durante o processamento.
-                            </div>
-                        @elseif(empty($erros))
-                            <div class="p-4 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
-                                <i class="ph-fill ph-hourglass-high text-4xl mb-2 text-gray-600"></i>
-                                Aguardando o processamento em background...
-                            </div>
-                        @else
-                            <table class="w-full text-left border-collapse">
-                                <thead class="bg-gray-950 sticky top-0 border-b border-gray-700">
-                                    <tr>
-                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-16 text-center">Linha</th>
-                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-36">Classificação</th>
-                                        <th class="p-2.5 font-bold uppercase tracking-wider text-[10px] text-gray-400">O que aconteceu?</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-800">
-                                    @foreach($erros as $erro)
-                                        @php
-                                            $tipoErro = $erro['tipo'] ?? 'Geral';
-                                            $corSelo = 'bg-red-500/20 text-red-400 border-red-500/30'; // Padrão Erro Crítico
-                                            if (str_contains($tipoErro, 'Alerta') || str_contains($tipoErro, 'Duplicata')) {
-                                                $corSelo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-                                            }
-                                        @endphp
-                                        <tr class="hover:bg-gray-800/50 transition-colors">
-                                            <td class="p-3 text-center text-gray-500 font-mono">[{{ $erro['linha'] ?? '-' }}]</td>
-                                            <td class="p-3">
-                                                <span class="px-2 py-0.5 border text-[10px] font-bold rounded {{ $corSelo }}">{{ $tipoErro }}</span>
-                                            </td>
-                                            <td class="p-3 font-medium text-gray-300">
-                                                {{ $isDev ? ($erro['mensagem'] ?? 'Erro desconhecido') : ($erro['amigavel'] ?? $erro['mensagem'] ?? 'Falha ao processar o registro.') }}
-                                            </td>
+                    <h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-1 shrink-0"><i class="ph-bold ph-terminal-window text-gray-400"></i> Eventos e Observações</h4>
+                    
+                    <div class="bg-gray-900 text-gray-300 rounded-lg text-xs shadow-inner border border-gray-800 flex-1 flex flex-col overflow-hidden" :class="fullscreen ? 'h-full min-h-[300px]' : 'h-64'">
+                        <div class="overflow-y-auto custom-scrollbar flex-1">
+                            @if(empty($erros) && $importacaoDetalhes->status === 'concluido')
+                                <div class="p-8 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
+                                    <i class="ph-fill ph-check-circle text-4xl mb-2 text-green-500"></i>
+                                    <span class="font-bold text-gray-400 text-sm">Operação Perfeita</span>
+                                    Nenhum alerta, duplicata ou erro foi registrado durante o processamento.
+                                </div>
+                            @elseif(empty($erros))
+                                <div class="p-8 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
+                                    <i class="ph-fill ph-hourglass-high text-4xl mb-2 text-gray-600"></i>
+                                    Aguardando o processamento em background...
+                                </div>
+                            @else
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-gray-950 sticky top-0 border-b border-gray-700 shadow-sm">
+                                        <tr>
+                                            <th class="p-3 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-16 text-center">Linha</th>
+                                            <th class="p-3 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-40">Classificação</th>
+                                            <th class="p-3 font-bold uppercase tracking-wider text-[10px] text-gray-400">Mensagem do Sistema</th>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-800">
+                                        @foreach($erros as $erro)
+                                            @php
+                                                $tipoErro = $erro['tipo'] ?? 'Geral';
+                                                $corSelo = 'bg-red-500/20 text-red-400 border-red-500/30';
+                                                if (str_contains($tipoErro, 'Alerta') || str_contains($tipoErro, 'Duplicata')) {
+                                                    $corSelo = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+                                                }
+                                            @endphp
+                                            <tr class="hover:bg-gray-800/50 transition-colors">
+                                                <td class="p-3 text-center text-gray-500 font-mono">[{{ $erro['linha'] ?? '-' }}]</td>
+                                                <td class="p-3"><span class="px-2 py-0.5 border text-[10px] font-bold rounded {{ $corSelo }}">{{ $tipoErro }}</span></td>
+                                                <td class="p-3 font-medium text-gray-300">{{ $isDev ? ($erro['mensagem'] ?? 'Erro desconhecido') : ($erro['amigavel'] ?? $erro['mensagem'] ?? 'Falha ao processar registro.') }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            @endif
+                        </div>
                     </div>
                     
                 </div>
