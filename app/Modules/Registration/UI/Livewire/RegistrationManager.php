@@ -7,20 +7,15 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\On; 
 use App\Models\Inscricao;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Hash;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Str;
 use App\Helpers\BreadcrumbHelper;
-use Illuminate\Support\Facades\Auth;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
 class RegistrationManager extends Component
 {
-    public bool $showModal = false;
-
     use WithPagination;
     use ComPadraoListagem;
 
@@ -32,9 +27,7 @@ class RegistrationManager extends Component
     public $filtroTurno = '';
     public $filtroCurso = '';
 
-    public $inscricaoSelecionada = null;
-
-    // Variáveis de Lote
+    // Variáveis de Lote e Modais
     public array $selecionadas = []; 
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
@@ -66,12 +59,11 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.excluir'), 403);
 
-        $inscricao = Inscricao::findOrFail($id);
-        $inscricao->delete();
+        Inscricao::findOrFail($id)->delete();
 
-        // Se a inscrição excluída estivesse na lista de seleções em lote, removemos ela de lá
-        if (($key = array_search($id, $this->selecionadas)) !== false) {
+        if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
             unset($this->selecionadas[$key]);
+            $this->selecionadas = array_values($this->selecionadas);
         }
 
         $this->dispatch('sucesso', msg: 'Inscrição removida permanentemente com sucesso!');
@@ -104,31 +96,33 @@ class RegistrationManager extends Component
         return $query; 
     }
 
-    // ==========================================
-    // QUICK VIEW COM AÇÃO DE STATUS
-    // ==========================================
-    
     #[On('quick-change-status')]
-    public function alterarStatusQuickView($id, $status)
+    public function alterarStatusQuickView($id, $statusId)
     {
-        $inscricao = Inscricao::find($id);
-        if ($inscricao) {
-            
-            // Passa a inscrição como um array para o Helper processar
-            $this->aplicarMudancaDeStatus([$inscricao], $status);
-            
-            $this->dispatch('sucesso', msg: 'Status do candidato atualizado!');
-            
-            // Recarrega o próprio Quick View na hora para mostrar os botões novos selecionados
-            $this->showQuickView($id);
-        }
+        abort_if(!feature('inscricao.editar'), 403);
+        
+        // Manda o ID único pra fila e deixa o Worker criar conta/mandar email
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'atualizacao_lote',
+            'formato' => 'system',
+            'arquivo_nome' => "Alteração Individual via QuickView",
+            'status' => 'na_fila',
+            'total_linhas' => 1,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$id], $statusId))->afterResponse();
+        
+        $this->dispatch('sucesso', msg: 'Status do candidato enviado para processamento!');
+        $this->showQuickView($id);
     }
 
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
         
-        // 1. Constrói os botões dinâmicos de troca de status usando HTML e AlpineJS
         $statusDisponiveis = \App\Models\StatusInscricao::orderBy('nome')->get();
         $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
         
@@ -137,18 +131,15 @@ class RegistrationManager extends Component
                         ? 'bg-purpura-500 text-white border-purpura-500' 
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
                         
-            $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', status: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
+            $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
         }
         $botoesAcao .= '</div>';
 
-        // 2. Constrói a tabela visual das respostas dinâmicas
         $detalhesDinamicos = '';
         if($inscricao->dados_dinamicos) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
             foreach($inscricao->dados_dinamicos as $chave => $valor) {
-                
                 $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
-                
                 $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
             }
             $detalhesDinamicos .= '</div>';
@@ -156,7 +147,6 @@ class RegistrationManager extends Component
             $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registrado.</span>';
         }
 
-        // 3. Dispara para o Drawer Global
         $this->dispatch('load-quick-view', [
             'title' => $inscricao->nome,
             'subtitle' => 'CPF: ' . $inscricao->cpf . ' • ' . $inscricao->email,
@@ -173,33 +163,28 @@ class RegistrationManager extends Component
 
     public function selecionarQuantidade($quantidade)
     {
-        // 1. Limpa sujeira anterior
         $this->desmarcarTodas();
         
         $query = $this->obterQueryFiltrada();
-        
         $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
         $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
 
-        // 2. Altera o estado da Tabela (Tela) para refletir a mesma ordenação da seleção
         if ($temRanking) {
             $this->ordenacaoCampo = 'posicao_ranking_geral';
             $this->ordenacaoDirecao = 'asc';
-            $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
+            $query->whereNotNull('posicao_ranking_geral')->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
         } elseif ($temPontuacao) {
             $this->ordenacaoCampo = 'pontuacao_total';
             $this->ordenacaoDirecao = 'desc';
-            $query->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
+            $query->where('pontuacao_total', '>', 0)->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
         } else {
             $this->ordenacaoCampo = 'id';
             $this->ordenacaoDirecao = 'asc';
             $query->orderBy('id', 'asc');
         }
 
-        // 3. Força a tabela a voltar para a página 1 para exibir os selecionados
         $this->resetPage();
 
-        // 4. Executa a seleção garantindo o limite
         $this->selecionadas = $query->take((int) $quantidade)
                                     ->pluck('id')
                                     ->map(fn($id) => (string) $id)
@@ -219,7 +204,6 @@ class RegistrationManager extends Component
         $idsSelecionados = [];
 
         if ($this->selecaoPreencherVagas) {
-            // Busca as vagas ofertadas no ciclo filtrado (ou todos ativos)
             $queryOfertas = \App\Models\OfertaVaga::query();
             if (!empty($this->filtroCiclo)) $queryOfertas->where('ciclo_id', $this->filtroCiclo);
             else $queryOfertas->whereIn('ciclo_id', \App\Models\Ciclo::where('status', true)->pluck('id'));
@@ -236,8 +220,10 @@ class RegistrationManager extends Component
 
                 if ((clone $queryInsc)->whereNotNull('posicao_ranking')->exists()) {
                     $queryInsc->orderByRaw('posicao_ranking ASC NULLS LAST');
-                } else {
+                } elseif ((clone $queryInsc)->where('pontuacao_total', '>', 0)->exists()) {
                     $queryInsc->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
+                } else {
+                    $queryInsc->orderBy('id', 'asc');
                 }
 
                 $ids = $queryInsc->limit($oferta->vagas)->pluck('id')->toArray();
@@ -282,19 +268,104 @@ class RegistrationManager extends Component
         $this->modalLoteAberto = true;
     }
 
-    public function salvarStatusEmLote()
+    public function getInscricoesModal()
+    {
+        if (!$this->modalLoteAberto || empty($this->selecionadas)) {
+            return collect();
+        }
+        return Inscricao::with(['curso', 'unidade', 'statusInscricao'])
+            ->whereIn('id', $this->selecionadas)
+            ->get();
+    }
+
+    public function desmarcarIndividual($id)
+    {
+        if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
+            unset($this->selecionadas[$key]);
+            $this->selecionadas = array_values($this->selecionadas);
+        }
+        if (count($this->selecionadas) === 0) {
+            $this->modalLoteAberto = false;
+        }
+    }
+
+    public function alterarStatusLoteRapido($statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
+        if (count($this->selecionadas) === 0) return;
         
-        $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
-        $this->aplicarMudancaDeStatus($inscricoes, $this->novoStatusId);
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $qtd = count($this->selecionadas);
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'atualizacao_lote',
+            'formato' => 'system',
+            'arquivo_nome' => "Alteração em Lote: {$qtd} registros para '{$statusNovo->nome}'",
+            'status' => 'na_fila',
+            'total_linhas' => $qtd,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $this->selecionadas, $statusId))->afterResponse();
         
+        $this->desmarcarTodas();
         $this->modalLoteAberto = false;
-        $this->desmarcarTodas(); 
-        $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
+        
+        $this->dispatch('sucesso', msg: 'Ação enviada para a Nuvem! Acompanhe o progresso no Gerenciador de Integrações.');
+    }
+
+    public function salvarStatusEmLote()
+    {
+        $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
+        $this->alterarStatusLoteRapido($this->novoStatusId);
+    }
+
+    public function recalcularScoresGlobais()
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        
+        $trackingScore = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
+            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
+
+        $trackingRank = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
+            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
+
+        \Illuminate\Support\Facades\Bus::chain([
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
+        ])->dispatch();
+        
+        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
+    }
+
+    public function gerarRankingGlobal()
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
+            'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
+
+        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
+        $this->resetPage();
     }
 
     public function getFabActionsProperty()
@@ -311,7 +382,7 @@ class RegistrationManager extends Component
             [
                 'label' => 'Gerar Rankings',
                 'icon' => 'ph ph-medal',
-                'wire_click' => 'gerarRankingGlobal', // Botão que faltava
+                'wire_click' => 'gerarRankingGlobal',
                 'always_show_label' => true,
                 'bg_color' => 'bg-indigo-500 hover:bg-indigo-600',
                 'icon_color' => 'text-white',
@@ -327,44 +398,6 @@ class RegistrationManager extends Component
                 'confirm' => 'Processar as pontuações e regras Multiplicadoras de TODAS as inscrições? Essa ação rodará na nuvem.'
             ]
         ];
-    }
-
-    public function getInscricoesModal()
-    {
-        if (!$this->modalLoteAberto || empty($this->selecionadas)) {
-            return collect();
-        }
-        return Inscricao::with(['curso', 'unidade', 'statusInscricao'])
-            ->whereIn('id', $this->selecionadas)
-            ->get();
-    }
-
-    public function desmarcarIndividual($id)
-    {
-        if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
-            unset($this->selecionadas[$key]);
-            $this->selecionadas = array_values($this->selecionadas); // Reindexa o array
-        }
-        
-        // Se removeu o último, fecha o modal sozinho
-        if (count($this->selecionadas) === 0) {
-            $this->modalLoteAberto = false;
-        }
-    }
-
-    public function alterarStatusLoteRapido($statusId)
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-
-        if (count($this->selecionadas) === 0) return;
-        
-        $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
-        $this->aplicarMudancaDeStatus($inscricoes, $statusId);
-        
-        $this->desmarcarTodas();
-        $this->modalLoteAberto = false; // <-- Agora fecha o modal
-        $this->dispatch('sucesso', msg: 'Status alterado rapidamente com sucesso!');
     }
 
     public function getHeadersProperty()
@@ -386,142 +419,15 @@ class RegistrationManager extends Component
         ];
     }
 
-    public function recalcularScoresGlobais()
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-        
-        $trackingScore = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
-        ]);
-
-        $trackingRank = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
-        ]);
-
-        // Encadeia os Jobs: O Ranking só inicia automaticamente após o Recálculo terminar com sucesso
-        \Illuminate\Support\Facades\Bus::chain([
-            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
-            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
-        ])->dispatch();
-        
-        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
-    }
-
-    public function gerarRankingGlobal()
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-
-        // 1. Cria o Rastreio na Nuvem para o usuário acompanhar a barra de progresso
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'inscricoes',
-            'operacao' => 'ranking',
-            'formato' => 'system',
-            'arquivo_nome' => 'Geração de Ranking Global (Job)',
-            'status' => 'na_fila',
-            'total_linhas' => 0,
-            'linhas_processadas' => 0,
-        ]);
-
-        // 2. Dispara a fila
-        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
-
-        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
-    }
-
-    public function limparFiltros()
-    {
-        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
-        $this->resetPage();
-    }
-
-    /**
-     * Helper responsável por processar a mudança de status
-     * e criar o Estudante caso seja uma aprovação.
-     */
-    private function aplicarMudancaDeStatus($inscricoes, $statusId)
-    {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        if (!$statusNovo) return;
-
-        // Limpa o nome do status para facilitar a validação
-        $nomeStatus = strtolower(trim($statusNovo->nome));
-        $isAprovacao = in_array($nomeStatus, ['aprovado', 'selecionado', 'aprovada']);
-
-        foreach ($inscricoes as $inscricao) {
-            // REGRA DE NEGÓCIO: Criação do Estudante
-            if ($isAprovacao && !$inscricao->student_id) {
-                $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
-                    ['email' => $inscricao->email],
-                    [
-                        'name' => $inscricao->nome,
-                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
-                        'is_active' => true,
-                        'unidade_id' => $inscricao->unidade_id,
-                        'cpf' => $inscricao->cpf,
-                        'slug' => \Illuminate\Support\Str::slug($inscricao->nome)
-                    ]
-                );
-                $inscricao->student_id = $estudante->id;
-            }
-            
-            // Atualiza o status e salva a inscrição
-            $inscricao->status_inscricao_id = $statusId;
-            $inscricao->save();
-
-            // LÓGICA DINÂMICA DE GATILHOS PARA E-MAIL
-            $eventoGatilho = 'inscricao.pendente'; // Padrão
-            
-            if ($isAprovacao) {
-                $eventoGatilho = 'inscricao.aprovada';
-            } elseif (in_array($nomeStatus, ['reprovado', 'reprovada', 'cancelado', 'cancelada'])) {
-                $eventoGatilho = 'inscricao.reprovada';
-            }
-
-            // Agora dispara a automação correta baseada no status!
-            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
-        }
-    }
-
     public function render()
     {
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
         $metricas = [
-            [
-                'label' => 'Total',
-                'value' => (clone $queryBase)->count(),
-                'color_text' => 'text-blue-600 dark:text-blue-400',
-                'color_bg' => 'bg-blue-100 dark:bg-blue-900/30',
-            ],
-            [
-                'label' => 'Aprovados',
-                'value' => (clone $queryBase)
-                    ->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Aprovado'))
-                    ->count(),
-                'color_text' => 'text-green-600 dark:text-green-400',
-                'color_bg' => 'bg-green-100 dark:bg-green-900/30',
-            ],
-            [
-                'label' => 'Reprovados',
-                'value' => (clone $queryBase)
-                    ->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Reprovado'))
-                    ->count(),
-                'color_text' => 'text-red-600 dark:text-red-400',
-                'color_bg' => 'bg-red-100 dark:bg-red-900/30',
-            ],
-            [
-                'label' => 'Pendentes',
-                'value' => (clone $queryBase)
-                    ->whereHas('statusInscricao', fn ($q) => $q->whereNotIn('nome', ['Aprovado', 'Reprovado']))
-                    ->count(),
-                'color_text' => 'text-yellow-600 dark:text-yellow-400',
-                'color_bg' => 'bg-yellow-100 dark:bg-yellow-900/30',
-            ],
+            ['label' => 'Total', 'value' => (clone $queryBase)->count(), 'color_text' => 'text-blue-600 dark:text-blue-400', 'color_bg' => 'bg-blue-100 dark:bg-blue-900/30'],
+            ['label' => 'Aprovados', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Aprovado'))->count(), 'color_text' => 'text-green-600 dark:text-green-400', 'color_bg' => 'bg-green-100 dark:bg-green-900/30'],
+            ['label' => 'Reprovados', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Reprovado'))->count(), 'color_text' => 'text-red-600 dark:text-red-400', 'color_bg' => 'bg-red-100 dark:bg-red-900/30'],
+            ['label' => 'Pendentes', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->whereNotIn('nome', ['Aprovado', 'Reprovado']))->count(), 'color_text' => 'text-yellow-600 dark:text-yellow-400', 'color_bg' => 'bg-yellow-100 dark:bg-yellow-900/30'],
         ];
 
         if ($this->ordenacaoCampo) {
