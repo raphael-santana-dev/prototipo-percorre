@@ -193,10 +193,12 @@
                                 @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a> @endcan
                                 @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Auditoria</a> @endcan
                                 @can('importacao.acessar') <a href="{{ route('importacoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Importações</a> @endcan
-                                <a href="{{ route('formbuilder.hub') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                    <i class="text-lg ph ph-magic-wand"></i> Form Builder
+                                @can('form.builder')
+                                <a href="{{ route('formbuilder.hub') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                    Form Builder
                                 </a>
-                                <!-- Restrito EXCLUSIVAMENTE ao papel de 'dev' -->
+                                @endcan
+                                
                                 @role('dev')
                                     <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                     <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tabela de Permissões</a>

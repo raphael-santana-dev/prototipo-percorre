@@ -27,7 +27,7 @@ class ImportacaoManager extends Component
     public $importacaoReprocessarId = null;
 
     public $arquivo;
-    public $tipoImportacao = 'inscricoes';
+    public $tipoImportacao = '';
     public $cicloSelecionadoId = null;
     public $ciclosDisponiveis = [];
 
@@ -107,6 +107,7 @@ class ImportacaoManager extends Component
 
     public function baixarTemplate($tipo)
     {
+        
         if ($tipo === 'inscricoes') {
             $cabecalho = ['Nome', 'E-mail', 'CPF', 'Celular', 'Data de Nascimento', 'Estado', 'Unidade', 'Curso', 'Turno'];
             $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
@@ -210,72 +211,77 @@ class ImportacaoManager extends Component
 
     public function processarUpload()
     {
-        $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; 
-        if ($this->tipoImportacao === 'campos' || $this->tipoImportacao === 'inscricoes') {
-            $regras['cicloSelecionadoId'] = 'required';
-        }
-        $this->validate($regras, ['cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo para este tipo de importação.']);
-
-        $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
-        if ($ativos >= 5) {
-            $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
-            return;
-        }
-
-        $extensao = $this->arquivo->getClientOriginalExtension();
-        $caminho = $this->arquivo->store('importacoes', 'local'); 
-        $caminhoAbsoluto = Storage::disk('local')->path($caminho);
         
-        $totalLinhas = 0;
-        $cabecalhosLidos = [];
-        
-        if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-            if (strtolower($extensao) === 'csv') {
-                $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-                $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
-                $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
-            } else {
-                $reader = SimpleExcelReader::create($caminhoAbsoluto);
+        if (!empty($this->tipoImportacao) || $this->tipoImportacao !== '') {
+            $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; 
+            if ($this->tipoImportacao === 'campos' || $this->tipoImportacao === 'inscricoes') {
+                $regras['cicloSelecionadoId'] = 'required';
+            }
+            $this->validate($regras, ['cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo para este tipo de importação.']);
+
+            $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
+            if ($ativos >= 5) {
+                $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
+                return;
             }
 
-            $headers = $reader->getHeaders() ?? [];
-            foreach ($headers as $h) {
-                $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
-            }
-            $totalLinhas = $reader->getRows()->count();
-        } else {
-            $cabecalhosLidos = ['Dados Brutos'];
-            $totalLinhas = 1; 
-        }
-
-        $importacao = Importacao::create([
-            'user_id' => auth()->id(),
-            'tipo' => $this->tipoImportacao,
-            'operacao' => 'importacao',
-            'formato' => strtolower($extensao),
-            'arquivo_nome' => $this->arquivo->getClientOriginalName(),
-            'arquivo_caminho' => $caminho,
-            'total_linhas' => $totalLinhas,
-            'status' => 'mapeamento',
-            'mapeamento' => ['ciclo_id' => $this->cicloSelecionadoId]
-        ]);
-
-        $this->importacaoAtualId = $importacao->id;
-        $this->cabecalhos = $cabecalhosLidos;
-        
-        $this->reset('arquivo');
-        $this->modalUploadAberto = false;
-
-        if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-            $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
-                ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
-                ->pluck('label', 'name')
-                ->toArray();
+            $extensao = $this->arquivo->getClientOriginalExtension();
+            $caminho = $this->arquivo->store('importacoes', 'local'); 
+            $caminhoAbsoluto = Storage::disk('local')->path($caminho);
             
-            $this->inicializarMapeamentoManualmente();
-            $this->modalMapeamentoAberto = true;
+            $totalLinhas = 0;
+            $cabecalhosLidos = [];
+            
+            if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
+                if (strtolower($extensao) === 'csv') {
+                    $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+                    $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+                    $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
+                } else {
+                    $reader = SimpleExcelReader::create($caminhoAbsoluto);
+                }
+
+                $headers = $reader->getHeaders() ?? [];
+                foreach ($headers as $h) {
+                    $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+                }
+                $totalLinhas = $reader->getRows()->count();
+            } else {
+                $cabecalhosLidos = ['Dados Brutos'];
+                $totalLinhas = 1; 
+            }
+
+            $importacao = Importacao::create([
+                'user_id' => auth()->id(),
+                'tipo' => $this->tipoImportacao,
+                'operacao' => 'importacao',
+                'formato' => strtolower($extensao),
+                'arquivo_nome' => $this->arquivo->getClientOriginalName(),
+                'arquivo_caminho' => $caminho,
+                'total_linhas' => $totalLinhas,
+                'status' => 'mapeamento',
+                'mapeamento' => ['ciclo_id' => $this->cicloSelecionadoId]
+            ]);
+
+            $this->importacaoAtualId = $importacao->id;
+            $this->cabecalhos = $cabecalhosLidos;
+            
+            $this->reset('arquivo');
+            $this->modalUploadAberto = false;
+
+            if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
+                $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
+                    ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
+                    ->pluck('label', 'name')
+                    ->toArray();
+                
+                $this->inicializarMapeamentoManualmente();
+                $this->modalMapeamentoAberto = true;
+            } else {
+                $this->iniciarImportacao(); 
+            }
         } else {
-            $this->iniciarImportacao(); 
+            $this->dispatch('erro', msg: 'Necessário selecionar um tipo de importação');
         }
     }
 

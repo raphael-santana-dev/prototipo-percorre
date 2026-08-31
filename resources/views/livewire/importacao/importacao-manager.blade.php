@@ -155,10 +155,30 @@
                     </div>
                 </div>
             
+                
+                @php
+                    $opcoesImportacao = [
+                        'importacao.opcao-inscricoes',
+                        'importacao.opcao-usuarios',
+                        'importacao.opcao-formulario',
+                        'importacao.opcao-unidades',
+                        'importacao.opcao-cursos',
+                    ];
 
-                <button wire:click="abrirModalUpload" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
-                    <i class="ph ph-upload-simple text-lg"></i> Nova Importação
-                </button>
+                    $usuario = auth()->user();
+
+                    $podeImportar = collect($opcoesImportacao)->contains(
+                        fn ($opcao) =>
+                            feature($opcao) &&
+                            ($usuario->hasRole('dev') || $usuario->can($opcao))
+                    );
+                @endphp
+
+                @if($podeImportar)
+                    <button wire:click="abrirModalUpload" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
+                        <i class="ph ph-upload-simple text-lg"></i> Nova Importação
+                    </button>
+                @endif
             @endif
         </x-slot>
 
@@ -263,11 +283,22 @@
                         <div>
                             <label class="block mb-1 text-xs font-bold text-gray-700 uppercase tracking-wider">O que você vai importar?</label>
                             <select wire:model.live="tipoImportacao" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 font-medium">
-                                <option value="inscricoes">Base de Dados: Inscrições de Estudantes</option>
+                                <option value="">Selecione uma opção...</option>
+                                @if(feature('importacao.opcao-inscricoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.opcao-inscricoes')))
+                                <option value="inscricoes">Inscrições de Estudantes</option>
+                                @endif
+                                @if(feature('importacao.opcao-usuarios') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.opcao-usuarios')))
                                 <option value="usuarios">Acessos: Usuários Administrativos</option>
+                                @endif
+                                @if(feature('importacao.opcao-formulario') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.opcao-formulario')))
                                 <option value="campos">Estrutura: Blocos de Formulário</option>
+                                @endif
+                                @if(feature('importacao.opcao-unidades') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.opcao-unidades')))
                                 <option value="unidades">Cadastros: Unidades / Sedes</option>
+                                @endif 
+                                @if(feature('importacao.opcao-cursos') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.opcao-cursos')))
                                 <option value="cursos">Cadastros: Cursos Ativos</option>
+                                @endif
                             </select>
                         </div>
 
