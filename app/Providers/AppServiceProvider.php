@@ -118,7 +118,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('website.inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class);
         Livewire::component('student.student-manager', \App\Modules\Student\UI\Livewire\StudentManager::class);
         Livewire::component('student.student-details', \App\Modules\Student\UI\Livewire\StudentDetails::class);
-    
+        Livewire::component('inscricao.retomada', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class);
+
         // Portal do Aluno (Auth Isolada)
         Livewire::component('portal.auth.login', PortalLogin::class);
         Livewire::component('portal.auth.logout-button', PortalLogout::class);

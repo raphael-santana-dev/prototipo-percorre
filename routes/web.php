@@ -25,7 +25,8 @@ use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
 // ==========================================
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
-
+Route::get('/retomar-inscricao/{token}', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class)
+    ->name('inscricao.retomar');
 // Respostas de Formulários Públicos
 Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
     ->name('formularios.publico');

@@ -1,5 +1,6 @@
-<div class="p-6 mx-auto font-sans relative max-w-7xl" x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto') }" x-effect="document.body.style.overflow = (loteAberto || selecaoAberto) ? 'hidden' : 'auto'">
-    
+<div class="p-6 mx-auto font-sans relative max-w-7xl" 
+     x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto') }" 
+     x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto)">   
     {{-- A mágica acontece aqui: Todo o topo em um único componente --}}
     <x-page-header 
         title="Inscrições" 
@@ -236,6 +237,14 @@
                             </a>
                         @endif
 
+                        <button x-data="{ copiado: false }" 
+                            @click="navigator.clipboard.writeText('{{ route('inscricao.retomar', encrypt($inscricao->id)) }}'); copiado = true; setTimeout(() => copiado = false, 2000)" 
+                            class="p-1.5 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative" 
+                            :class="copiado ? 'text-green-500' : 'text-gray-400 hover:text-blue-500'"
+                            title="Copiar Link de Retomada">
+                        <i class="text-xl ph" :class="copiado ? 'ph-check-circle' : 'ph-link'"></i>
+                        </button>
+
                         @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
                             <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
                                 <i class="text-xl ph ph-trash"></i>
@@ -269,6 +278,14 @@
                             <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                             <button wire:click="showQuickView({{ $inscricao->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
                                 <i class="text-xl ph ph-info"></i>
+                            </button>
+
+                            <button x-data="{ copiado: false }" 
+                                    @click="navigator.clipboard.writeText('{{ route('inscricao.retomar', encrypt($inscricao->id)) }}'); copiado = true; setTimeout(() => copiado = false, 2000)" 
+                                    class="p-2 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative" 
+                                    :class="copiado ? 'text-green-500' : 'text-gray-400 hover:text-blue-500'"
+                                    title="Copiar Link de Retomada">
+                                <i class="text-xl ph" :class="copiado ? 'ph-check-circle' : 'ph-link'"></i>
                             </button>
 
                             <a href="#" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
@@ -415,7 +432,7 @@
 
     {{-- MODAL DE SELEÇÃO AVANÇADA --}}
     @if($modalSelecaoAvancadaAberto)
-        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900 bg-opacity-80 backdrop-blur-sm">
+        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-md">
             <div class="flex flex-col w-full max-w-2xl overflow-hidden bg-white shadow-2xl dark:bg-gray-800 rounded-xl">
                 
                 <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">

@@ -173,7 +173,7 @@ class RegistrationManager extends Component
 
     public function selecionarQuantidade($quantidade)
     {
-        // 1. Limpa qualquer seleção anterior para não acumular sujeira
+        // 1. Limpa sujeira anterior
         $this->desmarcarTodas();
         
         $query = $this->obterQueryFiltrada();
@@ -181,25 +181,31 @@ class RegistrationManager extends Component
         $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
         $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
 
-        // 2. Aplica a ordenação forçando a exclusão de campos nulos/vazios do topo
+        // 2. Altera o estado da Tabela (Tela) para refletir a mesma ordenação da seleção
         if ($temRanking) {
-            $query->whereNotNull('posicao_ranking_geral')
-                  ->orderBy('posicao_ranking_geral', 'asc');
+            $this->ordenacaoCampo = 'posicao_ranking_geral';
+            $this->ordenacaoDirecao = 'asc';
+            $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
         } elseif ($temPontuacao) {
-            $query->where('pontuacao_total', '>', 0)
-                  ->orderBy('pontuacao_total', 'desc')
-                  ->orderBy('created_at', 'asc');
+            $this->ordenacaoCampo = 'pontuacao_total';
+            $this->ordenacaoDirecao = 'desc';
+            $query->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
         } else {
+            $this->ordenacaoCampo = 'id';
+            $this->ordenacaoDirecao = 'asc';
             $query->orderBy('id', 'asc');
         }
 
-        // 3. Usa take() com cast inteiro rigoroso para garantir o limite no banco
+        // 3. Força a tabela a voltar para a página 1 para exibir os selecionados
+        $this->resetPage();
+
+        // 4. Executa a seleção garantindo o limite
         $this->selecionadas = $query->take((int) $quantidade)
                                     ->pluck('id')
                                     ->map(fn($id) => (string) $id)
                                     ->toArray();
                                     
-        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas com base no critério do topo.');
+        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
     }
 
     public function abrirModalSelecaoAvancada()
@@ -519,7 +525,11 @@ class RegistrationManager extends Component
         ];
 
         if ($this->ordenacaoCampo) {
-            $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+            if (in_array($this->ordenacaoCampo, ['posicao_ranking_geral', 'posicao_ranking_unidade', 'posicao_ranking_curso', 'posicao_ranking'])) {
+                $queryBase->orderByRaw("{$this->ordenacaoCampo} {$this->ordenacaoDirecao} NULLS LAST");
+            } else {
+                $queryBase->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+            }
         } else {
             $queryBase->orderBy('id', 'desc');
         }
