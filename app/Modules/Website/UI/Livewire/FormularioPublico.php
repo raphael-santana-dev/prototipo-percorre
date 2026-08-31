@@ -31,15 +31,14 @@ class FormularioPublico extends Component
     // Guardará as configurações globais (Fundo, Cor, Opacidade)
     public array $formSettings = [];
 
-    public function mount($id, $slug)
+    public function mount($slug)
     {
         $this->formulario = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-        }])->where('id', $id)->where('status', true)->firstOrFail();
+        }])->where('slug', $slug)->where('status', true)->firstOrFail();
         
         $this->camposDinamicos = $this->formulario->campos;
         
-        // Carrega o Papel de Parede Global mesmo se for bloquear o acesso (mantém a estética)
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
         if ($cfg && $cfg->configuracoes) {
             $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
@@ -50,9 +49,8 @@ class FormularioPublico extends Component
         // ==========================================
         $agora = now();
         
-        // 1. Regra de Tempo
         if ($this->formulario->data_inicio && $agora->lt($this->formulario->data_inicio)) {
-            $this->bloquearAcesso('Este formulário estará disponível para respostas a partir de ' . $this->formulario->data_inicio->format('d/m/Y \à\s H:i') . '.', 'ph-calendar-plus');
+            $this->bloquearAcesso('Este formulário estará disponível a partir de ' . $this->formulario->data_inicio->format('d/m/Y \à\s H:i') . '.', 'ph-calendar-plus');
             return;
         }
         if ($this->formulario->data_fim && $agora->gt($this->formulario->data_fim)) {
@@ -60,55 +58,86 @@ class FormularioPublico extends Component
             return;
         }
 
-        // 2. Regra de Privacidade (Restrição de Usuários)
         if (!$this->formulario->acesso_livre) {
-            
-            // Ninguém está logado
-            if (!auth('web')->check() && !auth('student')->check() && !auth('company')->check()) {
-                $this->bloquearAcesso('Este formulário é restrito. Você precisa fazer login para acessar.', 'ph-identification-badge', true);
+            $liberado = false;
+
+            if (!auth('web')->check() && !auth('student')->check()) {
+                $this->bloquearAcesso('Formulário restrito. Faça login em sua conta para acessar.', 'ph-lock-key', true);
                 return;
             }
 
-            // Exige apenas Alunos
-            if ($this->formulario->apenas_estudantes) {
-                if (!auth('student')->check()) {
-                    $this->bloquearAcesso('Acesso negado. Apenas alunos do instituto podem responder a este formulário.', 'ph-student');
-                    return;
-                }
-            } 
-            // Exige Funcionários/Administração (Roles)
-            else {
-                $rolesPermitidas = is_string($this->formulario->roles_permitidas) ? json_decode($this->formulario->roles_permitidas, true) : ($this->formulario->roles_permitidas ?? []);
-                
-                if (!empty($rolesPermitidas)) {
-                    if (!auth('web')->check()) {
-                        $this->bloquearAcesso('Acesso negado. Formulário restrito a colaboradores internos.', 'ph-shield-warning');
-                        return;
-                    }
+            // AVALIAÇÃO DE COLABORADORES (WEB)
+            if (auth('web')->check()) {
+                $user = auth('web')->user();
+                if ($user->hasRole('dev')) {
+                    $liberado = true;
+                } else {
+                    $roles = is_array($this->formulario->roles_permitidas) ? $this->formulario->roles_permitidas : [];
+                    $users = is_array($this->formulario->users_permitidos) ? $this->formulario->users_permitidos : [];
 
-                    $user = auth('web')->user();
-                    if (!$user->hasRole('dev') && !$user->hasAnyRole($rolesPermitidas)) {
-                        $this->bloquearAcesso('Seu nível de acesso não possui permissão para visualizar este formulário.', 'ph-hand-waving');
-                        return;
+                    if (!empty($roles) && $user->hasAnyRole($roles)) $liberado = true;
+                    if (!empty($users) && in_array((string)$user->id, $users)) $liberado = true;
+                    
+                    // Se não tiver regras web específicas e os estudantes também não estiverem habilitados, libera geral pra WEB
+                    if (empty($roles) && empty($users) && !$this->formulario->apenas_estudantes) {
+                        $liberado = true; 
                     }
                 }
             }
+
+            // AVALIAÇÃO DE ESTUDANTES
+            if (auth('student')->check()) {
+                if ($this->formulario->apenas_estudantes) {
+                    $student = auth('student')->user();
+                    $student->load('matriculas');
+                    $matriculas = $student->matriculas;
+
+                    $unidades = is_array($this->formulario->unidades_permitidas) ? $this->formulario->unidades_permitidas : [];
+                    $cursos = is_array($this->formulario->cursos_permitidos) ? $this->formulario->cursos_permitidos : [];
+                    $turnos = $this->formulario->turnos_permitidas ? $this->formulario->turnos_permitidas : [];
+
+                    if (empty($unidades) && empty($cursos) && empty($turnos)) {
+                        $liberado = true; // Aberto a todos os alunos
+                    } else {
+                        $unidadesAluno = $matriculas->pluck('unidade_id')->map(fn($v) => (string)$v)->toArray();
+                        $cursosAluno = $matriculas->pluck('curso_id')->map(fn($v) => (string)$v)->toArray();
+                        $turnosAluno = $matriculas->pluck('turno_id')->map(fn($v) => (string)$v)->toArray();
+
+                        // O aluno só passa se bater com TODOS os filtros (And-logic)
+                        $passouUnidade = empty($unidades) || !empty(array_intersect($unidades, $unidadesAluno));
+                        $passouCurso = empty($cursos) || !empty(array_intersect($cursos, $cursosAluno));
+                        $passouTurno = empty($turnos) || !empty(array_intersect($turnos, $turnosAluno));
+
+                        if ($passouUnidade && $passouCurso && $passouTurno) {
+                            $liberado = true;
+                        }
+                    }
+                }
+            }
+
+            if (!$liberado) {
+                $this->bloquearAcesso('Seu nível de acesso ou vínculo acadêmico não permite visualizar este formulário.', 'ph-hand-waving');
+                return;
+            }
         }
 
-        // ==========================================
-        // SUCESSO: INICIALIZA O FORMULÁRIO NORMALMENTE
-        // ==========================================
+        // Inicializa o ambiente e descobre o total de etapas
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         $this->carregarOpcoesSistemaInicial();
         
-        // Inicializa os campos nas respostas
+        // Inicializa o E-mail de forma segura e auto-preenche se o usuário já for conhecido
+        if ($this->formulario->exigir_email) {
+            $emailAutofill = '';
+            if (auth('web')->check()) $emailAutofill = auth('web')->user()->email;
+            elseif (auth('student')->check()) $emailAutofill = auth('student')->user()->email;
+            
+            $this->respostas['_email_coletado'] = $emailAutofill;
+        }
+        
         foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
             if (!isset($this->respostas[$campo->name])) {
-                if (in_array($campo->tipo, ['check', 'matriz'])) {
-                    $this->respostas[$campo->name] = [];
-                } else {
-                    $this->respostas[$campo->name] = '';
-                }
+                if (in_array($campo->tipo, ['check', 'matriz'])) $this->respostas[$campo->name] = [];
+                else $this->respostas[$campo->name] = '';
             }
         }
     }
@@ -150,6 +179,11 @@ class FormularioPublico extends Component
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
+
+        // Validação obrigatória do e-mail na Etapa 1
+        if ($this->formulario->exigir_email && $etapa === 1) {
+            $regras['respostas._email_coletado'] = 'required|email';
+        }
 
         foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {

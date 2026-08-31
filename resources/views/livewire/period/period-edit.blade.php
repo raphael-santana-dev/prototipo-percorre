@@ -6,9 +6,14 @@
         badge="Administração">
         
         <x-slot name="actions">
-            <a href="{{ route('ciclos.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
-                <i class="ph-bold ph-arrow-left"></i> Voltar
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('ciclos.show', $cicloId) }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-700 bg-purpura-50 border-purpura-200 hover:bg-purpura-100 transition shadow-sm dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400 flex items-center gap-2">
+                    <i class="ph-bold ph-eye"></i> Ver Detalhes
+                </a>
+                <a href="{{ route('ciclos.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-left"></i> Voltar
+                </a>
+            </div>
         </x-slot>
     </x-page-header>
 
@@ -165,76 +170,72 @@
                     @endif
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-3">
                     @forelse($ofertasVagas as $index => $oferta)
-                        <div class="p-5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm relative group">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
                             
-                            {{-- LINHA 1: CASCATA UNIDADE / CURSO / TURNO --}}
-                            <div class="grid grid-cols-12 gap-4 mb-4">
-                                <div class="col-span-12 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">1. Unidade</label>
-                                    <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500">
-                                        <option value="">Selecione...</option>
-                                        @foreach($unidadesDb as $u) 
-                                            @if(in_array((string)$u->id, $unidadesSelecionadas))
-                                                <option value="{{ $u->id }}">{{ $u->nome }}</option> 
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
+                                <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                                    <option value="">Selecione...</option>
+                                    @foreach($unidadesDb as $u) 
+                                        @if(in_array((string)$u->id, $unidadesSelecionadas))
+                                            <option value="{{ $u->id }}">{{ $u->nome }}</option> 
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
+                                <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
+                                    <option value="">Selecione...</option>
+                                    @if($oferta['unidade_id'])
+                                        @foreach($cursosDb as $c)
+                                            @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
+                                                <option value="{{ $c->id }}">{{ $c->nome }}</option>
                                             @endif
                                         @endforeach
-                                    </select>
-                                </div>
-                                
-                                <div class="col-span-12 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">2. Curso</label>
-                                    <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
-                                        <option value="">Selecione...</option>
-                                        @if($oferta['unidade_id'])
-                                            @foreach($cursosDb as $c)
-                                                @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
-                                                    <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                                    @endif
+                                </select>
+                            </div>
+                            
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
+                                <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
+                                    <option value="">Selecione...</option>
+                                    @if($oferta['curso_id'])
+                                        @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
+                                        @if($cursoSelecionado)
+                                            @foreach($cursoSelecionado->turnosVinculados as $t)
+                                                @if(in_array((string)$t->id, $turnosSelecionados))
+                                                    <option value="{{ $t->id }}">{{ $t->nome }}</option>
                                                 @endif
                                             @endforeach
                                         @endif
-                                    </select>
-                                </div>
-                                
-                                <div class="col-span-12 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">3. Turno</label>
-                                    <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
-                                        <option value="">Selecione...</option>
-                                        @if($oferta['curso_id'])
-                                            @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
-                                            @if($cursoSelecionado)
-                                                @foreach($cursoSelecionado->turnosVinculados as $t)
-                                                    @if(in_array((string)$t->id, $turnosSelecionados))
-                                                        <option value="{{ $t->id }}">{{ $t->nome }}</option>
-                                                    @endif
-                                                @endforeach
-                                            @endif
-                                        @endif
-                                    </select>
-                                </div>
+                                    @endif
+                                </select>
                             </div>
 
-                            {{-- LINHA 2: CONFIGURAÇÕES DA OFERTA (VAGAS E IDADES) --}}
-                            <div class="grid grid-cols-12 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div class="col-span-12 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Limite de Vagas (Aprovados)</label>
-                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400">
-                                </div>
-                                <div class="col-span-6 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Idade Mínima</label>
-                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-semibold">
-                                </div>
-                                <div class="col-span-6 md:col-span-4">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Idade Máxima</label>
-                                    <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Sem limite" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2.5 focus:ring-purpura-500 font-semibold">
-                                </div>
+                            <div class="w-full xl:w-20">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" title="Vagas">Vagas</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400 text-center">
+                            </div>
+                            <div class="w-full xl:w-20">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" title="Idade Mínima">Id. Mín</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
+                            </div>
+                            <div class="w-full xl:w-20">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" title="Idade Máxima">Id. Máx</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                             </div>
 
                             @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                                <button type="button" wire:click="removeOferta({{ $index }})" class="absolute -right-2 -top-2 w-8 h-8 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center shadow-md hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
-                                    <i class="ph-bold ph-trash text-sm"></i>
-                                </button>
+                                <div class="w-full xl:w-auto">
+                                    <button type="button" wire:click="removeOferta({{ $index }})" class="w-full xl:w-auto px-3 py-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
+                                        <i class="ph-bold ph-trash text-sm"></i>
+                                    </button>
+                                </div>
                             @endif
                         </div>
                     @empty

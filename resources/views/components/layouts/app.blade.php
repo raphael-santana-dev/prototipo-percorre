@@ -84,8 +84,7 @@
                             </button>
                             <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
                                 @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Inscrição</a> @endcan
-                                @can('etapa.listar') <a href="{{ route('ciclos.etapas') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Etapas de Formulário</a> @endcan
-                                @can('inscricao.listar') <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Fichas de Inscrição</a> @endcan
+                                @can('inscricao.listar') <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Inscrições</a> @endcan
                             </div>
                         </div>
                         @endcanany
@@ -194,10 +193,12 @@
                                 @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a> @endcan
                                 @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Auditoria</a> @endcan
                                 @can('importacao.acessar') <a href="{{ route('importacoes.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Importações</a> @endcan
-                                <a href="{{ route('formbuilder.hub') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                    <i class="text-lg ph ph-magic-wand"></i> Form Builder
+                                @can('form.builder')
+                                <a href="{{ route('formbuilder.hub') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                    Form Builder
                                 </a>
-                                <!-- Restrito EXCLUSIVAMENTE ao papel de 'dev' -->
+                                @endcan
+                                
                                 @role('dev')
                                     <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                     <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tabela de Permissões</a>
@@ -241,8 +242,7 @@
                         </button>
                         <div x-show="open" class="pl-8 space-y-1" x-cloak>
                             @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ciclos de Inscrição</a> @endcan
-                            @can('etapa.listar') <a href="{{ route('ciclos.etapas') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Etapas de Formulário</a> @endcan
-                            @can('inscricao.listar') <a href="{{ route('inscricoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Fichas de Inscrição</a> @endcan
+                            @can('inscricao.listar') <a href="{{ route('inscricoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Inscrições</a> @endcan
                         </div>
                     </div>
                     @endcanany
@@ -330,8 +330,7 @@
                             <div x-data="{ subOpen: false }" class="space-y-1">
                                 <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                                     <span>Turmas</span>
-                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="rotate-180': subOpen}"></i>
-                                </button>
+                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>                                </button>
                                 <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
                                     <a href="{{ route('turmas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Turmas</a>
                                     @can('turma.criar') <a href="{{ route('turmas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Turma</a> @endcan

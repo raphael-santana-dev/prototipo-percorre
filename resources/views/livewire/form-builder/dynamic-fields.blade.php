@@ -41,6 +41,31 @@
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
+            {{-- BARRA DE NAVEGAÇÃO DE PÁGINAS (TYPEFORM STYLE) --}}
+            <div class="flex items-center gap-2 mb-2 overflow-x-auto custom-scrollbar pb-2">
+                <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-purpura-600 hover:border-purpura-300">
+                    <i class="ph-bold ph-plus"></i> Adicionar Página
+                </button>
+                <div class="w-px h-6 bg-gray-300 mx-1 shrink-0"></div>
+                
+                @foreach($etapasDisponiveis as $et)
+                    <div class="shrink-0 flex items-center bg-white border border-gray-200 rounded-lg text-sm shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-purpura-500 focus-within:border-purpura-500 transition-all">
+                        <div class="px-3 py-2 border-r border-gray-100 text-gray-400 bg-gray-50">
+                            <i class="ph-fill ph-dots-six-vertical"></i>
+                        </div>
+                        <input type="text" 
+                               wire:change="atualizarNomeEtapa({{ $et->id }}, $event.target.value)" 
+                               value="{{ $et->nome }}" 
+                               class="w-32 border-none focus:ring-0 text-sm font-bold text-gray-700 px-3 py-2 bg-transparent">
+                        @if($etapasDisponiveis->count() > 1)
+                            <button wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
             <div class="relative w-full min-h-[600px] rounded-xl overflow-hidden bg-gray-100 shadow-inner">
                 
                 @if($previewBgUrl)
@@ -63,7 +88,11 @@
                                 
                                 <div class="flex items-center gap-3 mb-6">
                                     <span class="flex items-center justify-center w-7 h-7 text-sm font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                    <h3 class="text-xl font-bold {{ $textoForm }}">Etapa {{ $numEtapa }}</h3>
+                                    @php 
+                                        $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
+                                        $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                                    @endphp
+                                    <h3 class="text-xl font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
                                     <div class="flex-1 h-px ml-4 bg-gray-200"></div>
                                 </div>
                                 
@@ -96,15 +125,17 @@
                                                     <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
                                                 </div>
                                                 
-                                                <!-- PREVIEWS VISUAIS -->
+                                                <!-- PREVIEWS VISUAIS ATUALIZADOS -->
                                                 @if($c->tipo === 'text')
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
                                                         @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
                                                         @elseif(in_array($c->subtipo, ['date', 'datetime-local', 'date_range'])) <i class="ph ph-calendar-blank text-lg"></i>
                                                         @elseif($c->subtipo == 'time') <i class="ph ph-clock text-lg"></i>
                                                         @elseif($c->subtipo == 'number') <i class="ph ph-hash text-lg"></i>
+                                                        @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-lg text-green-600"></i>
+                                                        @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-lg text-blue-500"></i>
                                                         @else <i class="ph ph-text-t text-lg"></i> @endif
-                                                        <span class="truncate">Preenchimento ({{ $c->subtipo }})...</span>
+                                                        <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
                                                     </div>
                                                 
                                                 @elseif($c->tipo === 'select')
@@ -112,7 +143,6 @@
                                                         <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
                                                     </div>
                                                 
-                                                {{-- NOVA LÓGICA DE PREVIEW VERTICAL VS HORIZONTAL --}}
                                                 @elseif($c->tipo === 'radio' || $c->tipo === 'check')
                                                     <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
                                                         <div class="flex items-center gap-2 text-gray-600 text-sm">
@@ -193,9 +223,14 @@
                                                     </div>
 
                                                 @elseif($c->tipo === 'social')
-                                                    <div class="flex gap-2 justify-center py-2 pointer-events-none">
-                                                        <div class="w-8 h-8 rounded-full bg-gray-100 shadow-sm flex items-center justify-center text-gray-600"><i class="ph-fill ph-instagram-logo"></i></div>
-                                                        <div class="w-8 h-8 rounded-full bg-gray-100 shadow-sm flex items-center justify-center text-gray-600"><i class="ph-fill ph-facebook-logo"></i></div>
+                                                    @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
+                                                    <div class="flex flex-col gap-2 mt-2 pointer-events-none">
+                                                        @foreach($redesPreview as $rede)
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-lg ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
+                                                                <div class="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-md"></div>
+                                                            </div>
+                                                        @endforeach
                                                     </div>
                                                     
                                                 @elseif($c->tipo === 'rating')
@@ -266,12 +301,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Etapa e Posição</label>
+                            <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Página (Fase) e Posição</label>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <select wire:model.live="etapa" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700">
                                         @foreach($etapasDisponiveis as $et)
-                                            <option value="{{ $et->numero }}">Etapa {{ $et->numero }}</option>
+                                            <option value="{{ $et->numero }}">{{ $et->nome }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -287,13 +322,14 @@
                         <div>
                             <label class="block text-xs font-bold text-gray-800 mb-3">Escolha o Tipo de Bloco <span class="text-red-500">*</span></label>
                             
-                            <div class="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div class="space-y-4 pr-2">
                                 
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                        <!-- BOTÃO ATUALIZADO COM OS NOVOS TIPOS -->
+                                        <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                            <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Texto Curto</span>
                                         </button>
                                         <button type="button" wire:click="setTipo('text', 'date')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
@@ -413,31 +449,39 @@
                                         <option value="date">Data (Calendário)</option>
                                         <option value="time">Hora (Relógio)</option>
                                         <option value="datetime-local">Data e Hora</option>
+                                        <!-- OPÇÕES NOVAS INSERIDAS AQUI -->
+                                        <option value="money">Valor Monetário (R$)</option>
+                                        <option value="tel">Telefone / Celular</option>
                                     </select>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                
+                                @if($subtipo === 'number')
+                                <div class="grid grid-cols-2 gap-3 border-t border-gray-200 pt-3">
                                     <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Mínimo</label>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Mínimo</label>
                                         <input type="number" wire:model="tamanho_min" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máximo</label>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Máximo</label>
                                         <input type="number" wire:model="tamanho_max" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara (x-mask)</label>
-                                    <input type="text" wire:model="regex_mascara" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
+                                @endif
+
+                                @if($subtipo === 'text')
+                                <div class="border-t border-gray-200 pt-3">
+                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara Exata (x-mask)</label>
+                                    <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
                                 </div>
+                                @endif
                             </div>
 
-                        {{-- SELETOR DE DISPOSIÇÃO ADICIONADO AQUI --}}
                         @elseif(in_array($tipo, ['select', 'radio', 'check']))
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700">Opções de Resposta</label>
-                                    <p class="text-[10px] text-gray-500 mb-1.5">Separe as opções por vírgula.</p>
-                                    <textarea wire:model="opcoes" rows="3" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                                    <p class="text-[10px] text-gray-500 mb-1.5">Coloque **uma opção por linha** (Aperte Enter).</p>
+                                    <textarea wire:model="opcoes" rows="5" placeholder="Sim&#10;Não&#10;Talvez" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
                                 </div>
 
                                 @if(in_array($tipo, ['radio', 'check']))
@@ -502,9 +546,26 @@
                             </div>
                         @elseif($tipo === 'social')
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                                <label class="block text-xs font-bold text-gray-700 mb-1">Listagem Social</label>
-                                <p class="text-[10px] text-gray-500 mb-1.5">Formato: <b>icone|link</b> (Um por linha)</p>
-                                <textarea wire:model="configuracoes.social_redes" rows="3" class="w-full text-xs font-mono rounded-lg border-gray-300" placeholder="instagram-logo|https://..."></textarea>
+                                <label class="block text-xs font-bold text-gray-900 mb-3">Redes Sociais Solicitadas</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    @php
+                                        $redesOpcoes = [
+                                            'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
+                                            'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
+                                            'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
+                                            'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
+                                            'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
+                                            'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
+                                        ];
+                                    @endphp
+                                    @foreach($redesOpcoes as $key => $rede)
+                                        <label class="flex items-center gap-2 cursor-pointer bg-white p-2 rounded border border-gray-200 shadow-sm hover:border-purpura-300">
+                                            <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                            <i class="ph-fill {{ $rede['icon'] }} text-lg"></i>
+                                            <span class="text-xs font-bold text-gray-700">{{ $rede['nome'] }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
                         @elseif($tipo === 'rating')
                             <div>
@@ -584,14 +645,16 @@
 
                         <div class="space-y-6">
                             
-                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para compartilhar)</label>
-                                <div class="flex items-center mt-2">
-                                    <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
-                                    <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
+                            @if($contextoTipo === 'formulario')
+                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                    <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para compartilhar)</label>
+                                    <div class="flex items-center mt-2">
+                                        <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
+                                        <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
+                                    </div>
+                                    @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                 </div>
-                                @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
-                            </div>
+                            @endif
 
                             <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
                                 <label class="block text-sm font-bold text-gray-800 mb-2">Upload de Imagem de Fundo</label>
@@ -611,27 +674,29 @@
                                 </div>
                                 @error('bg_image_upload') <span class="text-xs text-red-500 mt-2 block font-bold">{{ $message }}</span> @enderror
 
-                                <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
-                                    <div class="col-span-2">
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
-                                        <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                            <option value="cover">Preencher a Tela Toda (Cortar sobras)</option>
-                                            <option value="contain">Encaixar na Tela (Sem cortar)</option>
-                                            <option value="auto">Tamanho Original (Centralizado)</option>
-                                            <option value="repeat">Repetir como Textura (Mosaico)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor da Sobreposição</label>
-                                        <div class="flex items-center gap-2">
-                                            <input type="color" wire:model.live="formSettings.bg_color" class="w-12 h-8 rounded border border-gray-300 cursor-pointer p-0.5">
+                                @if($bg_image_upload || !empty($formSettings['bg_image']))
+                                    <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+                                        <div class="col-span-2">
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
+                                            <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
+                                                <option value="cover">Preencher a Tela Toda (Cortar sobras)</option>
+                                                <option value="contain">Encaixar na Tela (Sem cortar)</option>
+                                                <option value="auto">Tamanho Original (Centralizado)</option>
+                                                <option value="repeat">Repetir como Textura (Mosaico)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor da Sobreposição</label>
+                                            <div class="flex items-center gap-2">
+                                                <input type="color" wire:model.live="formSettings.bg_color" class="w-12 h-8 rounded border border-gray-300 cursor-pointer p-0.5">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
+                                            <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
                                         </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
-                                        <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                    </div>
-                                </div>
+                                @endif
                             </div>
 
                             <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">

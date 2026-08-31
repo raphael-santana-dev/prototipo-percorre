@@ -86,7 +86,12 @@
                     <form wire:submit="save" class="space-y-5">
                         <div>
                             <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Status <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" placeholder="Ex: Aprovado" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purpura-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white">
+                            <input type="text" wire:model="nome" placeholder="Ex: Aprovado" 
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purpura-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white {{ $isInUse ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                {{ $isInUse ? 'readonly' : '' }}>
+                            @if($isInUse)
+                                <span class="block mt-1 text-xs text-amber-600 font-bold"><i class="ph-fill ph-warning-circle"></i> O nome não pode ser alterado pois já existem inscrições usando este status.</span>
+                            @endif
                             @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 

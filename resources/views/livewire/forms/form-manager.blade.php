@@ -7,13 +7,13 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        @if(feature('formulario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.criar')))
-            <x-slot name="actions">
-                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
+        <x-slot name="actions">
+            @if(feature('formulario.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.criar')))
+                <a href="{{ route('formularios.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold">
                     <i class="ph ph-plus text-lg"></i> Novo Formulário
-                </button>
-            </x-slot>
-        @endif
+                </a>
+            @endif
+        </x-slot>
     </x-page-header>
 
     <x-table
@@ -69,7 +69,7 @@
                         <a href="{{ route('formularios.respostas.show', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Ver Respostas Coletadas">
                             <i class="text-lg ph ph-database"></i>
                         </a>
-                        <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Acessar Formulário (Link)">
+                        <a href="{{ route('formularios.publico', ['slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Acessar Formulário (Link)">
                             <i class="text-lg ph ph-arrow-square-in"></i>
                         </a>
                         @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
@@ -80,6 +80,10 @@
                                 <i class="text-lg ph ph-gear"></i>
                             </button>
                         @endif
+
+                        <a href="{{ route('formularios.edit', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Configurações do Form">
+                            <i class="text-lg ph ph-gear"></i>
+                        </a>
                         
                         @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
                             <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Atenção: Ao excluir o formulário, todas as respostas vinculadas a ele também serão deletadas. Deseja continuar?') || event.stopImmediatePropagation()">
@@ -150,40 +154,95 @@
                         </div>
 
                         {{-- 3. Travas de Acesso (Privacidade) --}}
-                        <div class="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800" x-data="{ livre: @entangle('acesso_livre') }">
-                            <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-400 mb-3 flex items-center gap-2"><i class="ph-bold ph-shield-check"></i> Controle de Privacidade</h4>
+                        <div class="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                            <h4 class="text-sm font-extrabold uppercase tracking-wider text-indigo-800 dark:text-indigo-400 mb-4 flex items-center gap-2">
+                                <i class="ph-bold ph-shield-check text-xl"></i> Níveis de Acesso
+                            </h4>
                             
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" wire:model.live="acesso_livre" class="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
-                                <div>
-                                    <span class="block text-sm font-bold text-gray-900 dark:text-white">Formulário Público (Livre)</span>
-                                    <span class="block text-xs text-gray-500 dark:text-gray-400">Qualquer pessoa que acessar o link poderá responder de forma anônima.</span>
-                                </div>
-                            </label>
-
-                            <div x-show="!livre" x-collapse class="mt-4 pt-4 border-t border-indigo-200/50 space-y-4" x-cloak>
-                                
-                                <label class="flex items-center gap-3 cursor-pointer p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200">
-                                    <input type="checkbox" wire:model="apenas_estudantes" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
-                                    <div>
-                                        <span class="block text-sm font-bold text-gray-900 dark:text-white">Exigir Login de Estudantes</span>
-                                        <span class="block text-xs text-gray-500">Apenas alunos matriculados e logados no Portal do Aluno poderão acessar e responder.</span>
-                                    </div>
+                            <!-- Toggle Principal: Livre vs Restrito -->
+                            <div class="flex gap-6 mb-6 pb-4 border-b border-indigo-200/60">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" wire:model.live="acesso_livre" value="1" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                    <span class="font-bold text-gray-800 dark:text-white">Acesso Livre (Público)</span>
                                 </label>
-
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Ou liberar para Funcionários e Professores (Roles):</label>
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        @foreach($rolesDb as $role)
-                                            <label class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 border border-gray-200 rounded cursor-pointer hover:bg-gray-50 transition">
-                                                <input type="checkbox" wire:model="roles_permitidas" value="{{ $role->name }}" class="w-3.5 h-3.5 text-purpura-600 rounded border-gray-300">
-                                                <span class="text-xs font-bold text-gray-700">{{ ucfirst($role->name) }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                    <p class="text-[10px] text-gray-500 mt-1">Se não marcar nenhum, todos os usuários internos terão acesso.</p>
-                                </div>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" wire:model.live="acesso_livre" value="0" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                    <span class="font-bold text-gray-800 dark:text-white">Acesso Restrito (Requer Login)</span>
+                                </label>
                             </div>
+
+                            <!-- OPÇÕES PARA ACESSO LIVRE -->
+                            @if($acesso_livre)
+                                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
+                                    <label class="flex items-start gap-3 cursor-pointer">
+                                        <input type="checkbox" wire:model="exigir_email" class="w-5 h-5 text-purpura-600 mt-0.5 rounded border-gray-300 focus:ring-purpura-500">
+                                        <div>
+                                            <span class="block text-sm font-bold text-gray-900 dark:text-white">Necessidade de incluir e-mail</span>
+                                            <span class="block text-xs text-gray-500">Adiciona um campo de E-mail obrigatório no início do formulário para saber quem respondeu.</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            @endif
+
+                            <!-- OPÇÕES PARA ACESSO RESTRITO -->
+                            @if(!$acesso_livre)
+                                <div class="space-y-6">
+                                    
+                                    <!-- Bloco 1: Permissões de Estudantes -->
+                                    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
+                                        <label class="flex items-center gap-2 cursor-pointer mb-3">
+                                            <input type="checkbox" wire:model.live="apenas_estudantes" class="w-5 h-5 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                            <span class="text-sm font-bold text-gray-900 dark:text-white">Permitir Estudantes</span>
+                                        </label>
+                                        
+                                        @if($apenas_estudantes)
+                                            <div class="pl-7 space-y-3 mt-2 border-l-2 border-purpura-200">
+                                                <p class="text-xs text-gray-500 mb-2">Se nenhum filtro for selecionado abaixo, todos os alunos terão acesso.</p>
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Restringir Unidades</label>
+                                                        <select multiple wire:model="unidades_permitidas" class="w-full text-xs rounded border-gray-300 h-24 custom-scrollbar">
+                                                            @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Restringir Cursos</label>
+                                                        <select multiple wire:model="cursos_permitidos" class="w-full text-xs rounded border-gray-300 h-24 custom-scrollbar">
+                                                            @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Restringir Turnos</label>
+                                                        <select multiple wire:model="turnos_permitidas" class="w-full text-xs rounded border-gray-300 h-24 custom-scrollbar">
+                                                            @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <!-- Bloco 2: Permissões da Equipe Interna -->
+                                    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
+                                        <p class="text-sm font-bold text-gray-900 dark:text-white mb-3">Permitir Colaboradores Administrativos / Web</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Níveis de Acesso (Roles)</label>
+                                                <select multiple wire:model="roles_permitidas" class="w-full text-xs rounded border-gray-300 h-32 custom-scrollbar">
+                                                    @foreach($rolesDb as $role) <option value="{{ $role->name }}">{{ ucfirst($role->name) }}</option> @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Usuário(s) Específico(s)</label>
+                                                <select multiple wire:model="users_permitidos" class="w-full text-xs rounded border-gray-300 h-32 custom-scrollbar">
+                                                    @foreach($usersDb as $user) <option value="{{ $user->id }}">{{ $user->name }}</option> @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            @endif
                         </div>
 
                         <div class="flex items-center pt-2">

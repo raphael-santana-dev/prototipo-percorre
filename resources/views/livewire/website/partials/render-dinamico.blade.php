@@ -173,14 +173,36 @@
                 <hr class="border-t-2 border-dashed border-gray-300 my-6">
 
             @elseif($campo->tipo === 'social')
-                @php $redes = $config['redes'] ?? []; @endphp
-                <div class="flex flex-wrap gap-4 items-center justify-center py-4">
-                    @foreach($redes as $rede)
-                        <a href="{{ $rede['url'] }}" target="_blank" class="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition text-gray-700 hover:text-purpura-600">
-                            <i class="text-2xl ph-fill ph-{{ strtolower($rede['nome']) }}"></i>
-                        </a>
-                    @endforeach
-                </div>
+                @php $redesPermitidas = $config['redes_permitidas'] ?? []; @endphp
+                
+                @if(count($redesPermitidas) > 0)
+                    <div class="space-y-3 mt-1">
+                        @foreach($redesPermitidas as $redeKey)
+                            <div class="flex items-center bg-white border @error('respostas.'.$campo->name.'.'.$redeKey) border-red-500 bg-red-50 @else border-gray-300 @enderror rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-purpura-500/25 focus-within:border-purpura-500 transition-all">
+                                
+                                <div class="w-12 h-10 flex items-center justify-center bg-gray-50 border-r border-gray-200 text-gray-600 shrink-0">
+                                    @if($redeKey === 'instagram') <i class="ph-fill ph-instagram-logo text-2xl text-pink-500"></i>
+                                    @elseif($redeKey === 'facebook') <i class="ph-fill ph-facebook-logo text-2xl text-blue-600"></i>
+                                    @elseif($redeKey === 'youtube') <i class="ph-fill ph-youtube-logo text-2xl text-red-600"></i>
+                                    @elseif($redeKey === 'tiktok') <i class="ph-fill ph-tiktok-logo text-2xl text-gray-900"></i>
+                                    @elseif($redeKey === 'vsco') <i class="ph-fill ph-aperture text-2xl text-gray-800"></i>
+                                    @elseif($redeKey === 'linkedin') <i class="ph-fill ph-linkedin-logo text-2xl text-blue-700"></i>
+                                    @endif
+                                </div>
+                                
+                                <input type="text" 
+                                    wire:model.live.debounce.500ms="respostas.{{ $campo->name }}.{{ $redeKey }}" 
+                                    placeholder="Qual o seu @usuario ou link do perfil?" 
+                                    class="w-full px-3 py-2 text-sm text-gray-900 bg-transparent border-0 focus:ring-0">
+                            </div>
+                            @error('respostas.'.$campo->name.'.'.$redeKey) 
+                                <span class="text-red-500 text-xs font-bold block drop-shadow-md">{{ $message }}</span> 
+                            @enderror
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500 italic">Nenhuma rede social configurada.</p>
+                @endif
 
             @elseif($campo->tipo === 'rating')
                 <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name) }">
@@ -210,14 +232,34 @@
                 </select>
                 
             @else
-                <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password']) ? $campo->subtipo : 'text' }}" 
-                    wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
-                    
-                    @if($campo->regex_mascara) x-mask="{{ $campo->regex_mascara }}" @endif
-                    @if($campo->tamanho_min && $campo->subtipo == 'number') min="{{ $campo->tamanho_min }}" @endif
-                    @if($campo->tamanho_max && $campo->subtipo == 'number') max="{{ $campo->tamanho_max }}" @endif
+                @if($campo->subtipo === 'money')
+                    <div class="relative w-full">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 font-bold sm:text-sm">R$</span>
+                        </div>
+                        <input type="text" 
+                            wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
+                            x-mask:dynamic="$money($input, ',', '.')" 
+                            class="w-full rounded-md border pl-10 pr-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror"
+                            placeholder="0,00">
+                    </div>
+                @else
+                    {{-- INPUTS PADRÃO E TELEFONE --}}
+                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ? $campo->subtipo : 'text' }}" 
+                        wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
+                        
+                        @if($campo->subtipo === 'tel')
+                            x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'"
+                            placeholder="(00) 00000-0000"
+                        @elseif($campo->regex_mascara) 
+                            x-mask="{{ $campo->regex_mascara }}" 
+                        @endif
 
-                    class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
+                        @if($campo->tamanho_min && $campo->subtipo == 'number') min="{{ $campo->tamanho_min }}" @endif
+                        @if($campo->tamanho_max && $campo->subtipo == 'number') max="{{ $campo->tamanho_max }}" @endif
+
+                        class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
+                @endif
             @endif
 
             @error('respostas.'.$campo->name) <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror

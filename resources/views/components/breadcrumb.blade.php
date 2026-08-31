@@ -9,9 +9,13 @@
                 @endif
                 
                 @if(!$loop->last)
-                    <a href="{{ $item['url'] }}" class="text-sm font-medium text-gray-500 hover:text-purpura-600 transition-colors">
-                        {{ $item['label'] }}
-                    </a>
+                    @if(isset($item['url']))
+                        <a href="{{ $item['url'] }}" class="text-sm font-medium text-gray-500 hover:text-purpura-600 transition-colors">
+                            {{ $item['label'] }}
+                        </a>
+                    @else
+                        <span class="text-sm font-medium text-gray-500">{{ $item['label'] }}</span>
+                    @endif
                 @else
                     <span class="text-sm font-bold text-gray-900">{{ $item['label'] }}</span>
                 @endif

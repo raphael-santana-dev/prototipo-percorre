@@ -66,19 +66,17 @@ class DynamicFields extends Component
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
             $this->contextoNome = $model->nome;
-            $this->etapasDisponiveis = \App\Models\Etapa::orderBy('numero', 'asc')->get();
         } else {
             $model = \App\Models\Formulario::findOrFail($id);
             $this->contextoNome = $model->titulo;
-            $this->etapasDisponiveis = [
-                (object)['numero' => 1], (object)['numero' => 2], (object)['numero' => 3]
-            ];
         }
 
         $this->slug = $model->slug ?? '';
 
-        if (count($this->etapasDisponiveis) > 0) {
-            $this->etapa = is_object($this->etapasDisponiveis[0]) ? $this->etapasDisponiveis[0]->numero : 1;
+        $this->carregarEtapas();
+
+        if ($this->etapasDisponiveis->count() > 0) {
+            $this->etapa = $this->etapasDisponiveis->first()->numero;
         }
         
         $this->loadFormSettings();
@@ -87,6 +85,36 @@ class DynamicFields extends Component
 
     private function getContextColumn() {
         return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
+    }
+
+    public function carregarEtapas()
+    {
+        $query = \App\Models\Etapa::query();
+        if ($this->contextoTipo === 'ciclo') {
+            $query->where('ciclo_id', $this->contextoId);
+        } else {
+            $query->where('formulario_id', $this->contextoId);
+        }
+        
+        $this->etapasDisponiveis = $query->orderBy('numero', 'asc')->get();
+
+        $numerosExistentes = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('tipo', '!=', 'config')->distinct()->pluck('etapa')->toArray();
+
+        $numerosExistentes = empty($numerosExistentes) ? [1] : $numerosExistentes;
+
+        foreach ($numerosExistentes as $num) {
+            if (!$this->etapasDisponiveis->contains('numero', $num)) {
+                $novaEtapa = \App\Models\Etapa::create([
+                    $this->getContextColumn() => $this->contextoId,
+                    'numero' => $num,
+                    'nome' => $num . 'º Fase'
+                ]);
+                $this->etapasDisponiveis->push($novaEtapa);
+            }
+        }
+        
+        $this->etapasDisponiveis = $this->etapasDisponiveis->sortBy('numero')->values();
     }
 
     public function loadFormSettings()
@@ -105,6 +133,10 @@ class DynamicFields extends Component
         
         if (in_array($tipo, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
              $this->name = 'ui_' . time(); 
+        }
+
+        if ($tipo === 'social') {
+            $this->configuracoes['redes_permitidas'] = [];
         }
     }
 
@@ -129,11 +161,13 @@ class DynamicFields extends Component
 
         if ($this->campoId) {
             $campoAtual = CampoFormulario::find($this->campoId);
+            // Se ele for mantido na MESMA etapa, o limite é o número atual de itens
             if ($campoAtual && $campoAtual->etapa == $this->etapa) {
-                return $count;
+                return max(1, $count);
             }
         }
 
+        // Se for um bloco novo OU estiver sendo movido para uma etapa diferente, o limite aumenta 1
         return $count + 1;
     }
 
@@ -145,9 +179,8 @@ class DynamicFields extends Component
 
     public function updatedEtapa()
     {
-        if (!$this->campoId) {
-            $this->atualizarProximaOrdem();
-        }
+        // Sempre que o usuário troca a etapa no dropdown, atualizamos os limites de ordem daquela página
+        $this->atualizarProximaOrdem();
     }
 
     public function editar($id)
@@ -174,7 +207,7 @@ class DynamicFields extends Component
             if (isset($campo->opcoes['origem_bd'])) {
                 $this->opcoes = 'bd:' . $campo->opcoes['origem_bd'];
             } else {
-                $this->opcoes = implode(', ', $campo->opcoes);
+                $this->opcoes = implode("\n", $campo->opcoes);
             }
         } else {
             $this->opcoes = $campo->opcoes ?? '';
@@ -188,11 +221,7 @@ class DynamicFields extends Component
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
         if ($campo->tipo === 'social') {
-            $lines = [];
-            foreach($config['redes'] ?? [] as $rede) {
-                $lines[] = $rede['nome'] . '|' . $rede['url'];
-            }
-            $this->configuracoes['social_redes'] = implode("\n", $lines);
+            $this->configuracoes['redes_permitidas'] = $config['redes_permitidas'] ?? [];
         }
     }
 
@@ -284,7 +313,8 @@ class DynamicFields extends Component
             if (str_starts_with(strtolower($opcoesLimpas), 'bd:')) {
                 $arrayOpcoes = ['origem_bd' => trim(substr($opcoesLimpas, 3))];
             } else {
-                $arrayOpcoes = array_map('trim', explode(',', $this->opcoes));
+                $linhas = explode("\n", $this->opcoes);
+                $arrayOpcoes = array_values(array_filter(array_map('trim', $linhas), fn($v) => $v !== ''));
             }
         }
 
@@ -297,33 +327,37 @@ class DynamicFields extends Component
             $configToSave['linhas'] = array_values(array_filter(array_map('trim', explode("\n", $linhasStr)), fn($val) => $val !== ''));
             $configToSave['colunas'] = array_values(array_filter(array_map('trim', explode(',', $colunasStr)), fn($val) => $val !== ''));
         }
-        
+
         if ($this->tipo === 'social') {
-            $redesLines = array_filter(explode("\n", $this->configuracoes['social_redes'] ?? ''));
-            $redes = [];
-            foreach($redesLines as $line) {
-                $parts = explode('|', $line);
-                if(count($parts) >= 2) {
-                    $redes[] = ['nome' => trim($parts[0]), 'url' => trim($parts[1])];
-                }
-            }
-            $configToSave['redes'] = $redes;
-            unset($configToSave['social_redes']);
+            $configToSave['redes_permitidas'] = array_values(array_filter($this->configuracoes['redes_permitidas'] ?? []));
         }
 
+        // --- SISTEMA INTELIGENTE DE REORGANIZAÇÃO ---
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
+            $etapaAntiga = $campo->etapa;
             $ordemNova = $this->ordem;
+            $etapaNova = $this->etapa;
 
-            if ($ordemAntiga != $ordemNova && $campo->etapa == $this->etapa) {
-                if ($ordemNova < $ordemAntiga) {
-                    CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
-                } else {
-                    CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
+            if ($etapaAntiga == $etapaNova) {
+                // Cenário 1: Reorganização dentro da MESMA página
+                if ($ordemAntiga != $ordemNova) {
+                    if ($ordemNova < $ordemAntiga) {
+                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
+                    } else {
+                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
+                    }
                 }
+            } else {
+                // Cenário 2: Movimentação ENTRE páginas diferentes
+                // Fecha o "buraco" na etapa antiga
+                CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaAntiga)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemAntiga)->decrement('ordem');
+                // Abre o espaço na etapa nova
+                CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->where('ordem', '>=', $ordemNova)->increment('ordem');
             }
         } else {
+            // Cenário 3: Inserção de um bloco totalmente NOVO
             CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
         }
 
@@ -370,6 +404,50 @@ class DynamicFields extends Component
         CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
         $this->atualizarProximaOrdem();
         $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
+    }
+
+    // --- FUNÇÕES DE PÁGINAS / FASES ---
+    public function adicionarEtapa()
+    {
+        $proxNumero = $this->etapasDisponiveis->max('numero') + 1;
+        \App\Models\Etapa::create([
+            $this->getContextColumn() => $this->contextoId,
+            'numero' => $proxNumero,
+            'nome' => $proxNumero . 'º Fase'
+        ]);
+        $this->carregarEtapas();
+        $this->dispatch('sucesso', msg: 'Nova página adicionada!');
+    }
+
+    public function atualizarNomeEtapa($id, $novoNome)
+    {
+        if (!empty(trim($novoNome))) {
+            \App\Models\Etapa::where('id', $id)->update(['nome' => trim($novoNome)]);
+            $this->carregarEtapas();
+        }
+    }
+
+    public function excluirEtapa($id)
+    {
+        $etapa = \App\Models\Etapa::find($id);
+        if (!$etapa) return;
+        
+        $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $etapa->numero)
+            ->where('tipo', '!=', 'config')
+            ->exists();
+            
+        if ($temCampos) {
+            $this->dispatch('erro', msg: 'Esta página possui campos. Mova-os ou exclua-os primeiro.');
+            return;
+        }
+        
+        $etapa->delete();
+        $this->carregarEtapas();
+        
+        if ($this->etapa == $etapa->numero) {
+            $this->etapa = $this->etapasDisponiveis->first()->numero ?? 1;
+        }
     }
 
     public function render()

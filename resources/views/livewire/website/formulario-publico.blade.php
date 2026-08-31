@@ -82,6 +82,20 @@
                 @endif
 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
+                    
+                    {{-- CAMPO DE E-MAIL FIXO (Injetado apenas se exigido na Etapa 1) --}}
+                    @if($formulario->exigir_email && $etapaAtual === 1)
+                        <div class="col-span-12 relative rounded-lg transition-all duration-300">
+                            <div class="relative z-10">
+                                <label class="block text-sm font-semibold text-gray-800 mb-2 {{ isset($formSettings['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
+                                    Seu E-mail Institucional ou Pessoal <span class="text-red-500">*</span>
+                                </label>
+                                <input type="email" wire:model.live.debounce.500ms="respostas._email_coletado" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas._email_coletado') border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror" placeholder="seu.email@exemplo.com">
+                                @error('respostas._email_coletado') <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    @endif
+
                     @include('livewire.website.partials.render-dinamico', ['etapa' => $etapaAtual])
                 </div>
 

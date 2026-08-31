@@ -60,7 +60,6 @@ class Inscricao extends Component
             $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
             if ($cfg && $cfg->configuracoes) {
                 $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
-                // Carrega a configuração da trava
                 if (isset($this->formSettings['use_vacancy_limit'])) {
                     $this->use_vacancy_limit = filter_var($this->formSettings['use_vacancy_limit'], FILTER_VALIDATE_BOOLEAN);
                 }
@@ -69,14 +68,68 @@ class Inscricao extends Component
             $maxEtapaDinamica = $this->camposDinamicos->max('etapa') ?? 1;
             $this->totalEtapas = max(1, $maxEtapaDinamica);
 
+            // Pré-aloca o array de respostas para evitar erros de undefined index no Blade
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
-                    if (in_array($campo->tipo, ['check', 'matriz'])) {
-                        $this->respostas[$campo->name] = [];
-                    } else {
-                        $this->respostas[$campo->name] = '';
-                    }
+                    $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz']) ? [] : '';
                 }
+            }
+
+            // =========================================================
+            // RETOMADA DE INSCRIÇÃO: Carrega dados caso exista sessão
+            // =========================================================
+            if (session()->has('inscricao_retomada_id')) {
+                $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
+                
+                if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
+                    $this->inscricaoId = $inscricaoRetomada->id;
+                    $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
+                    
+                    // Bloqueia avançar se a inscrição já estiver finalizada
+                    if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado'])) {
+                        $this->etapaAtual = 99;
+                        session()->forget('inscricao_retomada_id');
+                        return;
+                    }
+
+                    // Carrega os campos fixos
+                    $this->nome = $inscricaoRetomada->nome;
+                    $this->cpf = $inscricaoRetomada->cpf;
+                    $this->email = $inscricaoRetomada->email;
+                    $this->celular = $inscricaoRetomada->celular;
+                    $this->data_nascimento = $inscricaoRetomada->data_nascimento ? $inscricaoRetomada->data_nascimento->format('Y-m-d') : null;
+                    $this->cep = $inscricaoRetomada->cep;
+                    $this->logradouro = $inscricaoRetomada->logradouro;
+                    $this->bairro = $inscricaoRetomada->bairro;
+                    $this->cidade = $inscricaoRetomada->cidade;
+                    $this->estado = $inscricaoRetomada->estado;
+                    $this->numero = $inscricaoRetomada->numero;
+                    $this->complemento = $inscricaoRetomada->complemento;
+                    
+                    $this->possui_nome_social = $inscricaoRetomada->possui_nome_social ?? 'nao';
+                    $this->nome_social = $inscricaoRetomada->nome_social;
+                    $this->possui_deficiencia = $inscricaoRetomada->possui_deficiencia ?? 'nao';
+                    $this->natureza_deficiencia = $inscricaoRetomada->natureza_deficiencia;
+                    $this->autorizacao_uso_infos = (bool) $inscricaoRetomada->autorizacao_uso_infos;
+
+                    $this->unidade = $inscricaoRetomada->unidade_id;
+                    $this->curso = $inscricaoRetomada->curso_id;
+                    $this->turno = $inscricaoRetomada->turno_id;
+
+                    // Carrega as respostas dos campos dinâmicos (JSON)
+                    $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
+                    if (is_array($dadosAntigos)) {
+                        foreach ($dadosAntigos as $chave => $valor) {
+                            $this->respostas[$chave] = $valor;
+                        }
+                    }
+
+                    // Força a recarga das cascatas de cursos e unidades baseadas na data de nascimento injetada
+                    $this->restaurarDeDadosSalvos();
+                }
+                
+                // Limpa a sessão para não afetar próximas inscrições no mesmo PC
+                session()->forget('inscricao_retomada_id');
             }
         }
     }
@@ -92,6 +145,64 @@ class Inscricao extends Component
         'cep.required' => 'O CEP é obrigatório.',
         'data_nascimento.required' => 'A data de nascimento é obrigatória.',
     ];
+
+    public function updatedCpf($value)
+    {
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $value);
+        
+        // Só busca no banco quando o CPF estiver completamente digitado
+        if (strlen($cpfLimpo) === 11) {
+            $inscricaoRetomada = InscricaoModel::with('statusInscricao')
+                ->where('cpf', $cpfLimpo)
+                ->where('ciclo_id', $this->cicloAtivoId)
+                ->first();
+
+            if ($inscricaoRetomada) {
+                // Se o status já for de uma inscrição concluída, bloqueia
+                if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado', 'pendente'])) {
+                    $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada neste ciclo.');
+                    return;
+                }
+
+                // Carrega os dados básicos
+                $this->inscricaoId = $inscricaoRetomada->id;
+                $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
+                $this->nome = $inscricaoRetomada->nome;
+                $this->email = $inscricaoRetomada->email;
+                $this->celular = $inscricaoRetomada->celular;
+                $this->data_nascimento = $inscricaoRetomada->data_nascimento ? $inscricaoRetomada->data_nascimento->format('Y-m-d') : null;
+                $this->cep = $inscricaoRetomada->cep;
+                $this->logradouro = $inscricaoRetomada->logradouro;
+                $this->bairro = $inscricaoRetomada->bairro;
+                $this->cidade = $inscricaoRetomada->cidade;
+                $this->estado = $inscricaoRetomada->estado;
+                $this->numero = $inscricaoRetomada->numero;
+                $this->complemento = $inscricaoRetomada->complemento;
+                $this->possui_nome_social = $inscricaoRetomada->possui_nome_social ?? 'nao';
+                $this->nome_social = $inscricaoRetomada->nome_social;
+                $this->possui_deficiencia = $inscricaoRetomada->possui_deficiencia ?? 'nao';
+                $this->natureza_deficiencia = $inscricaoRetomada->natureza_deficiencia;
+                
+                $this->unidade = $inscricaoRetomada->unidade_id;
+                $this->curso = $inscricaoRetomada->curso_id;
+                $this->turno = $inscricaoRetomada->turno_id;
+
+                // Carrega os campos dinâmicos do JSON
+                $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
+                if (is_array($dadosAntigos)) {
+                    foreach ($dadosAntigos as $chave => $valor) {
+                        $this->respostas[$chave] = $valor;
+                    }
+                }
+
+                // Reconstrói as cascatas de cursos baseadas nos dados puxados
+                $this->restaurarDeDadosSalvos();
+
+                // Notifica o usuário visualmente no frontend
+                $this->dispatch('sucesso', msg: 'Encontramos uma inscrição em andamento! Recuperamos seus dados de onde você parou.');
+            }
+        }
+    }
 
     /**
      * MOTOR ULTRA RÁPIDO DE CHECAGEM DE VAGAS
@@ -353,7 +464,6 @@ class Inscricao extends Component
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
-        // NOVO MOTOR DE BUSCA: Lendo as idades diretamente da tabela de Ofertas (ofertas_vagas)
         $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
             ->where(function($q) use ($idade) {
@@ -367,14 +477,11 @@ class Inscricao extends Component
         $unidadesDisponiveisList = collect();
         
         foreach($ofertasDisponiveis as $oferta) {
-            // Verifica status do Curso e Unidade
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true])) continue;
             
-            // Verifica bloqueio de Estado (UF) do curso
             if (!$oferta->curso->permite_estado_diferente && $oferta->unidade->estado !== $this->estado) continue;
 
-            // Verifica a trava de vagas (overbooking)
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
                 if (!isset($ofertasValidas[$key])) continue;
@@ -385,7 +492,11 @@ class Inscricao extends Component
 
         if ($unidadesDisponiveisList->count() > 0) {
             $this->temVagasDisponiveis = true;
-            $this->unidadesDisponiveis = $unidadesDisponiveisList->unique()->toArray();
+            // AQUI: Aplica a ordenação alfabética (.asort) mantendo o ID da unidade
+            $unidadesOrdenadas = $unidadesDisponiveisList->unique()->toArray();
+            asort($unidadesOrdenadas);
+            
+            $this->unidadesDisponiveis = $unidadesOrdenadas;
 
             if (count($this->unidadesDisponiveis) === 1) {
                 $this->unidade = array_key_first($this->unidadesDisponiveis);
@@ -417,7 +528,7 @@ class Inscricao extends Component
             ->where(function($q) use ($idade) {
                 $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
             })
-            ->get();
+            ->get(); // Removido o ->orderBy() daqui!
 
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
@@ -431,6 +542,11 @@ class Inscricao extends Component
             }
 
             $this->cursosDisponiveis[$oferta->curso_id] = $oferta->curso->nome;
+        }
+
+        // AQUI: Ordenação alfabética dos Cursos
+        if (!empty($this->cursosDisponiveis)) {
+            asort($this->cursosDisponiveis);
         }
 
         if (count($this->cursosDisponiveis) === 1) {

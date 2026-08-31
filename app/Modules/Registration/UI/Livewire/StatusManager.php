@@ -6,11 +6,14 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\StatusInscricao;
+use App\Models\Inscricao;
 
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
+
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Status de Inscrição - Administrativo')]
@@ -23,6 +26,7 @@ class StatusManager extends Component
     public bool $showModal = false;
     public bool $isEditMode = false;
     public ?int $statusId = null;
+    public bool $isInUse = false; // <-- Nova propriedade
 
     public string $nome = '';
     public string $descricao = '';
@@ -63,6 +67,10 @@ class StatusManager extends Component
         $this->descricao = $status->descricao ?? '';
         $this->cor = $status->cor ?? '#9CA3AF';
         $this->isEditMode = true;
+        
+        // Verifica se há alguma inscrição usando este status
+        $this->isInUse = Inscricao::where('status_inscricao_id', $id)->exists();
+        
         $this->showModal = true;
     }
 
@@ -71,10 +79,22 @@ class StatusManager extends Component
         if ($this->isEditMode) {
             abort_if(!feature('status.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+            
+            // Trava de segurança no Back-end: Se estiver em uso, ignora alteração no nome
+            if ($this->isInUse) {
+                $statusAntigo = StatusInscricao::findOrFail($this->statusId);
+                $this->nome = $statusAntigo->nome; 
+            }
         } else {
             abort_if(!feature('status.criar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
         }
+
+        $this->validate([
+            'nome' => 'required|string|max:255',
+            'descricao' => 'nullable|string',
+            'cor' => 'required|string',
+        ]);
 
         $data = [
             'nome' => $this->nome,
@@ -99,6 +119,12 @@ class StatusManager extends Component
         abort_if(!feature('status.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
 
+        $emUso = Inscricao::where('status_inscricao_id', $id)->exists();
+        if ($emUso) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Existem inscrições vinculadas a este status. Você não pode excluí-lo.');
+            return;
+        }
+
         StatusInscricao::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Status excluído com sucesso!');
     }
@@ -109,6 +135,7 @@ class StatusManager extends Component
         $this->nome = '';
         $this->descricao = '';
         $this->isEditMode = false;
+        $this->isInUse = false;
         $this->cor = '#9CA3AF';
         $this->resetErrorBag();
     }
