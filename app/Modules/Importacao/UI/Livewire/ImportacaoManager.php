@@ -48,6 +48,9 @@ class ImportacaoManager extends Component
     // Mapeamento Dinâmico
     public $camposDinamicosDisponiveis = [];
 
+    public array $previewCabecalhos = [];
+    public array $previewDados = [];
+
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
         'email' => 'E-mail',
@@ -345,7 +348,135 @@ class ImportacaoManager extends Component
     public function verDetalhes($id)
     {
         $this->importacaoDetalhes = Importacao::findOrFail($id);
+        
+        $this->previewCabecalhos = [];
+        $this->previewDados = [];
+        
+        // Se houver um arquivo, lemos as 100 primeiras linhas para o Preview na tela
+        if ($this->importacaoDetalhes->arquivo_caminho && Storage::disk('local')->exists($this->importacaoDetalhes->arquivo_caminho)) {
+            $caminhoAbsoluto = Storage::disk('local')->path($this->importacaoDetalhes->arquivo_caminho);
+            $extensao = pathinfo($caminhoAbsoluto, PATHINFO_EXTENSION);
+            
+            if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
+                try {
+                    $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
+                    if (strtolower($extensao) === 'csv') {
+                        $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+                        $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+                        $reader->useDelimiter($delimiter);
+                    }
+                    
+                    $this->previewCabecalhos = $reader->getHeaders() ?? [];
+                    
+                    // Prepara o cruzamento de erros
+                    $erros = json_decode($this->importacaoDetalhes->erro_mensagem, true) ?? [];
+                    $linhasComErro = array_column($erros, 'linha');
+                    $mensagensErro = [];
+                    $isDev = auth()->user()->hasRole('dev');
+                    
+                    foreach ($erros as $e) {
+                        if (isset($e['linha'])) {
+                            $mensagensErro[$e['linha']] = [
+                                'tipo' => $e['tipo'] ?? 'Erro',
+                                'msg' => $isDev ? ($e['mensagem'] ?? 'Erro') : ($e['amigavel'] ?? $e['mensagem'] ?? 'Erro')
+                            ];
+                        }
+                    }
+
+                    $linhaAtual = 0;
+                    // Limita a 100 linhas para não travar o navegador
+                    $reader->getRows()->take(100)->each(function(array $rowProperties) use (&$linhaAtual, $linhasComErro, $mensagensErro) {
+                        $linhaAtual++;
+                        $status = 'Sucesso';
+                        $msg = '';
+                        $tipoErro = '';
+                        
+                        if (in_array($linhaAtual, $linhasComErro)) {
+                            $status = 'Erro';
+                            $tipoErro = $mensagensErro[$linhaAtual]['tipo'] ?? 'Erro';
+                            $msg = $mensagensErro[$linhaAtual]['msg'] ?? '';
+                        }
+                        
+                        $this->previewDados[] = [
+                            'linha' => $linhaAtual,
+                            'status' => $status,
+                            'tipo_erro' => $tipoErro,
+                            'mensagem' => $msg,
+                            'dados' => array_values($rowProperties)
+                        ];
+                    });
+                } catch (\Exception $e) {
+                    // Ignora o preview silenciosamente se o arquivo estiver corrompido
+                }
+            }
+        }
+
         $this->modalDetalhesAberto = true;
+    }
+
+    public function baixarErros($id)
+    {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+
+        $importacao = Importacao::findOrFail($id);
+        $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+
+        if (empty($erros) || !$importacao->arquivo_caminho || !Storage::disk('local')->exists($importacao->arquivo_caminho)) {
+            $this->dispatch('erro', msg: 'Não há erros para baixar ou o arquivo original não está mais no servidor.');
+            return;
+        }
+
+        $linhasComErro = array_column($erros, 'linha');
+        $mensagensErro = [];
+        $isDev = auth()->user()->hasRole('dev');
+
+        foreach ($erros as $e) {
+            if (isset($e['linha'])) {
+                $mensagensErro[$e['linha']] = $isDev ? ($e['mensagem'] ?? 'Erro') : ($e['amigavel'] ?? $e['mensagem'] ?? 'Erro');
+            }
+        }
+
+        $caminhoAbsoluto = Storage::disk('local')->path($importacao->arquivo_caminho);
+        $extensao = pathinfo($caminhoAbsoluto, PATHINFO_EXTENSION);
+        
+        $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
+        if (strtolower($extensao) === 'csv') {
+            $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+            $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+            $reader->useDelimiter($delimiter);
+        }
+
+        // Criamos o cabeçalho novo injetando os avisos do sistema
+        $headers = $reader->getHeaders() ?? [];
+        array_unshift($headers, 'Motivo_do_Erro_no_Sistema');
+        array_unshift($headers, 'Linha_Original');
+
+        $linhasExportar = [];
+        $linhasExportar[] = $headers;
+
+        $linhaAtual = 0;
+        $reader->getRows()->each(function(array $rowProperties) use (&$linhaAtual, $linhasComErro, $mensagensErro, &$linhasExportar) {
+            $linhaAtual++;
+            // A mágica: só exportamos as linhas cruzadas com o Log
+            if (in_array($linhaAtual, $linhasComErro)) {
+                $valores = array_values($rowProperties);
+                array_unshift($valores, $mensagensErro[$linhaAtual] ?? 'Erro não especificado');
+                array_unshift($valores, $linhaAtual);
+                $linhasExportar[] = $valores;
+            }
+        });
+
+        $nomeArquivo = 'Relatorio_Erros_Importacao_' . $importacao->id . '.csv';
+        
+        $callback = function() use ($linhasExportar) {
+            $file = fopen('php://output', 'w');
+            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // Previne erro de formatação UTF-8 no Excel
+            foreach ($linhasExportar as $linha) {
+                fputcsv($file, $linha, ';');
+            }
+            fclose($file);
+        };
+        return response()->streamDownload($callback, $nomeArquivo, ['Content-Type' => 'text/csv']);
     }
 
     public function baixarArquivoOriginal($id)

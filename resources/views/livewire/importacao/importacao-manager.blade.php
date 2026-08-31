@@ -404,8 +404,9 @@
     @endif
 
     <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
+    <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
     @if($modalDetalhesAberto && $importacaoDetalhes)
-        <div class="fixed inset-0 z-[70] overflow-y-auto" x-data="{ fullscreen: false }">
+        <div class="fixed inset-0 z-[70] overflow-y-auto" x-data="{ fullscreen: false, tab: 'logs' }">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalDetalhesAberto', false)"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
@@ -430,6 +431,13 @@
                             <p class="text-xs text-gray-500 font-medium mt-1">Nome do Arquivo: <b class="text-gray-700">{{ $importacaoDetalhes->arquivo_nome ?? 'Sem arquivo' }}</b></p>
                         </div>
                         <div class="flex gap-2 items-center">
+                            
+                            @if(count($erros) > 0 && $importacaoDetalhes->operacao === 'importacao')
+                                <button wire:click="baixarErros({{ $importacaoDetalhes->id }})" class="px-3 py-1.5 bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg flex items-center gap-2 transition shadow-sm mr-2">
+                                    <i class="ph-bold ph-download-simple"></i> Baixar Linhas com Erro
+                                </button>
+                            @endif
+
                             @if($importacaoDetalhes->operacao === 'importacao')
                                 <button wire:click="baixarArquivoOriginal({{ $importacaoDetalhes->id }})" class="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-2 transition shadow-sm">
                                     <i class="ph-bold ph-download-simple"></i> Original
@@ -447,7 +455,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 shrink-0">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 shrink-0">
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col justify-center">
                             <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Status Final</span>
                             <span class="text-xs font-bold px-2 py-0.5 rounded border {{ $importacaoDetalhes->status_visual['cor'] }} inline-flex items-center gap-1 w-max">
@@ -472,9 +480,18 @@
                         </div>
                     </div>
 
-                    <h4 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-1 shrink-0"><i class="ph-bold ph-terminal-window text-gray-400"></i> Eventos e Observações</h4>
+                    <!-- Abas de Navegação -->
+                    <div class="flex items-center gap-6 mb-2 border-b border-gray-100 shrink-0">
+                        <button @click="tab = 'logs'" :class="tab === 'logs' ? 'text-purpura-600 border-b-2 border-purpura-600' : 'text-gray-500 hover:text-gray-700'" class="pb-2 font-bold text-sm transition-colors flex items-center gap-1">
+                            <i class="ph-bold ph-terminal-window"></i> Eventos e Logs do Sistema
+                        </button>
+                        <button @click="tab = 'dados'" :class="tab === 'dados' ? 'text-purpura-600 border-b-2 border-purpura-600' : 'text-gray-500 hover:text-gray-700'" class="pb-2 font-bold text-sm transition-colors flex items-center gap-1">
+                            <i class="ph-bold ph-table"></i> Pré-visualização da Planilha
+                        </button>
+                    </div>
                     
-                    <div class="bg-gray-900 text-gray-300 rounded-lg text-xs shadow-inner border border-gray-800 flex-1 flex flex-col overflow-hidden" :class="fullscreen ? 'h-full min-h-[300px]' : 'h-64'">
+                    <!-- CONTEÚDO DA ABA 1: LOGS -->
+                    <div x-show="tab === 'logs'" class="bg-gray-900 text-gray-300 rounded-lg text-xs shadow-inner border border-gray-800 flex-1 flex flex-col overflow-hidden" :class="fullscreen ? 'h-full min-h-[300px]' : 'h-64'">
                         <div class="overflow-y-auto custom-scrollbar flex-1">
                             @if(empty($erros) && $importacaoDetalhes->status === 'concluido')
                                 <div class="p-8 text-center text-gray-500 italic flex flex-col items-center justify-center h-full">
@@ -489,7 +506,7 @@
                                 </div>
                             @else
                                 <table class="w-full text-left border-collapse">
-                                    <thead class="bg-gray-950 sticky top-0 border-b border-gray-700 shadow-sm">
+                                    <thead class="bg-gray-950 sticky top-0 border-b border-gray-700 shadow-sm z-10">
                                         <tr>
                                             <th class="p-3 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-16 text-center">Linha</th>
                                             <th class="p-3 font-bold uppercase tracking-wider text-[10px] text-gray-400 w-40">Classificação</th>
@@ -513,6 +530,56 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- CONTEÚDO DA ABA 2: PREVIEW DE DADOS -->
+                    <div x-show="tab === 'dados'" class="bg-white rounded-lg text-xs shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden" :class="fullscreen ? 'h-full min-h-[300px]' : 'h-64'" style="display: none;">
+                        <div class="overflow-auto custom-scrollbar flex-1">
+                            <table class="w-full text-left border-collapse whitespace-nowrap">
+                                <thead class="bg-gray-50 sticky top-0 border-b border-gray-200 shadow-sm z-10">
+                                    <tr>
+                                        <th class="p-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider text-center w-16">Nº</th>
+                                        <th class="p-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider w-36">Status</th>
+                                        @foreach($previewCabecalhos as $cabecalho)
+                                            <th class="p-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider">{{ $cabecalho }}</th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    @forelse($previewDados as $row)
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-3 text-center font-mono text-gray-500">{{ $row['linha'] }}</td>
+                                            <td class="p-3">
+                                                @if($row['status'] === 'Sucesso')
+                                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold border border-green-200 inline-flex items-center gap-1"><i class="ph-bold ph-check"></i> Sucesso</span>
+                                                @else
+                                                    @php
+                                                        $corAlerta = str_contains($row['tipo_erro'], 'Alerta') ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-red-100 text-red-700 border-red-200';
+                                                        $iconeAlerta = str_contains($row['tipo_erro'], 'Alerta') ? 'ph-warning' : 'ph-x-circle';
+                                                    @endphp
+                                                    <div class="flex flex-col gap-1 items-start">
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold border {{ $corAlerta }} inline-flex items-center gap-1"><i class="ph-bold {{ $iconeAlerta }}"></i> {{ $row['tipo_erro'] }}</span>
+                                                        <span class="text-[9px] text-gray-500 whitespace-normal max-w-xs leading-tight" title="{{ $row['mensagem'] }}">{{ Str::limit($row['mensagem'], 45) }}</span>
+                                                    </div>
+                                                @endif
+                                            </td>
+                                            @foreach($row['dados'] as $dado)
+                                                <td class="p-3 text-gray-700 truncate max-w-[200px]" title="{{ $dado }}">{{ $dado }}</td>
+                                            @endforeach
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="100%" class="p-8 text-center text-gray-500 italic">O arquivo base não foi encontrado no servidor para gerar a pré-visualização.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                            @if(count($previewDados) === 100)
+                                <div class="p-3 text-center bg-gray-50 border-t border-gray-100 text-[10px] text-gray-500 font-bold uppercase">
+                                    <i class="ph-fill ph-info"></i> Mostrando apenas as primeiras 100 linhas por performance.
+                                </div>
                             @endif
                         </div>
                     </div>
