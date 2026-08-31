@@ -363,8 +363,57 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
-        
-        Inscricao::withoutEvents(function () use ($dadosFixos) {
+
+        $mesclarDuplicatas = filter_var($mapeamento['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        Inscricao::withoutEvents(function () use ($dadosFixos, $mesclarDuplicatas) {
+            // Se houver CPF e ciclo definido, verifica se já existe inscrição para o mesmo ciclo
+            if (!empty($dadosFixos['cpf']) && !empty($dadosFixos['ciclo_id'])) {
+                $inscricaoExistente = Inscricao::where('cpf', $dadosFixos['cpf'])
+                                               ->where('ciclo_id', $dadosFixos['ciclo_id'])
+                                               ->first();
+                
+                if ($inscricaoExistente) {
+                    if (!$mesclarDuplicatas) {
+                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo. Ative a opção 'Mesclar Duplicadas' caso deseje atualizar o cadastro.", 23505);
+                    }
+
+                    // MODO MESCLAR: Pega os dados existentes do banco e preserva o que já tem valor
+                    $dadosAtuais = $inscricaoExistente->toArray();
+                    
+                    // Tratamento especial para mesclar JSON (Campos dinâmicos)
+                    $dinamicoAntigo = is_string($inscricaoExistente->dados_dinamicos) ? json_decode($inscricaoExistente->dados_dinamicos, true) : ($inscricaoExistente->dados_dinamicos ?? []);
+                    $dinamicoNovo = $dadosFixos['dados_dinamicos'] ?? [];
+                    
+                    foreach ($dinamicoNovo as $chaveNova => $valorNovo) {
+                        // Só sobrescreve se o campo antigo estava vazio ou não existia
+                        if (!isset($dinamicoAntigo[$chaveNova]) || empty(trim($dinamicoAntigo[$chaveNova]))) {
+                            $dinamicoAntigo[$chaveNova] = $valorNovo;
+                        }
+                    }
+                    $dadosFixos['dados_dinamicos'] = $dinamicoAntigo;
+
+                    // Avalia os dados fixos
+                    foreach ($dadosFixos as $coluna => $valorImportado) {
+                        // Exceções e campos que sempre devem ser preservados e não verificados
+                        if (in_array($coluna, ['id', 'created_at', 'updated_at', 'student_id', 'dados_dinamicos', 'origem'])) continue;
+                        
+                        // O valor atual do banco está preenchido?
+                        $valorAtualBanco = $dadosAtuais[$coluna] ?? null;
+                        
+                        // Se o banco JÁ TEM um dado preenchido e não for null/vazio, removemos o dado da planilha para evitar que sobreponha
+                        if ($valorAtualBanco !== null && trim((string)$valorAtualBanco) !== '') {
+                            unset($dadosFixos[$coluna]);
+                        }
+                    }
+
+                    // Executa a mescla salvando apenas o que "sobrou" na variável dadosFixos
+                    $inscricaoExistente->update($dadosFixos);
+                    return; // Aborta para não chegar no create() abaixo
+                }
+            }
+
+            // Se for CPF novo (ou sem CPF), cai no fluxo padrão de criação
             Inscricao::create($dadosFixos);
         });
     }

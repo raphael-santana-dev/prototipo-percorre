@@ -32,8 +32,9 @@ class ImportacaoManager extends Component
     public $ciclosDisponiveis = [];
 
     public $importacaoAtualId = null;
-    public $importacaoDetalhes = null; // Carrega a importação para o modal 3
-    public $permitirAutoCadastro = false; // Checkbox Etapa 2
+    public $importacaoDetalhes = null;
+    public $permitirAutoCadastro = false;
+    public $mesclarDuplicadas = false;
 
     public $cabecalhos = [];
     public $mapeamento = [];
@@ -212,7 +213,7 @@ class ImportacaoManager extends Component
 
     public function abrirModalUpload()
     {
-        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis', 'permitirAutoCadastro']);
+        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);
         $this->modalUploadAberto = true;
     }
 
@@ -311,6 +312,7 @@ class ImportacaoManager extends Component
         $mapaFinal = [];
         // Injeta a configuração do checkbox na fila de dados da importação
         $mapaFinal['config_auto_cadastro'] = $this->permitirAutoCadastro;
+        $mapaFinal['config_mesclar_duplicadas'] = $this->mesclarDuplicadas;
 
         foreach($this->mapeamento as $map) {
              if ($map['destino'] !== 'ignorar') {
@@ -330,8 +332,7 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro']);
-        $this->dispatch('sucesso', msg: 'Importação enviada para a fila com sucesso!');
+        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);        $this->dispatch('sucesso', msg: 'Importação enviada para a fila com sucesso!');
         
         dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
     }

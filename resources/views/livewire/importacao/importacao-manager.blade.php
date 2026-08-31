@@ -342,15 +342,27 @@
                         </div>
 
                         @if($tipoImportacao === 'inscricoes')
-                            <label class="flex items-start gap-3 p-3 border border-purpura-200 bg-purpura-50/50 rounded-lg cursor-pointer hover:bg-purpura-50 transition">
-                                <div class="flex items-center h-5 mt-0.5">
-                                    <input type="checkbox" wire:model="permitirAutoCadastro" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-sm text-purpura-900 font-bold">Auto-cadastrar Vínculos Ausentes</span>
-                                    <span class="text-[10px] text-purpura-600 leading-tight mt-0.5">Se a sua planilha tiver um Curso, Unidade ou Turno que não exista no sistema, o sistema criará o cadastro deles automaticamente para você.</span>
-                                </div>
-                            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                <label class="flex items-start gap-3 p-3 border border-purpura-200 bg-purpura-50/50 rounded-lg cursor-pointer hover:bg-purpura-50 transition">
+                                    <div class="flex items-center h-5 mt-0.5">
+                                        <input type="checkbox" wire:model="permitirAutoCadastro" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm text-purpura-900 font-bold">Auto-cadastrar Vínculos</span>
+                                        <span class="text-[10px] text-purpura-600 leading-tight mt-0.5">Cria cadastros no sistema de Cursos, Unidades ou Turnos que vierem na planilha e não existam.</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-start gap-3 p-3 border border-blue-200 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                                    <div class="flex items-center h-5 mt-0.5">
+                                        <input type="checkbox" wire:model="mesclarDuplicadas" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm text-blue-900 font-bold">Mesclar Duplicadas</span>
+                                        <span class="text-[10px] text-blue-600 leading-tight mt-0.5">Caso o CPF já exista neste ciclo, o sistema irá injetar apenas os dados que faltam, atualizando-o.</span>
+                                    </div>
+                                </label>
+                            </div>
                         @endif
 
                         <div class="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-100">
