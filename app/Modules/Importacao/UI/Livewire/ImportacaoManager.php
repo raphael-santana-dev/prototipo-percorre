@@ -62,14 +62,21 @@ class ImportacaoManager extends Component
         'cep' => 'CEP',
         'logradouro' => 'Logradouro / Endereço',
         'numero' => 'Número',
+        'complemento' => 'Complemento',
         'bairro' => 'Bairro',
         'cidade' => 'Cidade',
         'estado' => 'Estado (UF)',
         'unidade_id' => 'Sede/Unidade (Exige ID)',
         'curso_id' => 'Curso (Exige ID)',
         'turno_id' => 'Turno (Exige ID)',
+        'status_inscricao_id' => 'Status da Inscrição (Exige ID)',
         'possui_deficiencia' => 'Possui Deficiência?',
         'natureza_deficiencia' => 'Natureza da Deficiência',
+        'receber_informacoes' => 'Termo: Receber Informações (0/1)',
+        'autorizacao_uso_infos' => 'Termo: Autorização de Uso de Dados (0/1)',
+        'pontuacao_total' => 'Score / Pontuação Total',
+        'posicao_ranking' => 'Posição no Ranking',
+        'etapa_atual' => 'Progresso (Etapa Atual)',
     ];
 
     public function mount()

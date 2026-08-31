@@ -44,38 +44,59 @@
         <x-summary-cards :metricas="$metricas" />
     @endif
 
-    {{-- NUVEM DE TAGS: CURSOS OFERTADOS --}}
+    {{-- NUVEM DE TAGS: ESTRUTURA ACADÊMICA --}}
     <div class="mb-8 mt-6">
-        <h3 class="font-extrabold text-gray-900 dark:text-white mb-3 text-lg">Cursos Ofertados</h3>
+        <h3 class="font-extrabold text-gray-900 dark:text-white mb-3 text-lg">Estrutura Acadêmica (Cursos e Unidades)</h3>
         
-        <div class="flex flex-wrap gap-2 items-center bg-gray-50/50 p-4 rounded-xl border border-gray-100 dark:bg-gray-800/30 dark:border-gray-700">
-            @forelse($ciclo->cursos as $curso)
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 border-l-4 border-l-orange-400 rounded-md text-sm font-bold text-gray-700 shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
-                    {{ $curso->nome }}
+        <div class="flex flex-col gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100 dark:bg-gray-800/30 dark:border-gray-700">
+            
+            {{-- CURSOS --}}
+            <div>
+                <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cursos Ofertados</span>
+                <div class="flex flex-wrap gap-2 items-center">
+                    @forelse($ciclo->cursos as $curso)
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 border-l-4 border-l-orange-400 rounded-md text-sm font-bold text-gray-700 shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                            {{ $curso->nome }}
+                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                <button wire:click="removerCurso({{ $curso->id }})" class="text-gray-400 hover:text-red-500 transition-colors focus:outline-none ml-1">
+                                    <i class="ph-bold ph-x"></i>
+                                </button>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 italic mr-2">Nenhum curso ofertado.</p>
+                    @endforelse
+
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                        <button wire:click="removerCurso({{ $curso->id }})" class="text-gray-400 hover:text-red-500 transition-colors focus:outline-none ml-1">
-                            <i class="ph-bold ph-x"></i>
-                        </button>
+                        <div class="flex items-center gap-2 ml-auto">
+                            <select wire:model="cursoSelecionado" class="border-gray-300 rounded-md text-xs py-1.5 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm w-48 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <option value="">Adicionar novo curso...</option>
+                                @foreach($cursosDisponiveis as $c)
+                                    <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                                @endforeach
+                            </select>
+                            <button wire:click="adicionarCurso" class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-bold rounded-md shadow-sm transition text-xs dark:bg-gray-600">
+                                Vincular
+                            </button>
+                        </div>
                     @endif
                 </div>
-            @empty
-                <p class="text-sm text-gray-500 italic mr-2">Nenhum curso ofertado.</p>
-            @endforelse
+            </div>
 
-            <!-- Adicionar Novo Curso (Discreto) -->
-            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                <div class="flex items-center gap-2 ml-auto">
-                    <select wire:model="cursoSelecionado" class="border-gray-300 rounded-md text-xs py-1.5 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm w-48 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="">Adicionar novo curso...</option>
-                        @foreach($cursosDisponiveis as $c)
-                            <option value="{{ $c->id }}">{{ $c->nome }}</option>
-                        @endforeach
-                    </select>
-                    <button wire:click="adicionarCurso" class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white font-bold rounded-md shadow-sm transition text-xs dark:bg-gray-600">
-                        Vincular
-                    </button>
+            {{-- UNIDADES --}}
+            <div class="pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
+                <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Unidades Vinculadas</span>
+                <div class="flex flex-wrap gap-2 items-center">
+                    @forelse($ciclo->unidades as $unidade)
+                        <div class="px-3 py-1.5 bg-white border border-gray-200 rounded-md text-xs font-bold text-gray-700 shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 flex items-center gap-1.5">
+                            <i class="ph-fill ph-map-pin text-purpura-500"></i> {{ $unidade->nome }}
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 italic">Nenhuma unidade vinculada.</p>
+                    @endforelse
                 </div>
-            @endif
+            </div>
+            
         </div>
     </div>
 

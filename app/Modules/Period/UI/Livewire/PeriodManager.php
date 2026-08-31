@@ -119,43 +119,70 @@ class PeriodManager extends Component
 
     public function duplicar(int $id)
     {
-        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
-        $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline'])->findOrFail($id);
+        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.'); //[cite: 2]
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403); //[cite: 2]
+        
+        // 1. Carregue todas as relações N:N pertinentes (Adicionados 'unidades' e 'turnos')
+        $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline', 'unidades', 'turnos'])->findOrFail($id);
 
         $novoCiclo = $cicloOriginal->replicate();
-        $novoCiclo->nome = $cicloOriginal->nome . ' (Cópia)';
-        $novoCiclo->slug = Str::slug($novoCiclo->nome) . '-' . time();
-        $novoCiclo->status = false; 
+        $novoCiclo->nome = $cicloOriginal->nome . ' (Cópia)'; 
+        $novoCiclo->slug = Str::slug($novoCiclo->nome) . '-' . time(); 
+        $novoCiclo->status = false;
         $novoCiclo->save();
 
+        // 2. Sincronizar Cursos (Existente)[cite: 2]
         if ($cicloOriginal->cursos) {
             $novoCiclo->cursos()->sync($cicloOriginal->cursos->pluck('id')->toArray());
         }
 
+        // 3. Sincronizar Unidades (Novo - Relacionamento da Migration)
+        if ($cicloOriginal->unidades) {
+            $novoCiclo->unidades()->sync($cicloOriginal->unidades->pluck('id')->toArray());
+        }
+
+        // 4. Sincronizar Turnos (Novo - Relacionamento da Migration)[cite: 5]
+        if ($cicloOriginal->turnos) {
+            $novoCiclo->turnos()->sync($cicloOriginal->turnos->pluck('id')->toArray());
+        }
+
+        // 5. Sincronizar Status Pipeline (Existente)[cite: 2]
         if ($cicloOriginal->statusPipeline) {
             $syncStatus = [];
-            foreach ($cicloOriginal->statusPipeline as $status) {
-                $syncStatus[$status->id] = ['ordem' => $status->pivot->ordem ?? 1];
+            foreach ($cicloOriginal->statusPipeline as $status) { //[cite: 2]
+                $syncStatus[$status->id] = ['ordem' => $status->pivot->ordem ?? 1]; //[cite: 2]
             }
             $novoCiclo->statusPipeline()->sync($syncStatus);
         }
 
-        $camposOriginais = \App\Models\CampoFormulario::where('ciclo_id', $id)->get();
-        foreach ($camposOriginais as $campo) {
-            $novoCampo = $campo->replicate();
-            $novoCampo->ciclo_id = $novoCiclo->id;
-            $novoCampo->save();
+        // 6. Duplicar Campos Formulário (Existente)[cite: 2]
+        $camposOriginais = \App\Models\CampoFormulario::where('ciclo_id', $id)->get(); //[cite: 2]
+        foreach ($camposOriginais as $campo) { //[cite: 2]
+            $novoCampo = $campo->replicate(); //[cite: 2]
+            $novoCampo->ciclo_id = $novoCiclo->id; //[cite: 2]
+            $novoCampo->save(); //[cite: 2]
         }
 
-        $ofertasOriginais = \App\Models\OfertaVaga::where('ciclo_id', $id)->get();
-        foreach($ofertasOriginais as $oferta) {
-            $novaOferta = $oferta->replicate();
-            $novaOferta->ciclo_id = $novoCiclo->id;
-            $novaOferta->save();
+        // 7. Duplicar Ofertas de Vagas (Existente)[cite: 2]
+        $ofertasOriginais = \App\Models\OfertaVaga::where('ciclo_id', $id)->get(); //[cite: 2]
+        foreach($ofertasOriginais as $oferta) { //[cite: 2]
+            $novaOferta = $oferta->replicate(); //[cite: 2]
+            $novaOferta->ciclo_id = $novoCiclo->id; //[cite: 2]
+            $novaOferta->save(); //[cite: 2]
         }
 
-        $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!');
+        // 8. Duplicar Regras de Pontuação (Novo - Baseado na View)[cite: 1]
+        // Substitua 'Regra' pelo nome exato do seu Model de regras
+        if (class_exists(\App\Models\Regra::class)) {
+            $regrasOriginais = \App\Models\Regra::where('ciclo_id', $id)->get();
+            foreach($regrasOriginais as $regra) {
+                $novaRegra = $regra->replicate();
+                $novaRegra->ciclo_id = $novoCiclo->id;
+                $novaRegra->save();
+            }
+        }
+
+        $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!'); //[cite: 2]
     }
 
     public function getHeadersProperty()

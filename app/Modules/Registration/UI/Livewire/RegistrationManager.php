@@ -39,6 +39,12 @@ class RegistrationManager extends Component
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
 
+    public bool $modalSelecaoAvancadaAberto = false;
+    public int $selecaoQtd = 40;
+    public string $selecaoBase = 'pontuacao';
+    public string $selecaoModo = 'global';
+    public bool $selecaoPreencherVagas = false;
+
     public array $breadcrumbs = [];
     
     public function mount()
@@ -165,16 +171,100 @@ class RegistrationManager extends Component
         ]);
     }
 
-    // ==========================================
-    // MÉTODOS DE LOTE MANTIDOS
-    // ==========================================
     public function selecionarQuantidade($quantidade)
     {
-        $this->selecionadas = $this->obterQueryFiltrada()
-            ->limit($quantidade)
-            ->pluck('id')
-            ->map(fn($id) => (string) $id) 
-            ->toArray();
+        // 1. Limpa qualquer seleção anterior para não acumular sujeira
+        $this->desmarcarTodas();
+        
+        $query = $this->obterQueryFiltrada();
+        
+        $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
+        $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
+
+        // 2. Aplica a ordenação forçando a exclusão de campos nulos/vazios do topo
+        if ($temRanking) {
+            $query->whereNotNull('posicao_ranking_geral')
+                  ->orderBy('posicao_ranking_geral', 'asc');
+        } elseif ($temPontuacao) {
+            $query->where('pontuacao_total', '>', 0)
+                  ->orderBy('pontuacao_total', 'desc')
+                  ->orderBy('created_at', 'asc');
+        } else {
+            $query->orderBy('id', 'asc');
+        }
+
+        // 3. Usa take() com cast inteiro rigoroso para garantir o limite no banco
+        $this->selecionadas = $query->take((int) $quantidade)
+                                    ->pluck('id')
+                                    ->map(fn($id) => (string) $id)
+                                    ->toArray();
+                                    
+        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas com base no critério do topo.');
+    }
+
+    public function abrirModalSelecaoAvancada()
+    {
+        $this->modalSelecaoAvancadaAberto = true;
+    }
+
+    public function executarSelecaoAvancada()
+    {
+        $this->validate(['selecaoQtd' => 'required|integer|min:1']);
+        $idsSelecionados = [];
+
+        if ($this->selecaoPreencherVagas) {
+            // Busca as vagas ofertadas no ciclo filtrado (ou todos ativos)
+            $queryOfertas = \App\Models\OfertaVaga::query();
+            if (!empty($this->filtroCiclo)) $queryOfertas->where('ciclo_id', $this->filtroCiclo);
+            else $queryOfertas->whereIn('ciclo_id', \App\Models\Ciclo::where('status', true)->pluck('id'));
+
+            foreach ($queryOfertas->get() as $oferta) {
+                if ($oferta->vagas <= 0) continue;
+
+                $queryInsc = $this->obterQueryFiltrada()
+                    ->where('ciclo_id', $oferta->ciclo_id)
+                    ->where('unidade_id', $oferta->unidade_id)
+                    ->where('curso_id', $oferta->curso_id)
+                    ->where('turno_id', $oferta->turno_id)
+                    ->whereNotIn('id', $idsSelecionados);
+
+                if ((clone $queryInsc)->whereNotNull('posicao_ranking')->exists()) {
+                    $queryInsc->orderByRaw('posicao_ranking ASC NULLS LAST');
+                } else {
+                    $queryInsc->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
+                }
+
+                $ids = $queryInsc->limit($oferta->vagas)->pluck('id')->toArray();
+                $idsSelecionados = array_merge($idsSelecionados, $ids);
+            }
+        } else {
+            if ($this->selecaoModo === 'global') {
+                $query = $this->obterQueryFiltrada();
+                
+                if ($this->selecaoBase === 'ranking_geral') $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
+                elseif ($this->selecaoBase === 'ranking_turma') $query->orderByRaw('posicao_ranking ASC NULLS LAST');
+                else $query->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
+                
+                $idsSelecionados = $query->limit($this->selecaoQtd)->pluck('id')->toArray();
+            } else {
+                $agrupadas = $this->obterQueryFiltrada()->get()->groupBy(function($item) {
+                    return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
+                });
+
+                foreach ($agrupadas as $grupo) {
+                    if ($this->selecaoBase === 'ranking_geral') $grupo = $grupo->sortBy('posicao_ranking_geral');
+                    elseif ($this->selecaoBase === 'ranking_turma') $grupo = $grupo->sortBy('posicao_ranking');
+                    else $grupo = $grupo->sortByDesc('pontuacao_total');
+
+                    $ids = $grupo->take($this->selecaoQtd)->pluck('id')->toArray();
+                    $idsSelecionados = array_merge($idsSelecionados, $ids);
+                }
+            }
+        }
+
+        $this->selecionadas = array_values(array_unique(array_map('strval', $idsSelecionados)));
+        $this->modalSelecaoAvancadaAberto = false;
+        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições capturadas com as regras avançadas.');
     }
 
     public function desmarcarTodas() { $this->selecionadas = []; }
@@ -213,15 +303,47 @@ class RegistrationManager extends Component
                 'icon_color' => 'text-black'
             ],
             [
-                'label' => 'Recalcular Tudo',
+                'label' => 'Gerar Rankings',
+                'icon' => 'ph ph-medal',
+                'wire_click' => 'gerarRankingGlobal', // Botão que faltava
+                'always_show_label' => true,
+                'bg_color' => 'bg-indigo-500 hover:bg-indigo-600',
+                'icon_color' => 'text-white',
+                'confirm' => 'Gerar a posição de ranking cruzado para todas as inscrições ativas? O motor analisará Unidade, Curso e Turno em segundo plano.'
+            ],
+            [
+                'label' => 'Recalcular Scores',
                 'icon' => 'ph ph-calculator',
                 'wire_click' => 'recalcularScoresGlobais',
                 'always_show_label' => true,
-                'bg_color' => 'bg-green-500 hover:bg-green-600',
-                'icon_color' => 'text-black',
-                'confirm' => 'Processar TODAS as inscrições de TODOS os ciclos ativos? Isso pode levar alguns segundos.'
+                'bg_color' => 'bg-orange-500 hover:bg-orange-600',
+                'icon_color' => 'text-white',
+                'confirm' => 'Processar as pontuações e regras Multiplicadoras de TODAS as inscrições? Essa ação rodará na nuvem.'
             ]
         ];
+    }
+
+    public function getInscricoesModal()
+    {
+        if (!$this->modalLoteAberto || empty($this->selecionadas)) {
+            return collect();
+        }
+        return Inscricao::with(['curso', 'unidade', 'statusInscricao'])
+            ->whereIn('id', $this->selecionadas)
+            ->get();
+    }
+
+    public function desmarcarIndividual($id)
+    {
+        if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
+            unset($this->selecionadas[$key]);
+            $this->selecionadas = array_values($this->selecionadas); // Reindexa o array
+        }
+        
+        // Se removeu o último, fecha o modal sozinho
+        if (count($this->selecionadas) === 0) {
+            $this->modalLoteAberto = false;
+        }
     }
 
     public function alterarStatusLoteRapido($statusId)
@@ -235,6 +357,7 @@ class RegistrationManager extends Component
         $this->aplicarMudancaDeStatus($inscricoes, $statusId);
         
         $this->desmarcarTodas();
+        $this->modalLoteAberto = false; // <-- Agora fecha o modal
         $this->dispatch('sucesso', msg: 'Status alterado rapidamente com sucesso!');
     }
 
@@ -257,148 +380,28 @@ class RegistrationManager extends Component
         ];
     }
 
-    // ==========================================
-    // RECÁLCULO GLOBAL (TWO-PASS EVALUATION)
-    // ==========================================
     public function recalcularScoresGlobais()
     {
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
-        $atualizados = 0;
+        $trackingScore = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
+            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
+
+        $trackingRank = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
+            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
+
+        // Encadeia os Jobs: O Ranking só inicia automaticamente após o Recálculo terminar com sucesso
+        \Illuminate\Support\Facades\Bus::chain([
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
+        ])->dispatch();
         
-        // Pega APENAS os ciclos ATIVOS que têm regras definidas
-        $ciclos = \App\Models\Ciclo::where('status', true)
-                    ->whereNotNull('regras_pontuacao')
-                    ->get();
-        
-        foreach ($ciclos as $ciclo) {
-            $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
-            if (empty($regras)) continue;
-
-            // Varre as inscrições desse ciclo de 100 em 100
-            $ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
-                foreach ($inscricoes as $inscricao) {
-                    
-                    $scoreBase = 0;
-                    $scoreBonus = 0;
-                    $acertosPadrao = 0;
-                    $detalhes = ['auditoria_detalhada' => []];
-
-                    $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
-
-                    // Closure isolada para avaliar a condição cruzando a regra vs as respostas deste candidato
-                    $avaliarCondicao = function($regra) use ($inscricao, $respostas) {
-                        if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') {
-                            return true; 
-                        }
-
-                        $campo = trim($regra['campo'] ?? '');
-                        $operador = trim($regra['operador'] ?? '=');
-                        $valorResposta = null;
-
-                        if ($campo === 'idade' && $inscricao->data_nascimento) {
-                            $valorResposta = \Carbon\Carbon::parse($inscricao->data_nascimento)->age;
-                        } elseif (in_array($campo, ['estado', 'cidade', 'curso_id', 'turno_id', 'possui_deficiencia'])) {
-                            $valorResposta = $inscricao->$campo;
-                        } elseif (isset($respostas[$campo])) {
-                            $valorResposta = $respostas[$campo];
-                        }
-
-                        if ($valorResposta === null || $valorResposta === '') return false;
-
-                        $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
-                        $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
-                        $valorAlvo = $valoresEsperados[0] ?? null;
-
-                        switch ($operador) {
-                            case '=': return (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo)));
-                            case '!=': return (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo)));
-                            case '>=': return ((float)$valorResposta >= (float)$valorAlvo);
-                            case '<=': return ((float)$valorResposta <= (float)$valorAlvo);
-                            case '>': return ((float)$valorResposta > (float)$valorAlvo);
-                            case '<': return ((float)$valorResposta < (float)$valorAlvo);
-                            case 'between':
-                                $min = (float)($valoresEsperados[0] ?? 0);
-                                $max = (float)($valoresEsperados[1] ?? $min);
-                                return ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
-                            case 'in':
-                                $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
-                                return in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
-                        }
-                        return false;
-                    };
-
-                    // PASSAGEM 1: A Base
-                    foreach ($regras as $regra) {
-                        $tipo = $regra['tipo_regra'] ?? 'padrao';
-                        
-                        if ($tipo === 'padrao') {
-                            if ($avaliarCondicao($regra)) {
-                                $pontos = (float) ($regra['pontos'] ?? 0);
-                                $scoreBase += $pontos;
-                                $acertosPadrao++;
-                                
-                                $detalhes['auditoria_detalhada'][] = [
-                                    'tipo_regra' => 'padrao',
-                                    'campo_avaliado' => $regra['campo'],
-                                    'resposta_dada' => "Condição atendida",
-                                    'pontos_ganhos' => $pontos,
-                                    'condicao' => "{$regra['operador']} {$regra['valor']}"
-                                ];
-                            }
-                        }
-                    }
-
-                    // PASSAGEM 2: O Bônus Especial
-                    foreach ($regras as $regra) {
-                        $tipo = $regra['tipo_regra'] ?? 'padrao';
-                        $escopo = $regra['escopo'] ?? 'especifico';
-                        
-                        if ($tipo !== 'padrao') {
-                            if ($avaliarCondicao($regra)) {
-                                $multiplicador = (float) ($regra['pontos'] ?? 0);
-                                $pontosGanhos = 0;
-                                $motivo = "";
-
-                                if ($tipo === 'bonus_por_acerto') {
-                                    $pontosGanhos = $multiplicador * $acertosPadrao; 
-                                    $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
-                                } elseif ($tipo === 'multiplicador_percentual') {
-                                    $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
-                                }
-
-                                if ($pontosGanhos > 0) {
-                                    $scoreBonus += $pontosGanhos;
-                                    
-                                    $alvoDescritivo = ($escopo === 'todos') ? 'Regra Global (Todos os Campos)' : $regra['campo'];
-                                    
-                                    $detalhes['auditoria_detalhada'][] = [
-                                        'tipo_regra' => 'especial',
-                                        'campo_avaliado' => $alvoDescritivo,
-                                        'resposta_dada' => "Benefício Ativado",
-                                        'pontos_ganhos' => $pontosGanhos,
-                                        'condicao' => $motivo
-                                    ];
-                                }
-                            }
-                        }
-                    }
-
-                    $totalFinal = $scoreBase + $scoreBonus;
-
-                    $inscricao->update([
-                        'pontuacao_total' => $totalFinal,
-                        'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Admin). Score Base: {$scoreBase} pts. Score Bônus: {$scoreBonus} pts. Total Consolidado: {$totalFinal} pts."]) : null
-                    ]);
-                    
-                    $atualizados++;
-                }
-            });
-        }
-        
-        $this->dispatch('sucesso', msg: "Recálculo finalizado! {$atualizados} inscrições atualizadas em ciclos ativos usando as regras Multiplicadoras.");
+        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
     }
 
     public function gerarRankingGlobal()
@@ -406,76 +409,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        // Pega APENAS os ciclos ATIVOS
-        $ciclos = \App\Models\Ciclo::where('status', true)
-                    ->whereNotNull('regras_pontuacao')
-                    ->get();
-                    
-        $totalGeral = 0;
+        // 1. Cria o Rastreio na Nuvem para o usuário acompanhar a barra de progresso
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'ranking',
+            'formato' => 'system',
+            'arquivo_nome' => 'Geração de Ranking Global (Job)',
+            'status' => 'na_fila',
+            'total_linhas' => 0,
+            'linhas_processadas' => 0,
+        ]);
 
-        foreach ($ciclos as $ciclo) {
-            // 1. Zera todos os 4 rankings APENAS deste ciclo específico
-            \App\Models\Inscricao::where('ciclo_id', $ciclo->id)
-                ->update([
-                    'posicao_ranking' => null, 
-                    'posicao_ranking_geral' => null,
-                    'posicao_ranking_unidade' => null,
-                    'posicao_ranking_curso' => null,
-                ]);
+        // 2. Dispara a fila
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
 
-            // 2. Busca e ordena as inscrições (Maior Nota -> Inscrição mais antiga)
-            $inscricoes = $ciclo->inscricoes()
-                ->orderBy('pontuacao_total', 'desc')
-                ->orderBy('created_at', 'asc')
-                ->get();
-
-            // ==========================================
-            // RANKING 1: GERAL DO CICLO
-            // ==========================================
-            foreach ($inscricoes as $index => $inscricao) {
-                $inscricao->update(['posicao_ranking_geral' => $index + 1]);
-                $totalGeral++;
-            }
-
-            // ==========================================
-            // RANKING 2: POR UNIDADE
-            // ==========================================
-            $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
-            foreach ($agrupadoUnidade as $grupo) {
-                $pos = 1;
-                foreach ($grupo as $inscricao) {
-                    $inscricao->update(['posicao_ranking_unidade' => $pos++]);
-                }
-            }
-
-            // ==========================================
-            // RANKING 3: POR UNIDADE + CURSO
-            // ==========================================
-            $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) {
-                return $item->unidade_id . '-' . $item->curso_id;
-            });
-            foreach ($agrupadoCurso as $grupo) {
-                $pos = 1;
-                foreach ($grupo as $inscricao) {
-                    $inscricao->update(['posicao_ranking_curso' => $pos++]);
-                }
-            }
-
-            // ==========================================
-            // RANKING 4: TURMA (UNIDADE + CURSO + TURNO)
-            // ==========================================
-            $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) {
-                return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
-            });
-            foreach ($agrupadoTurma as $grupo) {
-                $pos = 1;
-                foreach ($grupo as $inscricao) {
-                    $inscricao->update(['posicao_ranking' => $pos++]);
-                }
-            }
-        }
-
-        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} inscrições classificadas nos 4 níveis (Geral, Unidade, Curso e Turma) dentro dos ciclos ativos.");
+        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
     }
 
     public function limparFiltros()

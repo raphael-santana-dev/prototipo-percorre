@@ -234,7 +234,7 @@
                                 <i class="text-lg ph-fill ph-info"></i>
                             </button>
 
-                            @if(in_array($log->status, ['erro', 'erro_parcial']))
+                            @if(in_array($log->status, ['erro', 'erro_parcial']) && $log->operacao === 'importacao')
                                 <button wire:click="abrirModalReprocessar({{ $log->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700" title="Reprocessar Importação">
                                     <i class="text-lg ph-bold ph-arrows-clockwise"></i>
                                 </button>

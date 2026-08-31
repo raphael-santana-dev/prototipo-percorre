@@ -99,7 +99,7 @@ class PermissionManager extends Component
 
     public function salvar()
     {
-        if ($id) {
+        if ($this->permissionId) {
             abort_if(!feature('acl.permissao.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.editar'), 403);
         } else {

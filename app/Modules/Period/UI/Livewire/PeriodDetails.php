@@ -48,7 +48,9 @@ class PeriodDetails extends Component
         abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
 
-        $this->ciclo = Ciclo::with('cursos')->findOrFail($id);
+        // Alterado: Adicionando 'unidades' e 'turnos' na query para resolver a falta de dados
+        $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
+        
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
