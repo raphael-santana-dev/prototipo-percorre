@@ -94,23 +94,23 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('estudante.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.visualizar')))
-                            <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                            <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
                                 <i class="text-lg ph ph-info"></i>
                             </button>
 
-                            <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                            <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
                                 <i class="text-lg ph ph-eye"></i>
                             </a>
                         @endif
                         
                         @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
-                            <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
+                            <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endif
                         
                         @if(feature('estudante.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.excluir')))
-                            <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
+                            <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
@@ -162,23 +162,23 @@
                     
                         <div class="flex items-center gap-1">
                             @if(feature('estudante.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.visualizar')))
-                                <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
+                                <button wire:click="showQuickDetails({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ficha Rápida">
                                     <i class="text-lg ph ph-info"></i>
                                 </button>
 
-                                <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
+                                <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
                                     <i class="text-lg ph ph-eye"></i>
                                 </a>
                             @endif
                         
                             @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
-                                <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
+                                <button wire:click="edit({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Matrícula">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
                             @endif
                         
                             @if(feature('estudante.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.excluir')))
-                                <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
+                                <button wire:click="delete({{ $student->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente este aluno do sistema?') || event.stopImmediatePropagation()">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
                             @endif

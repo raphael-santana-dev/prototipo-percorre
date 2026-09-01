@@ -54,23 +54,23 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
-                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
                                 <i class="text-lg ph ph-info"></i>
                             </button>
                             
-                            <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                            <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
                                 <i class="text-lg ph ph-eye"></i>
                             </a>
                         @endif
 
                         @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
-                            <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endif
 
                         @if(feature('unidade.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.excluir')))
-                            <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
+                            <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Unidade" onclick="confirm('Excluir permanentemente esta unidade do sistema?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
@@ -112,22 +112,22 @@
                         
                         <div class="flex items-center gap-1">
                             @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
-                                <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                                <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
                                     <i class="text-lg ph ph-info"></i>
                                 </button>
-                                <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                                <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
                                     <i class="text-lg ph ph-eye"></i>
                                 </a>
                             @endif
 
                             @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
-                                <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                                <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
                             @endif
 
                             @if(feature('unidade.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.excluir')))
-                                <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()" title="Excluir">
+                                <button wire:click="delete({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir esta unidade?') || event.stopImmediatePropagation()" title="Excluir">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
                             @endif

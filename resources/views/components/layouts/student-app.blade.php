@@ -46,8 +46,8 @@
                     <div class="flex items-center gap-4 sm:gap-6 text-white dark:text-gray-200">
                         @feature('sistema.tema')
                             <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
-                                <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
-                                <i class="text-xl ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                                <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
+                                <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                             </button>
                         @endfeature
                         

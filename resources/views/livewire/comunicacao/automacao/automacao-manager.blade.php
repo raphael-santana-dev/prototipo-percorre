@@ -60,17 +60,17 @@
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('automacao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.visualizar')))
-                            <a href="{{ route('automacoes.show', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50" title="Ver Histórico de Disparos">
+                            <a href="{{ route('automacoes.show', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50" title="Ver Histórico de Disparos">
                                 <i class="text-lg ph ph-chart-line-up"></i>
                             </a>
                         @endif
                         @if(feature('automacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.editar')))
-                            <a href="{{ route('automacoes.edit', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar Regra">
+                            <a href="{{ route('automacoes.edit', $regra->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Editar Regra">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </a>
                         @endif
                         @if(feature('automacao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('automacao.excluir')))
-                            <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra de automação permanentemente?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluir({{ $regra->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir esta regra de automação permanentemente?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
