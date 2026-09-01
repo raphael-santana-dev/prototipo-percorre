@@ -35,6 +35,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         'novos'        => []
     ];
 
+    // VARIÁVEIS DE CACHE DE MEMÓRIA (Performance)
+    protected $cacheVinculos = [];
+    protected $configsRelacionamentoCache = null;
+
     public function __construct(Importacao $importacao)
     {
         $this->importacao = $importacao;
@@ -60,8 +64,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $linhaAtual++;
 
                 if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
-                    if ($linhaAtual % 50 === 0) {
-                        $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+                    if ($linhaAtual % 10 === 0) {
+                        $this->importacao->update([
+                            'linhas_processadas' => $linhaAtual,
+                            'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
+                        ]);
                     }
                     continue; 
                 }
@@ -115,7 +122,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
             }
 
-            // === RELATÓRIO DA INTELIGÊNCIA ARTIFICIAL (FUZZY MATCHING) ===
             if (count($this->relatorioAutoCadastro['novos'] ?? []) > 0 || count($this->relatorioAutoCadastro['50_porcento'] ?? []) > 0) {
                 $msgRelatorio = "Mapeamento IA (50%+): \n";
                 
@@ -191,12 +197,20 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $cabecalhoRaw = file_get_contents($caminho, false, null, 0, 250);
                 $reader->useDelimiter(strpos($cabecalhoRaw, ';') !== false ? ';' : ',');
             }
-            return $reader->getRows();
+            
+            // OTIMIZAÇÃO EXTREMA: Usa um Generator (Yield) para ler o arquivo linha por linha
+            // Isso impede que o PHP guarde as 5957 linhas na memória de uma vez só
+            foreach ($reader->getRows() as $rowProperties) {
+                yield $rowProperties;
+            }
+            return;
         }
 
+        // Se for JSON ou XML, não tem jeito, precisa jogar na memória
         if ($formato === 'json') {
             $dados = json_decode(file_get_contents($caminho), true);
-            return collect($dados ?? []);
+            foreach ($dados as $row) yield $row;
+            return;
         }
 
         if ($formato === 'xml') {
@@ -204,7 +218,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $json = json_encode($xml);
             $dados = json_decode($json, true);
             $primeiraChave = array_key_first($dados);
-            return collect($dados[$primeiraChave] ?? $dados);
+            
+            $dataset = $dados[$primeiraChave] ?? $dados;
+            foreach ($dataset as $row) yield $row;
+            return;
         }
 
         throw new \Exception("Formato de arquivo não suportado.");
@@ -256,7 +273,12 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $nomePlanilha = trim(preg_replace('/\s+/', ' ', $nomePlanilha));
         if (empty($nomePlanilha)) return null;
 
-        $registrosBanco = $classeModel::all();
+        // OTIMIZAÇÃO: Consulta no banco apenas a 1ª vez e salva na memória RAM!
+        if (!isset($this->cacheVinculos[$classeModel])) {
+            $this->cacheVinculos[$classeModel] = $classeModel::all();
+        }
+        $registrosBanco = $this->cacheVinculos[$classeModel];
+
         $melhorMatch = null;
         $maiorScore = 0;
 
@@ -290,6 +312,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             if (str_contains($classeModel, 'Unidade')) $dadosNovo['status'] = 'Ativa';
             
             $novo = $classeModel::create($dadosNovo);
+            
+            // ATENÇÃO: Adiciona o item recém-criado na memória para as próximas linhas
+            $this->cacheVinculos[$classeModel]->push($novo);
             
             $this->relatorioAutoCadastro['novos'][$tipoVinculo][] = $nomePlanilha;
             return $novo->id;
@@ -331,7 +356,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $autoCadastroAtivo = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         foreach ($mapeamento as $colunaPlanilha => $config) {
-            if (in_array($colunaPlanilha, ['ciclo_id', 'config_auto_cadastro', 'config_mesclar_duplicadas'])) continue;
+            if (in_array($colunaPlanilha, ['ciclo_id', 'config_auto_cadastro', 'config_mesclar_duplicadas', 'linhas_reprocessar'])) continue;
 
             $destino = $config['destino'] ?? 'ignorar';
             if ($destino === 'ignorar') continue;
@@ -339,33 +364,25 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $valorPlanilha = trim((string) ($linhaOriginal[$colunaPlanilha] ?? ''));
             if ($valorPlanilha === '') continue;
 
-            // ========================================================
-            // NOVO: CONVERSOR UNIVERSAL DE DADOS (Datas e Moedas)
-            // ========================================================
             $tipoMapeado = $config['tipo'] ?? 'texto';
 
-            // Tratamento de Data (Inverte padrão BR DD/MM/YYYY para padrão DB YYYY-MM-DD)
             if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data')) {
-                // Formato DD/MM/YYYY
                 if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $valorPlanilha, $matches)) {
                     $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
                 } 
-                // Formato DD/MM/YYYY HH:MM:SS
                 elseif (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(.*)$/', $valorPlanilha, $matches)) {
                     $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]} {$matches[4]}";
                 }
             }
 
-            // Tratamento Monetário (Limpa R$, pontos e ajusta vírgula)
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
-                $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); // Mantém só números, vírgula e hífen
+                $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); 
                 $valTemp = str_replace(',', '.', $valTemp);
                 if (is_numeric($valTemp)) {
                     $valorPlanilha = $valTemp;
                 }
             }
 
-            // INTERCEPTAÇÃO INTELIGENTE DE VÍNCULOS
             if (in_array($destino, ['curso_id', 'unidade_id', 'turno_id'])) {
                 $classe = null;
                 $tipoLabel = '';
@@ -399,6 +416,63 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         if (empty($dadosFixos['cpf'])) $dadosFixos['cpf'] = null;
         if (empty($dadosFixos['email'])) $dadosFixos['email'] = null;
+
+        // OTIMIZAÇÃO: Tabela acessória também foi jogada no Cache de Memória
+        if ($this->configsRelacionamentoCache === null) {
+            $this->configsRelacionamentoCache = \App\Models\ImportacaoConfig::all();
+        }
+        $configsRelacionamento = $this->configsRelacionamentoCache;
+        $permiteAutoCadastro = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        foreach ($configsRelacionamento as $config) {
+            $coluna = $config->coluna;
+            
+            if (array_key_exists($coluna, $dadosFixos)) {
+                
+                if (!empty($dadosFixos[$coluna])) {
+                    if (!is_numeric($dadosFixos[$coluna])) {
+                        $termoOriginal = trim($dadosFixos[$coluna]);
+                        
+                        $termo = preg_replace('/[\r\n]+.*/s', '', $termoOriginal);
+                        $termo = explode(',', $termo)[0];
+                        $termo = explode(';', $termo)[0];
+                        $termo = trim($termo);
+                        
+                        if (strlen($termo) > 80) {
+                            $termo = trim(substr($termo, 0, 80));
+                        }
+
+                        if ($coluna === 'unidade_id' && str_contains($termo, '-')) {
+                            $partes = explode('-', $termo);
+                            $termo = trim(end($partes));
+                        }
+
+                        $ModelClass = $config->model_class;
+                        $campoBusca = $config->campo_busca;
+
+                        $registro = $ModelClass::where($campoBusca, 'ilike', '%' . $termo . '%')->first();
+
+                        if (!$registro && $permiteAutoCadastro && $config->auto_cadastro) {
+                            $payload = $config->payload_padrao ?? [];
+                            $payload[$campoBusca] = $termo;
+                            
+                            if (!isset($payload['slug'])) {
+                                $payload['slug'] = Str::slug($termo);
+                            }
+                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) {
+                                $payload['horario_inicio'] = '00:00:00';
+                            }
+
+                            $registro = $ModelClass::create($payload);
+                        }
+
+                        $dadosFixos[$coluna] = $registro ? $registro->id : null;
+                    }
+                } else {
+                    $dadosFixos[$coluna] = null; 
+                }
+            }
+        }
 
         if (empty($dadosFixos['status_inscricao_id'])) {
             $dadosFixos['status_inscricao_id'] = 1; 

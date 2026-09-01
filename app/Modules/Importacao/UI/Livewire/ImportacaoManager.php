@@ -25,6 +25,7 @@ class ImportacaoManager extends Component
     public $modalMapeamentoAberto = false;
     public $modalDetalhesAberto = false;
     public $modalReprocessarAberto = false;
+    public $modalMonitoramentoAberto = false; // NOVO: Controle do modal de monitoramento
     public $importacaoReprocessarId = null;
 
     public $arquivo;
@@ -36,9 +37,13 @@ class ImportacaoManager extends Component
     public $importacaoDetalhes = null;
     public $permitirAutoCadastro = false;
     public $mesclarDuplicadas = false;
+    public $refazerMapeamento = false;
 
     public $cabecalhos = [];
     public $mapeamento = [];
+    
+    // NOVO: Variável para armazenar os dados da importação em andamento
+    public $importacaoMonitoramento = null;
     
     // Filtros
     public $filtro_tipo = '';
@@ -116,7 +121,6 @@ class ImportacaoManager extends Component
 
     public function baixarTemplate($tipo)
     {
-        
         if ($tipo === 'inscricoes') {
             $cabecalho = ['Nome', 'E-mail', 'CPF', 'Celular', 'Data de Nascimento', 'Estado', 'Unidade', 'Curso', 'Turno'];
             $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
@@ -161,6 +165,7 @@ class ImportacaoManager extends Component
 
     public function abrirModalReprocessar($id)
     {
+        $this->reset('refazerMapeamento');
         $this->importacaoReprocessarId = $id;
         $this->modalReprocessarAberto = true;
     }
@@ -173,7 +178,6 @@ class ImportacaoManager extends Component
         $mapa = $importacao->mapeamento;
 
         if ($modo === 'falhas') {
-            // Extrai do log antigo apenas as linhas que falharam
             $erros = json_decode($importacao->erro_mensagem, true) ?? [];
             $linhasComErro = [];
             
@@ -188,28 +192,90 @@ class ImportacaoManager extends Component
                 return;
             }
             
-            // Injeta as linhas a serem processadas no mapeamento (sem alterar a base de dados estrutural)
             $mapa['linhas_reprocessar'] = array_values(array_unique($linhasComErro));
         } else {
-            // Modo "Tudo" - Limpa o array de linhas alvo se existir de uma tentativa passada
             if (isset($mapa['linhas_reprocessar'])) {
                 unset($mapa['linhas_reprocessar']);
             }
         }
 
-        // Reseta os status da importação como se ela tivesse acabado de ser enviada
-        $importacao->update([
-            'status' => 'na_fila',
-            'linhas_processadas' => 0,
-            'erro_mensagem' => null,
-            'mapeamento' => $mapa
-        ]);
+        if ($this->refazerMapeamento) {
+            $importacao->update([
+                'mapeamento' => $mapa,
+                'status' => 'mapeamento',
+            ]);
 
-        $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes']);
-        $this->dispatch('sucesso', msg: 'A importação foi devolvida para a fila de processamento!');
+            $caminhoAbsoluto = Storage::disk('local')->path($importacao->arquivo_caminho);
+            $formato = $importacao->formato;
+            
+            $cabecalhosLidos = [];
+            if (in_array(strtolower($formato), ['csv', 'xlsx', 'xls'])) {
+                if (strtolower($formato) === 'csv') {
+                    $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+                    $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+                    $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
+                } else {
+                    $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
+                }
 
-        // Despacha o Background Job
-        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
+                $headers = $reader->getHeaders() ?? [];
+                foreach ($headers as $h) {
+                    $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+                }
+            } else {
+                $cabecalhosLidos = ['Dados Brutos'];
+            }
+            
+            $this->cabecalhos = $cabecalhosLidos;
+            $this->importacaoAtualId = $importacao->id;
+            $this->cicloSelecionadoId = $mapa['ciclo_id'] ?? null;
+            $this->permitirAutoCadastro = filter_var($mapa['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $this->mesclarDuplicadas = filter_var($mapa['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            if ($importacao->tipo === 'inscricoes') {
+                $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
+                    ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
+                    ->pluck('label', 'name')
+                    ->toArray();
+            }
+
+            $this->mapeamento = [];
+            foreach ($this->cabecalhos as $index => $coluna) {
+                $destino = 'ignorar';
+                $tipo = 'texto';
+                
+                if (isset($mapa[$coluna])) {
+                    $destino = $mapa[$coluna]['destino'] ?? 'ignorar';
+                    $tipo = $mapa[$coluna]['tipo'] ?? 'texto';
+                }
+                
+                $this->mapeamento[$index] = [
+                    'coluna_nome' => $coluna, 
+                    'destino' => $destino, 
+                    'tipo' => $tipo
+                ];
+            }
+
+            $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
+            $this->modalMapeamentoAberto = true;
+
+        } else {
+            $importacao->update([
+                'status' => 'na_fila',
+                'linhas_processadas' => 0,
+                'erro_mensagem' => null,
+                'mapeamento' => $mapa
+            ]);
+
+            $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
+            
+            // NOVO: Chama a tela de monitoramento
+            $this->importacaoAtualId = $importacao->id;
+            $this->modalMonitoramentoAberto = true;
+            $this->dispatch('sucesso', msg: 'A importação foi enviada para processamento!');
+
+            dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
+        }
     }
 
     public function abrirModalUpload()
@@ -220,7 +286,6 @@ class ImportacaoManager extends Component
 
     public function processarUpload()
     {
-        
         if (!empty($this->tipoImportacao) || $this->tipoImportacao !== '') {
             $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; 
             if ($this->tipoImportacao === 'campos' || $this->tipoImportacao === 'inscricoes') {
@@ -298,7 +363,6 @@ class ImportacaoManager extends Component
     {
         $this->mapeamento = [];
 
-        // Consolida todas as opções de destino (nativas e dinâmicas) num único array de busca
         $todosDestinos = [];
         foreach ($this->opcoesMapeamento as $chave => $label) {
             $todosDestinos[$chave] = $label;
@@ -307,33 +371,23 @@ class ImportacaoManager extends Component
             $todosDestinos["dinamico:{$name}"] = $label;
         }
 
-        // Percorre cada coluna da planilha enviada pelo usuário
         foreach ($this->cabecalhos as $index => $colunaPlanilha) {
             $melhorDestino = 'ignorar';
             $maiorScore = 0;
             $tipoSugerido = 'texto';
 
-            // 1. Testa a similaridade da coluna da planilha contra todos os destinos do sistema
             foreach ($todosDestinos as $chaveDestino => $labelDestino) {
-                
-                // Calcula contra o rótulo amigável (ex: "Data de Nascimento")
                 $scoreLabel = $this->calcularCompatibilidade($colunaPlanilha, $labelDestino);
-                
-                // Calcula contra o nome da chave interna (ex: "data_nascimento")
                 $chaveLimpa = str_replace('dinamico:', '', $chaveDestino);
                 $scoreChave = $this->calcularCompatibilidade($colunaPlanilha, str_replace('_', ' ', $chaveLimpa));
-                
-                // Pega a maior nota entre as duas comparações
                 $scoreFinal = max($scoreLabel, $scoreChave);
 
-                // Regra solicitada: Só considera se for 50% ou mais E se for a maior nota encontrada até agora
                 if ($scoreFinal >= 50 && $scoreFinal > $maiorScore) {
                     $maiorScore = $scoreFinal;
                     $melhorDestino = $chaveDestino;
                 }
             }
 
-            // 2. Infere inteligentemente o tipo de dado para facilitar a vida do usuário
             $colunaLower = strtolower($colunaPlanilha);
             if (str_contains($colunaLower, 'data') || str_contains($colunaLower, 'nascimento')) {
                 $tipoSugerido = 'data';
@@ -343,7 +397,6 @@ class ImportacaoManager extends Component
                 $tipoSugerido = 'booleano';
             }
 
-            // 3. Monta o array da interface
             $this->mapeamento[$index] = [
                 'coluna_nome' => $colunaPlanilha, 
                 'destino' => $melhorDestino, 
@@ -357,9 +410,12 @@ class ImportacaoManager extends Component
         $importacao = Importacao::findOrFail($this->importacaoAtualId);
         
         $mapaFinal = [];
-        // Injeta a configuração do checkbox na fila de dados da importação
         $mapaFinal['config_auto_cadastro'] = $this->permitirAutoCadastro;
         $mapaFinal['config_mesclar_duplicadas'] = $this->mesclarDuplicadas;
+
+        if (isset($importacao->mapeamento['linhas_reprocessar'])) {
+            $mapaFinal['linhas_reprocessar'] = $importacao->mapeamento['linhas_reprocessar'];
+        }
 
         foreach($this->mapeamento as $map) {
              if ($map['destino'] !== 'ignorar') {
@@ -379,9 +435,33 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        $this->reset(['arquivo', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);        $this->dispatch('sucesso', msg: 'Importação enviada para a fila com sucesso!');
+        $this->reset(['arquivo', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);        
+        
+        // NOVO: Chama a tela de monitoramento em tempo real
+        $this->modalMonitoramentoAberto = true;
         
         dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
+    }
+
+    // NOVO: Método que o AlpineJS vai chamar a cada X segundos para trazer o progresso real
+    public function monitorarProgresso()
+    {
+        if ($this->importacaoAtualId) {
+            $this->importacaoMonitoramento = Importacao::find($this->importacaoAtualId);
+            
+            // Se concluiu ou deu erro, ele fecha o modal sozinho
+            if ($this->importacaoMonitoramento && in_array($this->importacaoMonitoramento->status, ['concluido', 'erro', 'erro_parcial'])) {
+                $this->modalMonitoramentoAberto = false;
+                $this->verDetalhes($this->importacaoAtualId); // Já abre o relatório
+            }
+        }
+    }
+
+    public function fecharMonitoramento()
+    {
+        $this->modalMonitoramentoAberto = false;
+        $this->importacaoMonitoramento = null;
+        $this->importacaoAtualId = null;
     }
 
     public function excluirImportacao($id)
@@ -397,7 +477,7 @@ class ImportacaoManager extends Component
         }
 
         if ($this->importacaoAtualId == $id) {
-            $this->reset(['modalMapeamentoAberto', 'importacaoAtualId', 'cabecalhos', 'mapeamento']);
+            $this->reset(['modalMapeamentoAberto', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMonitoramentoAberto']);
         }
         if ($this->importacaoDetalhes && $this->importacaoDetalhes->id == $id) {
             $this->reset(['modalDetalhesAberto', 'importacaoDetalhes']);
@@ -413,7 +493,6 @@ class ImportacaoManager extends Component
         $this->previewCabecalhos = [];
         $this->previewDados = [];
         
-        // Se houver um arquivo, lemos as 100 primeiras linhas para o Preview na tela
         if ($this->importacaoDetalhes->arquivo_caminho && Storage::disk('local')->exists($this->importacaoDetalhes->arquivo_caminho)) {
             $caminhoAbsoluto = Storage::disk('local')->path($this->importacaoDetalhes->arquivo_caminho);
             $extensao = pathinfo($caminhoAbsoluto, PATHINFO_EXTENSION);
@@ -429,7 +508,6 @@ class ImportacaoManager extends Component
                     
                     $this->previewCabecalhos = $reader->getHeaders() ?? [];
                     
-                    // Prepara o cruzamento de erros
                     $erros = json_decode($this->importacaoDetalhes->erro_mensagem, true) ?? [];
                     $linhasComErro = array_column($erros, 'linha');
                     $mensagensErro = [];
@@ -445,7 +523,6 @@ class ImportacaoManager extends Component
                     }
 
                     $linhaAtual = 0;
-                    // Limita a 100 linhas para não travar o navegador
                     $reader->getRows()->take(100)->each(function(array $rowProperties) use (&$linhaAtual, $linhasComErro, $mensagensErro) {
                         $linhaAtual++;
                         $status = 'Sucesso';
@@ -467,7 +544,7 @@ class ImportacaoManager extends Component
                         ];
                     });
                 } catch (\Exception $e) {
-                    // Ignora o preview silenciosamente se o arquivo estiver corrompido
+                    // Ignora o preview
                 }
             }
         }
@@ -507,7 +584,6 @@ class ImportacaoManager extends Component
             $reader->useDelimiter($delimiter);
         }
 
-        // Criamos o cabeçalho novo injetando os avisos do sistema
         $headers = $reader->getHeaders() ?? [];
         array_unshift($headers, 'Motivo_do_Erro_no_Sistema');
         array_unshift($headers, 'Linha_Original');
@@ -518,7 +594,6 @@ class ImportacaoManager extends Component
         $linhaAtual = 0;
         $reader->getRows()->each(function(array $rowProperties) use (&$linhaAtual, $linhasComErro, $mensagensErro, &$linhasExportar) {
             $linhaAtual++;
-            // A mágica: só exportamos as linhas cruzadas com o Log
             if (in_array($linhaAtual, $linhasComErro)) {
                 $valores = array_values($rowProperties);
                 array_unshift($valores, $mensagensErro[$linhaAtual] ?? 'Erro não especificado');
@@ -531,7 +606,7 @@ class ImportacaoManager extends Component
         
         $callback = function() use ($linhasExportar) {
             $file = fopen('php://output', 'w');
-            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // Previne erro de formatação UTF-8 no Excel
+            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             foreach ($linhasExportar as $linha) {
                 fputcsv($file, $linha, ';');
             }

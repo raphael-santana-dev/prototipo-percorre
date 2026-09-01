@@ -675,4 +675,90 @@
             </div>
         </div>
     @endif
+
+    <!-- MODAL 5: MONITORAMENTO EM TEMPO REAL -->
+    @if($modalMonitoramentoAberto)
+        <div class="fixed inset-0 z-[90] overflow-y-auto" wire:poll.1s="monitorarProgresso">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/90 backdrop-blur-md"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                
+                <div class="relative z-10 inline-block w-full max-w-2xl px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-2xl sm:my-8 sm:align-middle sm:p-6 border border-purpura-100">
+                    
+                    @if($importacaoMonitoramento)
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purpura-50 text-purpura-600 mb-4 animate-pulse">
+                                <i class="ph-fill ph-rocket-launch text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-black text-gray-900 mb-1">Processando Importação...</h3>
+                            <p class="text-sm font-medium text-gray-500">Não feche esta janela. O sistema está salvando os dados no servidor.</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6 relative overflow-hidden">
+                            <div class="flex justify-between items-end mb-2 relative z-10">
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Progresso Atual</span>
+                                <span class="text-2xl font-black text-purpura-600">{{ $importacaoMonitoramento->progresso }}%</span>
+                            </div>
+                            
+                            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden relative z-10">
+                                <div class="h-full bg-gradient-to-r from-purpura-500 to-indigo-500 transition-all duration-300" style="width: {{ $importacaoMonitoramento->progresso }}%"></div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center mt-3 relative z-10">
+                                <span class="text-xs font-bold text-gray-600 bg-white px-2 py-1 rounded border shadow-sm">
+                                    <i class="ph-bold ph-check text-green-500"></i> {{ number_format($importacaoMonitoramento->linhas_processadas, 0, ',', '.') }} linhas
+                                </span>
+                                <span class="text-xs font-bold text-gray-500">
+                                    Total: {{ number_format($importacaoMonitoramento->total_linhas, 0, ',', '.') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- EXIBIÇÃO DA LINHA ATUAL / LOG RAW -->
+                        @php
+                            // Tenta ler o erro_mensagem para mostrar a última linha processada caso esteja travado
+                            $logRaw = json_decode($importacaoMonitoramento->erro_mensagem, true);
+                            $ultimoLog = is_array($logRaw) ? end($logRaw) : null;
+                        @endphp
+
+                        <div class="bg-gray-900 rounded-xl p-4 shadow-inner border border-gray-800">
+                            <div class="flex items-center gap-2 mb-2 text-gray-400 text-xs font-bold uppercase tracking-wider">
+                                <i class="ph-bold ph-terminal-window text-green-400"></i> Terminal / Memória
+                            </div>
+                            
+                            <div class="font-mono text-xs text-gray-300">
+                                <div class="flex items-center gap-2 text-green-400">
+                                    <span class="animate-pulse">▶</span> Lendo arquivo: {{ $importacaoMonitoramento->arquivo_nome }}
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-blue-400">ℹ</span> Lote atual processando a linha nº <span class="text-white font-bold">{{ $importacaoMonitoramento->linhas_processadas + 1 }}</span>...
+                                </div>
+                                
+                                @if($ultimoLog)
+                                    <div class="mt-3 pt-3 border-t border-gray-700">
+                                        <span class="text-red-400 block mb-1">⚠️ Último alerta capturado:</span>
+                                        <div class="text-gray-400 leading-tight">
+                                            [Linha {{ $ultimoLog['linha'] ?? '?' }}] {{ $ultimoLog['mensagem'] ?? 'Erro desconhecido' }}
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                    @else
+                        <div class="flex flex-col items-center justify-center p-8">
+                            <i class="ph ph-spinner animate-spin text-4xl text-purpura-500 mb-4"></i>
+                            <h3 class="text-lg font-bold text-gray-900">Iniciando conexão com o servidor...</h3>
+                        </div>
+                    @endif
+
+                    <div class="mt-6 text-center">
+                        <button wire:click="fecharMonitoramento" class="text-xs font-bold text-gray-400 hover:text-gray-600 transition underline decoration-dashed underline-offset-4">
+                            Ocultar e processar em 2º plano
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
