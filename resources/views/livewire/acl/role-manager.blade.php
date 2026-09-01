@@ -46,19 +46,19 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('acl.role.permissoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.permissoes')))
-                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
+                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Gerenciar Permissões do Grupo">
                                 <i class="text-lg ph ph-key"></i>
                             </a>
                         @endif
                         
                         @if(!in_array($role->name, ['dev', 'admin']))
                             @if(feature('acl.role.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.editar')))
-                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
+                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar Nome">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
                             @endif
                             @if(feature('acl.role.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.excluir')))
-                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
+                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Grupo" onclick="confirm('Excluir este grupo permanentemente?') || event.stopImmediatePropagation()">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
                             @endif
@@ -84,14 +84,14 @@
                     </div>
                     <div class="flex items-center justify-end mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div class="flex items-center gap-1">
-                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Permissões">
+                            <a href="{{ route('roles.permissions', $role->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Permissões">
                                 <i class="text-lg ph ph-key"></i>
                             </a>
                             @if(!in_array($role->name, ['dev', 'admin']))
-                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
+                                <button wire:click="edit({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
-                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este grupo?') || event.stopImmediatePropagation()">
+                                <button wire:click="delete({{ $role->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este grupo?') || event.stopImmediatePropagation()">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
                             @endif

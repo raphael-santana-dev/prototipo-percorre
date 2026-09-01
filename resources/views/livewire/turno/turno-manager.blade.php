@@ -56,13 +56,13 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('turno.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.editar')))
-                            <button wire:click="edit({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
+                            <button wire:click="edit({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endcan
                         
                         @if(feature('turno.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('turno.excluir')))
-                            <button wire:click="delete({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()" title="Excluir">
+                            <button wire:click="delete({{ $turno->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" onclick="confirm('Excluir este turno permanentemente?') || event.stopImmediatePropagation()" title="Excluir">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endcan
@@ -118,17 +118,8 @@
 
     <!-- Modal Integrado -->
     @if($showModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="closeModal"></div>
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-                
-                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-md sm:w-full sm:p-6 dark:bg-gray-800">
-                    <h3 class="mb-4 text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 dark:text-white dark:border-gray-700">
-                        {{ $isEditMode ? 'Editar Turno' : 'Novo Turno' }}
-                    </h3>
-                    
-                    <form wire:submit="save" class="space-y-4">
+        <x-modal title="{{ $isEditMode ? 'Editar Turno' : 'Novo Turno' }}" max-width="md" close-method="closeModal">                    
+            <form wire:submit="save" class="space-y-4">
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome (ex: Manhã) <span class="text-red-500">*</span></label>
                             <input type="text" wire:model="nome" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
@@ -156,9 +147,7 @@
                                 Salvar Turno
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+            </form>
+        </x-modal>
     @endif
 </div>

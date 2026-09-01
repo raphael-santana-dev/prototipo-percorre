@@ -64,12 +64,12 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('acl.permissao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.permissao.editar')))
-                            <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
+                            <button wire:click="abrirModal({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Permissão">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endif
                         @if(feature('acl.permissao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.permissao.excluir')))
-                            <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluir({{ $permission->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Permissão" onclick="confirm('Excluir esta permissão pode quebrar o acesso ao sistema. Continuar?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif

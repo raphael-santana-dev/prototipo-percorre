@@ -71,7 +71,7 @@
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                    <a href="{{ route('empresas.show', $empresa->id) }}" class="inline-flex items-center justify-center p-2 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes e Vínculos">
+                    <a href="{{ route('empresas.show', $empresa->id) }}" class="inline-flex items-center justify-center p-2 text-gray-400 transition-colors rounded-lg hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes e Vínculos">
                         <i class="text-xl ph-bold ph-caret-right"></i>
                     </a>
                 </td>

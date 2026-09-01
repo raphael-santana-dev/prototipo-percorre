@@ -54,22 +54,22 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('curso.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.visualizar')))
-                            <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
+                            <button wire:click="showQuickView({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
                                 <i class="text-lg ph ph-info"></i>
                             </button>
                             
-                            <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
+                            <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
                                 <i class="text-lg ph ph-eye"></i>
                             </a>
                         @endif
 
-                        @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                            <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                        @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                            <button wire:click="edit({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endif
 
                         @if(feature('curso.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.excluir')))
-                            <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
+                            <button wire:click="delete({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem certeza que deseja excluir este curso?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
@@ -120,18 +120,18 @@
 
                         <div class="flex items-center gap-1">
                             @if(feature('curso.visualizar'))
-                                <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes">
+                                <a href="{{ route('cursos.show', $curso->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes">
                                     <i class="text-lg ph ph-eye"></i>
                                 </a>
                             @endif
                             
-                            @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                                <button wire:click="abrirModal({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                            @if(feature('curso.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.editar')))                                <button wire:click="abrirModal({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
                                     <i class="text-lg ph ph-pencil-simple"></i>
                                 </button>
                             @endif
 
                             @if(feature('curso.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('curso.excluir')))
-                                <button wire:click="excluir({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Curso" onclick="confirm('Excluir este curso permanentemente?') || event.stopImmediatePropagation()">
+                                <button wire:click="excluir({{ $curso->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Curso" onclick="confirm('Excluir este curso permanentemente?') || event.stopImmediatePropagation()">
                                     <i class="text-lg ph ph-trash"></i>
                                 </button>
                             @endif

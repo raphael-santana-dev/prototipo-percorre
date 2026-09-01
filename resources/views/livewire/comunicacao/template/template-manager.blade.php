@@ -50,12 +50,12 @@
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('template.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.editar')))
-                            <a href="{{ route('templates.edit', $template->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50" title="Editar">
+                            <a href="{{ route('templates.edit', $template->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </a>
                         @endif
                         @if(feature('template.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.excluir')))
-                            <button wire:click="excluir({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir este template permanentemente?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluir({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir" onclick="confirm('Excluir este template permanentemente?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif

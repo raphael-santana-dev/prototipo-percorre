@@ -79,11 +79,11 @@
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                             @if($log->status === 'erro')
-                                <button wire:click="verErro({{ $log->id }})" class="p-1.5 text-red-500 transition-colors rounded hover:bg-red-50" title="Ver Log de Erro">
+                                <button wire:click="verErro({{ $log->id }})" class="p-1.5 text-red-500 transition-colors rounded-lg hover:bg-red-50" title="Ver Log de Erro">
                                     <i class="text-lg ph-fill ph-warning-circle"></i>
                                 </button>
                             @endif
-                            <button wire:click="verPreview({{ $log->id }})" class="p-1.5 text-blue-500 transition-colors rounded hover:bg-blue-50" title="Pré-visualizar E-mail">
+                            <button wire:click="verPreview({{ $log->id }})" class="p-1.5 text-blue-500 transition-colors rounded-lg hover:bg-blue-50" title="Pré-visualizar E-mail">
                                 <i class="text-lg ph-bold ph-eye"></i>
                             </button>
                         </div>

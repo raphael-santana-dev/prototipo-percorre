@@ -50,12 +50,12 @@
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('status.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.editar')))
-                            <button wire:click="edit({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <button wire:click="edit({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>
                             </button>
                         @endif
                         @if(feature('status.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.excluir')))
-                            <button wire:click="delete({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
+                            <button wire:click="delete({{ $status->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir este status?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         @endif
@@ -83,31 +83,35 @@
                         {{ $isEditMode ? 'Editar Status' : 'Novo Status' }}
                     </h3>
                     
-                    <form wire:submit="save" class="space-y-5">
+                    <form wire:submit="save" class="space-y-4">
                         <div>
-                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Status <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" placeholder="Ex: Aprovado" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purpura-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white">
+                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Status <span class="text-red-500">*</span></label>
+                            <input type="text" wire:model="nome" placeholder="Ex: Aprovado" class="w-full mt-1 text-sm border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
-                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">Descrição (Opcional)</label>
-                            <textarea wire:model="descricao" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purpura-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white"></textarea>
+                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Descrição (Opcional)</label>
+                            <textarea wire:model="descricao" rows="3" class="w-full mt-1 text-sm border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
                             @error('descricao') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
-                        <!-- Input Color Formatado -->
+                        <!-- Input Color Formatado (Compacto) -->
                         <div>
-                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">Cor da Tag</label>
-                            <div class="flex items-center gap-4">
-                                <input type="color" wire:model="cor" class="w-14 h-14 p-1 bg-white border border-gray-200 rounded-lg cursor-pointer dark:bg-gray-700 dark:border-gray-600">
+                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Cor da Tag</label>
+                            <div class="flex items-center gap-4 mt-1">
+                                <input type="color" wire:model="cor" class="w-10 h-10 p-0.5 bg-white border border-gray-300 rounded-md cursor-pointer shadow-sm dark:bg-gray-700 dark:border-gray-600">
                                 <span class="text-sm text-gray-500 font-mono">{{ $cor ?? '#9CA3AF' }}</span>
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-3 pt-4 mt-6">
-                            <button type="button" wire:click="$set('showModal', false)" class="px-6 py-3 text-sm font-bold text-purpura-600 bg-white border border-purpura-200 rounded-xl hover:bg-purpura-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancelar</button>
-                            <button type="submit" class="px-6 py-3 text-sm font-bold text-white rounded-xl shadow-sm bg-ponkan-500 hover:bg-ponkan-600">Salvar Status</button>
+                        <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
+                                Salvar Status
+                            </button>
                         </div>
                     </form>
                 </div>

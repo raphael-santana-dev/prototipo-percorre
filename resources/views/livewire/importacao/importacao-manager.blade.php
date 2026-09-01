@@ -211,18 +211,18 @@
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                             @if(in_array($log->status, ['erro', 'erro_parcial']))
-                                <button wire:click="verErro({{ $log->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:bg-orange-50" title="Ver Relatório de Erros">
+                                <button wire:click="verErro({{ $log->id }})" class="p-1.5 text-orange-500 transition-colors rounded-lg hover:bg-orange-50" title="Ver Relatório de Erros">
                                     <i class="text-lg ph-fill ph-warning"></i>
                                 </button>
                             @endif
 
                             @if($log->operacao === 'exportacao' && $log->status === 'concluido' && $log->arquivo_gerado_caminho)
-                                <button wire:click="baixarExportacao({{ $log->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Planilha">
+                                <button wire:click="baixarExportacao({{ $log->id }})" class="p-1.5 text-green-600 transition-colors rounded-lg hover:bg-green-50" title="Baixar Planilha">
                                     <i class="text-lg ph-bold ph-download-simple"></i>
                                 </button>
                             @endif
 
-                            <button wire:click="excluirImportacao({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Excluir Registro" onclick="confirm('Excluir este log e apagar os arquivos do servidor?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluirImportacao({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir Registro" onclick="confirm('Excluir este log e apagar os arquivos do servidor?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         </div>

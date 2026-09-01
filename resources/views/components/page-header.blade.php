@@ -11,13 +11,13 @@
     <!-- 1. Alertas Globais Unificados -->
     @if (session()->has('sucesso') || session()->has('success'))
         <div class="flex items-center gap-2 p-4 mb-4 font-bold rounded-lg shadow-sm text-pistache-100 bg-pistache-500">
-            <i class="text-xl ph ph-check-circle"></i> {{ session('sucesso') ?? session('success') }}
+            <i class="text-lg ph ph-check-circle"></i> {{ session('sucesso') ?? session('success') }}
         </div>
     @endif
     
     @if (session()->has('error'))
         <div class="flex items-center gap-2 p-4 mb-4 font-bold text-red-100 bg-red-500 rounded-lg shadow-sm">
-            <i class="text-xl ph ph-warning"></i> {{ session('error') }}
+            <i class="text-lg ph ph-warning"></i> {{ session('error') }}
         </div>
     @endif
 

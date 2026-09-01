@@ -83,7 +83,7 @@
                             </td>
                             <td class="px-6 py-3 whitespace-nowrap text-right">
                                 <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes do Disparo">
-                                    <i class="text-xl ph ph-info"></i>
+                                    <i class="text-lg ph ph-info"></i>
                                 </button>
                             </td>
                         </tr>

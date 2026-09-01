@@ -55,12 +55,12 @@
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
                     @if(feature('periodo_avaliacao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.editar')))
                         <a href="{{ route('avaliacoes.periodos.edit', $periodo->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Configurar Período">
-                            <i class="text-xl ph ph-gear"></i>
+                            <i class="text-lg ph ph-gear"></i>
                         </a>
                     @endif
                     @if(feature('periodo_avaliacao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('periodo_avaliacao.excluir')))
                         <button wire:click="excluir({{ $periodo->id }})" wire:confirm="Tem certeza que deseja excluir?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                            <i class="text-xl ph ph-trash"></i>
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     @endif
                 </td>

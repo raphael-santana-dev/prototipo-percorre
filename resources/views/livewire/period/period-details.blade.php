@@ -186,8 +186,8 @@
                 </td>
                 
                 <td class="px-4 py-2 text-right">
-                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded"><i class="text-xl ph ph-info"></i></button>
-                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded"><i class="text-xl ph ph-eye"></i></a>
+                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded"><i class="text-lg ph ph-info"></i></button>
+                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded"><i class="text-lg ph ph-eye"></i></a>
                 </td>
             </tr>
         @empty
