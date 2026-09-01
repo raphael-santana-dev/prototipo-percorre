@@ -10,6 +10,7 @@ use App\Models\Ciclo;
 use App\Models\Inscricao;
 use App\Models\OfertaVaga;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 #[Layout('components.layouts.app')]
 #[Title('Dashboard Estratégico - Relatórios')]
@@ -19,13 +20,19 @@ class Dashboard extends Component
     public $ciclosDb = [];
     public bool $carregando = true;
 
-    // Estrutura dos 4 gráficos principais
+    // Gráficos Atuais
     public array $graficoVagas = [];
     public array $graficoInscricoes = [];
     public array $graficoCursos = [];
     public array $graficoUnidades = [];
     
-    // Estrutura do gráfico de detalhamento (Drill-down)
+    // Novos Gráficos (Demográficos e Dinâmicos)
+    public array $graficoIdades = [];
+    public array $graficoPCD = [];
+    public array $graficoGenero = [];
+    public array $graficoRaca = [];
+
+    // Drill-down
     public array $graficoDetalhado = [];
     public string $tituloDetalhado = '';
 
@@ -35,85 +42,149 @@ class Dashboard extends Component
         if ($this->ciclosDb->count() > 0) {
             $this->filtroCiclo = $this->ciclosDb->first()->id;
         }
-        
         $this->inicializarEstruturaGraficos();
     }
 
     private function inicializarEstruturaGraficos()
     {
-        $this->graficoVagas = ['title' => 'Ocupação de Vagas', 'type' => 'donut', 'height' => 300, 'series' => [], 'labels' => []];
-        $this->graficoInscricoes = ['title' => 'Status das Inscrições', 'type' => 'bar', 'height' => 300, 'series' => [], 'labels' => []];
-        $this->graficoCursos = ['title' => 'Inscrições por Curso', 'type' => 'area', 'height' => 300, 'series' => [], 'labels' => []];
-        $this->graficoUnidades = ['title' => 'Distribuição por Unidade', 'type' => 'pie', 'height' => 300, 'series' => [], 'labels' => []];
+        $vazio = ['title' => 'Carregando...', 'type' => 'bar', 'height' => 300, 'series' => [], 'labels' => []];
+        $this->graficoVagas = $this->graficoInscricoes = $this->graficoCursos = $this->graficoUnidades = $vazio;
+        $this->graficoIdades = $this->graficoPCD = $this->graficoGenero = $this->graficoRaca = $vazio;
     }
 
     public function updatingFiltroCiclo()
     {
         $this->carregando = true;
-        $this->graficoDetalhado = []; // Fecha o drill-down ao mudar de ciclo
+        $this->graficoDetalhado = []; 
     }
 
     public function carregarDados()
     {
         if (!$this->filtroCiclo) return;
 
-        // 1. DADOS DE VAGAS
+        // 1. Coleta Vagas Globais
         $totalVagas = OfertaVaga::where('ciclo_id', $this->filtroCiclo)->sum('vagas');
-        $vagasPreenchidas = Inscricao::where('ciclo_id', $this->filtroCiclo)
-            ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'Selecionado']))
-            ->count();
-        
-        $this->graficoVagas['series'] = [$vagasPreenchidas, max(0, $totalVagas - $vagasPreenchidas)];
-        $this->graficoVagas['labels'] = ['Vagas Preenchidas', 'Vagas Abertas'];
 
-        // 2. STATUS DAS INSCRIÇÕES
-        $statusData = Inscricao::select('status_inscricao_id', DB::raw('count(*) as total'))
-            ->with('statusInscricao:id,nome')
+        // 2. Extrai TODA a base de Inscrições do Ciclo de uma vez só (Alta Performance)
+        $inscricoes = Inscricao::select('id', 'status_inscricao_id', 'curso_id', 'unidade_id', 'data_nascimento', 'possui_deficiencia', 'dados_dinamicos')
+            ->with(['statusInscricao:id,nome', 'curso:id,nome', 'unidade:id,nome'])
             ->where('ciclo_id', $this->filtroCiclo)
-            ->groupBy('status_inscricao_id')
             ->get();
 
-        $this->graficoInscricoes['labels'] = $statusData->pluck('statusInscricao.nome')->map(fn($v) => $v ?? 'Pendente')->toArray();
-        $this->graficoInscricoes['series'] = [['name' => 'Inscritos', 'data' => $statusData->pluck('total')->toArray()]];
+        // Inicializadores de Contagem
+        $statusContagem = []; $cursoContagem = []; $unidadeContagem = [];
+        $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
+        $pcdContagem = ['Sim' => 0, 'Não' => 0];
+        $generoContagem = []; $racaContagem = [];
+        $vagasPreenchidas = 0;
 
-        // 3. INSCRIÇÕES POR CURSO
-        $cursosData = Inscricao::select('curso_id', DB::raw('count(*) as total'))
-            ->with('curso:id,nome')
-            ->where('ciclo_id', $this->filtroCiclo)
-            ->groupBy('curso_id')
-            ->orderByDesc('total')
-            ->get();
+        // Loop Único em Memória
+        foreach ($inscricoes as $insc) {
+            // Status e Ocupação
+            $status = $insc->statusInscricao->nome ?? 'Pendente';
+            $statusContagem[$status] = ($statusContagem[$status] ?? 0) + 1;
+            if (in_array($status, ['Aprovado', 'Selecionado'])) $vagasPreenchidas++;
 
-        $this->graficoCursos['labels'] = $cursosData->pluck('curso.nome')->map(fn($v) => $v ?? 'Sem Curso')->toArray();
-        $this->graficoCursos['series'] = [['name' => 'Inscritos', 'data' => $cursosData->pluck('total')->toArray()]];
+            // Curso e Unidade
+            $curso = $insc->curso->nome ?? 'Sem Curso';
+            $cursoContagem[$curso] = ($cursoContagem[$curso] ?? 0) + 1;
+            
+            $unidade = $insc->unidade->nome ?? 'Sem Unidade';
+            $unidadeContagem[$unidade] = ($unidadeContagem[$unidade] ?? 0) + 1;
 
-        // 4. INSCRIÇÕES POR UNIDADE
-        $unidadesData = Inscricao::select('unidade_id', DB::raw('count(*) as total'))
-            ->with('unidade:id,nome')
-            ->where('ciclo_id', $this->filtroCiclo)
-            ->groupBy('unidade_id')
-            ->get();
+            // Idades Matemáticas
+            if ($insc->data_nascimento) {
+                $idade = Carbon::parse($insc->data_nascimento)->age;
+                if ($idade < 18) $idadesContagem['Menor de 18']++;
+                elseif ($idade <= 24) $idadesContagem['18 a 24']++;
+                elseif ($idade <= 34) $idadesContagem['25 a 34']++;
+                elseif ($idade <= 45) $idadesContagem['35 a 45']++;
+                else $idadesContagem['Acima de 45']++;
+            }
 
-        $this->graficoUnidades['labels'] = $unidadesData->pluck('unidade.nome')->map(fn($v) => $v ?? 'Sem Unidade')->toArray();
-        $this->graficoUnidades['series'] = $unidadesData->pluck('total')->toArray();
+            // Campos Nativos Simples
+            $isPcd = in_array(strtolower(trim($insc->possui_deficiencia)), ['sim', 's', '1', 'true']) ? 'Sim' : 'Não';
+            $pcdContagem[$isPcd]++;
+
+            // Lendo o Form Builder (JSON) Dinamicamente
+            $dinamicos = is_string($insc->dados_dinamicos) ? json_decode($insc->dados_dinamicos, true) : ($insc->dados_dinamicos ?? []);
+            
+            $genero = $dinamicos['genero'] ?? 'Não Informado';
+            $generoContagem[$genero] = ($generoContagem[$genero] ?? 0) + 1;
+
+            $raca = $dinamicos['cor_raca'] ?? 'Não Informada';
+            $racaContagem[$raca] = ($racaContagem[$raca] ?? 0) + 1;
+        }
+
+        // Ordenações para ficar mais bonito na tela
+        arsort($cursoContagem);
+        arsort($generoContagem);
+        arsort($racaContagem);
+
+        // --- Montagem dos Objetos para o Alpine ---
+
+        $this->graficoVagas = [
+            'title' => 'Ocupação de Vagas Geração', 'type' => 'donut', 'height' => 300,
+            'labels' => ['Vagas Preenchidas', 'Vagas Abertas'],
+            'series' => [$vagasPreenchidas, max(0, $totalVagas - $vagasPreenchidas)]
+        ];
+
+        $this->graficoInscricoes = [
+            'title' => 'Status do Funil', 'type' => 'bar', 'height' => 300,
+            'labels' => array_keys($statusContagem),
+            'series' => [['name' => 'Inscritos', 'data' => array_values($statusContagem)]]
+        ];
+
+        $this->graficoCursos = [
+            'title' => 'Procura por Curso', 'type' => 'area', 'height' => 300,
+            'labels' => array_keys($cursoContagem),
+            'series' => [['name' => 'Inscritos', 'data' => array_values($cursoContagem)]]
+        ];
+
+        $this->graficoUnidades = [
+            'title' => 'Candidatos por Unidade', 'type' => 'donut', 'height' => 300,
+            'labels' => array_keys($unidadeContagem),
+            'series' => array_values($unidadeContagem)
+        ];
+
+        $this->graficoIdades = [
+            'title' => 'Faixa Etária', 'type' => 'pie', 'height' => 300,
+            'labels' => array_keys($idadesContagem),
+            'series' => array_values($idadesContagem)
+        ];
+
+        $this->graficoPCD = [
+            'title' => 'Pessoas com Deficiência (PCD)', 'type' => 'donut', 'height' => 300,
+            'labels' => array_keys($pcdContagem),
+            'series' => array_values($pcdContagem)
+        ];
+
+        $this->graficoGenero = [
+            'title' => 'Identidade de Gênero', 'type' => 'bar', 'height' => 300,
+            'labels' => array_keys($generoContagem),
+            'series' => [['name' => 'Qtd', 'data' => array_values($generoContagem)]]
+        ];
+
+        $this->graficoRaca = [
+            'title' => 'Cor / Raça Autodeclarada', 'type' => 'bar', 'height' => 300,
+            'labels' => array_keys($racaContagem),
+            'series' => [['name' => 'Qtd', 'data' => array_values($racaContagem)]]
+        ];
 
         $this->carregando = false;
     }
 
+    // CORREÇÃO: Recebendo os parâmetros mapeados de forma limpa
     #[On('chart-click')]
-    public function processarCliqueGrafico($dados)
+    public function processarCliqueGrafico($chartId, $label)
     {
-        $chartId = $dados['chartId'];
-        $labelClicado = $dados['label'];
-
-        // Se clicou no gráfico de Status, renderiza um gráfico detalhando quais Cursos têm esse status
         if ($chartId === 'grafico-status') {
-            $this->tituloDetalhado = "Detalhamento: Inscrições '{$labelClicado}' por Curso";
+            $this->tituloDetalhado = "Detalhamento: Inscrições '{$label}' por Curso";
             
             $detalhes = Inscricao::select('curso_id', DB::raw('count(*) as total'))
                 ->with('curso:id,nome')
                 ->where('ciclo_id', $this->filtroCiclo)
-                ->whereHas('statusInscricao', fn($q) => $q->where('nome', $labelClicado))
+                ->whereHas('statusInscricao', fn($q) => $q->where('nome', $label))
                 ->groupBy('curso_id')
                 ->orderByDesc('total')
                 ->get();
@@ -121,9 +192,8 @@ class Dashboard extends Component
             $labels = $detalhes->pluck('curso.nome')->map(fn($v) => $v ?? 'Sem Curso')->toArray();
             $valores = $detalhes->pluck('total')->toArray();
 
-            // Alimenta o 5º gráfico dinâmico que vai aparecer na tela
             $this->graficoDetalhado = [
-                'title' => "Distribuição do status '{$labelClicado}'",
+                'title' => "Distribuição do status '{$label}'",
                 'type' => 'bar',
                 'height' => 350,
                 'series' => [['name' => 'Quantidade', 'data' => $valores]],
