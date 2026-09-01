@@ -63,7 +63,7 @@ Route::middleware('auth:web,student,company')->group(function () {
 Route::middleware('auth')->group(function () {
     
     // --- Dashboard e Perfil ---
-    Route::get('/dashboard', Dashboard::class)->name('dashboard');
+    Route::get('/dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
 
     // --- Configurações e ACL ---

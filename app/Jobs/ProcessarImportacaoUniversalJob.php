@@ -17,12 +17,23 @@ use App\Models\CampoFormulario;
 use App\Models\Inscricao;
 use Illuminate\Database\QueryException;
 
+use App\Traits\FuzzyMatchingTrait;
+use App\Models\Curso;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
+
 class ProcessarImportacaoUniversalJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, FuzzyMatchingTrait;
 
     public $timeout = 3600; 
     protected $importacao;
+
+    protected $relatorioAutoCadastro = [
+        '100_porcento' => [],
+        '50_porcento'  => [],
+        'novos'        => []
+    ];
 
     public function __construct(Importacao $importacao)
     {
@@ -43,13 +54,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $registros = $this->extrairRegistrosLazy($caminhoAbsoluto, $formato);
             $mapeamento = $this->importacao->mapeamento ?? [];
             
-            // Verifica se existe uma limitação de linhas (Modo: Reprocessar Apenas Falhas)
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
             foreach ($registros as $linhaOriginal) {
                 $linhaAtual++;
 
-                // === LÓGICA DE SALTO DE REPROCESSAMENTO ===
                 if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
                     if ($linhaAtual % 50 === 0) {
                         $this->importacao->update(['linhas_processadas' => $linhaAtual]);
@@ -93,7 +102,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         'linha' => $linhaAtual, 
                         'tipo' => 'Erro de Dados',
                         'mensagem' => $e->getMessage(),
-                        'amigavel' => 'A informação fornecida na planilha está em um formato inválido.'
+                        'amigavel' => 'A informação fornecida na planilha está em um formato inválido: ' . $e->getMessage()
                     ];
                 }
 
@@ -106,14 +115,37 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
             }
 
+            // === RELATÓRIO DA INTELIGÊNCIA ARTIFICIAL (FUZZY MATCHING) ===
+            if (count($this->relatorioAutoCadastro['novos'] ?? []) > 0 || count($this->relatorioAutoCadastro['50_porcento'] ?? []) > 0) {
+                $msgRelatorio = "Mapeamento IA (50%+): \n";
+                
+                foreach ($this->relatorioAutoCadastro['50_porcento'] as $tipo => $itens) {
+                    if (!empty($itens)) {
+                        $msgRelatorio .= "- $tipo Compatíveis: " . implode(' | ', array_unique($itens)) . " \n";
+                    }
+                }
+                foreach ($this->relatorioAutoCadastro['novos'] as $tipo => $itens) {
+                    if (!empty($itens)) {
+                        $msgRelatorio .= "- $tipo Criados: " . implode(' | ', array_unique($itens)) . " \n";
+                    }
+                }
+                
+                array_unshift($erros, [
+                    'linha' => 'INFO',
+                    'tipo' => 'Alerta: Inteligência Artificial',
+                    'mensagem' => $msgRelatorio,
+                    'amigavel' => $msgRelatorio
+                ]);
+            }
+
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
+            
             $this->importacao->update([
                 'status' => $statusFinal,
                 'linhas_processadas' => $linhaAtual,
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
-            // === LOG DE AUDITORIA EM LOTE ===
             if ($this->importacao->tipo === 'inscricoes' && $linhaAtual > 0) {
                 $usuario = $this->importacao->user; 
                 \Illuminate\Support\Facades\DB::table('auditoria_logs')->insert([
@@ -180,7 +212,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
     private function processarCampo(array $dados, array $mapeamento)
     {
-        // ... (Mantido igual à sua Etapa 2) ...
         $cicloId = $mapeamento['ciclo_id'] ?? null;
         if (!$cicloId) throw new \Exception("ID do Ciclo ausente no mapeamento.");
         $label = trim($dados['nome do campo'] ?? $dados['label'] ?? '');
@@ -220,9 +251,55 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         );
     }
 
+    private function buscarOuCriarVinculo($classeModel, $nomePlanilha, $permiteAutoCadastro, $tipoVinculo)
+    {
+        $nomePlanilha = trim(preg_replace('/\s+/', ' ', $nomePlanilha));
+        if (empty($nomePlanilha)) return null;
+
+        $registrosBanco = $classeModel::all();
+        $melhorMatch = null;
+        $maiorScore = 0;
+
+        foreach ($registrosBanco as $registro) {
+            if (mb_strtolower(trim($registro->nome)) === mb_strtolower($nomePlanilha)) {
+                $melhorMatch = $registro;
+                $maiorScore = 100;
+                break;
+            }
+
+            $score = $this->calcularCompatibilidade($nomePlanilha, $registro->nome);
+            if ($score >= 50 && $score > $maiorScore) {
+                $maiorScore = $score;
+                $melhorMatch = $registro;
+            }
+        }
+
+        if ($melhorMatch) {
+            if ($maiorScore == 100) {
+                $this->relatorioAutoCadastro['100_porcento'][$tipoVinculo][] = $nomePlanilha;
+            } else {
+                $this->relatorioAutoCadastro['50_porcento'][$tipoVinculo][] = "'{$nomePlanilha}' ➔ '{$melhorMatch->nome}' (" . number_format($maiorScore, 1) . "%)";
+            }
+            return $melhorMatch->id;
+        }
+
+        if ($permiteAutoCadastro) {
+            $dadosNovo = ['nome' => $nomePlanilha];
+            
+            if (str_contains($classeModel, 'Curso')) $dadosNovo['status'] = 'Ativo';
+            if (str_contains($classeModel, 'Unidade')) $dadosNovo['status'] = 'Ativa';
+            
+            $novo = $classeModel::create($dadosNovo);
+            
+            $this->relatorioAutoCadastro['novos'][$tipoVinculo][] = $nomePlanilha;
+            return $novo->id;
+        }
+
+        return null;
+    }
+
     private function processarUsuario(array $dados)
     {
-        // ... (Mantido igual à sua Etapa 2) ...
         $cpfRaw = $dados['cpf'] ?? null;
         if (empty($cpfRaw)) throw new \Exception("A coluna 'CPF' é obrigatória.");
         $cpfLimpo = preg_replace('/[^0-9]/', '', $cpfRaw);
@@ -251,37 +328,68 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $dadosFixos = [];
         $dadosDinamicos = [];
 
-        foreach ($mapeamento as $colunaExcel => $config) {
-            $colunaValida = is_array($config) && isset($config['coluna_nome']) ? $config['coluna_nome'] : $colunaExcel;
+        $autoCadastroAtivo = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-            if (!isset($linhaOriginal[$colunaValida])) continue;
+        foreach ($mapeamento as $colunaPlanilha => $config) {
+            if (in_array($colunaPlanilha, ['ciclo_id', 'config_auto_cadastro', 'config_mesclar_duplicadas'])) continue;
 
-            $destino = is_array($config) ? ($config['destino'] ?? 'ignorar') : $config;
-            $tipoDado = is_array($config) ? ($config['tipo'] ?? 'texto') : 'texto';
-            
+            $destino = $config['destino'] ?? 'ignorar';
             if ($destino === 'ignorar') continue;
-            
-            $valor = trim($linhaOriginal[$colunaValida]);
 
-            if (!empty($valor) && in_array($tipoDado, ['data', 'data_hora'])) {
-                try {
-                    $formatoSaida = $tipoDado === 'data' ? 'Y-m-d' : 'Y-m-d H:i:s';
-                    $valor = \Carbon\Carbon::parse(str_replace('/', '-', $valor))->format($formatoSaida);
-                } catch (\Exception $e) {
-                    throw new \Exception("Data inválida na coluna '{$colunaValida}': {$valor}");
+            $valorPlanilha = trim((string) ($linhaOriginal[$colunaPlanilha] ?? ''));
+            if ($valorPlanilha === '') continue;
+
+            // ========================================================
+            // NOVO: CONVERSOR UNIVERSAL DE DADOS (Datas e Moedas)
+            // ========================================================
+            $tipoMapeado = $config['tipo'] ?? 'texto';
+
+            // Tratamento de Data (Inverte padrão BR DD/MM/YYYY para padrão DB YYYY-MM-DD)
+            if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data')) {
+                // Formato DD/MM/YYYY
+                if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $valorPlanilha, $matches)) {
+                    $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+                } 
+                // Formato DD/MM/YYYY HH:MM:SS
+                elseif (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(.*)$/', $valorPlanilha, $matches)) {
+                    $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]} {$matches[4]}";
                 }
             }
-            elseif (!empty($valor) && $tipoDado === 'monetario') {
-                $valor = floatval(preg_replace('/[^0-9.]/', '', str_replace(',', '.', $valor)));
+
+            // Tratamento Monetário (Limpa R$, pontos e ajusta vírgula)
+            if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
+                $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); // Mantém só números, vírgula e hífen
+                $valTemp = str_replace(',', '.', $valTemp);
+                if (is_numeric($valTemp)) {
+                    $valorPlanilha = $valTemp;
+                }
+            }
+
+            // INTERCEPTAÇÃO INTELIGENTE DE VÍNCULOS
+            if (in_array($destino, ['curso_id', 'unidade_id', 'turno_id'])) {
+                $classe = null;
+                $tipoLabel = '';
+                
+                if ($destino === 'curso_id') { $classe = \App\Models\Curso::class; $tipoLabel = 'Cursos'; }
+                if ($destino === 'unidade_id') { $classe = \App\Modules\Unidade\Domain\Models\Unidade::class; $tipoLabel = 'Unidades'; }
+                if ($destino === 'turno_id') { $classe = \App\Modules\Turno\Domain\Models\Turno::class; $tipoLabel = 'Turnos'; }
+                
+                $idVinculo = $this->buscarOuCriarVinculo($classe, $valorPlanilha, $autoCadastroAtivo, $tipoLabel);
+                
+                if ($idVinculo) {
+                    $dadosFixos[$destino] = $idVinculo;
+                } else {
+                    throw new \Exception("{$tipoLabel}: O nome '{$valorPlanilha}' não atingiu 50% de similaridade com o banco e o auto-cadastro está desativado.");
+                }
+                
+                continue; 
             }
 
             if (str_starts_with($destino, 'dinamico:')) {
-                $chaveDinamica = str_replace('dinamico:', '', $destino);
-                $dadosDinamicos[$chaveDinamica] = $valor;
-            } elseif ($destino === 'dados_dinamicos') {
-                $dadosDinamicos[Str::slug($colunaValida, '_')] = $valor;
+                $chaveNome = str_replace('dinamico:', '', $destino);
+                $dadosDinamicos[$chaveNome] = $valorPlanilha;
             } else {
-                $dadosFixos[$destino] = $valor;
+                $dadosFixos[$destino] = $valorPlanilha;
             }
         }
 
@@ -291,70 +399,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         if (empty($dadosFixos['cpf'])) $dadosFixos['cpf'] = null;
         if (empty($dadosFixos['email'])) $dadosFixos['email'] = null;
-
-        // =========================================================================
-        // MOTOR INTELIGENTE DE TRADUÇÃO DE IDS (Lido dinamicamente do Hub do Dev)
-        // =========================================================================
-
-        $configsRelacionamento = \App\Models\ImportacaoConfig::all();
-        $permiteAutoCadastro = $mapeamento['config_auto_cadastro'] ?? false;
-
-        foreach ($configsRelacionamento as $config) {
-            $coluna = $config->coluna;
-            
-            if (array_key_exists($coluna, $dadosFixos)) {
-                
-                if (!empty($dadosFixos[$coluna])) {
-                    if (!is_numeric($dadosFixos[$coluna])) {
-                        $termoOriginal = trim($dadosFixos[$coluna]);
-                        
-                        // =========================================================
-                        // FILTRO ANTI-LIXO (Limpa dados bagunçados de formulários)
-                        // =========================================================
-                        // 1. Remove tudo após a primeira quebra de linha oculta
-                        $termo = preg_replace('/[\r\n]+.*/s', '', $termoOriginal);
-                        // 2. Se o candidato marcou várias opções separadas por vírgula, pega só a primeira
-                        $termo = explode(',', $termo)[0];
-                        $termo = explode(';', $termo)[0];
-                        $termo = trim($termo);
-                        
-                        // 3. Trava final: impede cadastro de strings gigantes
-                        if (strlen($termo) > 80) {
-                            $termo = trim(substr($termo, 0, 80));
-                        }
-                        // =========================================================
-
-                        if ($coluna === 'unidade_id' && str_contains($termo, '-')) {
-                            $partes = explode('-', $termo);
-                            $termo = trim(end($partes));
-                        }
-
-                        $ModelClass = $config->model_class;
-                        $campoBusca = $config->campo_busca;
-
-                        $registro = $ModelClass::where($campoBusca, 'ilike', '%' . $termo . '%')->first();
-
-                        if (!$registro && $permiteAutoCadastro && $config->auto_cadastro) {
-                            $payload = $config->payload_padrao ?? [];
-                            $payload[$campoBusca] = $termo;
-                            
-                            if (!isset($payload['slug'])) {
-                                $payload['slug'] = Str::slug($termo);
-                            }
-                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) {
-                                $payload['horario_inicio'] = '00:00:00';
-                            }
-
-                            $registro = $ModelClass::create($payload);
-                        }
-
-                        $dadosFixos[$coluna] = $registro ? $registro->id : null;
-                    }
-                } else {
-                    $dadosFixos[$coluna] = null; 
-                }
-            }
-        }
 
         if (empty($dadosFixos['status_inscricao_id'])) {
             $dadosFixos['status_inscricao_id'] = 1; 
@@ -367,7 +411,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $mesclarDuplicatas = filter_var($mapeamento['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         Inscricao::withoutEvents(function () use ($dadosFixos, $mesclarDuplicatas) {
-            // Se houver CPF e ciclo definido, verifica se já existe inscrição para o mesmo ciclo
             if (!empty($dadosFixos['cpf']) && !empty($dadosFixos['ciclo_id'])) {
                 $inscricaoExistente = Inscricao::where('cpf', $dadosFixos['cpf'])
                                                ->where('ciclo_id', $dadosFixos['ciclo_id'])
@@ -378,42 +421,33 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo. Ative a opção 'Mesclar Duplicadas' caso deseje atualizar o cadastro.", 23505);
                     }
 
-                    // MODO MESCLAR: Pega os dados existentes do banco e preserva o que já tem valor
                     $dadosAtuais = $inscricaoExistente->toArray();
                     
-                    // Tratamento especial para mesclar JSON (Campos dinâmicos)
                     $dinamicoAntigo = is_string($inscricaoExistente->dados_dinamicos) ? json_decode($inscricaoExistente->dados_dinamicos, true) : ($inscricaoExistente->dados_dinamicos ?? []);
                     $dinamicoNovo = $dadosFixos['dados_dinamicos'] ?? [];
                     
                     foreach ($dinamicoNovo as $chaveNova => $valorNovo) {
-                        // Só sobrescreve se o campo antigo estava vazio ou não existia
                         if (!isset($dinamicoAntigo[$chaveNova]) || empty(trim($dinamicoAntigo[$chaveNova]))) {
                             $dinamicoAntigo[$chaveNova] = $valorNovo;
                         }
                     }
                     $dadosFixos['dados_dinamicos'] = $dinamicoAntigo;
 
-                    // Avalia os dados fixos
                     foreach ($dadosFixos as $coluna => $valorImportado) {
-                        // Exceções e campos que sempre devem ser preservados e não verificados
                         if (in_array($coluna, ['id', 'created_at', 'updated_at', 'student_id', 'dados_dinamicos', 'origem'])) continue;
                         
-                        // O valor atual do banco está preenchido?
                         $valorAtualBanco = $dadosAtuais[$coluna] ?? null;
                         
-                        // Se o banco JÁ TEM um dado preenchido e não for null/vazio, removemos o dado da planilha para evitar que sobreponha
                         if ($valorAtualBanco !== null && trim((string)$valorAtualBanco) !== '') {
                             unset($dadosFixos[$coluna]);
                         }
                     }
 
-                    // Executa a mescla salvando apenas o que "sobrou" na variável dadosFixos
                     $inscricaoExistente->update($dadosFixos);
-                    return; // Aborta para não chegar no create() abaixo
+                    return;
                 }
             }
 
-            // Se for CPF novo (ou sem CPF), cai no fluxo padrão de criação
             Inscricao::create($dadosFixos);
         });
     }

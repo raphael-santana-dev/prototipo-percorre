@@ -13,10 +13,11 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use App\Traits\ComPadraoListagem;
 use App\Helpers\BreadcrumbHelper;
+use App\Traits\FuzzyMatchingTrait;
 
 class ImportacaoManager extends Component
 {
-    use WithFileUploads, WithPagination, ComPadraoListagem;
+    use WithFileUploads, WithPagination, ComPadraoListagem, FuzzyMatchingTrait;
 
     public array $breadcrumbs = [];
 
@@ -296,11 +297,57 @@ class ImportacaoManager extends Component
     private function inicializarMapeamentoManualmente()
     {
         $this->mapeamento = [];
-        foreach ($this->cabecalhos as $index => $coluna) {
+
+        // Consolida todas as opções de destino (nativas e dinâmicas) num único array de busca
+        $todosDestinos = [];
+        foreach ($this->opcoesMapeamento as $chave => $label) {
+            $todosDestinos[$chave] = $label;
+        }
+        foreach ($this->camposDinamicosDisponiveis as $name => $label) {
+            $todosDestinos["dinamico:{$name}"] = $label;
+        }
+
+        // Percorre cada coluna da planilha enviada pelo usuário
+        foreach ($this->cabecalhos as $index => $colunaPlanilha) {
+            $melhorDestino = 'ignorar';
+            $maiorScore = 0;
+            $tipoSugerido = 'texto';
+
+            // 1. Testa a similaridade da coluna da planilha contra todos os destinos do sistema
+            foreach ($todosDestinos as $chaveDestino => $labelDestino) {
+                
+                // Calcula contra o rótulo amigável (ex: "Data de Nascimento")
+                $scoreLabel = $this->calcularCompatibilidade($colunaPlanilha, $labelDestino);
+                
+                // Calcula contra o nome da chave interna (ex: "data_nascimento")
+                $chaveLimpa = str_replace('dinamico:', '', $chaveDestino);
+                $scoreChave = $this->calcularCompatibilidade($colunaPlanilha, str_replace('_', ' ', $chaveLimpa));
+                
+                // Pega a maior nota entre as duas comparações
+                $scoreFinal = max($scoreLabel, $scoreChave);
+
+                // Regra solicitada: Só considera se for 50% ou mais E se for a maior nota encontrada até agora
+                if ($scoreFinal >= 50 && $scoreFinal > $maiorScore) {
+                    $maiorScore = $scoreFinal;
+                    $melhorDestino = $chaveDestino;
+                }
+            }
+
+            // 2. Infere inteligentemente o tipo de dado para facilitar a vida do usuário
+            $colunaLower = strtolower($colunaPlanilha);
+            if (str_contains($colunaLower, 'data') || str_contains($colunaLower, 'nascimento')) {
+                $tipoSugerido = 'data';
+            } elseif (str_contains($colunaLower, 'renda') || str_contains($colunaLower, 'valor') || str_contains($colunaLower, 'salario')) {
+                $tipoSugerido = 'monetario';
+            } elseif (str_contains($colunaLower, 'possui') || str_contains($colunaLower, 'bolsista')) {
+                $tipoSugerido = 'booleano';
+            }
+
+            // 3. Monta o array da interface
             $this->mapeamento[$index] = [
-                'coluna_nome' => $coluna, 
-                'destino' => 'ignorar', 
-                'tipo' => 'texto'
+                'coluna_nome' => $colunaPlanilha, 
+                'destino' => $melhorDestino, 
+                'tipo' => $tipoSugerido
             ];
         }
     }
