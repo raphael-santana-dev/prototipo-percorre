@@ -64,12 +64,12 @@
                 <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
                     @if(feature('matricula.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.editar')))
                         <a href="{{ route('matriculas.edit', $matricula->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600 inline-block" title="Editar Matrícula">
-                            <i class="text-xl ph ph-pencil-simple"></i>
+                            <i class="text-lg ph ph-pencil-simple"></i>
                         </a>
                     @endif
                     @if(feature('matricula.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('matricula.excluir')))
                         <button wire:click="excluir({{ $matricula->id }})" wire:confirm="Isso apagará a matrícula deste aluno. Deseja continuar?" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600 inline-block" title="Excluir">
-                            <i class="text-xl ph ph-trash"></i>
+                            <i class="text-lg ph ph-trash"></i>
                         </button>
                     @endif
                 </td>

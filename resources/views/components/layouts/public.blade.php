@@ -102,8 +102,8 @@
 
                     <div class="flex md:hidden">
                         <button @click="toggleTema()" type="button" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-300">
-                            <i class="text-xl ph ph-moon" x-show="tema === 'light'"></i>
-                            <i class="text-xl ph ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
+                            <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
+                            <i class="text-lg ph ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
                         </button>
                     </div>
 

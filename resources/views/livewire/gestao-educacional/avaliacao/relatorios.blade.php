@@ -80,7 +80,7 @@
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     @if(feature('avaliacao.responder') && (auth()->user()->hasRole('dev') || auth()->user()->can('avaliacao.responder')))
                         <a href="{{ route('avaliacoes.responder', ['periodo' => $av->periodo_id, 'turma' => $av->turma_id, 'student' => $av->student_id]) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Matriz Completa">
-                            <i class="text-xl ph ph-eye"></i>
+                            <i class="text-lg ph ph-eye"></i>
                         </a>
                     @endif
                 </td>

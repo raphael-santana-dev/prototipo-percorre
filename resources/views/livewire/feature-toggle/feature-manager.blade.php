@@ -85,10 +85,10 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                        <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                             <i class="text-lg ph ph-pencil-simple"></i>
                         </button>
-                        <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir?') || event.stopImmediatePropagation()">
+                        <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir?') || event.stopImmediatePropagation()">
                             <i class="text-lg ph ph-trash"></i>
                         </button>
                     </div>

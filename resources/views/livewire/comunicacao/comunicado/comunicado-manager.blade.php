@@ -106,11 +106,11 @@
                         <div class="flex items-center justify-end gap-1">
                             @if(feature('comunicado.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('comunicado.excluir')))
                                 @if($comunicado->status === 'pendente')
-                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50" title="Cancelar Agendamento" onclick="confirm('Tem certeza que deseja cancelar este envio?') || event.stopImmediatePropagation()">
+                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Cancelar Agendamento" onclick="confirm('Tem certeza que deseja cancelar este envio?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph ph-x-square"></i>
                                     </button>
                                 @else
-                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100" title="Excluir Histórico" onclick="confirm('Excluir este histórico?') || event.stopImmediatePropagation()">
+                                    <button wire:click="excluir({{ $comunicado->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-gray-900 hover:bg-gray-100" title="Excluir Histórico" onclick="confirm('Excluir este histórico?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph ph-trash"></i>
                                     </button>
                                 @endif
