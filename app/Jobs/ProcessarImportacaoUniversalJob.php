@@ -35,7 +35,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         'novos'        => []
     ];
 
-    // VARIÁVEIS DE CACHE DE MEMÓRIA (Performance)
     protected $cacheVinculos = [];
     protected $configsRelacionamentoCache = null;
 
@@ -64,11 +63,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $linhaAtual++;
 
                 if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
-                    if ($linhaAtual % 10 === 0) {
-                        $this->importacao->update([
-                            'linhas_processadas' => $linhaAtual,
-                            'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
-                        ]);
+                    if ($linhaAtual % 50 === 0) {
+                        $this->importacao->update(['linhas_processadas' => $linhaAtual]);
                     }
                     continue; 
                 }
@@ -113,12 +109,16 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     ];
                 }
 
-                if ($errosCriticos >= 100) {
-                    throw new \Exception("Excesso de erros estruturais detectados (100+). Processamento abortado por segurança.");
+                // Aumentado para 1000 erros críticos antes de abortar a operação
+                if ($errosCriticos >= 1000) {
+                    throw new \Exception("Excesso de erros estruturais detectados (1000+). Processamento abortado por segurança.");
                 }
 
-                if ($linhaAtual % 50 === 0) {
-                    $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+                if ($linhaAtual % 10 === 0) {
+                    $this->importacao->update([
+                        'linhas_processadas' => $linhaAtual,
+                        'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
+                    ]);
                 }
             }
 
@@ -180,7 +180,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'linha' => 'Crítico/Sistema', 
                 'tipo' => 'Falha Crítica',
                 'mensagem' => $e->getMessage(),
-                'amigavel' => 'A importação falhou de maneira irrecuperável. Verifique se o arquivo está no formato correto.'
+                'amigavel' => 'A importação falhou de maneira irrecuperável: ' . $e->getMessage()
             ]);
             $this->importacao->update([
                 'status' => 'erro', 
@@ -197,16 +197,12 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $cabecalhoRaw = file_get_contents($caminho, false, null, 0, 250);
                 $reader->useDelimiter(strpos($cabecalhoRaw, ';') !== false ? ';' : ',');
             }
-            
-            // OTIMIZAÇÃO EXTREMA: Usa um Generator (Yield) para ler o arquivo linha por linha
-            // Isso impede que o PHP guarde as 5957 linhas na memória de uma vez só
             foreach ($reader->getRows() as $rowProperties) {
                 yield $rowProperties;
             }
             return;
         }
 
-        // Se for JSON ou XML, não tem jeito, precisa jogar na memória
         if ($formato === 'json') {
             $dados = json_decode(file_get_contents($caminho), true);
             foreach ($dados as $row) yield $row;
@@ -218,7 +214,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $json = json_encode($xml);
             $dados = json_decode($json, true);
             $primeiraChave = array_key_first($dados);
-            
             $dataset = $dados[$primeiraChave] ?? $dados;
             foreach ($dataset as $row) yield $row;
             return;
@@ -273,7 +268,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $nomePlanilha = trim(preg_replace('/\s+/', ' ', $nomePlanilha));
         if (empty($nomePlanilha)) return null;
 
-        // OTIMIZAÇÃO: Consulta no banco apenas a 1ª vez e salva na memória RAM!
         if (!isset($this->cacheVinculos[$classeModel])) {
             $this->cacheVinculos[$classeModel] = $classeModel::all();
         }
@@ -313,7 +307,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             
             $novo = $classeModel::create($dadosNovo);
             
-            // ATENÇÃO: Adiciona o item recém-criado na memória para as próximas linhas
             $this->cacheVinculos[$classeModel]->push($novo);
             
             $this->relatorioAutoCadastro['novos'][$tipoVinculo][] = $nomePlanilha;
@@ -366,15 +359,44 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
             $tipoMapeado = $config['tipo'] ?? 'texto';
 
+            // ========================================================
+            // CORREÇÃO: INTERPRETADOR UNIVERSAL DE DATAS
+            // ========================================================
             if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data')) {
-                if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $valorPlanilha, $matches)) {
-                    $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+                $valData = str_replace('/', '-', $valorPlanilha); // Padroniza tudo para hífen
+                
+                // Formato de 2 dígitos no ano (DD-MM-YY ou MM-DD-YY)
+                if (preg_match('/^(\d{2})-(\d{2})-(\d{2})$/', $valData, $m)) {
+                    $p1 = (int)$m[1];
+                    $p2 = (int)$m[2];
+                    $y = (int)$m[3];
+                    $year = $y < 50 ? 2000 + $y : 1900 + $y; // Assume que 00-49 é anos 2000, e 50-99 é 1900
+                    
+                    if ($p1 > 12) { // Ex: 31-01-10 (DD-MM)
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+                    } elseif ($p2 > 12) { // Ex: 01-31-10 (MM-DD)
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p1, $p2);
+                    } else { // Assume padrão Brasileiro (DD-MM) para duvidosos
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+                    }
                 } 
-                elseif (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(.*)$/', $valorPlanilha, $matches)) {
-                    $valorPlanilha = "{$matches[3]}-{$matches[2]}-{$matches[1]} {$matches[4]}";
+                // Formato de 4 dígitos no ano (DD-MM-YYYY ou MM-DD-YYYY)
+                elseif (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $valData, $m)) {
+                    $p1 = (int)$m[1];
+                    $p2 = (int)$m[2];
+                    $year = (int)$m[3];
+
+                    if ($p1 > 12) { 
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+                    } elseif ($p2 > 12) { 
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p1, $p2);
+                    } else { 
+                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
+                    }
                 }
             }
 
+            // Tratamento Monetário
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
                 $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); 
                 $valTemp = str_replace(',', '.', $valTemp);
@@ -417,7 +439,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         if (empty($dadosFixos['cpf'])) $dadosFixos['cpf'] = null;
         if (empty($dadosFixos['email'])) $dadosFixos['email'] = null;
 
-        // OTIMIZAÇÃO: Tabela acessória também foi jogada no Cache de Memória
         if ($this->configsRelacionamentoCache === null) {
             $this->configsRelacionamentoCache = \App\Models\ImportacaoConfig::all();
         }
@@ -492,11 +513,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 
                 if ($inscricaoExistente) {
                     if (!$mesclarDuplicatas) {
-                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo. Ative a opção 'Mesclar Duplicadas' caso deseje atualizar o cadastro.", 23505);
+                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo.", 23505);
                     }
 
                     $dadosAtuais = $inscricaoExistente->toArray();
-                    
                     $dinamicoAntigo = is_string($inscricaoExistente->dados_dinamicos) ? json_decode($inscricaoExistente->dados_dinamicos, true) : ($inscricaoExistente->dados_dinamicos ?? []);
                     $dinamicoNovo = $dadosFixos['dados_dinamicos'] ?? [];
                     
@@ -509,7 +529,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
                     foreach ($dadosFixos as $coluna => $valorImportado) {
                         if (in_array($coluna, ['id', 'created_at', 'updated_at', 'student_id', 'dados_dinamicos', 'origem'])) continue;
-                        
                         $valorAtualBanco = $dadosAtuais[$coluna] ?? null;
                         
                         if ($valorAtualBanco !== null && trim((string)$valorAtualBanco) !== '') {
