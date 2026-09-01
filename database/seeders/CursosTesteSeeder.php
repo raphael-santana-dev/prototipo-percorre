@@ -51,8 +51,6 @@ class CursosTesteSeeder extends Seeder
                 'slug' => 'ia',
                 'status' => 'Ativo',
                 'turnos' => ['manha', 'tarde', 'noite'],
-                'min_idade' => 16,
-                'max_idade' => 35,
                 'permite_estado_diferente' => true,
             ],
 

@@ -25,8 +25,9 @@ class DatabaseSeeder extends Seeder
             UnidadesTesteSeeder::class,
             CursosTesteSeeder::class,
             EmpresasSeeder::class,
-            Ciclo2026::class,
-            CamposFormularioSeeder::class
+            Ciclo2026Seeder::class,
+            CamposFormularioSeeder::class,
+            ImportacaoConfigSeeder::class
         ]);
     }
 }

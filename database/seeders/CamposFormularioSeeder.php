@@ -488,7 +488,7 @@ class CamposFormularioSeeder extends Seeder
             // Associa o campo dinamicamente com o ciclo (substituindo ID hardcoded)
             $campo['ciclo_id'] = $cicloId; 
             
-            DB::table('campos_formularios')->insertOrIgnore(array_merge($campo, [
+            DB::table('campo_formularios')->insertOrIgnore(array_merge($campo, [
                 'created_at' => now(),
                 'updated_at' => now(),
             ]));
