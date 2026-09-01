@@ -51,12 +51,21 @@
             <livewire:chart-widget chartId="grafico-unidades" :config="$graficoUnidades" wire:key="widget-unidades-{{ $filtroCiclo }}" />
         </div>
 
-        <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-users-three text-purpura-500"></i> Perfil e Demografia (JSON Builders)</h3>
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-users-three text-purpura-500"></i> Perfil e Demografia (Campos Nativos e Form Builder)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- Gráficos Demográficos Nativos -->
             <livewire:chart-widget chartId="grafico-idades" :config="$graficoIdades" wire:key="widget-idades-{{ $filtroCiclo }}" />
-            <livewire:chart-widget chartId="grafico-genero" :config="$graficoGenero" wire:key="widget-genero-{{ $filtroCiclo }}" />
-            <livewire:chart-widget chartId="grafico-raca" :config="$graficoRaca" wire:key="widget-raca-{{ $filtroCiclo }}" />
             <livewire:chart-widget chartId="grafico-pcd" :config="$graficoPCD" wire:key="widget-pcd-{{ $filtroCiclo }}" />
+
+            <!-- Loop Inteligente: Imprime TODOS os Selects/Radios criados no Form Builder -->
+            @foreach($graficosDinamicos as $grafico)
+                <livewire:chart-widget 
+                    chartId="{{ $grafico['id'] }}" 
+                    :config="$grafico['config']" 
+                    wire:key="widget-{{ $grafico['id'] }}-{{ $filtroCiclo }}" />
+            @endforeach
+
         </div>
     @endif
 </div>
