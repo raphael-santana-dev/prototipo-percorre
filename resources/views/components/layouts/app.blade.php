@@ -162,9 +162,17 @@
                                     <button @click="subOpen = !subOpen" class="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                         Matrículas <i class="ph ph-caret-right text-xs transition-transform duration-200" :class="{'rotate-90': subOpen}"></i>
                                     </button>
-                                    <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-48 dark:bg-gray-800 dark:border-gray-700" x-cloak>
+                                    <div x-show="subOpen" class="absolute top-0 py-2 mt-0 bg-white border border-gray-100 rounded-lg shadow-xl left-full ml-1 w-56 dark:bg-gray-800 dark:border-gray-700" x-cloak>
                                         <a href="{{ route('matriculas.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Matrículas</a>
                                         @can('matricula.criar') <a href="{{ route('matriculas.create') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Nova Matrícula</a> @endcan
+                                        
+                                        <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
+                                        
+                                        <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Acompanhamento (Portal IA)</a>
+                                        <a href="{{ route('matriculas.analise-manual') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Central de Análise Manual</a>
+                                        @role('dev')
+                                            <a href="{{ route('matriculas.configuracao') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Configuração Motor IA</a>
+                                        @endrole
                                     </div>
                                 </div>
                                 @endcan
@@ -316,17 +324,23 @@
                             @endcanany
 
                             @can('matricula.listar')
-                            <div x-data="{ subOpen: false }" class="space-y-1">
-                                <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                                    <span>Matrículas</span>
-                                    <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>
-                                </button>
-                                <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
-                                    <a href="{{ route('matriculas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Matrículas</a>
-                                    @can('matricula.criar') <a href="{{ route('matriculas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Matrícula</a> @endcan
-                                </div>
-                            </div>
-                            @endcan
+<div x-data="{ subOpen: false }" class="space-y-1">
+    <button @click="subOpen = !subOpen" class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+        <span>Matrículas</span>
+        <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': subOpen}"></i>
+    </button>
+    <div x-show="subOpen" class="pl-4 space-y-1" x-cloak>
+        <a href="{{ route('matriculas.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Ver Matrículas</a>
+        @can('matricula.criar') <a href="{{ route('matriculas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Matrícula</a> @endcan
+        
+        <a href="{{ route('matriculas.acompanhamento') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Acompanhamento (Portal IA)</a>
+        <a href="{{ route('matriculas.analise-manual') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Central de Análise Manual</a>
+        @role('dev')
+            <a href="{{ route('matriculas.configuracao') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Config. Motor IA</a>
+        @endrole
+    </div>
+</div>
+@endcan
 
                             @can('turma.listar')
                             <div x-data="{ subOpen: false }" class="space-y-1">
