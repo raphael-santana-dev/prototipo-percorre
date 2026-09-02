@@ -5,9 +5,11 @@ namespace App\Modules\Matricula\Domain\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Inscricao;
 use App\Models\User;
+use App\Traits\RegistraAuditoria;
 
 class DocumentoMatricula extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'documentos_matricula';
     protected $guarded = ['id'];
     protected $casts = [
