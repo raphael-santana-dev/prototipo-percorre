@@ -11,6 +11,7 @@ use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\RateLimiter;
 
 #[Layout('components.layouts.public')]
 #[Title('Portal de Matrícula')]
@@ -25,7 +26,7 @@ class PortalMatricula extends Component
     public $arquivosEnviados = [];
     public $concluido = false;
 
-    // Variáveis de Segurança (Desafio de Identidade)
+    // Desafio de Identidade
     public $autenticado = false;
     public $cpf_acesso = '';
     public $data_nascimento_acesso = '';
@@ -36,7 +37,7 @@ class PortalMatricula extends Component
             ->where('token_matricula', $token)
             ->firstOrFail();
 
-        // Se o usuário já estiver logado no sistema como o Aluno dono desta inscrição, pula o desafio
+        // Pula o desafio caso o estudante já possua sessão ativa correspondente
         if (auth('student')->check() && auth('student')->id() === $this->inscricao->student_id) {
             $this->autenticado = true;
         }
@@ -47,6 +48,15 @@ class PortalMatricula extends Component
 
     public function verificarIdentidade()
     {
+        $throttleKey = 'matricula-auth:' . $this->token . '|' . request()->ip();
+
+        // Trava de segurança: máximo de 5 tentativas a cada 60 segundos
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $segundos = RateLimiter::availableIn($throttleKey);
+            $this->addError('falha_auth', "Muitas tentativas incorretas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.");
+            return;
+        }
+
         $this->validate([
             'cpf_acesso' => 'required|min:11',
             'data_nascimento_acesso' => 'required|date'
@@ -55,20 +65,30 @@ class PortalMatricula extends Component
             'data_nascimento_acesso.required' => 'A Data de Nascimento é obrigatória.'
         ]);
 
-        $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf_acesso);
-        $cpfInscricaoLimpo = preg_replace('/[^0-9]/', '', $this->inscricao->cpf);
+        $cpfLimpo = preg_replace('/[^0-9]/', '', (string)$this->cpf_acesso);
+        $cpfInscricaoLimpo = preg_replace('/[^0-9]/', '', (string)$this->inscricao->cpf);
 
-        if ($cpfLimpo === $cpfInscricaoLimpo && $this->data_nascimento_acesso === $this->inscricao->data_nascimento) {
+        // Comparação segura contra Timing Attacks
+        $cpfValido = hash_equals($cpfInscricaoLimpo, $cpfLimpo);
+        $dataValida = !empty($this->inscricao->data_nascimento) 
+            && hash_equals((string)$this->inscricao->data_nascimento, (string)$this->data_nascimento_acesso);
+
+        if ($cpfValido && $dataValida) {
+            RateLimiter::clear($throttleKey);
             $this->autenticado = true;
-            $this->dispatch('sucesso', msg: 'Identidade confirmada. Cofre liberado!');
+            $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso.');
         } else {
-            $this->addError('falha_auth', 'Os dados informados não conferem com o titular desta matrícula.');
+            RateLimiter::hit($throttleKey, 60);
+            $restantes = RateLimiter::remaining($throttleKey, 5);
+            $this->addError('falha_auth', "Dados incorretos. Você tem mais {$restantes} tentativa(s) antes do bloqueio.");
         }
     }
 
     public function carregarStatusArquivos()
     {
-        $documentosSalvos = DocumentoMatricula::where('inscricao_id', $this->inscricao->id)->get()->keyBy('documento_exigido_id');
+        $documentosSalvos = DocumentoMatricula::where('inscricao_id', $this->inscricao->id)
+            ->get()
+            ->keyBy('documento_exigido_id');
 
         foreach ($this->documentosExigidos as $doc) {
             if ($documentosSalvos->has($doc->id)) {
@@ -91,16 +111,28 @@ class PortalMatricula extends Component
 
     public function updatedUploads($value, $documentoExigidoId)
     {
-        $this->validate(["uploads.{$documentoExigidoId}" => 'image|max:10240']);
+        // Limita extensão e tamanho máximo (10MB)
+        $this->validate([
+            "uploads.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp|max:10240'
+        ], [
+            "uploads.{$documentoExigidoId}.mimes" => 'Apenas arquivos JPEG, PNG e WebP são aceitos.',
+            "uploads.{$documentoExigidoId}.max" => 'O tamanho máximo do documento é de 10MB.'
+        ]);
 
         $file = $this->uploads[$documentoExigidoId];
-        $documentoModel = DocumentoExigido::find($documentoExigidoId);
-        $caminho = $file->store("matriculas/{$this->inscricao->id}");
-        
+        $documentoModel = DocumentoExigido::findOrFail($documentoExigidoId);
+
         $docMatricula = DocumentoMatricula::firstOrNew([
             'inscricao_id' => $this->inscricao->id,
             'documento_exigido_id' => $documentoExigidoId,
         ]);
+
+        // Mitigação DoS: Remove arquivo órfão antigo antes de gravar o novo
+        if ($docMatricula->arquivo_caminho && Storage::disk('local')->exists($docMatricula->arquivo_caminho)) {
+            Storage::disk('local')->delete($docMatricula->arquivo_caminho);
+        }
+
+        $caminho = $file->store("matriculas/{$this->inscricao->id}");
 
         $docMatricula->arquivo_caminho = $caminho;
         $docMatricula->arquivo_extensao = $file->getClientOriginalExtension();
@@ -118,7 +150,10 @@ class PortalMatricula extends Component
             } else {
                 $docMatricula->status_analise = 'invalido_ia';
             }
-            $docMatricula->log_ia = ['motivo_rejeicao' => $resultadoIa['motivo_rejeicao'], 'raw' => $resultadoIa['raw'] ?? []];
+            $docMatricula->log_ia = [
+                'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'],
+                'raw' => $resultadoIa['raw'] ?? []
+            ];
         }
 
         $docMatricula->save();
@@ -131,7 +166,7 @@ class PortalMatricula extends Component
             if ($doc->is_obrigatorio) {
                 $status = $this->arquivosEnviados[$doc->id]['status'] ?? 'pendente';
                 if (in_array($status, ['pendente', 'invalido_ia'])) {
-                    $this->dispatch('erro', msg: 'Você possui documentos pendentes ou inválidos. Faça o upload corretamente.');
+                    $this->dispatch('erro', msg: 'Documentos pendentes ou inválidos. Complete os uploads antes de finalizar.');
                     return;
                 }
             }
