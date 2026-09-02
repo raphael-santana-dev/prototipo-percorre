@@ -6,8 +6,7 @@
             <p class="mt-2 text-sm text-gray-600">Curso de <b>{{ $inscricao->curso->nome ?? 'Não definido' }}</b></p>
         </div>
 
-        <div class="bg-white py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden">
-            
+        <div class="py-4 px-4 sm:px-0 relative">            
             <!-- TELA 1: DESAFIO DE SEGURANÇA -->
             @if(!$autenticado)
                 <div class="max-w-md mx-auto py-4">
