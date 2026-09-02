@@ -39,19 +39,21 @@
                     $isGlobal = $isEspecial && $escopo === 'todos';
                 @endphp
 
-                <div class="flex flex-col md:flex-row items-start md:items-center gap-3 py-3 px-4 hover:bg-gray-50/50 transition-colors {{ $isEspecial ? 'bg-indigo-50/20' : '' }}" wire:key="regra-{{ $index }}">
+                <!-- ITEMS-START adicionado para que os inputs fiquem alinhados no topo caso a mensagem de erro quebre a linha -->
+                <div class="flex flex-col md:flex-row items-start gap-3 py-3 px-4 hover:bg-gray-50/50 transition-colors {{ $isEspecial ? 'bg-indigo-50/20' : '' }}" wire:key="regra-{{ $index }}">
                     
-                    <div class="hidden md:block w-6 text-xs font-black text-gray-300 text-center">
+                    <div class="hidden md:block w-6 text-xs font-black text-gray-300 text-center mt-1.5">
                         {{ $index + 1 }}
                     </div>
 
                     <!-- 1. TIPO DE CÁLCULO -->
                     <div class="w-full md:w-40 shrink-0">
-                        <select wire:model.live="regras.{{ $index }}.tipo_regra" class="w-full border-gray-200 rounded text-xs focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-gray-50' }}">
+                        <select wire:model.live="regras.{{ $index }}.tipo_regra" class="w-full border-gray-200 rounded text-xs focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-gray-50' }} @error("regras.$index.tipo_regra") border-red-500 bg-red-50 text-red-700 @enderror">
                             <option value="padrao">Padrão (+ Pts)</option>
                             <option value="bonus_por_acerto">Bônus Acerto</option>
                             <option value="multiplicador_percentual">Multiplicador (%)</option>
                         </select>
+                        @error("regras.$index.tipo_regra") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- 1.5 ESCOPO E CAMPOS -->
@@ -62,7 +64,7 @@
                     @else
                         @if($isEspecial)
                             <div class="w-full md:w-32 shrink-0">
-                                <select wire:model.live="regras.{{ $index }}.escopo" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm">
+                                <select wire:model.live="regras.{{ $index }}.escopo" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm @error("regras.$index.escopo") border-red-500 bg-red-50 text-red-700 @enderror">
                                     <option value="especifico">Específico</option>
                                     <option value="todos">Global</option>
                                 </select>
@@ -70,17 +72,18 @@
                         @endif
                         
                         <div class="w-full md:flex-1">
-                            <select wire:model="regras.{{ $index }}.campo" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm">
+                            <select wire:model="regras.{{ $index }}.campo" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm @error("regras.$index.campo") border-red-500 bg-red-50 text-red-700 @enderror">
                                 <option value="">Qual campo será avaliado?</option>
                                 @foreach($camposDisponiveis as $campo)
                                     <option value="{{ $campo['name'] }}">{{ Str::limit($campo['label'], 40) }}</option>
                                 @endforeach
                             </select>
+                            @error("regras.$index.campo") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                         </div>
 
                         <!-- 3. CONDIÇÃO -->
                         <div class="w-full md:w-32 shrink-0">
-                            <select wire:model="regras.{{ $index }}.operador" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm">
+                            <select wire:model="regras.{{ $index }}.operador" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm @error("regras.$index.operador") border-red-500 bg-red-50 text-red-700 @enderror">
                                 <option value="=">Igual a</option>
                                 <option value="!=">Diferente de</option>
                                 <option value=">=">Maior ou igual a</option>
@@ -92,22 +95,26 @@
 
                         <!-- 4. VALOR ESPERADO -->
                         <div class="w-full md:w-48 shrink-0">
-                            <input type="text" wire:model="regras.{{ $index }}.valor" placeholder="Ex: sim, não" class="w-full border-gray-200 rounded text-xs bg-white focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm">
+                            <input type="text" wire:model="regras.{{ $index }}.valor" placeholder="Ex: sim, não" class="w-full border-gray-200 rounded text-xs bg-white focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm @error("regras.$index.valor") border-red-500 bg-red-50 text-red-700 @enderror">
+                            @error("regras.$index.valor") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                         </div>
                     @endif
 
                     <!-- 5. PONTOS -->
-                    <div class="w-full md:w-24 shrink-0 relative flex items-center gap-2 md:block">
-                        <span class="md:hidden text-[10px] font-bold text-gray-500 uppercase">Valor:</span>
-                        <input type="number" step="0.1" wire:model="regras.{{ $index }}.pontos" placeholder="0" class="w-full border-gray-200 rounded text-xs font-bold text-center focus:ring-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-100 text-indigo-700' : 'bg-green-50 text-green-700' }}">
-                        @if($tipo === 'multiplicador_percentual')
-                            <span class="absolute right-3 top-[7px] text-[10px] font-black text-indigo-400">%</span>
-                        @endif
+                    <div class="w-full md:w-24 shrink-0 flex flex-col md:block">
+                        <div class="relative flex items-center gap-2 md:block">
+                            <span class="md:hidden text-[10px] font-bold text-gray-500 uppercase">Valor:</span>
+                            <input type="number" step="0.1" wire:model="regras.{{ $index }}.pontos" placeholder="0" class="w-full border-gray-200 rounded text-xs font-bold text-center focus:ring-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-100 text-indigo-700' : 'bg-green-50 text-green-700' }} @error("regras.$index.pontos") border-red-500 bg-red-50 text-red-700 @enderror">
+                            @if($tipo === 'multiplicador_percentual')
+                                <span class="absolute right-3 top-[7px] text-[10px] font-black text-indigo-400">%</span>
+                            @endif
+                        </div>
+                        @error("regras.$index.pontos") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- 6. AÇÃO -->
                     @if(feature('ciclo.regras') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.regras')))
-                        <div class="w-full md:w-10 shrink-0 text-right md:text-center mt-2 md:mt-0">
+                        <div class="w-full md:w-10 shrink-0 text-right md:text-center mt-1 md:mt-0">
                             <button type="button" wire:click="removeRegra({{ $index }})" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition" title="Excluir">
                                 <i class="ph-bold ph-trash text-base"></i>
                             </button>
