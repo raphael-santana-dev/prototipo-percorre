@@ -22,6 +22,7 @@ class PeriodEdit extends Component
     public array $turnosSelecionados = []; 
     public array $statusSelecionados = [];
     public array $ofertasVagas = [];
+    public $novoStatusSelecionado = '';
 
     // Controles do Explorer (macOS Style)
     public $activeUnidadeId = null;
@@ -59,6 +60,11 @@ class PeriodEdit extends Component
                 'idade_max' => $oferta->idade_max,
             ];
         }
+
+        $statusOrdenados = $ciclo->statusPipeline->sortBy(function($status) {
+            return $status->pivot->ordem ?? 999;
+        });
+        $this->statusSelecionados = $statusOrdenados->pluck('id')->map(fn($v) => (string)$v)->toArray();
     }
 
     // --- MÉTODOS DO EXPLORER ---
@@ -90,10 +96,24 @@ class PeriodEdit extends Component
         }
     }
 
-    public function toggleTodosStatus()
+    public function adicionarStatusPipeline()
     {
-        $todos = StatusInscricao::pluck('id')->map(fn($v) => (string)$v)->toArray();
-        $this->statusSelecionados = (count($this->statusSelecionados) === count($todos)) ? [] : $todos;
+        if (!empty($this->novoStatusSelecionado) && !in_array($this->novoStatusSelecionado, $this->statusSelecionados)) {
+            $this->statusSelecionados[] = $this->novoStatusSelecionado;
+        }
+        $this->novoStatusSelecionado = '';
+    }
+
+    public function removerStatusPipeline($id)
+    {
+        // Reseta as chaves do array para não quebrar a ordem indexada ao remover um item no meio
+        $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id]));
+    }
+
+    public function atualizarOrdemStatus($ordemIds)
+    {
+        // Esta função é chamada via Javascript sempre que o usuário solta um card
+        $this->statusSelecionados = $ordemIds;
     }
 
     public function addOferta()

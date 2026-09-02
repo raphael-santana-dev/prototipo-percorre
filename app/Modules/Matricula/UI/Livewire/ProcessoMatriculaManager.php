@@ -103,7 +103,7 @@ class ProcessoMatriculaManager extends Component
                                            ->count();
 
         if ($docsAprovados >= count($docsObrigatorios)) {
-            $inscricao->update(['etapa_atual' => 'Matriculado']);
+            $inscricao->update(['etapa_atual' => 3]);
         }
     }
 

@@ -53,8 +53,8 @@
                 </td>
                 
                 <td class="px-4 py-3 text-center">
-                    <span class="px-2 py-1 text-[11px] font-bold rounded border {{ $inscricao->etapa_atual === 'Matriculado' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
-                        {{ $inscricao->etapa_atual ?? 'Coletando Documentos' }}
+                    <span class="px-2 py-1 text-[11px] font-bold rounded border {{ $inscricao->etapa_atual >= 3 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
+                        {{ $inscricao->etapa_atual >= 3 ? 'Matriculado' : ($inscricao->etapa_atual == 2 ? 'Em Análise Manual' : 'Coletando Documentos') }}
                     </span>
                 </td>
                 

@@ -51,9 +51,9 @@ class PortalMatricula extends Component
         $throttleKey = 'matricula-auth:' . $this->token . '|' . request()->ip();
 
         // Trava de segurança: máximo de 5 tentativas a cada 60 segundos
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $segundos = RateLimiter::availableIn($throttleKey);
-            $this->addError('falha_auth', "Muitas tentativas incorretas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.");
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $segundos = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            $this->addError('falha_auth', "Muitas tentativas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.");
             return;
         }
 
@@ -65,21 +65,28 @@ class PortalMatricula extends Component
             'data_nascimento_acesso.required' => 'A Data de Nascimento é obrigatória.'
         ]);
 
+        // 1. Normalização do CPF (Remove pontos e traços de ambos os lados)
         $cpfLimpo = preg_replace('/[^0-9]/', '', (string)$this->cpf_acesso);
         $cpfInscricaoLimpo = preg_replace('/[^0-9]/', '', (string)$this->inscricao->cpf);
 
-        // Comparação segura contra Timing Attacks
+        // 2. Normalização da Data de Nascimento
+        $dataValida = false;
+        if (!empty($this->inscricao->data_nascimento)) {
+            // Converte a data do banco (seja datetime ou string) para o formato exato do input HTML
+            $dataBancoFormatada = \Carbon\Carbon::parse($this->inscricao->data_nascimento)->format('Y-m-d');
+            $dataValida = hash_equals($dataBancoFormatada, (string)$this->data_nascimento_acesso);
+        }
+
+        // 3. Comparação Segura (Timing Attack Safe)
         $cpfValido = hash_equals($cpfInscricaoLimpo, $cpfLimpo);
-        $dataValida = !empty($this->inscricao->data_nascimento) 
-            && hash_equals((string)$this->inscricao->data_nascimento, (string)$this->data_nascimento_acesso);
 
         if ($cpfValido && $dataValida) {
-            RateLimiter::clear($throttleKey);
+            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
             $this->autenticado = true;
-            $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso.');
+            $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso. Cofre liberado!');
         } else {
-            RateLimiter::hit($throttleKey, 60);
-            $restantes = RateLimiter::remaining($throttleKey, 5);
+            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
+            $restantes = \Illuminate\Support\Facades\RateLimiter::remaining($throttleKey, 5);
             $this->addError('falha_auth', "Dados incorretos. Você tem mais {$restantes} tentativa(s) antes do bloqueio.");
         }
     }
@@ -172,7 +179,7 @@ class PortalMatricula extends Component
             }
         }
 
-        $this->inscricao->update(['etapa_atual' => 'Análise de Matrícula']);
+        $this->inscricao->update(['etapa_atual' => 2]);
         $this->concluido = true;
     }
 
