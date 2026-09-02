@@ -35,11 +35,10 @@ class AiValidationService
             } elseif ($config->provedor === 'deepseek') {
                 return self::chamarOpenAiCompatible('https://api.deepseek.com/chat/completions', 'deepseek-v4-flash-vision-exp', $config->api_key, $promptFinal, $mimeType, $base64);
             } elseif ($config->provedor === 'grok') {
-                // Roteamento oficial para a API da xAI (Grok Vision)
                 return self::chamarOpenAiCompatible('https://api.x.ai/v1/chat/completions', 'grok-vision-beta', $config->api_key, $promptFinal, $mimeType, $base64);
             }
             
-            return ['valido' => false, 'motivo_rejeicao' => 'Provedor de IA selecionado ainda não foi configurado no código.'];
+            return ['valido' => false, 'motivo_rejeicao' => 'Provedor de IA selecionado não configurado.'];
 
         } catch (\Exception $e) {
             Log::error("Erro na API da IA: " . $e->getMessage());
@@ -60,19 +59,34 @@ class AiValidationService
                     ]
                 ]
             ],
-            "generationConfig" => ["response_mime_type" => "application/json"]
+            // TRAVA DO GEMINI: Define o Schema JSON exato (Nome e Tipo das Colunas)
+            "generationConfig" => [
+                "response_mime_type" => "application/json",
+                "response_schema" => [
+                    "type" => "OBJECT",
+                    "properties" => [
+                        "valido" => [
+                            "type" => "BOOLEAN",
+                            "description" => "True se o documento for autêntico e pertencer ao candidato."
+                        ],
+                        "motivo_rejeicao" => [
+                            "type" => "STRING",
+                            "description" => "Justificativa caso seja inválido. Deixe vazio se for válido."
+                        ]
+                    ],
+                    "required" => ["valido", "motivo_rejeicao"]
+                ]
+            ]
         ];
 
         $response = Http::timeout(30)->post($url, $payload);
 
         if ($response->successful()) {
-            $jsonRaw = $response->json('candidates.0.content.parts.0.text');
-            $resultado = json_decode($jsonRaw, true);
-            
+            $resultado = json_decode($response->json('candidates.0.content.parts.0.text'), true);
             if (is_array($resultado)) {
                 return [
                     'valido' => (bool) ($resultado['valido'] ?? false),
-                    'motivo_rejeicao' => $resultado['motivo_rejeicao'] ?? 'Documento ilegível ou incorreto.',
+                    'motivo_rejeicao' => $resultado['motivo_rejeicao'] ?? '',
                     'raw' => $resultado
                 ];
             }
@@ -84,7 +98,13 @@ class AiValidationService
     {
         $payload = [
             "model" => $modelo,
+            // TRAVA UNIVERSAL: Força as APIs Open-Source a não usarem formatação Markdown
+            "response_format" => ["type" => "json_object"], 
             "messages" => [
+                [
+                    "role" => "system",
+                    "content" => "Você é um auditor de RH rigoroso. Você OBRIGATORIAMENTE deve responder em formato JSON limpo contendo apenas as chaves boolean 'valido' e string 'motivo_rejeicao'."
+                ],
                 [
                     "role" => "user",
                     "content" => [
@@ -98,20 +118,19 @@ class AiValidationService
         $response = Http::withToken($apiKey)->timeout(45)->post($url, $payload);
 
         if ($response->successful()) {
-            $conteudo = $response->json('choices.0.message.content');
-            $conteudo = preg_replace('/```json\s*(.*?)\s*```/s', '$1', $conteudo);
-            $conteudo = preg_replace('/```\s*(.*?)\s*```/s', '$1', $conteudo);
-            
-            $resultado = json_decode(trim($conteudo), true);
+            // O Regex foi completamente removido pois a chave 'json_object' garante a tipagem
+            $resultado = json_decode($response->json('choices.0.message.content'), true);
             
             if (is_array($resultado)) {
                 return [
                     'valido' => (bool) ($resultado['valido'] ?? false),
-                    'motivo_rejeicao' => $resultado['motivo_rejeicao'] ?? 'Erro na validação.',
+                    'motivo_rejeicao' => $resultado['motivo_rejeicao'] ?? '',
                     'raw' => $resultado
                 ];
             }
         }
-        return ['valido' => false, 'motivo_rejeicao' => 'A IA rejeitou o envio. O provedor pode não suportar análise de imagens.'];
+
+        Log::error("Erro API IA Compatível: " . $response->body());
+        return ['valido' => false, 'motivo_rejeicao' => 'A IA rejeitou o envio da imagem.'];
     }
 }
