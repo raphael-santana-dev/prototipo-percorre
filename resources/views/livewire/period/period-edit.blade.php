@@ -131,24 +131,74 @@
         <div class="space-y-6">
             
             {{-- STATUS CRM CHECKBOXES (Agora fica isolado como você pediu) --}}
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
+            {{-- IMPORTAÇÃO DA BIBLIOTECA SORTABLE --}}
+            <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+            {{-- STATUS CRM - DRAG AND DROP --}}
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+                 x-data="{
+                     initSortable() {
+                         new Sortable(this.$refs.statusList, {
+                             animation: 150,
+                             handle: '.drag-handle', // Só arrasta se clicar no ícone de pontinhos
+                             ghostClass: 'opacity-50',
+                             onEnd: () => {
+                                 // Coleta os IDs na nova ordem visual e manda para o Back-end
+                                 let items = Array.from(this.$refs.statusList.children).map(el => el.dataset.id);
+                                 $wire.atualizarOrdemStatus(items);
+                             }
+                         });
+                     }
+                 }" x-init="initSortable()">
+                 
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-4 gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 m-0 flex items-center gap-2">
                             <i class="ph-fill ph-funnel text-purpura-500"></i> Funil de Status do CRM
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Marque os status que farão parte da esteira deste processo seletivo.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Adicione os status desejados e <b>arraste-os para cima ou para baixo</b> para definir a ordem das etapas.</p>
                     </div>
-                    <button type="button" wire:click="toggleTodosStatus" class="text-[10px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded font-bold text-gray-600 dark:text-gray-300 uppercase transition">Selecionar Todos</button>
+                    
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <select wire:model="novoStatusSelecionado" class="flex-1 md:w-48 text-sm font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                            <option value="">Adicionar etapa...</option>
+                            @foreach($statusDisponiveis as $st)
+                                @if(!in_array($st->id, $statusSelecionados))
+                                    <option value="{{ $st->id }}">{{ $st->nome }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                        <button type="button" wire:click="adicionarStatusPipeline" class="bg-purpura-100 text-purpura-800 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 px-4 py-2 rounded-lg font-bold transition">
+                            <i class="ph-bold ph-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 p-1">
-                    @foreach($statusDisponiveis as $st)
-                        <label class="flex items-center gap-2 p-3 transition-colors border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 shadow-sm">
-                            <input type="checkbox" wire:model="statusSelecionados" value="{{ $st->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300 truncate" title="{{ $st->nome }}">{{ $st->nome }}</span>
-                        </label>
-                    @endforeach
+                <!-- LISTA ORDENÁVEL -->
+                <div x-ref="statusList" class="flex flex-col gap-2 p-1">
+                    @forelse($statusSelecionados as $index => $statusId)
+                        @php $statusObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
+                        @if($statusObj)
+                            <div data-id="{{ $statusId }}" wire:key="status-{{ $statusId }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg group transition-colors hover:border-purpura-300">
+                                <div class="flex items-center gap-4">
+                                    <i class="ph-bold ph-dots-six-vertical text-gray-400 cursor-grab active:cursor-grabbing drag-handle text-2xl hover:text-gray-600"></i>
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-black">
+                                            {{ $index + 1 }}
+                                        </span>
+                                        <span class="font-bold text-sm text-gray-800 dark:text-gray-200">{{ $statusObj->nome }}</span>
+                                    </div>
+                                </div>
+                                <button type="button" wire:click="removerStatusPipeline('{{ $statusId }}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-lg transition" title="Remover Etapa">
+                                    <i class="ph-bold ph-trash text-lg"></i>
+                                </button>
+                            </div>
+                        @endif
+                    @empty
+                        <div class="text-center p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-400">
+                            Nenhuma etapa configurada para este ciclo. Adicione os status acima.
+                        </div>
+                    @endforelse
                 </div>
             </div>
 

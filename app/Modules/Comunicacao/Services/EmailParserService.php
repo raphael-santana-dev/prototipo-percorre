@@ -2,104 +2,44 @@
 
 namespace App\Modules\Comunicacao\Services;
 
-use App\Models\User;
-use App\Models\Inscricao;
+use Illuminate\Support\Str;
 
 class EmailParserService
 {
-    /**
-     * TUTORIAL DE MANUTENÇÃO (Para Futuros Desenvolvedores)
-     * =========================================================================
-     * Como adicionar novas variáveis disponíveis para os e-mails?
-     * 
-     * PASSO 1: Registre a variável visualmente no método `getDicionarioDisponivel()`.
-     *          Isso fará com que ela apareça na "Legenda" da tela de criação de templates.
-     *          Siga o padrão: '{{chave}}' => 'Descrição do que ela faz'.
-     * 
-     * PASSO 2: Adicione a lógica de substituição no método `extrairValores()`.
-     *          Se você adicionou `{{estudante.cpf}}`, crie a chave `'estudante.cpf'` 
-     *          e aponte para de onde a informação vem (ex: $contexto['user']->cpf).
-     * 
-     * NOTA: Sempre use o operador de coalescência nula (?? '') para evitar erros
-     * se a variável não for passada no momento do envio do e-mail.
-     * =========================================================================
-     */
-
-    // PASSO 1: O Dicionário Visual (Aparece na UI)
-    public static function getDicionarioDisponivel(): array
+    public static function getDicionarioDisponivel()
     {
+        // Agora as variáveis estão agrupadas por Categoria para o menu sanfona da tela não quebrar
         return [
-            'Estudante / Usuário' => [
-                '{{estudante.nome}}' => 'Nome completo do usuário/estudante',
-                '{{estudante.email}}' => 'E-mail de cadastro do usuário',
-                '{{estudante.cpf}}' => 'CPF formatado do usuário',
+            'Dados do Candidato' => [
+                '[nome_candidato]' => 'Nome completo do candidato',
+                '[cpf_candidato]' => 'CPF do candidato',
+                '[curso_aprovado]' => 'Nome do Curso',
             ],
-            'Inscrição' => [
-                '{{inscricao.curso}}' => 'Nome do curso selecionado',
-                '{{inscricao.unidade}}' => 'Nome da unidade/sede',
-                '{{inscricao.turno}}' => 'Turno escolhido',
-                '{{inscricao.status}}' => 'Status atual da inscrição (ex: Aprovado, Pendente)',
-                '{{inscricao.pontuacao}}' => 'Total de pontos obtidos',
-                '{{inscricao.data}}' => 'Data e hora da realização da inscrição',
-            ],
-            'Sistema' => [
-                '{{sistema.data_atual}}' => 'Data de hoje (Ex: 15/10/2026)',
-                '{{sistema.nome_instituicao}}' => 'Nome da Instituição (Instituto Percorre)',
+            'Módulo de Matrícula (IA)' => [
+                '[link_matricula]' => 'Link seguro e único para o Portal de Envio de Documentos (IA)',
             ]
         ];
     }
 
-    // PASSO 2: O Extrator Lógico (Valores Reais)
-    private static function extrairValores(array $contexto): array
+    public static function parseTexto($texto, $inscricao)
     {
-        /** @var User|null $user */
-        $user = $contexto['user'] ?? null;
-        
-        /** @var Inscricao|null $inscricao */
-        $inscricao = $contexto['inscricao'] ?? null;
+        if (!$inscricao) return $texto;
 
-        // Recupera os nomes dos relacionamentos se existirem
-        $nomeCurso = $inscricao && $inscricao->curso_id ? (\App\Models\Curso::find($inscricao->curso_id)->nome ?? 'Não informado') : 'Não informado';
-        $nomeUnidade = $inscricao && $inscricao->unidade_id ? (\App\Modules\Unidade\Domain\Models\Unidade::find($inscricao->unidade_id)->nome ?? 'Não informado') : 'Não informado';
-        $nomeTurno = $inscricao && $inscricao->turno_id ? (\App\Modules\Turno\Domain\Models\Turno::find($inscricao->turno_id)->nome ?? 'Não informado') : 'Não informado';
-        $nomeStatus = $inscricao && $inscricao->status_inscricao_id ? (\App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Não informado') : 'Não informado';
-
-        return [
-            // Variáveis do Estudante
-            'estudante.nome' => $user->name ?? $inscricao->nome ?? '',
-            'estudante.email' => $user->email ?? $inscricao->email ?? '',
-            'estudante.cpf' => $user->cpf ?? $inscricao->cpf ?? '',
-            
-            // Variáveis da Inscrição
-            'inscricao.curso' => $nomeCurso,
-            'inscricao.unidade' => $nomeUnidade,
-            'inscricao.turno' => $nomeTurno,
-            'inscricao.status' => $nomeStatus,
-            'inscricao.pontuacao' => $inscricao->pontuacao_total ?? '0',
-            'inscricao.data' => $inscricao ? $inscricao->created_at->format('d/m/Y H:i') : '',
-
-            // Variáveis de Sistema
-            'sistema.data_atual' => now()->format('d/m/Y'),
-            'sistema.nome_instituicao' => 'Instituto Percorre',
-        ];
-    }
-
-    /**
-     * Método principal chamado na hora de enviar o e-mail.
-     * Pega o Assunto ou Corpo do template e injeta as variáveis reais.
-     */
-    public static function parse(string $textoOriginal, array $contexto = []): string
-    {
-        if (empty($textoOriginal)) return '';
-
-        $valores = self::extrairValores($contexto);
-        $textoProcessado = $textoOriginal;
-
-        foreach ($valores as $chave => $valor) {
-            // Substitui {{chave}} pelo valor correspondente
-            $textoProcessado = str_replace('{{' . $chave . '}}', $valor, $textoProcessado);
+        if (str_contains($texto, '[link_matricula]') && empty($inscricao->token_matricula)) {
+            $inscricao->token_matricula = Str::random(60);
+            $inscricao->save();
         }
 
-        return $textoProcessado;
+        $linkSeguro = $inscricao->token_matricula ? route('matricula.portal', ['token' => $inscricao->token_matricula]) : '#';
+        $botaoHtml = '<a href="'.$linkSeguro.'" style="display:inline-block;background:#8b5cf6;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;border-radius:4px;">Acessar Portal de Matrícula</a>';
+
+        $tags = [
+            '[nome_candidato]' => $inscricao->nome,
+            '[cpf_candidato]' => $inscricao->cpf,
+            '[curso_aprovado]' => $inscricao->curso->nome ?? 'Sem Curso Vinculado',
+            '[link_matricula]' => $botaoHtml
+        ];
+
+        return str_replace(array_keys($tags), array_values($tags), $texto);
     }
 }

@@ -5,6 +5,8 @@ namespace App\Modules\Comunicacao\UI\Livewire\Automacao;
 use Livewire\Component;
 use App\Modules\Comunicacao\Domain\Models\Automacao;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
+use App\Models\StatusInscricao;
+use Illuminate\Support\Str;
 
 class AutomacaoForm extends Component
 {
@@ -14,19 +16,21 @@ class AutomacaoForm extends Component
     public $template_id = '';
     public $status = true;
 
-    // Dicionário de Eventos 
-    public $eventosDisponiveis = [
-        'inscricao.criada' => 'Inscrição: Nova Ficha de Inscrição Recebida',
-        'inscricao.aprovada' => 'Inscrição: Status alterado para Aprovado / Selecionado',
-        'inscricao.reprovada' => 'Inscrição: Status alterado para Reprovado / Cancelado',
-        'inscricao.pendente' => 'Inscrição: Status alterado para Pendente',
-        'usuario.criado' => 'Usuário: Novo Cadastro de Usuário',
-        'usuario.bloqueado' => 'Usuário: Acesso ao Sistema Bloqueado',
-        'usuario.desbloqueado' => 'Usuário: Acesso ao Sistema Liberado',
-    ];
+    public $eventosDisponiveis = [];
 
     public function mount($id = null)
     {
+        // 1. Busca TODOS os status criados no sistema dinamicamente
+        $statusInscricoes = \App\Models\StatusInscricao::orderBy('nome')->get();
+        
+        foreach ($statusInscricoes as $st) {
+            // Converte "Em Análise" para "em_analise" automaticamente
+            $slug = \Illuminate\Support\Str::slug($st->nome, '_');
+            $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
+        }
+        
+        $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
+
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
@@ -37,22 +41,11 @@ class AutomacaoForm extends Component
             $this->evento_gatilho = $automacao->evento_gatilho;
             $this->template_id = $automacao->template_id;
             $this->status = $automacao->status;
-        } else {
-            abort_if(!feature('automacao.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
     }
 
     public function salvar()
     {
-        if ($this->automacaoId) {
-            abort_if(!feature('automacao.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
-        } else {
-            abort_if(!feature('automacao.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
-        }
-        
         $this->validate([
             'nome' => 'required|string|max:255',
             'evento_gatilho' => 'required|string',

@@ -419,6 +419,35 @@ class RegistrationManager extends Component
         ];
     }
 
+    public function avancarSelecionadas()
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+
+        if (count($this->selecionadas) === 0) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para avançar.');
+            return;
+        }
+        
+        $qtd = count($this->selecionadas);
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'atualizacao_lote',
+            'formato' => 'system',
+            'arquivo_nome' => "Avanço de Funil em Lote: {$qtd} registros",
+            'status' => 'na_fila',
+            'total_linhas' => $qtd,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\AvancarStatusNoFunilJob($tracking->id, $this->selecionadas))->afterResponse();
+        
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: 'Avanço iniciado em background!');
+    }
+
     public function render()
     {
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
