@@ -297,6 +297,64 @@
                     @endforelse
                 </div>
             </div>
+
+            {{-- SEÇÃO 4: DOCUMENTOS EXIGIDOS PARA MATRÍCULA --}}
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 m-0 flex items-center gap-2">
+                            <i class="ph-fill ph-files text-purpura-500"></i> Documentos Exigidos na Matrícula
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Configure quais arquivos o candidato deverá enviar para o Portal da IA especificamente neste ciclo.</p>
+                    </div>
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="addDocumento" class="px-4 py-2 bg-purpura-100 text-purpura-800 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 text-xs font-bold uppercase rounded-lg transition flex items-center gap-2 shadow-sm">
+                            <i class="ph-bold ph-plus text-sm"></i> Novo Documento
+                        </button>
+                    @endif
+                </div>
+
+                <div class="space-y-3">
+                    @forelse($documentosExigidos as $index => $doc)
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-end transition-colors hover:border-purpura-300">
+                            
+                            <div class="flex-1 w-full md:w-1/3">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Documento <span class="text-red-500">*</span></label>
+                                <input type="text" wire:model="documentosExigidos.{{ $index }}.nome" placeholder="Ex: RG Frente e Verso" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-bold">
+                                @error("documentosExigidos.$index.nome") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
+                            
+                            <div class="flex-1 w-full md:w-1/2">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Instruções Opcionais (Aparece na tela do aluno)</label>
+                                <input type="text" wire:model="documentosExigidos.{{ $index }}.descricao" placeholder="Ex: A foto deve estar legível e fora do plástico" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                            </div>
+
+                            <div class="w-full md:w-auto flex items-center justify-between gap-4 pb-1.5">
+                                <label class="flex items-center cursor-pointer">
+                                    <div class="relative">
+                                        <input type="checkbox" wire:model="documentosExigidos.{{ $index }}.is_obrigatorio" class="sr-only">
+                                        <div class="block bg-gray-200 dark:bg-gray-700 w-10 h-6 rounded-full transition-colors duration-300" :class="{ 'bg-green-500': @js($doc['is_obrigatorio']) }"></div>
+                                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300" :class="{ 'transform translate-x-4': @js($doc['is_obrigatorio']) }"></div>
+                                    </div>
+                                    <span class="ml-2 text-xs font-bold text-gray-600 dark:text-gray-300" x-text="@js($doc['is_obrigatorio']) ? 'Obrigatório' : 'Opcional'"></span>
+                                </label>
+
+                                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                    <button type="button" wire:click="removeDocumento({{ $index }})" class="p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Documento">
+                                        <i class="ph-bold ph-trash"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
+                            <i class="ph ph-files text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum documento exigido.</p>
+                            <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">Os candidatos deste ciclo não precisarão enviar documentos na fase de matrícula até que você adicione as exigências acima.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
         <div class="flex justify-end pt-4 pb-10">

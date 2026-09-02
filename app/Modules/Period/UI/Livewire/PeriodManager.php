@@ -182,6 +182,14 @@ class PeriodManager extends Component
             }
         }
 
+        // 9. Duplicar Documentos Exigidos (NOVO)
+        $docsOriginais = \App\Modules\Matricula\Domain\Models\DocumentoExigido::where('ciclo_id', $id)->get();
+        foreach($docsOriginais as $doc) {
+            $novoDoc = $doc->replicate();
+            $novoDoc->ciclo_id = $novoCiclo->id;
+            $novoDoc->save();
+        }
+
         $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!'); //[cite: 2]
     }
 

@@ -196,7 +196,8 @@ class AppServiceProvider extends ServiceProvider
         // Processo Matrícula
         Livewire::component('processo-matricula.analise-manual', \App\Modules\Matricula\UI\Livewire\AnaliseManualManager::class);
         Livewire::component('processo-matricula.iaconfig', \App\Modules\Matricula\UI\Livewire\IaConfigManager::class);
-        Livewire::component('processo-matricula-portal',  \App\Modules\Matricula\UI\Livewire\PortalMatricula::class);
+        Livewire::component('processo-matricula.portal',  \App\Modules\Matricula\UI\Livewire\PortalMatricula::class);
+        Livewire::component('processo-matricula.processo',  \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class);
         
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {

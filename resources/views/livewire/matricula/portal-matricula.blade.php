@@ -58,16 +58,23 @@
                 @else
                     
                     <!-- IDENTIFICAÇÃO DO ALUNO -->
-                    <div class="mb-8 pb-4 border-b border-gray-200 flex items-center gap-4">
-                        <div class="w-12 h-12 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center text-gray-600 font-bold text-lg shrink-0">
-                            {{ substr($inscricao->nome, 0, 1) }}
+                    <div class="mb-8 pb-4 border-b border-gray-200 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center text-gray-600 font-bold text-lg shrink-0">
+                                {{ substr($inscricao->nome, 0, 1) }}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-900 text-lg uppercase tracking-wide">{{ $inscricao->nome }}</h3>
+                                <p class="text-[10px] text-green-700 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
+                                    <i class="ph-fill ph-check-circle text-sm"></i> Identidade Confirmada
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 text-lg uppercase tracking-wide">{{ $inscricao->nome }}</h3>
-                            <p class="text-[10px] text-green-700 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
-                                <i class="ph-fill ph-check-circle text-sm"></i> Identidade Confirmada
-                            </p>
-                        </div>
+                        
+                        <!-- BOTÃO DE SAIR -->
+                        <button wire:click="sair" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
+                            <i class="ph-bold ph-sign-out"></i> Sair
+                        </button>
                     </div>
 
                     <!-- LAYOUT: DROPZONE E LISTA INDIVIDUAL -->

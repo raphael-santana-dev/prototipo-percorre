@@ -38,9 +38,19 @@ class PortalMatricula extends Component
             ->where('token_matricula', $token)
             ->firstOrFail();
 
-        // Pula o desafio caso o estudante já possua sessão ativa correspondente
+        // CHAVE DE SESSÃO ÚNICA PARA ESTA INSCRIÇÃO
+        $sessionKey = "matricula_auth_time_{$this->inscricao->id}";
+        $authTime = session()->get($sessionKey);
+
         if (auth('student')->check() && auth('student')->id() === $this->inscricao->student_id) {
             $this->autenticado = true;
+        } elseif ($authTime && now()->timestamp < $authTime) {
+            // Se tem sessão válida (menos de 5 min), libera o acesso e RENOVA por mais 5 min
+            $this->autenticado = true;
+            session()->put($sessionKey, now()->addMinutes(5)->timestamp); 
+        } else {
+            // Se expirou, mata a sessão
+            session()->forget($sessionKey);
         }
 
         $this->documentosExigidos = DocumentoExigido::where('ciclo_id', $this->inscricao->ciclo_id)->get();
@@ -81,15 +91,26 @@ class PortalMatricula extends Component
         // 3. Comparação Segura (Timing Attack Safe)
         $cpfValido = hash_equals($cpfInscricaoLimpo, $cpfLimpo);
 
-        if ($cpfValido && $dataValida) {
-            RateLimiter::clear($throttleKey);
+       if ($cpfValido && $dataValida) {
+            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
             $this->autenticado = true;
+            // CRIA A SESSÃO COM VALIDADE DE 5 MINUTOS NO FUTURO
+            session()->put("matricula_auth_time_{$this->inscricao->id}", now()->addMinutes(5)->timestamp);
             $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso. Cofre liberado!');
         } else {
             RateLimiter::hit($throttleKey, 60);
             $restantes = RateLimiter::remaining($throttleKey, 5);
             $this->addError('falha_auth', "Dados incorretos. Você tem mais {$restantes} tentativa(s) antes do bloqueio.");
         }
+    }
+
+    public function sair()
+    {
+        session()->forget("matricula_auth_time_{$this->inscricao->id}");
+        $this->autenticado = false;
+        $this->cpf_acesso = '';
+        $this->data_nascimento_acesso = '';
+        $this->dispatch('sucesso', msg: 'Sessão encerrada com segurança.');
     }
 
     public function carregarStatusArquivos()
