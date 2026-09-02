@@ -49,6 +49,8 @@ Route::prefix('portal')->name('portal.')->middleware('guest:student,company')->g
     Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
 });
 
+Route::get('/matricula/{token}', \App\Modules\Matricula\UI\Livewire\PortalMatricula::class)->name('matricula.portal');
+
 // ==========================================
 // 3. SEGURANÇA GLOBAL (Usuários Logados)
 // ==========================================
@@ -101,7 +103,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/ciclos/regras/{id}/{slug?}', \App\Modules\Period\UI\Livewire\RegrasManager::class)->name('ciclos.regras')->where('id', '[0-9]+');
     Route::get('/ciclos/{id}/editar', \App\Modules\Period\UI\Livewire\PeriodEdit::class)->name('ciclos.edit');
     Route::get('/ciclos/{id}/{slug?}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show')->where('id', '[0-9]+');
-        
+
+    // --- Validação de Matrículas e Inteligência Artificial ---
+    Route::get('/matriculas/configuracao-ia', \App\Modules\Matricula\UI\Livewire\IaConfigManager::class)->name('matriculas.configuracao');
+    Route::get('/matriculas/analise-manual', \App\Modules\Matricula\UI\Livewire\AnaliseManualManager::class)->name('matriculas.analise-manual');
+
     // --- Formulários Dinâmicos ---
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');

@@ -29,36 +29,43 @@ class RegistrationDetails extends Component
 
     public function atualizarStatus()
     {
-        // Garante que o usuário tem permissão para alterar status
         abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403, 'Você não tem permissão para alterar o status.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         $statusNovo = StatusInscricao::find($this->status_selecionado);
         if (!$statusNovo) return;
 
-        // REGRA DE NEGÓCIO: Criação do Estudante na Aprovação
-        if (strtolower($statusNovo->nome) === 'aprovado' && !$this->inscricao->student_id) {
-            
-            // Busca ou Cria o estudante mapeando estritamente para as colunas da sua Migration
-            $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
-                ['email' => $this->inscricao->email], // Chave de busca segura
-                [
-                    'name' => $this->inscricao->nome, // MAPEADO: 'nome' da Inscrição para 'name' do Student
-                    'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // Senha obrigatória gerada aleatoriamente
-                    'is_active' => true,
-                ]
-            );
+        if (strtolower($statusNovo->nome) === 'aprovado') {
+            if (empty($this->inscricao->token_matricula)) {
+                $this->inscricao->token_matricula = \Illuminate\Support\Str::random(60);
+            }
 
-            // Vincula o Estudante criado à inscrição
-            $this->inscricao->student_id = $estudante->id;
+            if (!$this->inscricao->student_id) {
+                $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
+                    ['email' => $this->inscricao->email],
+                    [
+                        'name' => $this->inscricao->nome,
+                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
+                        'is_active' => true,
+                    ]
+                );
+                $this->inscricao->student_id = $estudante->id;
+            }
         }
 
-        // Atualiza e salva a inscrição
         $this->inscricao->status_inscricao_id = $statusNovo->id;
         $this->inscricao->save();
 
+        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)
+                                                                       ->where('status', true)
+                                                                       ->first();
+        if ($automacao) {
+            dispatch(new \App\Jobs\ProcessarDisparoAutomacaoJob($automacao, $this->inscricao));
+        }
+
         $this->inscricao->refresh(); 
-        $this->dispatch('sucesso', msg: 'Status atualizado com sucesso! ' . ($this->inscricao->student_id && strtolower($statusNovo->nome) === 'aprovado' ? 'Cadastro de Estudante gerado e vinculado.' : ''));
+        $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
     }
 
     public function render()

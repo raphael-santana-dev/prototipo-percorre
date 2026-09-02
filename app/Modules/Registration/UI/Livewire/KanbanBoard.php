@@ -28,9 +28,13 @@ class KanbanBoard extends Component
     {
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-        Inscricao::where('ciclo_id', $this->ciclo->id)
-            ->where('id', $inscricaoId)
-            ->update(['status_inscricao_id' => $novoStatusId]);
+        
+        // Em vez de alterar no banco direto, passamos para o Job que cuida da automação de e-mails!
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+            'arquivo_nome' => "Alteração via CRM Kanban", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
+        ]);
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$inscricaoId], $novoStatusId))->afterResponse();
     }
 
     public function moverLote()
@@ -43,12 +47,14 @@ class KanbanBoard extends Component
             'statusDestinoLote' => 'required|exists:status_inscricoes,id'
         ]);
 
-        Inscricao::where('ciclo_id', $this->ciclo->id)
-            ->whereIn('id', $this->selecionados)
-            ->update(['status_inscricao_id' => $this->statusDestinoLote]);
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+            'arquivo_nome' => "Alteração em Lote via CRM Kanban", 'status' => 'na_fila', 'total_linhas' => count($this->selecionados), 'linhas_processadas' => 0,
+        ]);
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $this->selecionados, $this->statusDestinoLote))->afterResponse();
 
         $this->reset(['selecionados', 'statusDestinoLote']);
-        $this->dispatch('sucesso', msg: 'Candidatos movidos em lote com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ação enviada para processamento em background!');
     }
 
     public function render()
