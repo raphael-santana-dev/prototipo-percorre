@@ -98,6 +98,13 @@
                             @php
                                 $enviado = $documentosEnviados->get($docReq->id);
                                 $status = $enviado ? $enviado->status_analise : 'pendente';
+                                
+                                // Converte a imagem segura para exibição no navegador
+                                $imgBase64 = null;
+                                if ($enviado && \Illuminate\Support\Facades\Storage::disk('local')->exists($enviado->arquivo_caminho)) {
+                                    $path = \Illuminate\Support\Facades\Storage::disk('local')->path($enviado->arquivo_caminho);
+                                    $imgBase64 = 'data:' . mime_content_type($path) . ';base64,' . base64_encode(file_get_contents($path));
+                                }
                             @endphp
 
                             <div class="bg-white border rounded-xl p-4 shadow-sm {{ $status === 'valido_ia' || $status === 'aprovado_manual' ? 'border-green-200' : 'border-gray-200' }}">
@@ -107,22 +114,26 @@
                                         @if($docReq->is_obrigatorio) <span class="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded uppercase">Obrigatório</span> @endif
                                     </h4>
                                     
-                                    <!-- BADGES DE STATUS -->
-                                    @if($status === 'valido_ia')
-                                        <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full"><i class="ph-bold ph-robot"></i> IA Aprovou</span>
-                                    @elseif($status === 'aprovado_manual')
-                                        <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full"><i class="ph-bold ph-user"></i> Sec. Aprovou</span>
-                                    @elseif($status === 'analise_manual' || $status === 'invalido_ia')
-                                        <span class="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-2 py-1 rounded-full"><i class="ph-bold ph-warning"></i> Validar Manualmente</span>
-                                    @else
-                                        <span class="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-1 rounded-full">Pendente</span>
+                                    @if($status === 'valido_ia') <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">IA Aprovou</span>
+                                    @elseif($status === 'aprovado_manual') <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Sec. Aprovou</span>
+                                    @elseif($status === 'analise_manual' || $status === 'invalido_ia') <span class="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-2 py-1 rounded-full">Validar Manualmente</span>
+                                    @else <span class="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-1 rounded-full">Pendente</span>
                                     @endif
                                 </div>
 
-                                <!-- AÇÕES DA SECRETARIA -->
                                 @if($enviado)
+                                    <!-- EXIBIÇÃO DA IMAGEM CORRIGIDA -->
+                                    <div class="mt-3 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center h-40">
+                                        @if($imgBase64)
+                                            <a href="{{ $imgBase64 }}" target="_blank" title="Clique para ampliar">
+                                                <img src="{{ $imgBase64 }}" class="max-h-40 object-cover hover:scale-105 transition-transform">
+                                            </a>
+                                        @else
+                                            <span class="text-xs text-gray-400">Erro ao carregar arquivo físico.</span>
+                                        @endif
+                                    </div>
+
                                     <div class="mt-3 flex gap-2">
-                                        <!-- O botão de visualizar a imagem abre em nova aba convertendo via rota segura se necessário, ou link direto se storage publico. -->
                                         <button wire:click="aprovarDocumento({{ $enviado->id }})" class="flex-1 text-[11px] font-bold py-1.5 rounded bg-green-50 text-green-700 hover:bg-green-600 hover:text-white transition border border-green-200 flex items-center justify-center gap-1">
                                             <i class="ph-bold ph-check"></i> Aprovar
                                         </button>
@@ -130,12 +141,9 @@
                                             <i class="ph-bold ph-x"></i> Recusar
                                         </button>
                                     </div>
-                                    @if(in_array($status, ['analise_manual', 'invalido_ia']))
-                                        <p class="text-[10px] text-red-600 mt-2 font-medium bg-red-50 p-1.5 rounded">Motivo IA: {{ $enviado->log_ia['motivo_rejeicao'] ?? 'Documento não reconhecido.' }}</p>
-                                    @endif
                                 @else
                                     <div class="mt-4 p-3 bg-gray-50 border border-gray-100 rounded text-center">
-                                        <p class="text-xs text-gray-400">O candidato ainda não enviou este arquivo.</p>
+                                        <p class="text-xs text-gray-400">Candidato ainda não enviou.</p>
                                     </div>
                                 @endif
                             </div>
