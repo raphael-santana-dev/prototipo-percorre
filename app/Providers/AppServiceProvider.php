@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 
+use App\Modules\Report\UI\Livewire\ChartWidget;
+
 // Turno (DDD)
 use App\Modules\Turno\Domain\Repositories\TurnoRepositoryInterface;
 use App\Modules\Turno\Infrastructure\Persistence\EloquentTurnoRepository;
@@ -78,6 +80,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('auth.logout-button', LogoutButton::class);
         Livewire::component('dashboard.dashboard', Dashboard::class);
         Livewire::component('auth.profile-manager', \App\Modules\Auth\UI\Livewire\ProfileManager::class);
+        
 
         // Feature Toggles
         Blade::if('feature', function (string $name) {
@@ -186,6 +189,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('auth.reset-password',  \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class);
 
         Livewire::component('form.builder', \App\Modules\FormBuilder\UI\Livewire\Hub::class);
+
+        Livewire::component('report.dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class);
+        Livewire::component('chart-widget', ChartWidget::class);
         
         // Revogação Automática de Permissões Vencidas
         Event::listen(Authenticated::class, function (Authenticated $event) {
