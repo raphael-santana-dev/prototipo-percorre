@@ -103,13 +103,21 @@
                                                 <span class="text-[10px] text-gray-500 mt-1">Aguardando secretaria.</span>
                                             </div>
                                         @else
-                                            <div class="relative">
+                                            <div class="relative" x-data="imageCompressor({{ $doc->id }})">
                                                 <label class="flex justify-center items-center px-4 py-2.5 bg-purpura-50 text-purpura-700 border border-purpura-200 rounded-lg cursor-pointer hover:bg-purpura-100 transition font-bold text-sm w-full md:w-auto">
                                                     <i class="ph-bold ph-upload-simple mr-2"></i> Enviar Imagem
-                                                    <input type="file" wire:model.live="uploads.{{ $doc->id }}" class="hidden" accept="image/jpeg, image/png">
+                                                    <!-- Removido o wire:model.live. Agora o Alpine intercepta o arquivo primeiro -->
+                                                    <input type="file" @change="processarUpload" class="hidden" accept="image/jpeg, image/png, image/webp">
                                                 </label>
+
+                                                <!-- Spinner 1: Exibido enquanto o celular/navegador comprime a foto -->
+                                                <div x-show="comprimindo" style="display: none;" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center text-orange-600 font-bold text-xs gap-2">
+                                                    <i class="ph-bold ph-arrows-in animate-pulse text-lg"></i> Otimizando...
+                                                </div>
+
+                                                <!-- Spinner 2: Exibido pelo Livewire durante o Upload pra nuvem e Análise da IA -->
                                                 <div wire:loading wire:target="uploads.{{ $doc->id }}" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center text-purpura-600 font-bold text-xs gap-2">
-                                                    <i class="ph-bold ph-spinner animate-spin text-lg"></i> Analisando...
+                                                    <i class="ph-bold ph-spinner animate-spin text-lg"></i> Analisando na IA...
                                                 </div>
                                             </div>
                                         @endif
@@ -145,3 +153,68 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+    Alpine.data('imageCompressor', (docId) => ({
+        comprimindo: false,
+
+        processarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Se o usuário tentar enviar um PDF (caso você libere no accept) ou arquivo inválido, 
+            // não tentamos comprimir. Mandamos direto pro Livewire bloquear via Validation.
+            if (!file.type.startsWith('image/')) {
+                $wire.upload('uploads.' + docId, file);
+                return;
+            }
+
+            this.comprimindo = true;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // 1200px é perfeito: legível para humanos e sobra resolução para a IA (OCR).
+                    const MAX_SIZE = 1200; 
+
+                    if (width > height && width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    } else if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converte a tela virtual em um arquivo físico JPEG
+                    canvas.toBlob((blob) => {
+                        const novoNome = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                        const newFile = new File([blob], novoNome, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        
+                        this.comprimindo = false;
+                        
+                        // Faz a ponte entre o Alpine e o Back-end: Inicia o Upload Seguro!
+                        $wire.upload('uploads.' + docId, newFile);
+                        
+                    }, 'image/jpeg', 0.85); // Compressão em 85% de qualidade
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }));
+</script>
+@endscript
