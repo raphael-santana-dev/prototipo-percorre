@@ -67,7 +67,7 @@
                         </div>
                     </div>
 
-                    <div class="space-y-6">
+                    <div class="space-y-2">
                         @php $podeFinalizar = true; @endphp
 
                         @foreach($documentosExigidos as $doc)
@@ -80,44 +80,41 @@
                                 }
                             @endphp
 
-                            <div class="border rounded-xl p-5 {{ $status === 'valido_ia' ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white' }} transition-all">
-                                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                                    <div>
-                                        <h4 class="font-bold text-gray-900 text-lg flex items-center gap-2">
+                            <div class="border rounded-lg p-3 sm:p-4 {{ $status === 'valido_ia' ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white' }} transition-all shadow-sm">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-900 text-sm flex items-center gap-2">
                                             {{ $doc->nome }} 
-                                            @if($doc->is_obrigatorio) <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded uppercase tracking-wider">Obrigatório</span> @endif
+                                            @if($doc->is_obrigatorio) <span class="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold">Obrigatório</span> @endif
                                         </h4>
-                                        <p class="text-xs text-gray-500 mt-1">{{ $doc->descricao }}</p>
+                                        <p class="text-[11px] text-gray-500 mt-0.5 leading-tight">{{ $doc->descricao }}</p>
                                     </div>
 
-                                    <div class="shrink-0 w-full md:w-auto">
+                                    <div class="shrink-0">
                                         @if($status === 'valido_ia')
-                                            <div class="flex items-center gap-2 text-green-700 font-bold bg-green-100 px-4 py-2 rounded-lg justify-center">
-                                                <i class="ph-fill ph-check-circle text-xl"></i> Documento Aprovado
+                                            <div class="flex items-center gap-1.5 text-green-700 font-bold bg-green-100/50 border border-green-200 px-3 py-1.5 rounded text-xs justify-center w-full sm:w-auto">
+                                                <i class="ph-fill ph-check-circle text-sm"></i> Aprovado
                                             </div>
                                         @elseif($status === 'analise_manual')
                                             <div class="flex flex-col items-center text-center">
-                                                <div class="flex items-center gap-2 text-yellow-700 font-bold bg-yellow-100 px-4 py-2 rounded-lg w-full justify-center">
-                                                    <i class="ph-fill ph-clock text-xl"></i> Em Análise Manual
+                                                <div class="flex items-center gap-1.5 text-yellow-700 font-bold bg-yellow-100/50 border border-yellow-200 px-3 py-1.5 rounded text-xs w-full sm:w-auto justify-center">
+                                                    <i class="ph-fill ph-clock text-sm"></i> Em Análise Manual
                                                 </div>
-                                                <span class="text-[10px] text-gray-500 mt-1">Aguardando secretaria.</span>
                                             </div>
                                         @else
+                                            <!-- Reduzido botão de envio -->
                                             <div class="relative" x-data="imageCompressor({{ $doc->id }})">
-                                                <label class="flex justify-center items-center px-4 py-2.5 bg-purpura-50 text-purpura-700 border border-purpura-200 rounded-lg cursor-pointer hover:bg-purpura-100 transition font-bold text-sm w-full md:w-auto">
-                                                    <i class="ph-bold ph-upload-simple mr-2"></i> Enviar Imagem
-                                                    <!-- Removido o wire:model.live. Agora o Alpine intercepta o arquivo primeiro -->
+                                                <label class="flex justify-center items-center px-3 py-1.5 bg-purpura-50 text-purpura-700 border border-purpura-200 rounded cursor-pointer hover:bg-purpura-100 transition font-bold text-xs w-full sm:w-auto">
+                                                    <i class="ph-bold ph-upload-simple mr-1.5"></i> Enviar
                                                     <input type="file" @change="processarUpload" class="hidden" accept="image/jpeg, image/png, image/webp">
                                                 </label>
-
-                                                <!-- Spinner 1: Exibido enquanto o celular/navegador comprime a foto -->
-                                                <div x-show="comprimindo" style="display: none;" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center text-orange-600 font-bold text-xs gap-2">
-                                                    <i class="ph-bold ph-arrows-in animate-pulse text-lg"></i> Otimizando...
+                                                
+                                                <div x-show="comprimindo" style="display: none;" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded flex items-center justify-center text-orange-600 font-bold text-[10px] gap-1">
+                                                    <i class="ph-bold ph-arrows-in animate-pulse text-sm"></i> Otimizando...
                                                 </div>
 
-                                                <!-- Spinner 2: Exibido pelo Livewire durante o Upload pra nuvem e Análise da IA -->
-                                                <div wire:loading wire:target="uploads.{{ $doc->id }}" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center text-purpura-600 font-bold text-xs gap-2">
-                                                    <i class="ph-bold ph-spinner animate-spin text-lg"></i> Analisando na IA...
+                                                <div wire:loading wire:target="uploads.{{ $doc->id }}" class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded flex items-center justify-center text-purpura-600 font-bold text-[10px] gap-1">
+                                                    <i class="ph-bold ph-spinner animate-spin text-sm"></i> Analisando...
                                                 </div>
                                             </div>
                                         @endif
@@ -125,11 +122,11 @@
                                 </div>
 
                                 @if($status === 'invalido_ia')
-                                    <div class="mt-4 bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-3">
-                                        <i class="ph-fill ph-warning-circle text-red-500 text-xl shrink-0 mt-0.5"></i>
+                                    <div class="mt-3 bg-red-50 border border-red-100 p-2 rounded flex items-start gap-2">
+                                        <i class="ph-fill ph-warning-circle text-red-500 text-sm shrink-0 mt-0.5"></i>
                                         <div>
-                                            <p class="text-xs font-bold text-red-800">Documento Rejeitado (Tentativa {{ $statusInfo['tentativas'] }} de 3)</p>
-                                            <p class="text-xs text-red-600 mt-1">{{ $statusInfo['motivo_rejeicao'] }}</p>
+                                            <p class="text-[10px] font-bold text-red-800">Rejeitado pela IA (Tentativa {{ $statusInfo['tentativas'] }} de 3)</p>
+                                            <p class="text-[10px] text-red-600">{{ $statusInfo['motivo_rejeicao'] }}</p>
                                         </div>
                                     </div>
                                 @endif
@@ -144,7 +141,7 @@
                             <i class="ph-bold ph-paper-plane-right"></i> Enviar Dossiê de Matrícula
                         </button>
                         @if(!$podeFinalizar)
-                            <p class="text-center text-xs text-gray-500 mt-3">Envie todos os documentos obrigatórios para habilitar este botão.</p>
+                            <p class="text-center text-xs text-gray-500 mt-3">Anexe todos os documentos obrigatórios.</p>
                         @endif
                     </div>
                 @endif
