@@ -23,6 +23,7 @@ class PortalMatricula extends Component
     public $inscricao;
     public $documentosExigidos = [];
     public $uploads = [];
+    public $uploadsLote = []; // Variável para o Drag & Drop de múltiplos arquivos
     public $arquivosEnviados = [];
     public $concluido = false;
 
@@ -51,8 +52,8 @@ class PortalMatricula extends Component
         $throttleKey = 'matricula-auth:' . $this->token . '|' . request()->ip();
 
         // Trava de segurança: máximo de 5 tentativas a cada 60 segundos
-        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $segundos = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $segundos = RateLimiter::availableIn($throttleKey);
             $this->addError('falha_auth', "Muitas tentativas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.");
             return;
         }
@@ -72,7 +73,7 @@ class PortalMatricula extends Component
         // 2. Normalização da Data de Nascimento
         $dataValida = false;
         if (!empty($this->inscricao->data_nascimento)) {
-            // Converte a data do banco (seja datetime ou string) para o formato exato do input HTML
+            // Converte a data do banco para o formato exato do input HTML
             $dataBancoFormatada = \Carbon\Carbon::parse($this->inscricao->data_nascimento)->format('Y-m-d');
             $dataValida = hash_equals($dataBancoFormatada, (string)$this->data_nascimento_acesso);
         }
@@ -81,12 +82,12 @@ class PortalMatricula extends Component
         $cpfValido = hash_equals($cpfInscricaoLimpo, $cpfLimpo);
 
         if ($cpfValido && $dataValida) {
-            \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
+            RateLimiter::clear($throttleKey);
             $this->autenticado = true;
             $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso. Cofre liberado!');
         } else {
-            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 60);
-            $restantes = \Illuminate\Support\Facades\RateLimiter::remaining($throttleKey, 5);
+            RateLimiter::hit($throttleKey, 60);
+            $restantes = RateLimiter::remaining($throttleKey, 5);
             $this->addError('falha_auth', "Dados incorretos. Você tem mais {$restantes} tentativa(s) antes do bloqueio.");
         }
     }
@@ -116,6 +117,9 @@ class PortalMatricula extends Component
         }
     }
 
+    // ==========================================
+    // UPLOAD INDIVIDUAL (UM ARQUIVO POR VEZ)
+    // ==========================================
     public function updatedUploads($value, $documentoExigidoId)
     {
         // Limita extensão e tamanho máximo (10MB)
@@ -165,6 +169,73 @@ class PortalMatricula extends Component
 
         $docMatricula->save();
         $this->carregarStatusArquivos();
+        
+        // Desliga o spinner de carregamento individual no front-end
+        $this->dispatch('analise-concluida', docId: $documentoExigidoId);
+    }
+
+    // ==========================================
+    // UPLOAD EM LOTE (DRAG & DROP INTELIGENTE)
+    // ==========================================
+    public function updatedUploadsLote()
+    {
+        $this->validate([
+            'uploadsLote.*' => 'required|file|mimes:jpeg,png,jpg,webp|max:10240'
+        ]);
+
+        $sucessos = 0;
+        $falhas = 0;
+
+        foreach ($this->uploadsLote as $file) {
+            $caminhoTemp = $file->store("matriculas/{$this->inscricao->id}/temp");
+            
+            // A IA descobre a qual DocumentoExigido essa imagem pertence
+            $resultadoIa = AiValidationService::classificarDocumentoLote($this->inscricao, $this->documentosExigidos, $caminhoTemp);
+
+            if ($resultadoIa['documento_id'] > 0) {
+                $docId = $resultadoIa['documento_id'];
+                
+                $caminhoFinal = str_replace('/temp/', '/', $caminhoTemp);
+                Storage::move($caminhoTemp, $caminhoFinal);
+
+                $docMatricula = DocumentoMatricula::firstOrNew([
+                    'inscricao_id' => $this->inscricao->id,
+                    'documento_exigido_id' => $docId,
+                ]);
+
+                if ($docMatricula->arquivo_caminho && Storage::exists($docMatricula->arquivo_caminho)) {
+                    Storage::delete($docMatricula->arquivo_caminho);
+                }
+
+                $docMatricula->arquivo_caminho = $caminhoFinal;
+                $docMatricula->arquivo_extensao = $file->getClientOriginalExtension();
+                $docMatricula->tentativas_ia = $docMatricula->tentativas_ia + 1;
+                
+                if ($resultadoIa['valido']) {
+                    $docMatricula->status_analise = 'valido_ia';
+                    $docMatricula->log_ia = $resultadoIa['raw'] ?? [];
+                    $sucessos++;
+                } else {
+                    if ($docMatricula->tentativas_ia >= 3) {
+                        $docMatricula->status_analise = 'analise_manual';
+                    } else {
+                        $docMatricula->status_analise = 'invalido_ia';
+                    }
+                    $docMatricula->log_ia = ['motivo_rejeicao' => $resultadoIa['motivo_rejeicao'], 'raw' => $resultadoIa['raw'] ?? []];
+                    $falhas++;
+                }
+                $docMatricula->save();
+            } else {
+                Storage::delete($caminhoTemp); 
+                $falhas++;
+            }
+        }
+
+        $this->uploadsLote = [];
+        $this->carregarStatusArquivos();
+        
+        // Desliga a tela de carregamento do Lote no front-end
+        $this->dispatch('lote-concluido', msg: "Processamento concluído: {$sucessos} documento(s) válido(s) e alocado(s). {$falhas} ignorado(s) ou inválido(s).");
     }
 
     public function finalizarMatricula()
@@ -179,6 +250,7 @@ class PortalMatricula extends Component
             }
         }
 
+        // Avança a etapa no funil da secretaria
         $this->inscricao->update(['etapa_atual' => 2]);
         $this->concluido = true;
     }
