@@ -103,6 +103,11 @@
                     </button>
                 @endforeach
 
+                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-2 hidden md:block"></div>
+                <button wire:click="avancarSelecionadas" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 hover:-translate-y-0.5">
+                    Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
+                </button>
+
                 <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-1 hidden md:block"></div>
                 <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition">
                     Ver no Modal

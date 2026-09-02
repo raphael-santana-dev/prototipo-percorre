@@ -33,8 +33,10 @@ class AiValidationService
             } elseif ($config->provedor === 'openai') {
                 return self::chamarOpenAiCompatible('https://api.openai.com/v1/chat/completions', 'gpt-4o-mini', $config->api_key, $promptFinal, $mimeType, $base64);
             } elseif ($config->provedor === 'deepseek') {
-                // ATUALIZADO: Apontando para o novo modelo de visão da DeepSeek
                 return self::chamarOpenAiCompatible('https://api.deepseek.com/chat/completions', 'deepseek-v4-flash-vision-exp', $config->api_key, $promptFinal, $mimeType, $base64);
+            } elseif ($config->provedor === 'grok') {
+                // Roteamento oficial para a API da xAI (Grok Vision)
+                return self::chamarOpenAiCompatible('https://api.x.ai/v1/chat/completions', 'grok-vision-beta', $config->api_key, $promptFinal, $mimeType, $base64);
             }
             
             return ['valido' => false, 'motivo_rejeicao' => 'Provedor de IA selecionado ainda não foi configurado no código.'];
@@ -58,9 +60,7 @@ class AiValidationService
                     ]
                 ]
             ],
-            "generationConfig" => [
-                "response_mime_type" => "application/json"
-            ]
+            "generationConfig" => ["response_mime_type" => "application/json"]
         ];
 
         $response = Http::timeout(30)->post($url, $payload);
@@ -77,13 +77,11 @@ class AiValidationService
                 ];
             }
         }
-
         return ['valido' => false, 'motivo_rejeicao' => 'A IA não conseguiu interpretar o documento.'];
     }
 
     private static function chamarOpenAiCompatible($url, $modelo, $apiKey, $prompt, $mimeType, $base64)
     {
-        // A estrutura abaixo segue rigorosamente a exigência da documentação (inline image_url block)
         $payload = [
             "model" => $modelo,
             "messages" => [
@@ -98,10 +96,9 @@ class AiValidationService
         ];
 
         $response = Http::withToken($apiKey)->timeout(45)->post($url, $payload);
-        // dd($response->body()); // DEBUG: Exibe a resposta completa da API para análise
+
         if ($response->successful()) {
             $conteudo = $response->json('choices.0.message.content');
-            
             $conteudo = preg_replace('/```json\s*(.*?)\s*```/s', '$1', $conteudo);
             $conteudo = preg_replace('/```\s*(.*?)\s*```/s', '$1', $conteudo);
             
@@ -115,8 +112,6 @@ class AiValidationService
                 ];
             }
         }
-
-        Log::error("Erro API IA Compatível: " . $response->body());
         return ['valido' => false, 'motivo_rejeicao' => 'A IA rejeitou o envio. O provedor pode não suportar análise de imagens.'];
     }
 }

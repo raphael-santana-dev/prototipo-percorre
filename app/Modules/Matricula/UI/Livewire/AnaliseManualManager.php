@@ -123,7 +123,8 @@ class AnaliseManualManager extends Component
     public function render()
     {
         $pendentes = DocumentoMatricula::with(['inscricao', 'documentoExigido'])
-            ->where('status_analise', 'analise_manual')
+            // AGORA EXIBE TANTO OS QUE ESGOTARAM AS TENTATIVAS QUANTO OS QUE FALHARAM RECENTEMENTE
+            ->whereIn('status_analise', ['analise_manual', 'invalido_ia'])
             ->orderBy('updated_at', 'asc')
             ->paginate($this->porPagina);
 

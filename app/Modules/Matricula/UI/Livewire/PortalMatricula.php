@@ -12,7 +12,7 @@ use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
 use Illuminate\Support\Facades\Storage;
 
-#[Layout('components.layouts.public')] // Usa o layout sem sidebar de admin
+#[Layout('components.layouts.public')]
 #[Title('Portal de Matrícula')]
 class PortalMatricula extends Component
 {
@@ -21,22 +21,49 @@ class PortalMatricula extends Component
     public $token;
     public $inscricao;
     public $documentosExigidos = [];
-    public $uploads = []; // Arquivos temporários do Livewire
-    public $arquivosEnviados = []; // Controle dos status dos documentos
-
+    public $uploads = [];
+    public $arquivosEnviados = [];
     public $concluido = false;
+
+    // Variáveis de Segurança (Desafio de Identidade)
+    public $autenticado = false;
+    public $cpf_acesso = '';
+    public $data_nascimento_acesso = '';
 
     public function mount($token)
     {
-        // Busca a inscrição pelo token único
         $this->inscricao = Inscricao::with(['curso', 'unidade', 'ciclo'])
             ->where('token_matricula', $token)
             ->firstOrFail();
 
-        // Busca o que é exigido para o ciclo do aluno
-        $this->documentosExigidos = DocumentoExigido::where('ciclo_id', $this->inscricao->ciclo_id)->get();
+        // Se o usuário já estiver logado no sistema como o Aluno dono desta inscrição, pula o desafio
+        if (auth('student')->check() && auth('student')->id() === $this->inscricao->student_id) {
+            $this->autenticado = true;
+        }
 
+        $this->documentosExigidos = DocumentoExigido::where('ciclo_id', $this->inscricao->ciclo_id)->get();
         $this->carregarStatusArquivos();
+    }
+
+    public function verificarIdentidade()
+    {
+        $this->validate([
+            'cpf_acesso' => 'required|min:11',
+            'data_nascimento_acesso' => 'required|date'
+        ], [
+            'cpf_acesso.required' => 'O CPF é obrigatório.',
+            'data_nascimento_acesso.required' => 'A Data de Nascimento é obrigatória.'
+        ]);
+
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf_acesso);
+        $cpfInscricaoLimpo = preg_replace('/[^0-9]/', '', $this->inscricao->cpf);
+
+        if ($cpfLimpo === $cpfInscricaoLimpo && $this->data_nascimento_acesso === $this->inscricao->data_nascimento) {
+            $this->autenticado = true;
+            $this->dispatch('sucesso', msg: 'Identidade confirmada. Cofre liberado!');
+        } else {
+            $this->addError('falha_auth', 'Os dados informados não conferem com o titular desta matrícula.');
+        }
     }
 
     public function carregarStatusArquivos()
@@ -48,7 +75,7 @@ class PortalMatricula extends Component
                 $salvo = $documentosSalvos->get($doc->id);
                 $this->arquivosEnviados[$doc->id] = [
                     'id' => $salvo->id,
-                    'status' => $salvo->status_analise, // valido_ia, invalido_ia, analise_manual
+                    'status' => $salvo->status_analise,
                     'tentativas' => $salvo->tentativas_ia,
                     'motivo_rejeicao' => $salvo->log_ia['motivo_rejeicao'] ?? ''
                 ];
@@ -64,17 +91,12 @@ class PortalMatricula extends Component
 
     public function updatedUploads($value, $documentoExigidoId)
     {
-        $this->validate([
-            "uploads.{$documentoExigidoId}" => 'image|max:10240', // Apenas imagens, máx 10MB
-        ]);
+        $this->validate(["uploads.{$documentoExigidoId}" => 'image|max:10240']);
 
         $file = $this->uploads[$documentoExigidoId];
         $documentoModel = DocumentoExigido::find($documentoExigidoId);
-
-        // Salva o arquivo no disco local/privado
         $caminho = $file->store("matriculas/{$this->inscricao->id}");
         
-        // Busca ou cria o registro do cofre
         $docMatricula = DocumentoMatricula::firstOrNew([
             'inscricao_id' => $this->inscricao->id,
             'documento_exigido_id' => $documentoExigidoId,
@@ -85,14 +107,12 @@ class PortalMatricula extends Component
         $docMatricula->tentativas_ia = $docMatricula->tentativas_ia + 1;
         $docMatricula->save();
 
-        // Aciona a IA
         $resultadoIa = AiValidationService::validarDocumento($this->inscricao, $documentoModel, $caminho);
 
         if ($resultadoIa['valido']) {
             $docMatricula->status_analise = 'valido_ia';
             $docMatricula->log_ia = $resultadoIa['raw'] ?? [];
         } else {
-            // Se falhou e atingiu 3 tentativas, joga pra análise humana
             if ($docMatricula->tentativas_ia >= 3) {
                 $docMatricula->status_analise = 'analise_manual';
             } else {
@@ -102,12 +122,11 @@ class PortalMatricula extends Component
         }
 
         $docMatricula->save();
-        $this->carregarStatusArquivos(); // Atualiza a tela
+        $this->carregarStatusArquivos();
     }
 
     public function finalizarMatricula()
     {
-        // Confere se todos os documentos OBRIGATÓRIOS foram validados ou estão para análise manual
         foreach ($this->documentosExigidos as $doc) {
             if ($doc->is_obrigatorio) {
                 $status = $this->arquivosEnviados[$doc->id]['status'] ?? 'pendente';
@@ -118,7 +137,6 @@ class PortalMatricula extends Component
             }
         }
 
-        // Marca a etapa como concluída
         $this->inscricao->update(['etapa_atual' => 'Análise de Matrícula']);
         $this->concluido = true;
     }

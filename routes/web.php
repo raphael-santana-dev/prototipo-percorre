@@ -107,7 +107,8 @@ Route::middleware('auth')->group(function () {
     // --- Validação de Matrículas e Inteligência Artificial ---
     Route::get('/matriculas/configuracao-ia', \App\Modules\Matricula\UI\Livewire\IaConfigManager::class)->name('matriculas.configuracao');
     Route::get('/matriculas/analise-manual', \App\Modules\Matricula\UI\Livewire\AnaliseManualManager::class)->name('matriculas.analise-manual');
-
+    Route::get('/matriculas/acompanhamento', \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class)->name('matriculas.acompanhamento');
+    
     // --- Formulários Dinâmicos ---
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');

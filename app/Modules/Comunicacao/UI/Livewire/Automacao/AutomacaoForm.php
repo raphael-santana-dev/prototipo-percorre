@@ -20,11 +20,15 @@ class AutomacaoForm extends Component
 
     public function mount($id = null)
     {
-        $statusInscricoes = StatusInscricao::orderBy('nome')->get();
+        // 1. Busca TODOS os status criados no sistema dinamicamente
+        $statusInscricoes = \App\Models\StatusInscricao::orderBy('nome')->get();
+        
         foreach ($statusInscricoes as $st) {
-            $slug = Str::slug($st->nome, '_');
+            // Converte "Em Análise" para "em_analise" automaticamente
+            $slug = \Illuminate\Support\Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
+        
         $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
 
         if ($id) {
