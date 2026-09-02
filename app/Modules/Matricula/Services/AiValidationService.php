@@ -28,13 +28,13 @@ class AiValidationService
         $base64 = base64_encode(file_get_contents($caminhoAbsoluto));
 
         try {
-            // Roteamento baseado na escolha do Painel
             if ($config->provedor === 'gemini') {
                 return self::chamarGemini($config->api_key, $promptFinal, $mimeType, $base64);
             } elseif ($config->provedor === 'openai') {
                 return self::chamarOpenAiCompatible('https://api.openai.com/v1/chat/completions', 'gpt-4o-mini', $config->api_key, $promptFinal, $mimeType, $base64);
             } elseif ($config->provedor === 'deepseek') {
-                return self::chamarOpenAiCompatible('https://api.deepseek.com/chat/completions', 'deepseek-chat', $config->api_key, $promptFinal, $mimeType, $base64);
+                // ATUALIZADO: Apontando para o novo modelo de visão da DeepSeek
+                return self::chamarOpenAiCompatible('https://api.deepseek.com/chat/completions', 'deepseek-v4-flash-vision-exp', $config->api_key, $promptFinal, $mimeType, $base64);
             }
             
             return ['valido' => false, 'motivo_rejeicao' => 'Provedor de IA selecionado ainda não foi configurado no código.'];
@@ -81,9 +81,9 @@ class AiValidationService
         return ['valido' => false, 'motivo_rejeicao' => 'A IA não conseguiu interpretar o documento.'];
     }
 
-    // Método Universal que serve para OpenAI, DeepSeek, Grok, etc.
     private static function chamarOpenAiCompatible($url, $modelo, $apiKey, $prompt, $mimeType, $base64)
     {
+        // A estrutura abaixo segue rigorosamente a exigência da documentação (inline image_url block)
         $payload = [
             "model" => $modelo,
             "messages" => [
@@ -98,11 +98,10 @@ class AiValidationService
         ];
 
         $response = Http::withToken($apiKey)->timeout(45)->post($url, $payload);
-        dd($response->body()); // Debug: mostra a resposta da IA para análise
+        // dd($response->body()); // DEBUG: Exibe a resposta completa da API para análise
         if ($response->successful()) {
             $conteudo = $response->json('choices.0.message.content');
             
-            // IAs costumam responder envelopando o JSON em markdown. Esse regex limpa isso.
             $conteudo = preg_replace('/```json\s*(.*?)\s*```/s', '$1', $conteudo);
             $conteudo = preg_replace('/```\s*(.*?)\s*```/s', '$1', $conteudo);
             
