@@ -79,18 +79,27 @@
                                             {{ $avFase->status == '2' ? 'CONCLUÍDA' : 'PENDENTE' }}
                                         </span>
 
-                                        {{-- BOTÕES DE DESBLOQUEIO / SOLICITAÇÃO --}}
-                                        @if(auth()->guard('student')->check() && $avFase->status == '2')
-                                            @if($solicitacoesPendentes[$avFase->fase] ?? false)
-                                                <span class="mt-2 inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[9px] rounded font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-500">Em Análise</span>
-                                            @else
-                                                <button type="button" wire:click="abrirModalSolicitacao({{ $avFase->id }}, {{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
-                                                    Solicitar Alteração
+                                        {{-- BOTÕES DE DESBLOQUEIO E SOLICITAÇÃO --}}
+                                        @if($avFase->status == '2')
+                                            @if(auth()->guard('student')->check() && ($usuarioResponsavelFase[$avFase->fase] ?? false))
+                                                @if($solicitacoesPendentes[$avFase->fase] ?? false)
+                                                    <span class="mt-2 inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[9px] rounded font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-500">Em Análise</span>
+                                                @else
+                                                    <button type="button" wire:click="abrirModalSolicitacao({{ $avFase->id }}, {{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
+                                                        Solicitar Alteração
+                                                    </button>
+                                                @endif
+                                            @elseif(auth()->guard('web')->check() && auth()->user()->hasRole('professor') && !auth()->user()->hasRole('dev') && !$avaliacaoFinalizada && ($usuarioResponsavelFase[$avFase->fase] ?? false))
+                                                <button type="button" wire:click="abrirModalSelfUnlock({{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
+                                                    Desbloquear Fase
                                                 </button>
                                             @endif
-                                        @elseif(auth()->guard('web')->check() && auth()->user()->hasRole('professor') && $avFase->status == '2' && !$avaliacaoFinalizada && ($permissoesFase[$avFase->fase] ?? false))
-                                            <button type="button" wire:click="abrirModalSelfUnlock({{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
-                                                Desbloquear Fase
+                                        @endif
+
+                                        {{-- NOVO BOTÃO DE SALVAR FASE INDIVIDUAL --}}
+                                        @if($permissoesFase[$avFase->fase] ?? false)
+                                            <button type="button" wire:click="salvarFase({{ $avFase->fase }})" class="mt-3 flex items-center justify-center gap-1.5 w-full bg-purpura-100 text-purpura-700 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 dark:hover:bg-purpura-900/60 px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wider transition shadow-sm border border-purpura-200 dark:border-purpura-800">
+                                                <i class="ph-bold ph-floppy-disk text-sm"></i> Salvar Fase
                                             </button>
                                         @endif
                                     </th>
@@ -151,7 +160,7 @@
             @if($podeEditarGeral)
                 <div class="p-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end">
                     <button type="submit" class="px-8 py-3 bg-purpura-600 hover:bg-purpura-700 text-white font-black rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-lg"></i> Salvar Respostas
+                        <i class="ph-bold ph-check text-lg"></i> Salvar e Voltar
                     </button>
                 </div>
             @endif
@@ -205,7 +214,7 @@
                 </h3>
                 
                 <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg mb-4 text-sm text-blue-800 dark:text-blue-300">
-                    Como a matriz ainda não foi finalizada, você pode reabrir sua própria fase para correções imediatas. Esta ação será registrada no histórico de auditoria.
+                    Como a matriz ainda não foi finalizada, você pode reabrir sua própria fase para correções imediatas. Esta ação será registrada no histórico de auditoria e pode bloquear temporariamente o acesso do aluno às fases seguintes.
                 </div>
 
                 <div>
