@@ -477,11 +477,17 @@ class Inscricao extends Component
         $unidadesDisponiveisList = collect();
         
         foreach($ofertasDisponiveis as $oferta) {
-            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
-            if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true])) continue;
+            // Trava Básica: Curso ou Unidade inativos (Padrão e Boolean)
+            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
+            if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true], true)) continue;
             
-            if (!$oferta->curso->permite_estado_diferente && $oferta->unidade->estado !== $this->estado) continue;
+            // TRAVA DE UF CORRIGIDA: 
+            // Só libera a oferta se o estado do candidato for igual ao da unidade OU o curso específico permitir imigração
+            if ($oferta->unidade->estado !== $this->estado && !$oferta->curso->permite_estado_diferente) {
+                continue;
+            }
 
+            // Trava de Vagas Reais
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
                 if (!isset($ofertasValidas[$key])) continue;
@@ -492,10 +498,8 @@ class Inscricao extends Component
 
         if ($unidadesDisponiveisList->count() > 0) {
             $this->temVagasDisponiveis = true;
-            // AQUI: Aplica a ordenação alfabética (.asort) mantendo o ID da unidade
             $unidadesOrdenadas = $unidadesDisponiveisList->unique()->toArray();
             asort($unidadesOrdenadas);
-            
             $this->unidadesDisponiveis = $unidadesOrdenadas;
 
             if (count($this->unidadesDisponiveis) === 1) {
@@ -518,6 +522,7 @@ class Inscricao extends Component
 
         $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
+        $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
         $ofertasDaUnidade = \App\Models\OfertaVaga::with(['curso', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
@@ -528,13 +533,15 @@ class Inscricao extends Component
             ->where(function($q) use ($idade) {
                 $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
             })
-            ->get(); // Removido o ->orderBy() daqui!
-
-        $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
+            ->get(); 
 
         foreach ($ofertasDaUnidade as $oferta) {
-            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true])) continue;
-            if (!$oferta->curso->permite_estado_diferente && $unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado) continue;
+            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
+            
+            // TRAVA DE UF NO CURSO:
+            if ($unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado && !$oferta->curso->permite_estado_diferente) {
+                continue;
+            }
 
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$unidadeId}-{$oferta->curso_id}-{$oferta->turno_id}";
@@ -544,7 +551,6 @@ class Inscricao extends Component
             $this->cursosDisponiveis[$oferta->curso_id] = $oferta->curso->nome;
         }
 
-        // AQUI: Ordenação alfabética dos Cursos
         if (!empty($this->cursosDisponiveis)) {
             asort($this->cursosDisponiveis);
         }
