@@ -9,6 +9,14 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
+        <x-slot name="actions">
+            @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.cria')))
+                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                    <i class="ph ph-plus text-lg"></i> Nova Inscrição
+                </button>
+            @endif
+        </x-slot>
+
         {{-- FILTROS: O header renderiza a caixa branca, você só passa o Grid interno --}}
         <x-slot name="filters" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -496,4 +504,59 @@
     <x-fab :actions="$this->fabActions"
     main-color="bg-purple-500 hover:bg-purple-900"
     mainIcon="ph ph-plus" />
+
+    @if($modalAberto)
+        <x-modal title="Nova Inscrição" max-width="md" close-method="fecharModal">
+            <form wire:submit.prevent="salvarNovaInscricao" class="space-y-4">
+                
+                <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-3 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 font-medium mb-2">
+                    <i class="ph-fill ph-info"></i> O candidato receberá um link seguro de retomada no e-mail para concluir o restante das etapas após o seu cadastro.
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nome Completo <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="nome" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                    @error('nome') <span class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">CPF <span class="text-red-500">*</span></label>
+                        <input type="text" wire:model="cpf" x-mask="999.999.999-99" placeholder="000.000.000-00" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                        @error('cpf') <span class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Celular / Telefone</label>
+                        <input type="text" wire:model="celular" x-mask="(99) 99999-9999" placeholder="(00) 00000-0000" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        @error('celular') <span class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">E-mail <span class="text-red-500">*</span></label>
+                    <input type="email" wire:model="email" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                    @error('email') <span class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ $message }}</span> @enderror
+                </div>
+                
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Ciclo de Inscrição <span class="text-red-500">*</span></label>
+                    <select wire:model="ciclo_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                        <option value="">Selecione o Ciclo...</option>
+                        @foreach($ciclosDb as $ciclo)
+                            <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option>
+                        @endforeach
+                    </select>
+                    @error('ciclo_id') <span class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-5 mt-2 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" wire:click="fecharModal" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 text-xs font-bold transition">Cancelar</button>
+                    <button type="submit" wire:loading.attr="disabled" class="px-6 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-2">
+                        <span wire:loading.remove>Salvar Cadastro</span>
+                        <span wire:loading>Processando...</span>
+                    </button>
+                </div>
+            </form>
+        </x-modal>
+    @endif
 </div>

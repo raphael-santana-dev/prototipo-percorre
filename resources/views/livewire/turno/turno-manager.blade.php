@@ -120,33 +120,33 @@
     @if($showModal)
         <x-modal title="{{ $isEditMode ? 'Editar Turno' : 'Novo Turno' }}" max-width="md" close-method="closeModal">                    
             <form wire:submit="save" class="space-y-4">
-                        <div>
-                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome (ex: Manhã) <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                            @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                        </div>
+                <div>
+                    <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Nome (ex: Manhã) <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="nome" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Horário Início <span class="text-red-500">*</span></label>
-                                <input type="time" wire:model="horario_inicio" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('horario_inicio') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-                            <div>
-                                <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Horário Fim <span class="text-red-500">*</span></label>
-                                <input type="time" wire:model="horario_fim" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                @error('horario_fim') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
-                            </div>
-                        </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Horário Início <span class="text-red-500">*</span></label>
+                        <input type="time" wire:model="horario_inicio" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        @error('horario_inicio') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Horário Fim <span class="text-red-500">*</span></label>
+                        <input type="time" wire:model="horario_fim" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        @error('horario_fim') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                    </div>
+                </div>
 
-                        <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
-                            <button type="button" wire:click="closeModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
-                                Cancelar
-                            </button>
-                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white shadow-sm rounded-lg bg-ponkan-500 hover:bg-ponkan-600">
-                                Salvar Turno
-                            </button>
-                        </div>
+                <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" wire:click="closeModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold text-white shadow-sm rounded-lg bg-ponkan-500 hover:bg-ponkan-600">
+                        Salvar Turno
+                    </button>
+                </div>
             </form>
         </x-modal>
     @endif

@@ -39,6 +39,9 @@ class RegistrationManager extends Component
     public bool $selecaoPreencherVagas = false;
 
     public array $breadcrumbs = [];
+
+    public $nome, $cpf, $email, $celular, $ciclo_id;
+    public $modalAberto = false; 
     
     public function mount()
     {
@@ -52,6 +55,97 @@ class RegistrationManager extends Component
         ];
 
         $this->permiteGrid = true;
+    }
+
+    public function fecharModal()
+    {
+        $this->modalAberto = false;
+        $this->resetInputFields();
+    }
+
+    private function resetInputFields()
+    {
+        $this->nome = '';
+        $this->cpf = '';
+        $this->email = '';
+        $this->celular = '';
+        $this->ciclo_id = null;
+        $this->resetErrorBag();
+    }
+
+    public function abrirModal() {
+        abort_if(!feature('inscricao.criar'), 403, 'O módulo de cadastro de inscrição está temporariamente desativado no sistema.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.criar'), 403, 'Sem permissão');
+
+        $this->resetValidation();
+        $this->reset(['nome', 'cpf', 'email', 'celular', 'ciclo_id']);
+
+        $this->modalAberto = true;
+    }
+
+    public function salvarNovaInscricao()
+    {
+        abort_if(!feature('inscricao.criar'), 403);
+
+        $this->validate([
+            'nome' => 'required|string|min:3',
+            'cpf' => 'required|string|min:11',
+            'email' => 'required|email',
+            'celular' => 'nullable|string',
+            'ciclo_id' => 'required|exists:ciclos,id'
+        ]);
+
+        $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf);
+
+        // Verifica se CPF já existe
+        if (Inscricao::where('cpf', $cpfLimpo)->exists()) {
+            $this->addError('cpf', 'Este CPF já está cadastrado no sistema.');
+            return;
+        }
+
+        $payload = [
+            'nome' => $this->nome,
+            'cpf' => $cpfLimpo,
+            'email' => $this->email,
+            'celular' => $this->celular,
+            'ciclo_id' => $this->ciclo_id,
+            'origem' => 'manual',
+            'etapa_atual' => 1,
+            'status_inscricao_id' => 1, // Status Pendente por padrão
+            'criado_por' => auth()->id() // Rastro de auditoria manual
+        ];
+
+        // MÁGICA: Verifica se tem a permissão direta
+        $temPermissaoTotal = auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar_direto');
+
+        if ($temPermissaoTotal) {
+            // CADASTRO IMEDIATO
+            $inscricao = Inscricao::create($payload);
+            
+            // Dispara E-mail com Link de Retomada (Usando template)
+            $linkRetomada = route('inscricao.retomar', \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id));
+            \Illuminate\Support\Facades\Mail::to($inscricao->email)->send(new \App\Mail\TemplateGenericoMail('boas_vindas_estudante', $inscricao->toArray(), $linkRetomada));
+
+            $this->dispatch('sucesso', msg: 'Inscrição efetuada! E-mail de retomada enviado ao estudante.');
+        } else {
+            // ENTRA NO FLUXO DE APROVAÇÃO (HELP DESK)
+            $solicitacao = \App\Models\Solicitacao::create([
+                'tema' => 'cadastro_nova_inscricao',
+                'solicitante_type' => \App\Models\User::class,
+                'solicitante_id' => auth()->id(),
+                'justificativa' => "Cadastro inserido por " . auth()->user()->name . ". Aguardando análise para liberação.",
+                'status' => 'pendente',
+                'payload' => $payload
+            ]);
+
+            // Busca e-mail do sistema nas configs para notificar o admin
+            $emailSistema = \App\Models\ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
+            \Illuminate\Support\Facades\Mail::to($emailSistema)->send(new \App\Mail\NovaSolicitacaoMail($solicitacao, auth()->user()->name, 'Aprovação de Nova Inscrição'));
+
+            $this->dispatch('sucesso', msg: 'Sua solicitação de cadastro foi enviada para análise da administração.');
+        }
+
+        $this->fecharModal();
     }
 
     public function excluirInscricao($id)

@@ -50,6 +50,15 @@ class SolicitacoesManager extends Component
         if ($statusFinal === 'aprovada') {
             $payload = $this->solicitacaoAtiva->payload;
 
+            if ($this->solicitacaoAtiva->tema === 'cadastro_nova_inscricao') {
+                // Cria de fato a inscrição após a aprovação
+                $inscricao = \App\Models\Inscricao::create($payload);
+                
+                // Dispara o e-mail de retomada para o aluno através do Template
+                $linkRetomada = route('inscricao.retomar', \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id));
+                \Illuminate\Support\Facades\Mail::to($inscricao->email)->send(new \App\Mail\TemplateGenericoMail('boas_vindas_estudante', $inscricao->toArray(), $linkRetomada));
+            }
+
             if ($this->solicitacaoAtiva->tema === 'avaliacao_aluno_fase') {
                 // Desbloqueia a fase específica do aluno
                 AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])->update(['status' => '1', 'data_resposta' => null]);
