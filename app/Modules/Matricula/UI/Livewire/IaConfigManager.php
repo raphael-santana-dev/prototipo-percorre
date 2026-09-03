@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use App\Models\Ciclo;
 use App\Modules\Matricula\Domain\Models\ConfiguracaoIa;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
+use Illuminate\Support\Facades\Crypt;
 
 #[Layout('components.layouts.app')]
 #[Title('Motor de IA e Matrículas')]
@@ -25,6 +26,9 @@ class IaConfigManager extends Component
     public $descricaoDocumento = '';
     public $isObrigatorio = true;
 
+    // Constante para mascarar a chave no front-end
+    private const MASKED_KEY = '********_CHAVE_SALVA_********';
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.configurar'), 403, 'Acesso restrito.');
@@ -32,9 +36,11 @@ class IaConfigManager extends Component
         $config = ConfiguracaoIa::first();
         if ($config) {
             $this->provedor = $config->provedor;
-            $this->api_key = $config->api_key;
             $this->prompt_documentos = $config->prompt_documentos;
             $this->is_ativa = $config->is_ativa;
+            
+            // Mascara a chave: se existir no banco, o Livewire exibirá apenas asteriscos no front-end
+            $this->api_key = empty($config->api_key) ? '' : self::MASKED_KEY;
         }
     }
 
@@ -46,18 +52,29 @@ class IaConfigManager extends Component
             'prompt_documentos' => 'required'
         ]);
 
-        ConfiguracaoIa::updateOrCreate(
-            ['id' => 1], 
-            [
-                'provedor' => $this->provedor,
-                'api_key' => $this->api_key,
-                'prompt_documentos' => $this->prompt_documentos,
-                'is_ativa' => $this->is_ativa
-            ]
-        );
+        $dadosParaSalvar = [
+            'provedor' => $this->provedor,
+            'prompt_documentos' => $this->prompt_documentos,
+            'is_ativa' => $this->is_ativa
+        ];
 
-        $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com sucesso!');
+        // Só atualiza a chave no banco se o usuário digitou uma nova (diferente da máscara)
+        if ($this->api_key !== self::MASKED_KEY && !empty($this->api_key)) {
+            // Criptografa a chave antes de salvar no banco de dados
+            $dadosParaSalvar['api_key'] = Crypt::encryptString($this->api_key);
+        }
+
+        ConfiguracaoIa::updateOrCreate(['id' => 1], $dadosParaSalvar);
+
+        // Se o usuário digitou uma chave nova, voltamos a exibir a máscara na tela após salvar
+        if ($this->api_key !== self::MASKED_KEY) {
+            $this->api_key = self::MASKED_KEY;
+        }
+
+        $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com segurança!');
     }
+
+    // ... [Restante dos métodos adicionarDocumento, excluirDocumento e render permanecem iguais]
 
     public function adicionarDocumento()
     {
