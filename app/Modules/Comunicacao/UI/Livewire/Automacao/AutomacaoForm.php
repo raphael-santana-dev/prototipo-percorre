@@ -20,18 +20,19 @@ class AutomacaoForm extends Component
 
     public function mount($id = null)
     {
-        // 1. Busca TODOS os status criados no sistema dinamicamente
         $statusInscricoes = \App\Models\StatusInscricao::orderBy('nome')->get();
         
         foreach ($statusInscricoes as $st) {
-            // Converte "Em Análise" para "em_analise" automaticamente
             $slug = \Illuminate\Support\Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
 
         $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
-        
         $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
+        
+        // GATILHOS DO HELPDESK ADICIONADOS AQUI:
+        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
+        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
 
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);

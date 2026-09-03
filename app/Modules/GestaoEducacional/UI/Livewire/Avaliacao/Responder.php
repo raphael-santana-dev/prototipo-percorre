@@ -6,11 +6,8 @@ use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao;
 use App\Modules\GestaoEducacional\Domain\Models\PeriodoAvaliacao;
-
 use App\Models\Solicitacao;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\NovaSolicitacaoMail;
 
 class Responder extends Component
 {
@@ -56,15 +53,11 @@ class Responder extends Component
         $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor'); 
         $isDev = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'); 
 
-        // =======================================================
-        // 1. ISOLAMENTO DE ACESSO E PROTEÇÃO DIRETA DE URL
-        // =======================================================
         if ($isStudent) {
             abort_if(auth()->guard('student')->id() != $student, 403, 'Acesso negado. Você só pode acessar a sua própria avaliação.');
         }
 
         if ($isProfessor && !$isDev) {
-            // Verifica na tabela pivot se o professor logado está vinculado à turma da URL
             $professorVinculado = DB::table('professor_turma')
                 ->where('user_id', auth()->id())
                 ->where('turma_id', $turma)
@@ -73,9 +66,6 @@ class Responder extends Component
             abort_if(!$professorVinculado, 403, 'Acesso restrito. Você não leciona para esta turma e não pode gerenciar esta avaliação.');
         }
 
-        // =======================================================
-        // 2. CONFIGURAÇÕES DE VISIBILIDADE E FASES
-        // =======================================================
         $ocultar_fases = false;
         $aluno_responde_ambos = false;
         
@@ -129,7 +119,6 @@ class Responder extends Component
                 $this->visibilidadeFase[$f] = true;
             }
 
-            // Identifica quem é o responsável "dono" da fase
             $isResponsavel = false;
             if ($isStudent) {
                 if ($resp == '1') $isResponsavel = true;
@@ -156,7 +145,6 @@ class Responder extends Component
             $temSolicitacao = DB::table('avaliacao_solicitacoes')->where('aluno_avaliacao_id', $avFase->id)->where('status', 'pendente')->exists();
             $this->solicitacoesPendentes[$f] = $temSolicitacao;
 
-            // Bloqueio Total quando Respondida (se concluiu, corta a edição e vira texto)
             if ($avFase->status == '2' && !$isDev) {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = $temSolicitacao ? "Sua solicitação está em análise." : "Fase já respondida.";
@@ -221,7 +209,6 @@ class Responder extends Component
         ]);
 
         $this->mount($this->periodo_id, $this->turma_id, $this->student_id);
-
         $this->dispatch('sucesso', msg: "Fase {$faseNumero} salva com sucesso!");
     }
 
@@ -292,7 +279,7 @@ class Responder extends Component
             ]
         ]);
 
-        $this->enviarNotificacaoEmail($solicitacao, auth()->guard('student')->user()->name, 'Reabertura de Fase do Aluno');
+        $this->dispararAutomacoesFila('avaliacao.solicitacao_aluno');
 
         $this->solicitacoesPendentes[$this->faseNumero] = true;
         $this->motivosBloqueio[$this->faseNumero] = "Sua solicitação de alteração está em análise.";
@@ -312,7 +299,6 @@ class Responder extends Component
         $this->validate(['motivoTexto' => 'required|string|min:10']);
         
         $faseCorrente = $this->avaliacoesFases->firstWhere('fase', $this->faseNumero);
-
         $faseCorrente->update(['status' => '1', 'data_resposta' => null]);
 
         Solicitacao::create([
@@ -327,7 +313,7 @@ class Responder extends Component
 
         $this->modalSelfUnlock = false;
         $this->mount($this->periodo_id, $this->turma_id, $this->student_id); 
-        $this->dispatch('sucesso', msg: 'Sua fase foi desbloqueada. Você já pode editar as notas e as demais colunas foram travadas por cascata.');
+        $this->dispatch('sucesso', msg: 'Sua fase foi desbloqueada. Você já pode editar as notas.');
     }
 
     public function abrirModalTotalUnlock()
@@ -363,27 +349,29 @@ class Responder extends Component
             ]
         ]);
 
-        $this->enviarNotificacaoEmail($solicitacao, auth()->user()->name, 'Reabertura Total de Matriz Bloqueada');
+        $this->dispararAutomacoesFila('avaliacao.solicitacao_admin');
 
         $this->modalTotalUnlock = false;
         $this->dispatch('sucesso', msg: 'Sua solicitação foi enviada aos administradores.');
     }
 
     // =======================================================
-    // 3. E-MAIL RESTRITO AO PROFESSOR RESPONSÁVEL DA TURMA
+    // 3. INTEGRAÇÃO NATIVA COM O SERVIÇO DE AUTOMAÇÃO
     // =======================================================
-    private function enviarNotificacaoEmail($solicitacao, $nome, $tipo)
+    private function dispararAutomacoesFila($eventoGatilho)
     {
-        $emailsMaster = User::role(['dev', 'admin'])->pluck('email')->toArray();
+        // Coleta Administradores e Desenvolvedores
+        $adminDevs = User::role(['dev', 'admin'])->get();
         
-        // Pega todos os professores que lecionam exatamente nesta turma ($this->turma_id)
+        // Coleta Professores da Turma
         $professoresIds = DB::table('professor_turma')->where('turma_id', $this->turma_id)->pluck('user_id');
-        $emailsProfessores = User::whereIn('id', $professoresIds)->whereNotNull('email')->pluck('email')->toArray();
+        $professores = User::whereIn('id', $professoresIds)->whereNotNull('email')->get();
 
-        $emailsAlvo = array_unique(array_merge($emailsMaster, $emailsProfessores));
+        // Une todos e dispara a automação individualmente
+        $todosUsuarios = $adminDevs->merge($professores)->unique('id');
 
-        if (!empty($emailsAlvo)) {
-            Mail::to($emailsAlvo)->send(new NovaSolicitacaoMail($solicitacao, $nome, $tipo));
+        foreach ($todosUsuarios as $user) {
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $user);
         }
     }
 
