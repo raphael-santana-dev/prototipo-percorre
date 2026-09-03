@@ -28,6 +28,8 @@ class AutomacaoForm extends Component
             $slug = \Illuminate\Support\Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
+
+        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
         
         $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
 

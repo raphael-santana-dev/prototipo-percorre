@@ -97,8 +97,7 @@ class RegistrationManager extends Component
 
         $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf);
 
-        // Verifica se CPF já existe
-        if (Inscricao::where('cpf', $cpfLimpo)->exists()) {
+        if (\App\Models\Inscricao::where('cpf', $cpfLimpo)->exists()) {
             $this->addError('cpf', 'Este CPF já está cadastrado no sistema.');
             return;
         }
@@ -111,38 +110,33 @@ class RegistrationManager extends Component
             'ciclo_id' => $this->ciclo_id,
             'origem' => 'manual',
             'etapa_atual' => 1,
-            'status_inscricao_id' => 1, // Status Pendente por padrão
-            'criado_por' => auth()->id() // Rastro de auditoria manual
+            'status_inscricao_id' => 1, 
+            'criado_por' => auth()->id() 
         ];
 
-        // MÁGICA: Verifica se tem a permissão direta
-        $temPermissaoTotal = auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar_direto');
-
-        if ($temPermissaoTotal) {
-            // CADASTRO IMEDIATO
-            $inscricao = Inscricao::create($payload);
+        // MÁGICA DE PERMISSÃO E INTEGRAÇÃO
+        if (auth()->user()->hasRole('dev|admin') || auth()->user()->can('inscricao.aprovar')) {
+            $inscricao = \App\Models\Inscricao::create($payload);
             
-            // Dispara E-mail com Link de Retomada (Usando template)
-            $linkRetomada = route('inscricao.retomar', \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id));
-            \Illuminate\Support\Facades\Mail::to($inscricao->email)->send(new \App\Mail\TemplateGenericoMail('boas_vindas_estudante', $inscricao->toArray(), $linkRetomada));
+            // Refatorado para usar o Módulo de Comunicação Oficial Nativo
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
 
-            $this->dispatch('sucesso', msg: 'Inscrição efetuada! E-mail de retomada enviado ao estudante.');
+            $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
         } else {
-            // ENTRA NO FLUXO DE APROVAÇÃO (HELP DESK)
+            // ENTRA NO FLUXO DE APROVAÇÃO DA CENTRAL DE SOLICITAÇÕES
             $solicitacao = \App\Models\Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
                 'solicitante_type' => \App\Models\User::class,
                 'solicitante_id' => auth()->id(),
-                'justificativa' => "Cadastro inserido por " . auth()->user()->name . ". Aguardando análise para liberação.",
+                'justificativa' => "Cadastro inserido por " . auth()->user()->name . ". Aguardando análise para liberação oficial.",
                 'status' => 'pendente',
                 'payload' => $payload
             ]);
 
-            // Busca e-mail do sistema nas configs para notificar o admin
             $emailSistema = \App\Models\ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
             \Illuminate\Support\Facades\Mail::to($emailSistema)->send(new \App\Mail\NovaSolicitacaoMail($solicitacao, auth()->user()->name, 'Aprovação de Nova Inscrição'));
 
-            $this->dispatch('sucesso', msg: 'Sua solicitação de cadastro foi enviada para análise da administração.');
+            $this->dispatch('sucesso', msg: 'A solicitação de cadastro foi encaminhada para aprovação da coordenação.');
         }
 
         $this->fecharModal();
