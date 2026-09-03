@@ -16,7 +16,7 @@ class UnidadesTesteSeeder extends Seeder
         $unidades = [
             [
                 'nome' => 'SP-Santana',
-                'slug' => 'sede_santana_sp',
+                'slug' => 'sp_santana',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-03-12',
                 'endereco' => 'Av. Cruzeiro do Sul, 2840',
@@ -34,7 +34,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Jardim Ângela',
-                'slug' => 'jardim_angela_sp',
+                'slug' => 'sp_jardim_angela',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-08-20',
                 'endereco' => 'Estrada do M’Boi Mirim, 4850',
@@ -52,7 +52,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'MG-Barreiro',
-                'slug' => 'barreiro_bh_mg',
+                'slug' => 'mg_barreiro',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2017-05-15',
                 'endereco' => 'Av. Sinfrônio Brochado, 1250',
@@ -70,7 +70,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'PE-Recife',
-                'slug' => 'boa_vista_recife_pe',
+                'slug' => 'pe_recife',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2016-09-10',
                 'endereco' => 'Rua do Hospício, 420',
@@ -88,7 +88,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Hortolândia',
-                'slug' => 'jardim_boa_esperanca_hortolandia_sp',
+                'slug' => 'sp_hortolandia',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2020-02-17',
                 'endereco' => 'Rua das Palmeiras, 780',
@@ -106,7 +106,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Itaquera',
-                'slug' => 'itaquera_sp',
+                'slug' => 'sp_itaquera',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-11-05',
                 'endereco' => 'Rua Victório Santim, 980',
@@ -124,7 +124,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Jardim Santa Regina',
-                'slug' => 'jardim_santa_regina_sp',
+                'slug' => 'sp_jardim_santa_regina',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2021-04-12',
                 'endereco' => 'Rua Santa Regina, 315',
@@ -142,7 +142,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'RS-Porto Alegre',
-                'slug' => 'cidade_baixa_poa_rs',
+                'slug' => 'rs_porto_alegre',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2017-10-23',
                 'endereco' => 'Rua Lima e Silva, 640',
@@ -160,7 +160,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'MG-São Gabriel',
-                'slug' => 'sao_gabriel_bh_mg',
+                'slug' => 'mg_sao_gabriel',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-03-18',
                 'endereco' => 'Av. Cristiano Machado, 7200',
@@ -178,7 +178,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Vila Nova',
-                'slug' => 'vila_nova_santos_sp',
+                'slug' => 'sp_santos',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2020-08-03',
                 'endereco' => 'Rua Carvalho de Mendonça, 520',
@@ -196,7 +196,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-Cidade Ariston',
-                'slug' => 'cidade_ariston_carapicuiba_sp',
+                'slug' => 'sp_carapicuiba',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2021-06-21',
                 'endereco' => 'Av. Marginal do Ribeirão, 1150',
@@ -214,7 +214,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'RJ-Engenho Novo',
-                'slug' => 'engenho_novo_rj',
+                'slug' => 'rj_rio_de_janeiro',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-07-16',
                 'endereco' => 'Rua Barão do Bom Retiro, 1450',
@@ -232,7 +232,7 @@ class UnidadesTesteSeeder extends Seeder
 
             [
                 'nome' => 'SP-São José do Rio Preto',
-                'slug' => 'sao_jose_rio_preto_sp',
+                'slug' => 'sp_rio_preto',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-11-11',
                 'endereco' => 'Av. Alberto Andaló, 2850',
