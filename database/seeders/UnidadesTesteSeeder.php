@@ -15,7 +15,7 @@ class UnidadesTesteSeeder extends Seeder
     {
         $unidades = [
             [
-                'nome' => 'SP - Santana',
+                'nome' => 'SP-Santana',
                 'slug' => 'sede_santana_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-03-12',
@@ -33,7 +33,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Jardim Ângela',
+                'nome' => 'SP-Jardim Ângela',
                 'slug' => 'jardim_angela_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-08-20',
@@ -51,7 +51,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'MG - Barreiro',
+                'nome' => 'MG-Barreiro',
                 'slug' => 'barreiro_bh_mg',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2017-05-15',
@@ -69,7 +69,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'PE - Recife',
+                'nome' => 'PE-Recife',
                 'slug' => 'boa_vista_recife_pe',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2016-09-10',
@@ -87,7 +87,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Hortolândia',
+                'nome' => 'SP-Hortolândia',
                 'slug' => 'jardim_boa_esperanca_hortolandia_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2020-02-17',
@@ -105,7 +105,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Itaquera',
+                'nome' => 'SP-Itaquera',
                 'slug' => 'itaquera_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-11-05',
@@ -123,7 +123,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Jardim Santa Regina',
+                'nome' => 'SP-Jardim Santa Regina',
                 'slug' => 'jardim_santa_regina_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2021-04-12',
@@ -141,7 +141,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'RS - Porto Alegre',
+                'nome' => 'RS-Porto Alegre',
                 'slug' => 'cidade_baixa_poa_rs',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2017-10-23',
@@ -159,7 +159,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'MG - São Gabriel',
+                'nome' => 'MG-São Gabriel',
                 'slug' => 'sao_gabriel_bh_mg',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-03-18',
@@ -177,7 +177,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Vila Nova',
+                'nome' => 'SP-Vila Nova',
                 'slug' => 'vila_nova_santos_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2020-08-03',
@@ -195,7 +195,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - Cidade Ariston',
+                'nome' => 'SP-Cidade Ariston',
                 'slug' => 'cidade_ariston_carapicuiba_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2021-06-21',
@@ -213,7 +213,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'RJ - Engenho Novo',
+                'nome' => 'RJ-Engenho Novo',
                 'slug' => 'engenho_novo_rj',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2018-07-16',
@@ -231,7 +231,7 @@ class UnidadesTesteSeeder extends Seeder
             ],
 
             [
-                'nome' => 'SP - São José do Rio Preto',
+                'nome' => 'SP-São José do Rio Preto',
                 'slug' => 'sao_jose_rio_preto_sp',
                 'status' => 'Ativa',
                 'data_inauguracao' => '2019-11-11',

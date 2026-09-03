@@ -461,7 +461,7 @@ class Inscricao extends Component
 
         if (!$this->estado || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
         $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
@@ -477,17 +477,17 @@ class Inscricao extends Component
         $unidadesDisponiveisList = collect();
         
         foreach($ofertasDisponiveis as $oferta) {
-            // Trava Básica: Curso ou Unidade inativos (Padrão e Boolean)
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true], true)) continue;
             
-            // TRAVA DE UF CORRIGIDA: 
-            // Só libera a oferta se o estado do candidato for igual ao da unidade OU o curso específico permitir imigração
-            if ($oferta->unidade->estado !== $this->estado && !$oferta->curso->permite_estado_diferente) {
+            // FALLBACK INTELIGENTE: Pega o estado do banco. Se for nulo, extrai a UF do nome (Ex: "SP" de "SP - Hortolândia")
+            $estadoUnidade = $oferta->unidade->estado ?: trim(explode('-', $oferta->unidade->nome)[0]);
+
+            // TRAVA DE UF CORRIGIDA
+            if (strtoupper($estadoUnidade) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
                 continue;
             }
 
-            // Trava de Vagas Reais
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
                 if (!isset($ofertasValidas[$key])) continue;
@@ -520,9 +520,12 @@ class Inscricao extends Component
 
         if (!$unidadeId || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
+
+        // Fallback do estado para a unidade selecionada
+        $estadoUnidadeSelecionada = $unidadeSelecionada->estado ?: trim(explode('-', $unidadeSelecionada->nome)[0]);
 
         $ofertasDaUnidade = \App\Models\OfertaVaga::with(['curso', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
@@ -538,8 +541,8 @@ class Inscricao extends Component
         foreach ($ofertasDaUnidade as $oferta) {
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             
-            // TRAVA DE UF NO CURSO:
-            if ($unidadeSelecionada && $unidadeSelecionada->estado !== $this->estado && !$oferta->curso->permite_estado_diferente) {
+            // TRAVA DE UF NO CURSO
+            if ($unidadeSelecionada && strtoupper($estadoUnidadeSelecionada) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
                 continue;
             }
 
