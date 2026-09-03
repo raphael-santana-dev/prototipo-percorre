@@ -148,6 +148,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
 
     Route::get('/importacoes/hub', \App\Modules\Importacao\UI\Livewire\ImportacaoConfigManager::class)->name('importacoes.hub');
+
+    Route::get('/configuracoes', \App\Modules\Admin\UI\Livewire\ConfiguracoesGeraisManager::class)->name('configuracoes.index');
+
 });
 
 // ==========================================

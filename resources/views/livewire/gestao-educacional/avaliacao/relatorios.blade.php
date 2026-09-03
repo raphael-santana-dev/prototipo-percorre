@@ -1,11 +1,6 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     
-    <x-page-header 
-        title="Relatórios Estratégicos" 
-        icon="ph ph-chart-polar"
-        badge="Indicadores"
-        :metricas="$metricas">
-
+    <x-page-header title="Avaliações" icon="ph ph-chart-polar" badge="" :metricas="$metricas">
         @if(feature('relatorio.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('relatorio.exportar')))
             <x-slot name="actions">
                 <button wire:click="exportarCSV" class="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm transition flex items-center gap-2">
@@ -64,6 +59,14 @@
                         Ano {{ $av->periodo->ano }} - C{{ $av->periodo->ciclo }}
                     </div>
                 </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
+                    @if($av->isFinalizado)
+                        <span class="inline-block px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 font-bold text-[10px] uppercase tracking-wider rounded">Concluída</span>
+                    @else
+                        <span class="inline-block px-2 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 font-bold text-[10px] uppercase tracking-wider rounded">Pendente</span>
+                    @endif
+                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-center">
                     <span class="inline-block px-3 py-1 bg-gray-100 border border-gray-200 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 font-black text-sm rounded shadow-sm">
@@ -87,7 +90,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="px-4 py-12 text-center">
+                <td colspan="6" class="px-4 py-12 text-center">
                     <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                         <i class="ph ph-chart-polar text-2xl text-gray-400"></i>
                     </div>

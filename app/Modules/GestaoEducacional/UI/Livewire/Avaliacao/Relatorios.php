@@ -29,8 +29,9 @@ class Relatorios extends Component
         return [
             ['key' => 'student', 'label' => 'Estudante', 'sortable' => false],
             ['key' => 'turma', 'label' => 'Turma / Ciclo', 'sortable' => false],
-            ['key' => 'media_parcial', 'label' => 'Média Parcial', 'sortable' => false, 'class' => 'text-center w-32'],
-            ['key' => 'media_final', 'label' => 'Média Final', 'sortable' => false, 'class' => 'text-center w-32'],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'media_parcial', 'label' => 'M. Parcial', 'sortable' => false, 'class' => 'text-center w-24'],
+            ['key' => 'media_final', 'label' => 'M. Final', 'sortable' => false, 'class' => 'text-center w-24'],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right w-24'],
         ];
     }
@@ -41,7 +42,6 @@ class Relatorios extends Component
 
     private function getQueryBase()
     {
-        // Agrupa as avaliações por Aluno+Turma+Periodo usando subquery
         $queryIdsUnicos = AlunoAvaliacao::selectRaw('MAX(id)')
             ->whereNull('deleted_at')
             ->groupBy('student_id', 'turma_id', 'periodo_id');
@@ -75,7 +75,6 @@ class Relatorios extends Component
         $registros = $this->getQueryBase()->get();
         $csvFileName = 'relatorio_avaliacoes_' . date('Ymd_His') . '.csv';
 
-        // Busca os itens de todos os alunos listados para calcular as médias rapidamente
         $studentIds = $registros->pluck('student_id')->unique();
         $todosItens = AlunoAvaliacaoItem::join('aluno_avaliacoes', 'aluno_avaliacoes.id', '=', 'aluno_avaliacao_itens.aluno_avaliacao_id')
             ->whereIn('aluno_avaliacoes.student_id', $studentIds)
@@ -84,7 +83,7 @@ class Relatorios extends Component
 
         $callback = function() use($registros, $todosItens) {
             $file = fopen('php://output', 'w');
-            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // BOM para acentuação UTF-8 no Excel
+            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             
             fputcsv($file, ['ID_ALUNO', 'NOME_ALUNO', 'TURMA', 'ANO_PERIODO', 'CICLO', 'MEDIA_PARCIAL', 'MEDIA_FINAL'], ';');
 
@@ -121,7 +120,6 @@ class Relatorios extends Component
 
         $paginacao = $query->paginate($this->porPagina);
 
-        // --- CÁLCULO DAS MÉTRICAS GLOBAIS ---
         $totalAlunos = $paginacao->total();
         $mediaGeralParcial = '-';
         $mediaGeralFinal = '-';
@@ -129,11 +127,17 @@ class Relatorios extends Component
         if ($totalAlunos > 0) {
             $studentIds = $paginacao->pluck('student_id')->unique();
             $periodoIds = $paginacao->pluck('periodo_id')->unique();
+            $turmaIds = $paginacao->pluck('turma_id')->unique();
 
             $todosItens = AlunoAvaliacaoItem::join('aluno_avaliacoes', 'aluno_avaliacoes.id', '=', 'aluno_avaliacao_itens.aluno_avaliacao_id')
                 ->whereIn('aluno_avaliacoes.student_id', $studentIds)
                 ->whereIn('aluno_avaliacoes.periodo_id', $periodoIds)
                 ->select('aluno_avaliacao_itens.nivel_nps', 'aluno_avaliacoes.fase', 'aluno_avaliacoes.student_id', 'aluno_avaliacoes.periodo_id')
+                ->get();
+                
+            $todasFases = AlunoAvaliacao::whereIn('periodo_id', $periodoIds)
+                ->whereIn('student_id', $studentIds)
+                ->whereIn('turma_id', $turmaIds)
                 ->get();
 
             $notasParciais = $todosItens->whereIn('fase', ['1', '2'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
@@ -142,7 +146,6 @@ class Relatorios extends Component
             $mediaGeralParcial = $notasParciais->count() > 0 ? round($notasParciais->avg(), 1) : '-';
             $mediaGeralFinal = $notasFinais->count() > 0 ? round($notasFinais->avg(), 1) : '-';
 
-            // Injeta a média individual dinamicamente na paginação
             foreach ($paginacao as $reg) {
                 $itensDesteAluno = $todosItens->where('student_id', $reg->student_id)->where('periodo_id', $reg->periodo_id);
                 $np = $itensDesteAluno->whereIn('fase', ['1', '2'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
@@ -150,10 +153,16 @@ class Relatorios extends Component
                 
                 $reg->mediaParcial = $np->count() > 0 ? round($np->avg(), 1) : '-';
                 $reg->mediaFinal = $nf->count() > 0 ? round($nf->avg(), 1) : '-';
+                
+                $fasesDoAluno = $todasFases->where('periodo_id', $reg->periodo_id)
+                                           ->where('student_id', $reg->student_id)
+                                           ->where('turma_id', $reg->turma_id);
+                $totalFases = $fasesDoAluno->count();
+                $concluidas = $fasesDoAluno->where('status', '2')->count();
+                $reg->isFinalizado = ($totalFases > 0 && $concluidas === $totalFases);
             }
         }
 
-        // Construindo os cards para o <x-page-header>
         $metricas = [
             [
                 'label' => 'Alunos Avaliados',

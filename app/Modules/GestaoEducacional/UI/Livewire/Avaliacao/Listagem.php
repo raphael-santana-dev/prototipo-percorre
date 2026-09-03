@@ -6,7 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\DB;
 use App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao;
-use App\Traits\ComPadraoListagem; // Usando a trait padrão do seu projeto
+use App\Traits\ComPadraoListagem; 
 
 class Listagem extends Component
 {
@@ -24,7 +24,7 @@ class Listagem extends Component
         return [
             ['key' => 'student', 'label' => 'Estudante', 'sortable' => false],
             ['key' => 'turma', 'label' => 'Turma / Ciclo', 'sortable' => false],
-            ['key' => 'periodo', 'label' => 'Ano de Referência', 'sortable' => false],
+            ['key' => 'status', 'label' => 'Status da Matriz', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right w-32'],
         ];
     }
@@ -36,7 +36,6 @@ class Listagem extends Component
 
     public function render()
     {
-        // 1. Subquery inteligente: Pega apenas 1 registro (a Fase 1) para representar a Matriz
         $queryIdsUnicos = AlunoAvaliacao::selectRaw('MIN(id)')
             ->whereNull('deleted_at')
             ->groupBy('periodo_id', 'turma_id', 'student_id');
@@ -44,22 +43,18 @@ class Listagem extends Component
         $query = AlunoAvaliacao::with(['student', 'turma', 'periodo'])
             ->whereIn('id', $queryIdsUnicos);
 
-        // 2. Isolamento de Perfil Limpo (Sem tentar ler roles de quem não tem)
         $isStudent = auth()->guard('student')->check();
         $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor');
 
         if ($isStudent) {
-            // Aluno só vê as próprias avaliações
             $query->where('student_id', auth()->guard('student')->id());
         } elseif ($isProfessor) {
-            // Professor só vê alunos das turmas dele
             $turmasDoProfessor = DB::table('professor_turma')
                 ->where('user_id', auth()->guard('web')->id())
                 ->pluck('turma_id');
             $query->whereIn('turma_id', $turmasDoProfessor);
         }
 
-        // 3. Filtro de Busca Textual
         if (!empty($this->busca)) {
             $query->where(function($q) {
                 $q->whereHas('student', function($sq) {
@@ -77,11 +72,34 @@ class Listagem extends Component
             $query->orderBy('id', 'desc');
         }
 
-        // Layout dinâmico com base no guard
+        $paginacao = $query->paginate($this->porPagina);
+
+        if ($paginacao->count() > 0) {
+            $periodoIds = $paginacao->pluck('periodo_id')->unique();
+            $studentIds = $paginacao->pluck('student_id')->unique();
+            $turmaIds = $paginacao->pluck('turma_id')->unique();
+
+            $todasFases = AlunoAvaliacao::whereIn('periodo_id', $periodoIds)
+                ->whereIn('student_id', $studentIds)
+                ->whereIn('turma_id', $turmaIds)
+                ->get();
+
+            foreach($paginacao as $reg) {
+                $fasesDoAluno = $todasFases->where('periodo_id', $reg->periodo_id)
+                                           ->where('student_id', $reg->student_id)
+                                           ->where('turma_id', $reg->turma_id);
+                $totalFases = $fasesDoAluno->count();
+                $concluidas = $fasesDoAluno->where('status', '2')->count();
+                
+                $reg->isFinalizado = ($totalFases > 0 && $concluidas === $totalFases);
+                $reg->progressoTexto = "{$concluidas}/{$totalFases}";
+            }
+        }
+
         $layout = $isStudent ? 'components.layouts.student-app' : 'components.layouts.app';
 
         return view('livewire.gestao-educacional.avaliacao.listagem', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros' => $paginacao
         ])->layout($layout, ['title' => 'Minhas Avaliações']);
     }
 }

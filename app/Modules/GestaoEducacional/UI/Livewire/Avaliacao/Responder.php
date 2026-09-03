@@ -23,6 +23,10 @@ class Responder extends Component
     public $nps = [];
     public $metas = [];
 
+    // Novas variáveis de Controle
+    public $visibilidadeFase = [];
+    public $avaliacaoFinalizada = false;
+
     // Modal de Solicitação
     public $modalSolicitacao = false;
     public $faseSolicitacaoId = null; 
@@ -33,8 +37,6 @@ class Responder extends Component
     public $mediaParcial = '-';
     public $mediaFinal = '-';
 
-    public $visibilidadeFase = [];
-
     public function mount($periodo, $turma, $student)
     {
         abort_if(!feature('avaliacao.responder'), 403, 'A resposta de matrizes está desativada no momento.');
@@ -43,10 +45,12 @@ class Responder extends Component
         $this->turma_id = $turma;
         $this->student_id = $student;
 
+        // Identificação de Perfil
         $isStudent = auth()->guard('student')->check();
         $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor'); 
+        $isDev = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'); 
 
-        // 1. CARREGA AS CONFIGURAÇÕES GERAIS DE FORMA SEGURA
+        // Carrega Configurações Gerais do Sistema
         $ocultar_fases = false;
         $aluno_responde_ambos = false;
         
@@ -74,6 +78,13 @@ class Responder extends Component
         $this->turmaNome = $primeira->turma->nome;
         $this->periodoNome = 'Ano ' . $primeira->periodo->ano . ' / Ciclo ' . $primeira->periodo->ciclo;
 
+        // ===============================================
+        // VERIFICA SE A AVALIAÇÃO INTEIRA FOI CONCLUÍDA
+        // ===============================================
+        $totalFases = $this->avaliacoesFases->count();
+        $fasesConcluidas = $this->avaliacoesFases->where('status', '2')->count();
+        $this->avaliacaoFinalizada = ($totalFases > 0 && $fasesConcluidas === $totalFases);
+
         $faseAnteriorConcluida = true; 
         
         foreach ($this->avaliacoesFases as $avFase) {
@@ -84,9 +95,7 @@ class Responder extends Component
             $textos = ['1' => 'Estudante', '2' => 'Professor', '3' => 'Ambos'];
             $this->responsaveisDesc[$f] = $textos[$resp] ?? 'N/A';
 
-            // ===============================================
-            // 2. NOVA REGRA DE VISIBILIDADE DA FASE
-            // ===============================================
+            // REGRA 1: Visibilidade da Fase
             if ($ocultar_fases) {
                 if ($isStudent) {
                     $this->visibilidadeFase[$f] = in_array($resp, ['1', '3']);
@@ -99,22 +108,25 @@ class Responder extends Component
                 $this->visibilidadeFase[$f] = true;
             }
 
-            // ===============================================
-            // 3. NOVA REGRA DE EDIÇÃO (Bloqueio Inteligente)
-            // ===============================================
+            // REGRA 2: Permissão Base de Edição
             $podeEditarBase = false;
-            
             if ($isStudent) {
                 if ($resp == '1') $podeEditarBase = true;
-                if ($resp == '3' && $aluno_responde_ambos) $podeEditarBase = true; // Segue o botão Toggle!
+                if ($resp == '3' && $aluno_responde_ambos) $podeEditarBase = true;
             }
-            
             if ($isProfessor) {
-                if (in_array($resp, ['2', '3'])) $podeEditarBase = true; // Professor responde dele e 'Ambos'
+                if (in_array($resp, ['2', '3'])) $podeEditarBase = true;
+            }
+            if ($isDev) {
+                $podeEditarBase = true; // Dev pode editar tudo
             }
 
-            // O Restante do código original continua exatamante igual...
-            if ($podeEditarBase && $periodoObj->trava_fases && !$faseAnteriorConcluida) {
+            // REGRA 3: Bloqueios Operacionais e de Trava
+            if ($this->avaliacaoFinalizada && !$isDev) {
+                // Se a avaliação acabou, bloqueia tudo (exceto para o Dev)
+                $podeEditarBase = false;
+                $this->motivosBloqueio[$f] = "Matriz finalizada e bloqueada para edições.";
+            } elseif ($podeEditarBase && $periodoObj->trava_fases && !$faseAnteriorConcluida && !$isDev) {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = "Aguardando conclusão da fase anterior.";
             }
@@ -122,6 +134,7 @@ class Responder extends Component
             $temSolicitacao = DB::table('avaliacao_solicitacoes')->where('aluno_avaliacao_id', $avFase->id)->where('status', 'pendente')->exists();
             $this->solicitacoesPendentes[$f] = $temSolicitacao;
 
+            // Aluno não pode editar o que já respondeu (mesmo se a avaliação não estiver 100% terminada)
             if ($isStudent && $avFase->status == '2') {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = $temSolicitacao ? "Sua solicitação está em análise." : "Fase já respondida.";
@@ -135,6 +148,7 @@ class Responder extends Component
                 $faseAnteriorConcluida = false;
             }
 
+            // Preenche as variáveis do form
             foreach ($avFase->itens as $item) {
                 $this->nps[$item->criterio_id][$f] = $item->nivel_nps;
                 $this->metas[$item->criterio_id][$f] = $item->aval_metas;
@@ -180,7 +194,6 @@ class Responder extends Component
                 ]);
             }
 
-            // Se todas as notas da fase foram preenchidas, marca como concluída (2)
             $av->update([
                 'status' => $faseCompleta ? '2' : '1', 
                 'data_resposta' => $faseCompleta ? now() : null, 
@@ -207,11 +220,9 @@ class Responder extends Component
             'motivoTexto' => 'required|string|min:10',
         ]);
 
-        $loggedId = auth()->guard('student')->check() ? auth()->guard('student')->id() : auth()->id();
-
         DB::table('avaliacao_solicitacoes')->insert([
             'aluno_avaliacao_id' => $this->faseSolicitacaoId,
-            'student_id' => $this->student_id, // Vincula a solicitação ao estudante correto
+            'student_id' => $this->student_id,
             'criterios_selecionados' => json_encode($this->criteriosSelecionados),
             'motivo' => $this->motivoTexto,
             'status' => 'pendente',
@@ -234,7 +245,6 @@ class Responder extends Component
         foreach ($this->criterios as $crit) {
             $id = $crit->id;
             
-            // Fases 1 e 2
             if (isset($this->nps[$id][1]) && is_numeric($this->nps[$id][1])) {
                 $notasParcial[] = $this->nps[$id][1];
                 $notasFinal[] = $this->nps[$id][1];
@@ -243,8 +253,6 @@ class Responder extends Component
                 $notasParcial[] = $this->nps[$id][2];
                 $notasFinal[] = $this->nps[$id][2];
             }
-            
-            // Fase 3
             if (isset($this->nps[$id][3]) && is_numeric($this->nps[$id][3])) {
                 $notasFinal[] = $this->nps[$id][3];
             }
@@ -256,8 +264,6 @@ class Responder extends Component
 
     public function render()
     {
-        $this->calcularMedias();
-        
         $layout = auth()->guard('student')->check() ? 'components.layouts.student-app' : 'components.layouts.app';
         
         return view('livewire.gestao-educacional.avaliacao.responder')
