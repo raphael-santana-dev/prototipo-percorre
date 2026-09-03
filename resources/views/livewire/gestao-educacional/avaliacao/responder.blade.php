@@ -48,28 +48,27 @@
                                 Critério Avaliado
                             </th>
                             @foreach($avaliacoesFases as $avFase)
-                                <th class="p-4 text-center border-l border-gray-200 dark:border-gray-700 {{ ($permissoesFase[$avFase->fase] ?? false) ? 'text-purpura-800 bg-purpura-50/50 dark:text-purpura-300 dark:bg-purpura-900/20' : 'text-gray-400 dark:text-gray-500' }}">
-                                    <span class="font-black">FASE {{ $avFase->fase }}</span>
-                                    
-                                    <span class="block text-[10px] font-bold mt-1 uppercase text-gray-500">
-                                        Resp: {{ $responsaveisDesc[$avFase->fase] ?? '' }}
-                                    </span>
-                                    
-                                    <span class="block text-[10px] {{ $avFase->status == '2' ? 'text-green-600' : 'text-orange-500' }} font-bold mt-1">
-                                        {{ $avFase->status == '2' ? 'CONCLUÍDA' : 'PENDENTE' }}
-                                    </span>
+                                @if($visibilidadeFase[$avFase->fase] ?? true)
+                                    <th class="p-4 text-center border-l border-gray-200 dark:border-gray-700 {{ ($permissoesFase[$avFase->fase] ?? false) ? 'text-purpura-800 bg-purpura-50/50 dark:text-purpura-300 dark:bg-purpura-900/20' : 'text-gray-400 dark:text-gray-500' }}">
+                                        <span class="font-black">FASE {{ $avFase->fase }}</span>
+                                        <span class="block text-[10px] font-bold mt-1 uppercase text-gray-500">
+                                            Resp: {{ $responsaveisDesc[$avFase->fase] ?? '' }}
+                                        </span>
+                                        <span class="block text-[10px] {{ $avFase->status == '2' ? 'text-green-600' : 'text-orange-500' }} font-bold mt-1">
+                                            {{ $avFase->status == '2' ? 'CONCLUÍDA' : 'PENDENTE' }}
+                                        </span>
 
-                                    {{-- BOTÃO: Solicitar Alteração (Exclusivo Aluno) --}}
-                                    @if(auth()->guard('student')->check() && $avFase->status == '2')
-                                        @if($solicitacoesPendentes[$avFase->fase] ?? false)
-                                            <span class="mt-2 inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[9px] rounded font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-500">Em Análise</span>
-                                        @else
-                                            <button type="button" wire:click="abrirModalSolicitacao({{ $avFase->id }}, {{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
-                                                Solicitar Alteração
-                                            </button>
+                                        @if(auth()->guard('student')->check() && $avFase->status == '2')
+                                            @if($solicitacoesPendentes[$avFase->fase] ?? false)
+                                                <span class="mt-2 inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[9px] rounded font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-500">Em Análise</span>
+                                            @else
+                                                <button type="button" wire:click="abrirModalSolicitacao({{ $avFase->id }}, {{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
+                                                    Solicitar Alteração
+                                                </button>
+                                            @endif
                                         @endif
-                                    @endif
-                                </th>
+                                    </th>
+                                @endif
                             @endforeach
                         </tr>
                     </thead>
@@ -81,39 +80,41 @@
                                 </td>
                                 
                                 @foreach($avaliacoesFases as $avFase)
-                                    @php $podeEditar = $permissoesFase[$avFase->fase] ?? false; @endphp
-                                    <td class="p-4 border-l border-gray-100 dark:border-gray-700 align-top {{ $podeEditar ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900' }}">
-                                        
-                                        <div class="mb-3 flex flex-col items-center">
-                                            <label class="block text-[10px] font-bold {{ $podeEditar ? 'text-gray-500' : 'text-gray-500' }} uppercase mb-1">Nota NPS (0-10)</label>
+                                    @if($visibilidadeFase[$avFase->fase] ?? true)
+                                        @php $podeEditar = $permissoesFase[$avFase->fase] ?? false; @endphp
+                                        <td class="p-4 border-l border-gray-100 dark:border-gray-700 align-top {{ $podeEditar ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900' }}">
                                             
-                                            @if($podeEditar)
-                                                <input type="number" min="0" max="10" step="1" 
-                                                       wire:model="nps.{{ $criterio->id }}.{{ $avFase->fase }}" 
-                                                       class="w-20 border border-gray-300 dark:border-gray-600 rounded-md font-black text-center text-purpura-700 dark:text-purpura-400 bg-white dark:bg-gray-700 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm py-1.5 outline-none transition">
-                                            @else
-                                                <div class="w-20 py-1.5 border border-transparent rounded-md font-black text-center text-gray-600 dark:text-gray-400 bg-transparent text-lg">
-                                                    {{ $nps[$criterio->id][$avFase->fase] ?? '-' }}
-                                                </div>
-                                            @endif
-                                            @error("nps.{$criterio->id}.{$avFase->fase}") <span class="text-red-500 text-[10px] font-bold mt-1">{{ $message }}</span> @enderror
-                                        </div>
+                                            <div class="mb-3 flex flex-col items-center">
+                                                <label class="block text-[10px] font-bold {{ $podeEditar ? 'text-gray-500' : 'text-gray-500' }} uppercase mb-1">Nota NPS (0-10)</label>
+                                                
+                                                @if($podeEditar)
+                                                    <input type="number" min="0" max="10" step="1" 
+                                                        wire:model="nps.{{ $criterio->id }}.{{ $avFase->fase }}" 
+                                                        class="w-20 border border-gray-300 dark:border-gray-600 rounded-md font-black text-center text-purpura-700 dark:text-purpura-400 bg-white dark:bg-gray-700 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm py-1.5 outline-none transition">
+                                                @else
+                                                    <div class="w-20 py-1.5 border border-transparent rounded-md font-black text-center text-gray-600 dark:text-gray-400 bg-transparent text-lg">
+                                                        {{ $nps[$criterio->id][$avFase->fase] ?? '-' }}
+                                                    </div>
+                                                @endif
+                                                @error("nps.{$criterio->id}.{$avFase->fase}") <span class="text-red-500 text-[10px] font-bold mt-1">{{ $message }}</span> @enderror
+                                            </div>
 
-                                        <div class="mt-2">
-                                            <label class="block text-[10px] font-bold {{ $podeEditar ? 'text-gray-500' : 'text-gray-500' }} uppercase mb-1">Autoavaliação e Metas</label>
-                                            
-                                            @if($podeEditar)
-                                                <textarea rows="3" 
-                                                          wire:model="metas.{{ $criterio->id }}.{{ $avFase->fase }}" 
-                                                          placeholder="{{ $motivosBloqueio[$avFase->fase] ?? 'Descreva observações...' }}"
-                                                          class="w-full border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purpura-500 focus:border-purpura-500 shadow-sm resize-y p-2.5 outline-none transition"></textarea>
-                                            @else
-                                                <div class="w-full text-sm text-gray-600 dark:text-gray-400 italic leading-relaxed whitespace-pre-line p-2">
-                                                    {{ $metas[$criterio->id][$avFase->fase] ?? 'Nenhuma observação registrada.' }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                    </td>
+                                            <div class="mt-2">
+                                                <label class="block text-[10px] font-bold {{ $podeEditar ? 'text-gray-500' : 'text-gray-500' }} uppercase mb-1">Autoavaliação e Metas</label>
+                                                
+                                                @if($podeEditar)
+                                                    <textarea rows="3" 
+                                                            wire:model="metas.{{ $criterio->id }}.{{ $avFase->fase }}" 
+                                                            placeholder="{{ $motivosBloqueio[$avFase->fase] ?? 'Descreva observações...' }}"
+                                                            class="w-full border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purpura-500 focus:border-purpura-500 shadow-sm resize-y p-2.5 outline-none transition"></textarea>
+                                                @else
+                                                    <div class="w-full text-sm text-gray-600 dark:text-gray-400 italic leading-relaxed whitespace-pre-line p-2">
+                                                        {{ $metas[$criterio->id][$avFase->fase] ?? 'Nenhuma observação registrada.' }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    @endif
                                 @endforeach
                             </tr>
                         @endforeach

@@ -33,6 +33,8 @@ class Responder extends Component
     public $mediaParcial = '-';
     public $mediaFinal = '-';
 
+    public $visibilidadeFase = [];
+
     public function mount($periodo, $turma, $student)
     {
         abort_if(!feature('avaliacao.responder'), 403, 'A resposta de matrizes está desativada no momento.');
@@ -41,14 +43,21 @@ class Responder extends Component
         $this->turma_id = $turma;
         $this->student_id = $student;
 
-        // 1. Identificação do Usuário Logado Corrigida
         $isStudent = auth()->guard('student')->check();
         $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor'); 
+
+        // 1. CARREGA AS CONFIGURAÇÕES GERAIS DE FORMA SEGURA
+        $ocultar_fases = false;
+        $aluno_responde_ambos = false;
+        
+        if (\Illuminate\Support\Facades\Schema::hasTable('configuracoes_gerais')) {
+            $ocultar_fases = \App\Models\ConfiguracaoGeral::where('chave', 'ocultar_fases_restritas')->value('valor') === 'true';
+            $aluno_responde_ambos = \App\Models\ConfiguracaoGeral::where('chave', 'permitir_aluno_responder_ambos')->value('valor') === 'true';
+        }
 
         $periodoObj = PeriodoAvaliacao::with('fases', 'criterios')->findOrFail($periodo);
         $this->criterios = $periodoObj->criterios;
 
-        // 2. Busca as matrizes do aluno
         $this->avaliacoesFases = AlunoAvaliacao::with(['itens.criterio', 'student', 'turma', 'periodo'])
             ->where('periodo_id', $periodo)
             ->where('turma_id', $turma)
@@ -67,34 +76,52 @@ class Responder extends Component
 
         $faseAnteriorConcluida = true; 
         
-        // 3. Motor de Regras e Bloqueios
         foreach ($this->avaliacoesFases as $avFase) {
             $f = $avFase->fase;
             
             $configFase = $periodoObj->fases->where('fase', $f)->first();
-            $resp = $configFase ? $configFase->responsavel : '0';
+            $resp = $configFase ? $configFase->responsavel : '0'; // 1=Estudante, 2=Professor, 3=Ambos
             $textos = ['1' => 'Estudante', '2' => 'Professor', '3' => 'Ambos'];
             $this->responsaveisDesc[$f] = $textos[$resp] ?? 'N/A';
 
-            $podeEditarBase = false;
-            if ($isStudent && in_array($resp, ['1', '3'])) $podeEditarBase = true;
-            if ($isProfessor && in_array($resp, ['2', '3'])) $podeEditarBase = true;
+            // ===============================================
+            // 2. NOVA REGRA DE VISIBILIDADE DA FASE
+            // ===============================================
+            if ($ocultar_fases) {
+                if ($isStudent) {
+                    $this->visibilidadeFase[$f] = in_array($resp, ['1', '3']);
+                } elseif ($isProfessor) {
+                    $this->visibilidadeFase[$f] = in_array($resp, ['2', '3']);
+                } else {
+                    $this->visibilidadeFase[$f] = true; // Admins veem tudo
+                }
+            } else {
+                $this->visibilidadeFase[$f] = true;
+            }
 
-            // Bloqueio 1: Trava Sequencial
+            // ===============================================
+            // 3. NOVA REGRA DE EDIÇÃO (Bloqueio Inteligente)
+            // ===============================================
+            $podeEditarBase = false;
+            
+            if ($isStudent) {
+                if ($resp == '1') $podeEditarBase = true;
+                if ($resp == '3' && $aluno_responde_ambos) $podeEditarBase = true; // Segue o botão Toggle!
+            }
+            
+            if ($isProfessor) {
+                if (in_array($resp, ['2', '3'])) $podeEditarBase = true; // Professor responde dele e 'Ambos'
+            }
+
+            // O Restante do código original continua exatamante igual...
             if ($podeEditarBase && $periodoObj->trava_fases && !$faseAnteriorConcluida) {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = "Aguardando conclusão da fase anterior.";
             }
 
-            // Verifica solicitação de desbloqueio pendente
-            $temSolicitacao = DB::table('avaliacao_solicitacoes')
-                ->where('aluno_avaliacao_id', $avFase->id)
-                ->where('status', 'pendente')
-                ->exists();
-            
+            $temSolicitacao = DB::table('avaliacao_solicitacoes')->where('aluno_avaliacao_id', $avFase->id)->where('status', 'pendente')->exists();
             $this->solicitacoesPendentes[$f] = $temSolicitacao;
 
-            // Bloqueio 2: Se já respondeu (Status = 2)
             if ($isStudent && $avFase->status == '2') {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = $temSolicitacao ? "Sua solicitação está em análise." : "Fase já respondida.";
@@ -108,7 +135,6 @@ class Responder extends Component
                 $faseAnteriorConcluida = false;
             }
 
-            // Preenche os arrays do formulário
             foreach ($avFase->itens as $item) {
                 $this->nps[$item->criterio_id][$f] = $item->nivel_nps;
                 $this->metas[$item->criterio_id][$f] = $item->aval_metas;
