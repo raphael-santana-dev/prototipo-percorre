@@ -20,7 +20,6 @@ class ProcessoMatriculaManager extends Component
 
     public $termoBusca = '';
     
-    // Controle do Modal de Dossiê
     public $modalDossieAberto = false;
     public $inscricaoSelecionada = null;
     public $documentosExigidos = [];
