@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\DB;
 use App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao;
 use App\Modules\GestaoEducacional\Domain\Models\PeriodoAvaliacao;
 
+use App\Models\Solicitacao;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NovaSolicitacaoMail;
+
 class Responder extends Component
 {
     public $periodo_id, $turma_id, $student_id;
@@ -14,20 +19,22 @@ class Responder extends Component
     public $avaliacoesFases; 
     public $criterios; 
 
+    public $usuarioResponsavelFase = []; 
     public $permissoesFase = [];
     public $responsaveisDesc = [];
     public $podeEditarGeral = false;
     public $motivosBloqueio = [];
     public $solicitacoesPendentes = []; 
 
+    public $modalSelfUnlock = false;
+    public $modalTotalUnlock = false;
+
     public $nps = [];
     public $metas = [];
 
-    // Novas variáveis de Controle
     public $visibilidadeFase = [];
     public $avaliacaoFinalizada = false;
 
-    // Modal de Solicitação
     public $modalSolicitacao = false;
     public $faseSolicitacaoId = null; 
     public $faseNumero = null;
@@ -45,12 +52,30 @@ class Responder extends Component
         $this->turma_id = $turma;
         $this->student_id = $student;
 
-        // Identificação de Perfil
         $isStudent = auth()->guard('student')->check();
         $isProfessor = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('professor'); 
         $isDev = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'); 
 
-        // Carrega Configurações Gerais do Sistema
+        // =======================================================
+        // 1. ISOLAMENTO DE ACESSO E PROTEÇÃO DIRETA DE URL
+        // =======================================================
+        if ($isStudent) {
+            abort_if(auth()->guard('student')->id() != $student, 403, 'Acesso negado. Você só pode acessar a sua própria avaliação.');
+        }
+
+        if ($isProfessor && !$isDev) {
+            // Verifica na tabela pivot se o professor logado está vinculado à turma da URL
+            $professorVinculado = DB::table('professor_turma')
+                ->where('user_id', auth()->id())
+                ->where('turma_id', $turma)
+                ->exists();
+
+            abort_if(!$professorVinculado, 403, 'Acesso restrito. Você não leciona para esta turma e não pode gerenciar esta avaliação.');
+        }
+
+        // =======================================================
+        // 2. CONFIGURAÇÕES DE VISIBILIDADE E FASES
+        // =======================================================
         $ocultar_fases = false;
         $aluno_responde_ambos = false;
         
@@ -78,9 +103,6 @@ class Responder extends Component
         $this->turmaNome = $primeira->turma->nome;
         $this->periodoNome = 'Ano ' . $primeira->periodo->ano . ' / Ciclo ' . $primeira->periodo->ciclo;
 
-        // ===============================================
-        // VERIFICA SE A AVALIAÇÃO INTEIRA FOI CONCLUÍDA
-        // ===============================================
         $totalFases = $this->avaliacoesFases->count();
         $fasesConcluidas = $this->avaliacoesFases->where('status', '2')->count();
         $this->avaliacaoFinalizada = ($totalFases > 0 && $fasesConcluidas === $totalFases);
@@ -91,39 +113,39 @@ class Responder extends Component
             $f = $avFase->fase;
             
             $configFase = $periodoObj->fases->where('fase', $f)->first();
-            $resp = $configFase ? $configFase->responsavel : '0'; // 1=Estudante, 2=Professor, 3=Ambos
+            $resp = $configFase ? $configFase->responsavel : '0'; 
             $textos = ['1' => 'Estudante', '2' => 'Professor', '3' => 'Ambos'];
             $this->responsaveisDesc[$f] = $textos[$resp] ?? 'N/A';
 
-            // REGRA 1: Visibilidade da Fase
             if ($ocultar_fases) {
                 if ($isStudent) {
                     $this->visibilidadeFase[$f] = in_array($resp, ['1', '3']);
                 } elseif ($isProfessor) {
                     $this->visibilidadeFase[$f] = in_array($resp, ['2', '3']);
                 } else {
-                    $this->visibilidadeFase[$f] = true; // Admins veem tudo
+                    $this->visibilidadeFase[$f] = true; 
                 }
             } else {
                 $this->visibilidadeFase[$f] = true;
             }
 
-            // REGRA 2: Permissão Base de Edição
-            $podeEditarBase = false;
+            // Identifica quem é o responsável "dono" da fase
+            $isResponsavel = false;
             if ($isStudent) {
-                if ($resp == '1') $podeEditarBase = true;
-                if ($resp == '3' && $aluno_responde_ambos) $podeEditarBase = true;
+                if ($resp == '1') $isResponsavel = true;
+                if ($resp == '3' && $aluno_responde_ambos) $isResponsavel = true;
             }
             if ($isProfessor) {
-                if (in_array($resp, ['2', '3'])) $podeEditarBase = true;
+                if (in_array($resp, ['2', '3'])) $isResponsavel = true;
             }
             if ($isDev) {
-                $podeEditarBase = true; // Dev pode editar tudo
+                $isResponsavel = true;
             }
+            $this->usuarioResponsavelFase[$f] = $isResponsavel;
 
-            // REGRA 3: Bloqueios Operacionais e de Trava
+            $podeEditarBase = $isResponsavel;
+
             if ($this->avaliacaoFinalizada && !$isDev) {
-                // Se a avaliação acabou, bloqueia tudo (exceto para o Dev)
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = "Matriz finalizada e bloqueada para edições.";
             } elseif ($podeEditarBase && $periodoObj->trava_fases && !$faseAnteriorConcluida && !$isDev) {
@@ -134,8 +156,8 @@ class Responder extends Component
             $temSolicitacao = DB::table('avaliacao_solicitacoes')->where('aluno_avaliacao_id', $avFase->id)->where('status', 'pendente')->exists();
             $this->solicitacoesPendentes[$f] = $temSolicitacao;
 
-            // Aluno não pode editar o que já respondeu (mesmo se a avaliação não estiver 100% terminada)
-            if ($isStudent && $avFase->status == '2') {
+            // Bloqueio Total quando Respondida (se concluiu, corta a edição e vira texto)
+            if ($avFase->status == '2' && !$isDev) {
                 $podeEditarBase = false;
                 $this->motivosBloqueio[$f] = $temSolicitacao ? "Sua solicitação está em análise." : "Fase já respondida.";
             } elseif (!$podeEditarBase && !isset($this->motivosBloqueio[$f])) {
@@ -148,7 +170,6 @@ class Responder extends Component
                 $faseAnteriorConcluida = false;
             }
 
-            // Preenche as variáveis do form
             foreach ($avFase->itens as $item) {
                 $this->nps[$item->criterio_id][$f] = $item->nivel_nps;
                 $this->metas[$item->criterio_id][$f] = $item->aval_metas;
@@ -162,16 +183,55 @@ class Responder extends Component
         $this->calcularMedias();
     }
 
+    public function salvarFase($faseNumero)
+    {
+        abort_if(!feature('avaliacao.responder'), 403);
+        
+        $av = $this->avaliacoesFases->firstWhere('fase', $faseNumero);
+        
+        if (!$av || !($this->permissoesFase[$faseNumero] ?? false)) {
+            return;
+        }
+
+        $faseCompleta = true;
+
+        foreach ($av->itens as $item) {
+            $nota = $this->nps[$item->criterio_id][$faseNumero] ?? null;
+            $textoMeta = $this->metas[$item->criterio_id][$faseNumero] ?? null;
+
+            if ($nota !== null && $nota !== '') {
+                if ($nota < 0 || $nota > 10) {
+                    $this->addError("nps.{$item->criterio_id}.{$faseNumero}", "Nota 0 a 10.");
+                    return;
+                }
+            } else {
+                $faseCompleta = false;
+            }
+
+            $item->update([
+                'nivel_nps' => $nota !== '' ? $nota : null,
+                'aval_metas' => $textoMeta
+            ]);
+        }
+
+        $av->update([
+            'status' => $faseCompleta ? '2' : '1', 
+            'data_resposta' => $faseCompleta ? now() : null, 
+            'hora_resposta' => $faseCompleta ? now()->format('H:i') : null
+        ]);
+
+        $this->mount($this->periodo_id, $this->turma_id, $this->student_id);
+
+        $this->dispatch('sucesso', msg: "Fase {$faseNumero} salva com sucesso!");
+    }
+
     public function salvar()
     {
         abort_if(!feature('avaliacao.responder'), 403);
         
         foreach ($this->avaliacoesFases as $av) {
             $fase = $av->fase;
-
-            if (!($this->permissoesFase[$fase] ?? false)) {
-                continue; 
-            }
+            if (!($this->permissoesFase[$fase] ?? false)) continue; 
 
             $faseCompleta = true;
 
@@ -201,7 +261,7 @@ class Responder extends Component
             ]);
         }      
         
-        session()->flash('sucesso', 'Respostas salvas com sucesso!');
+        session()->flash('sucesso', 'Todas as respostas salvas com sucesso!');
         return redirect()->route('avaliacoes.index');
     }
 
@@ -215,26 +275,116 @@ class Responder extends Component
 
     public function enviarSolicitacao()
     {
-        $this->validate([
-            'criteriosSelecionados' => 'required|array|min:1',
-            'motivoTexto' => 'required|string|min:10',
+        $this->validate(['motivoTexto' => 'required|string|min:10']);
+
+        $faseCorrente = $this->avaliacoesFases->firstWhere('fase', $this->faseNumero);
+
+        $solicitacao = Solicitacao::create([
+            'tema' => 'avaliacao_aluno_fase',
+            'solicitante_type' => \App\Models\Student::class,
+            'solicitante_id' => auth()->guard('student')->id(),
+            'justificativa' => $this->motivoTexto,
+            'status' => 'pendente',
+            'payload' => [
+                'aluno_avaliacao_id' => $faseCorrente->id,
+                'fase' => $this->faseNumero,
+                'criterios_selecionados' => $this->criteriosSelecionados
+            ]
         ]);
 
-        DB::table('avaliacao_solicitacoes')->insert([
-            'aluno_avaliacao_id' => $this->faseSolicitacaoId,
-            'student_id' => $this->student_id,
-            'criterios_selecionados' => json_encode($this->criteriosSelecionados),
-            'motivo' => $this->motivoTexto,
-            'status' => 'pendente',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->enviarNotificacaoEmail($solicitacao, auth()->guard('student')->user()->name, 'Reabertura de Fase do Aluno');
 
         $this->solicitacoesPendentes[$this->faseNumero] = true;
-        $this->motivosBloqueio[$this->faseNumero] = "Sua solicitação de alteração está em análise pelo professor.";
+        $this->motivosBloqueio[$this->faseNumero] = "Sua solicitação de alteração está em análise.";
         $this->modalSolicitacao = false;
-
         $this->dispatch('sucesso', msg: 'Solicitação enviada para o professor!');
+    }
+
+    public function abrirModalSelfUnlock($faseNumero)
+    {
+        $this->reset(['motivoTexto']);
+        $this->faseNumero = $faseNumero;
+        $this->modalSelfUnlock = true;
+    }
+
+    public function executarSelfUnlock()
+    {
+        $this->validate(['motivoTexto' => 'required|string|min:10']);
+        
+        $faseCorrente = $this->avaliacoesFases->firstWhere('fase', $this->faseNumero);
+
+        $faseCorrente->update(['status' => '1', 'data_resposta' => null]);
+
+        Solicitacao::create([
+            'tema' => 'avaliacao_prof_self_unlock',
+            'solicitante_type' => User::class,
+            'solicitante_id' => auth()->id(),
+            'justificativa' => $this->motivoTexto,
+            'resposta_admin' => 'Auto-aprovado pelo sistema antes do fechamento da matriz.',
+            'status' => 'auto_aprovada',
+            'payload' => ['aluno_avaliacao_id' => $faseCorrente->id, 'fase' => $this->faseNumero]
+        ]);
+
+        $this->modalSelfUnlock = false;
+        $this->mount($this->periodo_id, $this->turma_id, $this->student_id); 
+        $this->dispatch('sucesso', msg: 'Sua fase foi desbloqueada. Você já pode editar as notas e as demais colunas foram travadas por cascata.');
+    }
+
+    public function abrirModalTotalUnlock()
+    {
+        $this->reset(['motivoTexto']);
+        $this->modalTotalUnlock = true;
+    }
+
+    public function enviarSolicitacaoTotal()
+    {
+        $this->validate(['motivoTexto' => 'required|string|min:10']);
+
+        $fasesPermitidas = [];
+        $periodoObj = PeriodoAvaliacao::with('fases')->find($this->periodo_id);
+        
+        foreach ($this->avaliacoesFases as $avFase) {
+            $configFase = $periodoObj->fases->where('fase', $avFase->fase)->first();
+            if ($configFase && in_array($configFase->responsavel, ['2', '3'])) {
+                $fasesPermitidas[] = $avFase->id;
+            }
+        }
+
+        $solicitacao = Solicitacao::create([
+            'tema' => 'avaliacao_prof_total',
+            'solicitante_type' => User::class,
+            'solicitante_id' => auth()->id(),
+            'justificativa' => $this->motivoTexto,
+            'status' => 'pendente',
+            'payload' => [
+                'periodo_id' => $this->periodo_id,
+                'student_id' => $this->student_id,
+                'fases_para_desbloquear' => $fasesPermitidas
+            ]
+        ]);
+
+        $this->enviarNotificacaoEmail($solicitacao, auth()->user()->name, 'Reabertura Total de Matriz Bloqueada');
+
+        $this->modalTotalUnlock = false;
+        $this->dispatch('sucesso', msg: 'Sua solicitação foi enviada aos administradores.');
+    }
+
+    // =======================================================
+    // 3. E-MAIL RESTRITO AO PROFESSOR RESPONSÁVEL DA TURMA
+    // =======================================================
+    private function enviarNotificacaoEmail($solicitacao, $nome, $tipo)
+    {
+        $emailsMaster = User::role(['dev', 'admin'])->pluck('email')->toArray();
+        
+        // Pega todos os professores que lecionam exatamente nesta turma ($this->turma_id)
+        $professoresIds = DB::table('professor_turma')->where('turma_id', $this->turma_id)->pluck('user_id');
+        $emailsProfessores = User::whereIn('id', $professoresIds)->whereNotNull('email')->pluck('email')->toArray();
+
+        $emailsAlvo = array_unique(array_merge($emailsMaster, $emailsProfessores));
+
+        if (!empty($emailsAlvo)) {
+            Mail::to($emailsAlvo)->send(new NovaSolicitacaoMail($solicitacao, $nome, $tipo));
+        }
     }
 
     public function calcularMedias()

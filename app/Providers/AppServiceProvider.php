@@ -193,6 +193,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('report.dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class);
 
         Livewire::component('admin.configuracoes-gerais', \App\Modules\Admin\UI\Livewire\ConfiguracoesGeraisManager::class);
+        Livewire::component('admin.solicitacoes-manager', \App\Modules\Admin\UI\Livewire\SolicitacoesManager::class);
+
         Livewire::component('chart-widget', ChartWidget::class);
 
         // Processo Matrícula

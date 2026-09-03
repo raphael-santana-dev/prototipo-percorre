@@ -13,19 +13,28 @@
 
     {{-- BANNER DE AVALIAÇÃO CONCLUÍDA E BLOQUEADA --}}
     @if($avaliacaoFinalizada)
-        <div class="mb-6 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 p-5 rounded-xl flex items-start gap-4 shadow-sm">
-            <div class="bg-green-100 dark:bg-green-900/50 p-2 rounded-full shrink-0">
-                <i class="ph-fill ph-lock-key text-2xl text-green-600 dark:text-green-400"></i>
+        <div class="mb-6 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 p-5 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+            <div class="flex items-start gap-4">
+                <div class="bg-green-100 dark:bg-green-900/50 p-2 rounded-full shrink-0">
+                    <i class="ph-fill ph-lock-key text-2xl text-green-600 dark:text-green-400"></i>
+                </div>
+                <div>
+                    <p class="font-black text-green-800 dark:text-green-400 text-lg">Matriz de Avaliação Concluída</p>
+                    <p class="text-sm text-green-700 dark:text-green-500 mt-1 leading-relaxed">Documento oficial bloqueado contra novas edições para garantir a integridade dos dados.</p>
+                    @if(auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'))
+                        <div class="mt-3 inline-flex items-center gap-1.5 bg-red-100 text-red-700 px-3 py-1 rounded font-bold text-[10px] uppercase tracking-wider">
+                            <i class="ph-bold ph-warning"></i> Modo Desenvolvedor: Edição Liberada
+                        </div>
+                    @endif
+                </div>
             </div>
-            <div>
-                <p class="font-black text-green-800 dark:text-green-400 text-lg">Matriz de Avaliação Concluída</p>
-                <p class="text-sm text-green-700 dark:text-green-500 mt-1 leading-relaxed">Todas as fases desta matriz foram devidamente preenchidas. O documento agora é de leitura oficial e está bloqueado contra novas edições para garantir a integridade dos dados.</p>
-                @if(auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'))
-                    <div class="mt-3 inline-flex items-center gap-1.5 bg-red-100 text-red-700 px-3 py-1 rounded font-bold text-[10px] uppercase tracking-wider">
-                        <i class="ph-bold ph-warning"></i> Modo Desenvolvedor: Edição Liberada
-                    </div>
-                @endif
-            </div>
+
+            {{-- BOTÃO DE SOLICITAÇÃO PROFESSOR -> ADMIN --}}
+            @if(auth()->guard('web')->check() && auth()->user()->hasRole('professor') && !auth()->user()->hasRole('dev'))
+                <button type="button" wire:click="abrirModalTotalUnlock" class="shrink-0 px-4 py-2.5 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-300 rounded-lg text-xs font-bold transition shadow-sm uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-lock-open text-base"></i> Solicitar Reabertura
+                </button>
+            @endif
         </div>
     @endif
 
@@ -70,6 +79,7 @@
                                             {{ $avFase->status == '2' ? 'CONCLUÍDA' : 'PENDENTE' }}
                                         </span>
 
+                                        {{-- BOTÕES DE DESBLOQUEIO / SOLICITAÇÃO --}}
                                         @if(auth()->guard('student')->check() && $avFase->status == '2')
                                             @if($solicitacoesPendentes[$avFase->fase] ?? false)
                                                 <span class="mt-2 inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[9px] rounded font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-500">Em Análise</span>
@@ -78,6 +88,10 @@
                                                     Solicitar Alteração
                                                 </button>
                                             @endif
+                                        @elseif(auth()->guard('web')->check() && auth()->user()->hasRole('professor') && $avFase->status == '2' && !$avaliacaoFinalizada && ($permissoesFase[$avFase->fase] ?? false))
+                                            <button type="button" wire:click="abrirModalSelfUnlock({{ $avFase->fase }})" class="mt-2 text-[10px] text-purpura-600 hover:text-purpura-800 font-bold underline transition">
+                                                Desbloquear Fase
+                                            </button>
                                         @endif
                                     </th>
                                 @endif
@@ -144,44 +158,97 @@
         </div>
     </form>
 
-    {{-- MODAL DE SOLICITAÇÃO MANTIDO IDÊNTICO --}}
+    {{-- MODAL 1: ALUNO SOLICITANDO ALTERAÇÃO AO PROFESSOR --}}
     @if($modalSolicitacao)
-        <div class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalSolicitacao', false)"></div>
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">
+                    Solicitar Alteração - Fase {{ $faseNumero }}
+                </h3>
                 
-                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-gray-800 rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-                    <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">
-                        Solicitar Alteração - Fase {{ $faseNumero }}
-                    </h3>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">1. Selecione os Critérios que deseja alterar:</label>
-                        <div class="space-y-2 max-h-40 overflow-y-auto p-3 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900">
-                            @foreach($criterios as $crit)
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" wire:model="criteriosSelecionados" value="{{ $crit->id }}" class="rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 border-gray-300 dark:border-gray-600">
-                                    <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $crit->nome }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                        @error('criteriosSelecionados') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">1. Selecione os Critérios que deseja alterar:</label>
+                    <div class="space-y-2 max-h-40 overflow-y-auto p-3 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900">
+                        @foreach($criterios as $crit)
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" wire:model="criteriosSelecionados" value="{{ $crit->id }}" class="rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $crit->nome }}</span>
+                            </label>
+                        @endforeach
                     </div>
+                    @error('criteriosSelecionados') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                </div>
 
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">2. Descreva o motivo da solicitação:</label>
-                        <textarea wire:model="motivoTexto" rows="4" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-purpura-500 focus:border-purpura-500" placeholder="Ex: Avaliei minha nota incorretamente no quesito colaboração porque..."></textarea>
-                        @error('motivoTexto') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
-                    </div>
-                    
-                    <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100 dark:border-gray-700">
-                        <button type="button" wire:click="$set('modalSolicitacao', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition">Cancelar</button>
-                        <button type="button" wire:click="enviarSolicitacao" wire:loading.attr="disabled" class="px-6 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
-                            <span wire:loading.remove>Enviar para o Professor</span>
-                            <span wire:loading>Enviando...</span>
-                        </button>
-                    </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">2. Descreva o motivo da solicitação:</label>
+                    <textarea wire:model="motivoTexto" rows="4" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-purpura-500 focus:border-purpura-500" placeholder="Ex: Avaliei minha nota incorretamente no quesito colaboração porque..."></textarea>
+                    @error('motivoTexto') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" wire:click="$set('modalSolicitacao', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition">Cancelar</button>
+                    <button type="button" wire:click="enviarSolicitacao" wire:loading.attr="disabled" class="px-6 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
+                        <span wire:loading.remove>Enviar para o Professor</span>
+                        <span wire:loading>Enviando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL 2: PROFESSOR DESBLOQUEANDO A PRÓPRIA FASE (SELF UNLOCK) --}}
+    @if($modalSelfUnlock)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
+                    <i class="ph-bold ph-lock-open text-purpura-600"></i> Desbloquear Fase {{ $faseNumero }}
+                </h3>
+                
+                <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg mb-4 text-sm text-blue-800 dark:text-blue-300">
+                    Como a matriz ainda não foi finalizada, você pode reabrir sua própria fase para correções imediatas. Esta ação será registrada no histórico de auditoria.
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Justificativa para a reabertura:</label>
+                    <textarea wire:model="motivoTexto" rows="3" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-purpura-500 focus:border-purpura-500" placeholder="Ex: Necessidade de reajustar a nota da meta X..."></textarea>
+                    @error('motivoTexto') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" wire:click="$set('modalSelfUnlock', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition">Cancelar</button>
+                    <button type="button" wire:click="executarSelfUnlock" wire:loading.attr="disabled" class="px-6 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
+                        <span wire:loading.remove>Confirmar Desbloqueio</span>
+                        <span wire:loading>Processando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL 3: PROFESSOR SOLICITANDO DESBLOQUEIO TOTAL AO ADMIN --}}
+    @if($modalTotalUnlock)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
+                    <i class="ph-bold ph-shield-warning text-yellow-600"></i> Solicitar Reabertura de Matriz
+                </h3>
+                
+                <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 p-3 rounded-lg mb-4 text-sm text-yellow-800 dark:text-yellow-400">
+                    Esta matriz já foi concluída e encontra-se bloqueada. Sua solicitação será encaminhada para análise da Coordenação (Admin/Dev).
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Por que esta matriz precisa ser reaberta?</label>
+                    <textarea wire:model="motivoTexto" rows="4" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-purpura-500 focus:border-purpura-500" placeholder="Detalhe os motivos operacionais ou acadêmicos para a reabertura..."></textarea>
+                    @error('motivoTexto') <span class="text-red-500 text-xs mt-1 block font-bold">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" wire:click="$set('modalTotalUnlock', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition">Cancelar</button>
+                    <button type="button" wire:click="enviarSolicitacaoTotal" wire:loading.attr="disabled" class="px-6 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-yellow-600 hover:bg-yellow-700 transition flex items-center gap-2">
+                        <span wire:loading.remove>Enviar Solicitação Geral</span>
+                        <span wire:loading>Enviando...</span>
+                    </button>
                 </div>
             </div>
         </div>

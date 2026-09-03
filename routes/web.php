@@ -150,6 +150,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/importacoes/hub', \App\Modules\Importacao\UI\Livewire\ImportacaoConfigManager::class)->name('importacoes.hub');
 
     Route::get('/configuracoes', \App\Modules\Admin\UI\Livewire\ConfiguracoesGeraisManager::class)->name('configuracoes.index');
+    Route::get('/solicitacoes', \App\Modules\Admin\UI\Livewire\SolicitacoesManager::class)->name('solicitacoes.index');
 
 });
 
