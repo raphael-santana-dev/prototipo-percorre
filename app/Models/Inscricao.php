@@ -49,7 +49,8 @@ class Inscricao extends Model
         'posicao_ranking_geral',
         'posicao_ranking_unidade',
         'posicao_ranking_curso',
-        'slug'
+        'slug',
+        'criado_por',
     ];
 
     protected $casts = [
@@ -87,5 +88,10 @@ class Inscricao extends Model
     public function statusInscricao()
     {
         return $this->belongsTo(StatusInscricao::class, 'status_inscricao_id');
+    }
+
+    public function criador()
+    {
+        return $this->belongsTo(User::class, 'criado_por');
     }
 }

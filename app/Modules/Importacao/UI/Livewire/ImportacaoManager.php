@@ -477,6 +477,12 @@ class ImportacaoManager extends Component
         $this->importacaoAtualId = null;
     }
 
+    public function cancelarImportacaoListagem($id, $apagarDados = false)
+    {
+        $this->importacaoAtualId = $id;
+        $this->cancelarImportacao($apagarDados);
+    }
+
     public function cancelarImportacao($apagarDados = false)
     {
         if (!$this->importacaoAtualId) return;
@@ -484,7 +490,7 @@ class ImportacaoManager extends Component
         $importacao = Importacao::find($this->importacaoAtualId);
         if (!$importacao) return;
 
-        // 1. Força a parada do Job no background alterando o status
+        // Força a parada do Job no background alterando o status
         $erros = json_decode($importacao->erro_mensagem, true) ?? [];
         $erros[] = [
             'linha' => '-',
@@ -498,26 +504,24 @@ class ImportacaoManager extends Component
             'erro_mensagem' => json_encode($erros)
         ]);
 
-        // 2. Regras para "Cancelar e Apagar" (Rollback)
+        // Regras para "Cancelar e Apagar" (Rollback) corrigidas sem usar "criado_por"
         if ($apagarDados) {
-            
-            // Reverte os dados inseridos comparando o horário de início da importação
             if ($importacao->tipo === 'inscricoes') {
-                \App\Models\Inscricao::where('criado_por', auth()->id())
+                // CORREÇÃO: Usa a origem "importacao" no lugar da coluna inexistente
+                \App\Models\Inscricao::where('criado_por', $importacao->user_id)
                     ->where('created_at', '>=', $importacao->created_at)
                     ->delete();
             } elseif ($importacao->tipo === 'usuarios') {
                 \App\Models\User::where('created_at', '>=', $importacao->created_at)
-                    ->where('id', '!=', auth()->id()) // Trava de segurança para não excluir a si próprio
+                    ->where('id', '!=', auth()->id()) 
                     ->delete();
             }
 
-            // Exclui a própria planilha original do servidor para limpar espaço
             if ($importacao->arquivo_caminho && \Illuminate\Support\Facades\Storage::disk('local')->exists($importacao->arquivo_caminho)) {
                 \Illuminate\Support\Facades\Storage::disk('local')->delete($importacao->arquivo_caminho);
             }
 
-            $this->dispatch('sucesso', msg: 'Importação interrompida e os dados já lidos foram revertidos com sucesso.');
+            $this->dispatch('sucesso', msg: 'Importação interrompida e os dados foram revertidos com sucesso.');
         } else {
             $this->dispatch('sucesso', msg: 'Sinal de cancelamento enviado! O processamento parará no lote atual.');
         }

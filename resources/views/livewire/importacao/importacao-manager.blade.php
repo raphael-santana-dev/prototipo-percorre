@@ -155,6 +155,24 @@
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
+                            @if(in_array($log->status, ['na_fila', 'processando']) && $log->operacao === 'importacao')
+                                <div x-data="{ openCancel: false }" class="relative inline-block text-left">
+                                    <button @click="openCancel = !openCancel" @click.away="openCancel = false" class="p-1.5 text-red-500 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-900/30" title="Cancelar Importação">
+                                        <i class="text-lg ph-bold ph-stop-circle"></i>
+                                    </button>
+                                    <div x-show="openCancel" x-cloak class="absolute right-0 z-50 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                                        <div class="py-1">
+                                            <button wire:click="cancelarImportacaoListagem({{ $log->id }}, false)" class="flex items-center w-full px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-gray-700">
+                                                <i class="ph-bold ph-stop mr-2"></i> Apenas Parar
+                                            </button>
+                                            <button wire:click="cancelarImportacaoListagem({{ $log->id }}, true)" class="flex items-center w-full px-4 py-2 text-xs font-bold text-red-800 hover:bg-red-50 dark:hover:bg-gray-700" onclick="confirm('Isso apagará os dados já importados. Confirmar?') || event.stopImmediatePropagation()">
+                                                <i class="ph-bold ph-trash mr-2"></i> Parar e Apagar Dados
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                            
                             <button wire:click="verDetalhes({{ $log->id }})" class="p-1.5 text-gray-500 transition-colors rounded hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700" title="Ver Relatório">
                                 <i class="text-lg ph-fill ph-info"></i>
                             </button>

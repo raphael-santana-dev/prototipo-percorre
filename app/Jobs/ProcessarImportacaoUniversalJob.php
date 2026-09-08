@@ -50,22 +50,28 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $errosCriticos = 0;
 
         try {
+            // Garante que o status inicie corretamente
             $this->importacao->update(['status' => 'processando']);
-            $caminhoAbsoluto = Storage::disk('local')->path($this->importacao->arquivo_caminho);
+            $caminhoAbsoluto = \Illuminate\Support\Facades\Storage::disk('local')->path($this->importacao->arquivo_caminho);
             $formato = $this->importacao->formato;
             
             $registros = $this->extrairRegistrosLazy($caminhoAbsoluto, $formato);
             $mapeamento = $this->importacao->mapeamento ?? [];
-            
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
             foreach ($registros as $linhaOriginal) {
                 $linhaAtual++;
 
-                if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
-                    if ($linhaAtual % 50 === 0) {
-                        $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+                // 1. TRAVA PRINCIPAL DE CANCELAMENTO
+                if ($linhaAtual % 50 === 0) {
+                    if ($this->importacao->fresh()->status !== 'processando') {
+                        break; // Se o status mudou (ex: para 'erro' via cancelamento), para a leitura na hora
                     }
+                    $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+                }
+
+                // Pula as linhas se for uma re-tentativa parcial de falhas
+                if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
                     continue; 
                 }
 
@@ -83,14 +89,16 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         default => throw new \Exception("Tipo de importação '{$this->importacao->tipo}' não implementado."),
                     };
 
-                } catch (QueryException $e) {
+                } catch (\Illuminate\Database\QueryException $e) {
                     $isDuplicate = $e->getCode() === '23505'; 
                     $isNotNull = $e->getCode() === '23502';   
                     
-                    if (!$isDuplicate) $errosCriticos++;
+                    if (!$isDuplicate) {
+                        $errosCriticos++;
+                    }
 
                     $amigavel = 'Falha técnica ao salvar no banco de dados.';
-                    if ($isDuplicate) $amigavel = 'Candidato ignorado: CPF ou E-mail já está cadastrado no sistema.';
+                    if ($isDuplicate) $amigavel = 'Candidato ignorado: Registro já existe e a opção de mesclar está desativada.';
                     if ($isNotNull) $amigavel = 'Falha ao auto-cadastrar vínculo: Faltam dados obrigatórios na tabela destino.';
 
                     $erros[] = [
@@ -105,16 +113,21 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         'linha' => $linhaAtual, 
                         'tipo' => 'Erro de Dados',
                         'mensagem' => $e->getMessage(),
-                        'amigavel' => 'A informação fornecida na planilha está em um formato inválido: ' . $e->getMessage()
+                        'amigavel' => 'A informação na planilha é inválida: ' . $e->getMessage()
                     ];
                 }
 
-                // Aumentado para 1000 erros críticos antes de abortar a operação
+                // 2. PROTEÇÃO DE MEMÓRIA (Se tiver mais de 1000 linhas totalmente quebradas, aborta)
                 if ($errosCriticos >= 1000) {
-                    throw new \Exception("Excesso de erros estruturais detectados (1000+). Processamento abortado por segurança.");
+                    throw new \Exception("Excesso de erros estruturais (1000+). Planilha corrompida ou fora do padrão. Operação abortada.");
                 }
 
+                // 3. ATUALIZAÇÃO CONSTANTE DE LOTE PARA O PROGRESSO
                 if ($linhaAtual % 10 === 0) {
+                    if ($this->importacao->fresh()->status !== 'processando') {
+                        break; // Trava secundária de cancelamento
+                    }
+                    
                     $this->importacao->update([
                         'linhas_processadas' => $linhaAtual,
                         'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
@@ -122,15 +135,21 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
             }
 
-            if (count($this->relatorioAutoCadastro['novos'] ?? []) > 0 || count($this->relatorioAutoCadastro['50_porcento'] ?? []) > 0) {
+            // 4. RETORNO IMEDIATO: Se a operação foi cancelada no meio do loop, encerra sem dar status de 'Concluído'
+            if ($this->importacao->fresh()->status !== 'processando') {
+                return;
+            }
+
+            // 5. RELATÓRIO DO MOTOR DE AUTO-CADASTRO (FUZZY LOGIC)
+            if (!empty($this->relatorioAutoCadastro['novos']) || !empty($this->relatorioAutoCadastro['50_porcento'])) {
                 $msgRelatorio = "Mapeamento IA (50%+): \n";
                 
-                foreach ($this->relatorioAutoCadastro['50_porcento'] as $tipo => $itens) {
+                foreach ($this->relatorioAutoCadastro['50_porcento'] ?? [] as $tipo => $itens) {
                     if (!empty($itens)) {
                         $msgRelatorio .= "- $tipo Compatíveis: " . implode(' | ', array_unique($itens)) . " \n";
                     }
                 }
-                foreach ($this->relatorioAutoCadastro['novos'] as $tipo => $itens) {
+                foreach ($this->relatorioAutoCadastro['novos'] ?? [] as $tipo => $itens) {
                     if (!empty($itens)) {
                         $msgRelatorio .= "- $tipo Criados: " . implode(' | ', array_unique($itens)) . " \n";
                     }
@@ -138,12 +157,13 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 
                 array_unshift($erros, [
                     'linha' => 'INFO',
-                    'tipo' => 'Alerta: Inteligência Artificial',
+                    'tipo' => 'Relatório: Inteligência Artificial',
                     'mensagem' => $msgRelatorio,
                     'amigavel' => $msgRelatorio
                 ]);
             }
 
+            // 6. FINALIZAÇÃO OFICIAL
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
             
             $this->importacao->update([
@@ -152,6 +172,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
+            // 7. RASTRO DE AUDITORIA DO LOTE COMPLETO
             if ($this->importacao->tipo === 'inscricoes' && $linhaAtual > 0) {
                 $usuario = $this->importacao->user; 
                 \Illuminate\Support\Facades\DB::table('auditoria_logs')->insert([
@@ -177,9 +198,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         } catch (\Throwable $e) {
             array_unshift($erros, [
-                'linha' => 'Crítico/Sistema', 
-                'tipo' => 'Falha Crítica',
-                'mensagem' => $e->getMessage(),
+                'linha' => 'Falha Crítica', 
+                'tipo' => 'Queda no Sistema',
+                'mensagem' => $e->getMessage() . ' no arquivo ' . basename($e->getFile()) . ':' . $e->getLine(),
                 'amigavel' => 'A importação falhou de maneira irrecuperável: ' . $e->getMessage()
             ]);
             $this->importacao->update([
@@ -502,6 +523,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
+        $dadosFixos['criado_por'] = $this->importacao->user_id;
 
         $mesclarDuplicatas = filter_var($mapeamento['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
