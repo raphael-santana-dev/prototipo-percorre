@@ -347,8 +347,13 @@
 
                     <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
                         <button type="button" wire:click="excluirImportacao({{ $importacaoAtualId }})" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar e Apagar Arquivo</button>
-                        <button type="button" wire:click="iniciarImportacao" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition flex items-center gap-2">
-                            <i class="ph-bold ph-rocket-launch"></i> Confirmar e Enviar para a Fila
+                        <button type="button" wire:click="iniciarImportacao" wire:loading.attr="disabled" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition flex items-center gap-2">
+                            <span wire:loading.remove wire:target="iniciarImportacao" class="flex items-center gap-2">
+                                <i class="ph-bold ph-rocket-launch"></i> Confirmar e Enviar para a Fila
+                            </span>
+                            <span wire:loading wire:target="iniciarImportacao" class="flex items-center gap-2">
+                                <i class="ph-bold ph-spinner animate-spin"></i> Processando...
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -610,10 +615,46 @@
                         </div>
                     @endif
 
-                    <div class="mt-6 text-center">
-                        <button wire:click="fecharMonitoramento" class="text-xs font-bold text-gray-400 hover:text-gray-600 transition underline decoration-dashed underline-offset-4">
-                            Ocultar e processar em 2º plano
-                        </button>
+                    <div class="mt-6 border-t border-gray-100 pt-4" x-data="{ showCancelOptions: false }">
+                        
+                        <!-- BOTÕES PADRÃO -->
+                        <div x-show="!showCancelOptions" class="flex justify-between items-center w-full">
+                            <button wire:click="fecharMonitoramento" class="text-xs font-bold text-gray-500 hover:text-gray-800 transition underline decoration-dashed underline-offset-4">
+                                Ocultar e processar em 2º plano
+                            </button>
+                            <button @click="showCancelOptions = true" class="text-xs font-bold text-red-500 hover:text-red-700 transition flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                                <i class="ph-bold ph-x-circle"></i> Cancelar Importação
+                            </button>
+                        </div>
+
+                        <!-- MENU DE CANCELAMENTO EXPANDIDO -->
+                        <div x-show="showCancelOptions" x-cloak class="flex flex-col items-center bg-red-50 p-4 rounded-xl border border-red-100 w-full animate-fade-in-up">
+                            <span class="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
+                                <i class="ph-fill ph-warning-circle text-lg"></i> Interromper o processo?
+                            </span>
+                            
+                            <div class="flex flex-wrap gap-2 w-full justify-center">
+                                <button @click="showCancelOptions = false" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-bold transition shadow-sm">
+                                    Fechar
+                                </button>
+                                
+                                <button wire:click="cancelarImportacao(false)" wire:loading.attr="disabled" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1">
+                                    <span wire:loading.remove wire:target="cancelarImportacao(false)"><i class="ph-bold ph-stop"></i> Apenas Cancelar</span>
+                                    <span wire:loading wire:target="cancelarImportacao(false)"><i class="ph-bold ph-spinner animate-spin"></i> Parando...</span>
+                                </button>
+                                
+                                <button wire:click="cancelarImportacao(true)" wire:loading.attr="disabled" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1">
+                                    <span wire:loading.remove wire:target="cancelarImportacao(true)"><i class="ph-bold ph-trash"></i> Cancelar e Apagar Dados</span>
+                                    <span wire:loading wire:target="cancelarImportacao(true)"><i class="ph-bold ph-spinner animate-spin"></i> Revertendo...</span>
+                                </button>
+                            </div>
+                            
+                            <p class="text-[10px] text-red-600 font-medium mt-3 text-center leading-tight">
+                                <b>"Apenas Cancelar":</b> Para a leitura da planilha e mantém os dados já processados.<br>
+                                <b>"Cancelar e Apagar":</b> Interrompe o processo e exclui em massa os dados inseridos por este arquivo.
+                            </p>
+                        </div>
+                        
                     </div>
                 </div>
             </div>

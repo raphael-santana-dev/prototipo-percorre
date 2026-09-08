@@ -360,18 +360,18 @@ class Responder extends Component
     // =======================================================
     private function dispararAutomacoesFila($eventoGatilho)
     {
-        // Coleta Administradores e Desenvolvedores
         $adminDevs = User::role(['dev', 'admin'])->get();
-        
-        // Coleta Professores da Turma
         $professoresIds = DB::table('professor_turma')->where('turma_id', $this->turma_id)->pluck('user_id');
         $professores = User::whereIn('id', $professoresIds)->whereNotNull('email')->get();
 
-        // Une todos e dispara a automação individualmente
         $todosUsuarios = $adminDevs->merge($professores)->unique('id');
+        $nomeCandidato = auth()->guard('student')->check() ? auth()->guard('student')->user()->name : auth()->user()->name;
 
         foreach ($todosUsuarios as $user) {
-            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $user);
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $user, [
+                'nome_solicitante' => $nomeCandidato,
+                'justificativa' => $this->motivoTexto
+            ]);
         }
     }
 

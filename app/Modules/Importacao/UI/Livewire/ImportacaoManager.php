@@ -411,20 +411,28 @@ class ImportacaoManager extends Component
         $importacao = Importacao::findOrFail($this->importacaoAtualId);
         
         $mapaFinal = [];
-        $mapaFinal['config_auto_cadastro'] = $this->permitirAutoCadastro;
-        $mapaFinal['config_mesclar_duplicadas'] = $this->mesclarDuplicadas;
+        $mapaFinal['config_auto_cadastro'] = (bool) $this->permitirAutoCadastro;
+        $mapaFinal['config_mesclar_duplicadas'] = (bool) $this->mesclarDuplicadas;
 
         if (isset($importacao->mapeamento['linhas_reprocessar'])) {
             $mapaFinal['linhas_reprocessar'] = $importacao->mapeamento['linhas_reprocessar'];
         }
 
-        foreach($this->mapeamento as $map) {
-             if ($map['destino'] !== 'ignorar') {
-                 $mapaFinal[$map['coluna_nome']] = [
-                      'destino' => $map['destino'],
-                      'tipo' => $map['tipo']
-                 ];
-             }
+        // Blindagem contra perda de chaves do Livewire
+        if (is_array($this->cabecalhos) && is_array($this->mapeamento)) {
+            foreach($this->cabecalhos as $index => $colunaNome) {
+                 if (isset($this->mapeamento[$index])) {
+                     $destino = $this->mapeamento[$index]['destino'] ?? 'ignorar';
+                     $tipo = $this->mapeamento[$index]['tipo'] ?? 'texto';
+
+                     if ($destino !== 'ignorar') {
+                         $mapaFinal[$colunaNome] = [
+                              'destino' => $destino,
+                              'tipo' => $tipo
+                         ];
+                     }
+                 }
+            }
         }
         
         if ($this->cicloSelecionadoId) {
@@ -436,12 +444,16 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        $this->reset(['arquivo', 'cabecalhos', 'mapeamento', 'modalMapeamentoAberto', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);        
-        
-        // NOVO: Chama a tela de monitoramento em tempo real
+        // Fecha o modal de cruzamento e abre o de monitoramento em tempo real imediatamente
+        $this->modalMapeamentoAberto = false;
         $this->modalMonitoramentoAberto = true;
+
+        // Limpa a memória usando o método nativo do Livewire (evita o erro 500 silencioso)
+        $this->reset(['camposDinamicosDisponiveis', 'mapeamento', 'cabecalhos', 'arquivo']);
         
-        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
+        // Removemos o ->afterResponse() para forçar o servidor a liberar a sua tela na hora,
+        // enquanto o Job vai diretamente para a fila em segundo plano.
+        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao));
     }
 
     // NOVO: Método que o AlpineJS vai chamar a cada X segundos para trazer o progresso real
@@ -463,6 +475,55 @@ class ImportacaoManager extends Component
         $this->modalMonitoramentoAberto = false;
         $this->importacaoMonitoramento = null;
         $this->importacaoAtualId = null;
+    }
+
+    public function cancelarImportacao($apagarDados = false)
+    {
+        if (!$this->importacaoAtualId) return;
+
+        $importacao = Importacao::find($this->importacaoAtualId);
+        if (!$importacao) return;
+
+        // 1. Força a parada do Job no background alterando o status
+        $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+        $erros[] = [
+            'linha' => '-',
+            'tipo' => 'Cancelamento Manual',
+            'mensagem' => 'A importação foi cancelada pelo usuário através do painel.',
+            'amigavel' => 'Cancelado pelo usuário.'
+        ];
+
+        $importacao->update([
+            'status' => 'erro', 
+            'erro_mensagem' => json_encode($erros)
+        ]);
+
+        // 2. Regras para "Cancelar e Apagar" (Rollback)
+        if ($apagarDados) {
+            
+            // Reverte os dados inseridos comparando o horário de início da importação
+            if ($importacao->tipo === 'inscricoes') {
+                \App\Models\Inscricao::where('criado_por', auth()->id())
+                    ->where('created_at', '>=', $importacao->created_at)
+                    ->delete();
+            } elseif ($importacao->tipo === 'usuarios') {
+                \App\Models\User::where('created_at', '>=', $importacao->created_at)
+                    ->where('id', '!=', auth()->id()) // Trava de segurança para não excluir a si próprio
+                    ->delete();
+            }
+
+            // Exclui a própria planilha original do servidor para limpar espaço
+            if ($importacao->arquivo_caminho && \Illuminate\Support\Facades\Storage::disk('local')->exists($importacao->arquivo_caminho)) {
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($importacao->arquivo_caminho);
+            }
+
+            $this->dispatch('sucesso', msg: 'Importação interrompida e os dados já lidos foram revertidos com sucesso.');
+        } else {
+            $this->dispatch('sucesso', msg: 'Sinal de cancelamento enviado! O processamento parará no lote atual.');
+        }
+
+        $this->fecharMonitoramento();
+        $this->resetPage();
     }
 
     public function excluirImportacao($id)

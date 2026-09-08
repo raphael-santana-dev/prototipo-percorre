@@ -34,6 +34,11 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
         $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
 
+        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
+        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Helpdesk: Solicitação de Cadastro de Inscrição';
+        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
+        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
+
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);

@@ -123,7 +123,7 @@ class RegistrationManager extends Component
 
             $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
         } else {
-            // ENTRA NO FLUXO DE APROVAÇÃO DA CENTRAL DE SOLICITAÇÕES
+            // ENTRA NO FLUXO DE APROVAÇÃO
             $solicitacao = \App\Models\Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
                 'solicitante_type' => \App\Models\User::class,
@@ -134,7 +134,12 @@ class RegistrationManager extends Component
             ]);
 
             $emailSistema = \App\Models\ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
-            \Illuminate\Support\Facades\Mail::to($emailSistema)->send(new \App\Mail\NovaSolicitacaoMail($solicitacao, auth()->user()->name, 'Aprovação de Nova Inscrição'));
+            
+            // Serviço nativo substituindo a classe solta
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.solicitacao_cadastro', $emailSistema, [
+                'nome_solicitante' => auth()->user()->name,
+                'justificativa' => $solicitacao->justificativa
+            ]);
 
             $this->dispatch('sucesso', msg: 'A solicitação de cadastro foi encaminhada para aprovação da coordenação.');
         }
