@@ -99,6 +99,8 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
+                        <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes e Inscrições"><i class="text-lg ph-fill ph-kanban"></i></a>
+
                         @if(feature('ciclo.quick-view'))
                             <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         @endif

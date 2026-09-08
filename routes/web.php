@@ -99,11 +99,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/inscricoes/status', \App\Modules\Registration\UI\Livewire\StatusManager::class)->name('status-inscricoes.index'); 
     Route::get('/inscricoes/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class)->name('inscricoes.show')->where('id', '[0-9]+');
     Route::get('/ciclos', PeriodManager::class)->name('ciclos.index');
-    Route::get('/ciclos/crm/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm')->where('id', '[0-9]+');
+    // Route::get('/ciclos/crm/{id}/{slug?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm')->where('id', '[0-9]+');
     Route::get('/ciclos/regras/{id}/{slug?}', \App\Modules\Period\UI\Livewire\RegrasManager::class)->name('ciclos.regras')->where('id', '[0-9]+');
     Route::get('/ciclos/{id}/editar', \App\Modules\Period\UI\Livewire\PeriodEdit::class)->name('ciclos.edit');
     Route::get('/ciclos/{id}/{slug?}', \App\Modules\Period\UI\Livewire\PeriodDetails::class)->name('ciclos.show')->where('id', '[0-9]+');
-
+    Route::get('/crm/{id?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm');
     // --- Validação de Matrículas e Inteligência Artificial ---
     Route::get('/matriculas/configuracao-ia', \App\Modules\Matricula\UI\Livewire\IaConfigManager::class)->name('matriculas.configuracao');
     Route::get('/matriculas/analise-manual', \App\Modules\Matricula\UI\Livewire\AnaliseManualManager::class)->name('matriculas.analise-manual');

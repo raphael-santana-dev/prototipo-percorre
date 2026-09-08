@@ -23,7 +23,7 @@
 
         <div class="flex items-center gap-3 w-full md:w-auto justify-end">
             <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition">
-                <i class="ph-fill ph-kanban text-sm"></i> Funil CRM
+                <i class="ph-fill ph-kanban text-sm"></i> Fluxo
             </a>
             
             @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
