@@ -27,7 +27,13 @@ class DatabaseSeeder extends Seeder
             EmpresasSeeder::class,
             Ciclo2026Seeder::class,
             CamposFormularioSeeder::class,
-            ImportacaoConfigSeeder::class
+            ImportacaoConfigSeeder::class,
+            TemplatesMatriculaSeeder::class,
+            AutomacaoMatriculaSeeder::class,
+            ComunicacaoTemplatesSeeder::class,
+            HelpdeskTemplatesSeeder::class,
+            CompanyUsersSeeder::class,
+            MaisStatusInscricaoSeeder::class,
         ]);
     }
 }

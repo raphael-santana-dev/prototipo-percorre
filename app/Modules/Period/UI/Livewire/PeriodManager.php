@@ -200,6 +200,7 @@ class PeriodManager extends Component
             ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
+            ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
