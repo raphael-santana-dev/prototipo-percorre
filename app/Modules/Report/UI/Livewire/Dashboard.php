@@ -23,6 +23,7 @@ class Dashboard extends Component
     public bool $carregando = true;
 
     // Gráficos Nativos e Estruturais
+    public array $graficoInscricoesDia = [];
     public array $graficoVagas = [];
     public array $graficoInscricoes = [];
     public array $graficoCursos = [];
@@ -48,8 +49,8 @@ class Dashboard extends Component
 
     private function inicializarEstruturaGraficos()
     {
-        $vazio = ['title' => 'Carregando...', 'type' => 'bar', 'height' => 300, 'series' => [], 'labels' => []];
-        $this->graficoVagas = $this->graficoInscricoes = $this->graficoCursos = $this->graficoUnidades = $vazio;
+        $vazio = ['title' => 'Carregando...', 'type' => 'bar', 'height' => 350, 'series' => [], 'labels' => []];
+        $this->graficoInscricoesDia = $this->graficoVagas = $this->graficoInscricoes = $this->graficoCursos = $this->graficoUnidades = $vazio;
         $this->graficoIdades = $this->graficoPCD = $vazio;
         $this->graficosDinamicos = [];
     }
@@ -69,14 +70,15 @@ class Dashboard extends Component
             ->whereIn('tipo', ['select', 'radio'])
             ->get();
 
-        // 2. Extrai TODA a base de Inscrições do Ciclo (Alta Performance)
-        $inscricoes = Inscricao::select('id', 'status_inscricao_id', 'curso_id', 'unidade_id', 'data_nascimento', 'possui_deficiencia', 'dados_dinamicos')
+        // 2. Extrai TODA a base de Inscrições do Ciclo (Alta Performance) incluindo o created_at
+        $inscricoes = Inscricao::select('id', 'status_inscricao_id', 'curso_id', 'unidade_id', 'data_nascimento', 'possui_deficiencia', 'dados_dinamicos', 'created_at')
             ->with(['statusInscricao:id,nome', 'curso:id,nome', 'unidade:id,nome'])
             ->where('ciclo_id', $this->filtroCiclo)
             ->get();
 
         // 3. Inicializadores de Contagem
         $totalVagas = OfertaVaga::where('ciclo_id', $this->filtroCiclo)->sum('vagas');
+        $inscricoesPorDia = [];
         $statusContagem = []; $cursoContagem = []; $unidadeContagem = [];
         $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
         $pcdContagem = ['Sim' => 0, 'Não' => 0];
@@ -93,6 +95,12 @@ class Dashboard extends Component
 
         // 4. Processamento em Memória RAM
         foreach ($inscricoes as $insc) {
+            // Evolução por Dia
+            if ($insc->created_at) {
+                $dataStr = $insc->created_at->format('Y-m-d');
+                $inscricoesPorDia[$dataStr] = ($inscricoesPorDia[$dataStr] ?? 0) + 1;
+            }
+
             // Nativos: Status, Curso e Unidade
             $status = $insc->statusInscricao->nome ?? 'Pendente';
             $statusContagem[$status] = ($statusContagem[$status] ?? 0) + 1;
@@ -133,35 +141,49 @@ class Dashboard extends Component
         }
 
         arsort($cursoContagem);
+        ksort($inscricoesPorDia); // Ordena cronologicamente os dias (Y-m-d)
+
+        // Prepara os dados do gráfico diário (formatando rótulo para d/m)
+        $labelsDias = [];
+        $dadosDias = [];
+        foreach ($inscricoesPorDia as $data => $qtd) {
+            $labelsDias[] = Carbon::parse($data)->format('d/m/Y');
+            $dadosDias[] = $qtd;
+        }
 
         // --- Montagem Nativos ---
+        $this->graficoInscricoesDia = [
+            'title' => 'Evolução Diária de Inscrições', 'type' => 'area', 'height' => 350,
+            'labels' => $labelsDias,
+            'series' => [['name' => 'Novas Inscrições', 'data' => $dadosDias]]
+        ];
         $this->graficoVagas = [
-            'title' => 'Ocupação de Vagas Geração', 'type' => 'donut', 'height' => 300,
+            'title' => 'Ocupação de Vagas Geração', 'type' => 'donut', 'height' => 350,
             'labels' => ['Vagas Preenchidas', 'Vagas Abertas'],
             'series' => [$vagasPreenchidas, max(0, $totalVagas - $vagasPreenchidas)]
         ];
         $this->graficoInscricoes = [
-            'title' => 'Status do Funil', 'type' => 'bar', 'height' => 300,
+            'title' => 'Status do Funil', 'type' => 'bar', 'height' => 350,
             'labels' => array_keys($statusContagem),
             'series' => [['name' => 'Inscritos', 'data' => array_values($statusContagem)]]
         ];
         $this->graficoCursos = [
-            'title' => 'Procura por Curso', 'type' => 'area', 'height' => 300,
+            'title' => 'Procura por Curso', 'type' => 'area', 'height' => 350,
             'labels' => array_keys($cursoContagem),
             'series' => [['name' => 'Inscritos', 'data' => array_values($cursoContagem)]]
         ];
         $this->graficoUnidades = [
-            'title' => 'Candidatos por Unidade', 'type' => 'donut', 'height' => 300,
+            'title' => 'Candidatos por Unidade', 'type' => 'donut', 'height' => 350,
             'labels' => array_keys($unidadeContagem),
             'series' => array_values($unidadeContagem)
         ];
         $this->graficoIdades = [
-            'title' => 'Faixa Etária', 'type' => 'pie', 'height' => 300,
+            'title' => 'Faixa Etária', 'type' => 'pie', 'height' => 350,
             'labels' => array_keys($idadesContagem),
             'series' => array_values($idadesContagem)
         ];
         $this->graficoPCD = [
-            'title' => 'Pessoas com Deficiência (PCD)', 'type' => 'donut', 'height' => 300,
+            'title' => 'Pessoas com Deficiência (PCD)', 'type' => 'donut', 'height' => 350,
             'labels' => array_keys($pcdContagem),
             'series' => array_values($pcdContagem)
         ];
@@ -179,7 +201,7 @@ class Dashboard extends Component
                 'config' => [
                     'title' => Str::limit($dados['label'], 45), // Limita o título para não quebrar a tela
                     'type' => $tipoGrafico,
-                    'height' => 300,
+                    'height' => 350,
                     'labels' => array_keys($dados['opcoes']),
                     'series' => $tipoGrafico === 'bar' 
                         ? [['name' => 'Qtd', 'data' => array_values($dados['opcoes'])]] 

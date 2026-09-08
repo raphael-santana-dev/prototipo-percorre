@@ -22,9 +22,10 @@
     </div>
 
     @if($carregando)
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-            @for ($i = 0; $i < 8; $i++)
-                <div class="h-80 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+        <!-- Skeleton Loading Unificado -->
+        <div class="flex flex-col gap-6 animate-pulse">
+            @for ($i = 0; $i < 4; $i++)
+                <div class="h-80 bg-gray-200 dark:bg-gray-700 rounded-xl w-full"></div>
             @endfor
         </div>
     @else
@@ -39,20 +40,25 @@
             </div>
         @endif
 
+        <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-trend-up text-purpura-500"></i> Evolução das Inscrições</h3>
+        <div class="grid grid-cols-1 gap-6 mb-8">
+            <livewire:chart-widget chartId="grafico-inscricoes-dia" :config="$graficoInscricoesDia" wire:key="widget-inscricoes-dia-{{ $filtroCiclo }}" />
+        </div>
+
         <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-funnel text-purpura-500"></i> Funil e Ocupação</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 gap-6 mb-8">
             <livewire:chart-widget chartId="grafico-vagas" :config="$graficoVagas" wire:key="widget-vagas-{{ $filtroCiclo }}" />
             <livewire:chart-widget chartId="grafico-status" :config="$graficoInscricoes" wire:key="widget-status-{{ $filtroCiclo }}" />
         </div>
 
         <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-map-pin text-purpura-500"></i> Distribuição Operacional</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 gap-6 mb-8">
             <livewire:chart-widget chartId="grafico-cursos" :config="$graficoCursos" wire:key="widget-cursos-{{ $filtroCiclo }}" />
             <livewire:chart-widget chartId="grafico-unidades" :config="$graficoUnidades" wire:key="widget-unidades-{{ $filtroCiclo }}" />
         </div>
 
         <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-users-three text-purpura-500"></i> Perfil e Demografia (Campos Nativos e Form Builder)</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-6">
             
             <!-- Gráficos Demográficos Nativos -->
             <livewire:chart-widget chartId="grafico-idades" :config="$graficoIdades" wire:key="widget-idades-{{ $filtroCiclo }}" />
