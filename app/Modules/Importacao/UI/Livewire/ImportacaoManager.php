@@ -84,6 +84,7 @@ class ImportacaoManager extends Component
         'pontuacao_total' => 'Score / Pontuação Total',
         'posicao_ranking' => 'Posição no Ranking',
         'etapa_atual' => 'Progresso (Etapa Atual)',
+        'regiao' => 'Região (Ex.: Norte, Sul, Leste, Oeste)',
     ];
 
     public function mount()

@@ -9,40 +9,28 @@ use App\Modules\Comunicacao\Jobs\DispararAutomacaoJob;
 
 class AutomacaoService
 {
-    /**
-     * TUTORIAL DE USO: Como acionar uma automação no seu código?
-     * 
-     * Em vez de usar Observers, você chama essa função exatamente onde a ação ocorre 
-     * (ex: No Livewire/Controller onde o administrador clica em "Aprovar Inscrição").
-     * 
-     * EXEMPLO DE USO:
-     * \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.aprovada', $inscricao);
-     */
-    public static function disparar(string $eventoGatilho, $entidade)
+    public static function disparar(string $eventoGatilho, $destinatario, array $dadosExtras = [])
     {
-        // 1. Busca se existe alguma automação ATIVA cadastrada para este evento
-        $automacoes = Automacao::with('template')
-            ->where('evento_gatilho', $eventoGatilho)
-            ->where('status', true)
-            ->get();
+        $automacoes = Automacao::with('template')->where('evento_gatilho', $eventoGatilho)->where('status', true)->get();
+        if ($automacoes->isEmpty()) return;
 
-        if ($automacoes->isEmpty()) {
-            return; // Se não houver automação ligada para este evento, não faz nada
-        }
-
-        // 2. Extrai o E-mail e monta o contexto (dependendo se a entidade é User ou Inscrição)
-        $email = $entidade->email ?? null;
+        // Aceita o Model User, Model Inscrição ou um endereço de e-mail em texto (String)
+        $email = is_string($destinatario) ? $destinatario : ($destinatario->email ?? null);
         if (!$email) return;
 
-        $user = $entidade instanceof User ? $entidade : User::where('email', $email)->first();
-        $inscricao = $entidade instanceof Inscricao ? $entidade : Inscricao::where('email', $email)->latest()->first();
+        $user = $destinatario instanceof User ? $destinatario : User::where('email', $email)->first();
+        $inscricao = $destinatario instanceof Inscricao ? $destinatario : Inscricao::where('email', $email)->latest()->first();
 
-        $contexto = ['user' => $user, 'inscricao' => $inscricao];
+        // Se uma inscrição for passada manualmente pelos dados extras, dê preferência a ela
+        if (isset($dadosExtras['inscricao'])) $inscricao = $dadosExtras['inscricao'];
 
-        // 3. Para cada automação ativa neste evento, manda para a fila de envio
+        $contexto = array_merge([
+            'user' => $user, 
+            'inscricao' => $inscricao
+        ], $dadosExtras);
+
         foreach ($automacoes as $automacao) {
             if ($automacao->template) {
-                // Dispara o Job para não travar a tela do usuário
                 DispararAutomacaoJob::dispatch($automacao->template, $email, $contexto);
             }
         }

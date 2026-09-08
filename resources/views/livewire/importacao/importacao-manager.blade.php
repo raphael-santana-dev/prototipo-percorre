@@ -301,7 +301,7 @@
                     
                     <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                         <div>
-                            <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2"><i class="ph-fill ph-git-merge text-ponkan-500"></i> Conferência de Mapeamento</h3>
+                            <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2"><i class="ph-fill ph-git-merge text-ponkan-500"></i> Mapear Campos</h3>
                             <p class="text-sm text-gray-500 font-medium">Nossa IA tentou cruzar as colunas da sua planilha com os campos do banco de dados.</p>
                         </div>
                         <span class="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded text-xs">Etapa 2 de 2</span>

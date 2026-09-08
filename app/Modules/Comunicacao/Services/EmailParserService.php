@@ -3,48 +3,60 @@
 namespace App\Modules\Comunicacao\Services;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
 
 class EmailParserService
 {
     public static function getDicionarioDisponivel()
     {
-        // Agora as variáveis estão agrupadas por Categoria para o menu sanfona da tela não quebrar
         return [
             'Dados do Candidato' => [
                 '[nome_candidato]' => 'Nome completo do candidato',
                 '[cpf_candidato]' => 'CPF do candidato',
                 '[curso_aprovado]' => 'Nome do Curso',
             ],
-            'Módulo de Matrícula e Retomada' => [
-                '[link_matricula]' => 'Link seguro e único para o Portal de Envio de Documentos (IA)',
-                '[link_retomada]' => 'Botão com link de acesso seguro para o candidato continuar a inscrição',
+            'Módulo de Matrícula (IA)' => [
+                '[link_matricula]' => 'Botão seguro para o Portal de Matrícula',
+                '[link_retomada]' => 'Botão para o candidato concluir a Inscrição',
+            ],
+            'Central de Solicitações (Helpdesk)' => [
+                '[nome_solicitante]' => 'Nome do usuário que solicitou a ação',
+                '[justificativa]' => 'Texto de justificativa inserido pelo usuário',
+                '[link_painel]' => 'Botão de acesso ao painel administrativo',
             ]
         ];
     }
 
-    public static function parseTexto($texto, $inscricao)
+    public static function parseTexto($texto, $inscricao = null, $dadosExtras = [])
     {
-        if (!$inscricao) return $texto;
+        if (empty($texto)) return '';
 
-        // 1. Processamento do Link de Matrícula (Já Existente)
-        if (str_contains($texto, '[link_matricula]') && empty($inscricao->token_matricula)) {
-            $inscricao->token_matricula = Str::random(60);
-            $inscricao->save();
+        $botaoMatricula = '';
+        $botaoRetomada = '';
+
+        if ($inscricao) {
+            if (str_contains($texto, '[link_matricula]') && empty($inscricao->token_matricula)) {
+                $inscricao->token_matricula = Str::random(60);
+                $inscricao->save();
+            }
+            $linkSeguro = $inscricao->token_matricula ? route('matricula.portal', ['token' => $inscricao->token_matricula]) : '#';
+            $botaoMatricula = '<a href="'.$linkSeguro.'" style="display:inline-block;background:#8b5cf6;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:4px;text-decoration:none;">Acessar Portal de Matrícula</a>';
+
+            $linkRetomada = route('inscricao.retomar', Crypt::encrypt($inscricao->id));
+            $botaoRetomada = '<a href="'.$linkRetomada.'" style="display:inline-block;background:#8b5cf6;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:4px;text-decoration:none;">Continuar Minha Inscrição</a>';
         }
-        $linkSeguroMatricula = $inscricao->token_matricula ? route('matricula.portal', ['token' => $inscricao->token_matricula]) : '#';
-        $botaoMatricula = '<a href="'.$linkSeguroMatricula.'" style="display:inline-block;background:#8b5cf6;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:4px;text-decoration:none;">Acessar Portal de Matrícula</a>';
 
-        // 2. Processamento do Link de Retomada (Novo)
-        $linkRetomada = route('inscricao.retomar', Crypt::encrypt($inscricao->id));
-        $botaoRetomada = '<a href="'.$linkRetomada.'" style="display:inline-block;background:#8b5cf6;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:4px;text-decoration:none;">Continuar Minha Inscrição</a>';
+        $linkPainel = '<a href="'.url('/solicitacoes').'" style="display:inline-block;background:#374151;color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;padding:10px 25px;border-radius:4px;text-decoration:none;">Acessar Painel Central</a>';
 
-        // 3. Substituição em Massa
         $tags = [
-            '[nome_candidato]' => $inscricao->nome,
-            '[cpf_candidato]' => $inscricao->cpf,
-            '[curso_aprovado]' => $inscricao->curso->nome ?? 'Sem Curso Vinculado',
+            '[nome_candidato]' => $inscricao ? $inscricao->nome : 'Candidato',
+            '[cpf_candidato]' => $inscricao ? $inscricao->cpf : '',
+            '[curso_aprovado]' => ($inscricao && $inscricao->curso) ? $inscricao->curso->nome : 'Sem Curso Vinculado',
             '[link_matricula]' => $botaoMatricula,
-            '[link_retomada]'  => $botaoRetomada
+            '[link_retomada]' => $botaoRetomada,
+            '[nome_solicitante]' => $dadosExtras['nome_solicitante'] ?? 'Sistema',
+            '[justificativa]' => $dadosExtras['justificativa'] ?? 'Não informada.',
+            '[link_painel]' => $linkPainel
         ];
 
         return str_replace(array_keys($tags), array_values($tags), $texto);
