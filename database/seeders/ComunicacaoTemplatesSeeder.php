@@ -15,7 +15,7 @@ class ComunicacaoTemplatesSeeder extends Seeder
             ['nome' => 'Boas-Vindas e Acesso ao Formulário'],
             [
                 'assunto' => 'Bem-vindo! Continue sua inscrição',
-                'corpo' => '<p>Olá <strong>[nome_candidato]</strong>,</p><p>Sua inscrição para o curso <strong>[curso_aprovado]</strong> foi iniciada com sucesso.</p><p>Para dar andamento ao processo e enviar seus documentos de matrícula, clique no botão seguro abaixo:</p><p><br>[link_retomada]</p><br><p>Atenciosamente,<br>Equipe Acadêmica.</p>'
+                'corpo' => '<p>Olá <strong>{{nome}}</strong>,</p><p>Sua inscrição para o curso <strong>{{curso}}</strong> foi iniciada com sucesso.</p><p>Para dar andamento ao processo e enviar seus documentos de matrícula, clique no botão seguro abaixo:</p><p><br>{{link_retomada}}</p><br><p>Atenciosamente,<br>Equipe Acadêmica.</p>'
             ]
         );
 
