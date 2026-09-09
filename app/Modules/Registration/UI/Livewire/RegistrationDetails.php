@@ -29,6 +29,12 @@ class RegistrationDetails extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
+        // TRAVA: Impede salvar se o status for exatamente o mesmo que o atual
+        if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
+            $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
+            return;
+        }
+
         $statusNovo = StatusInscricao::find($this->status_selecionado);
         if (!$statusNovo) return;
 

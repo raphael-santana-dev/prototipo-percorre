@@ -251,10 +251,20 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
+        
+        $inscricao = Inscricao::find($id);
+        
+        // TRAVA: Impede alterar para o status que já está
+        if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
+            $this->dispatch('erro', msg: 'O candidato já está neste status!');
+            return;
+        }
+
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
             'arquivo_nome' => "Alteração Individual via QuickView", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
         ]);
+        
         dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$id], $statusId))->afterResponse();
         $this->dispatch('sucesso', msg: 'Status do candidato enviado para processamento!');
         $this->showQuickView($id);
@@ -372,15 +382,28 @@ class RegistrationManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         if (count($this->selecionadas) === 0) return;
+        
+        // TRAVA INTELIGENTE: Filtra removendo da lista quem JÁ ESTÁ neste status
+        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionadas)
+            ->where('status_inscricao_id', '!=', $statusId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($inscricoesValidas)) {
+            $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
+            return;
+        }
+
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        $qtd = count($this->selecionadas);
+        $qtd = count($inscricoesValidas);
 
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
             'arquivo_nome' => "Alteração em Lote: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
         ]);
 
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $this->selecionadas, $statusId))->afterResponse();
+        // Manda pro Job apenas os IDs válidos!
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $inscricoesValidas, $statusId))->afterResponse();
         $this->desmarcarTodas();
         $this->modalLoteAberto = false;
         $this->dispatch('sucesso', msg: 'Ação enviada para a Nuvem! Acompanhe o progresso no Gerenciador de Integrações.');

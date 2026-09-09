@@ -68,6 +68,11 @@ class KanbanBoard extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
+        $inscricao = Inscricao::find($inscricaoId);
+        if ($inscricao && $inscricao->status_inscricao_id == $novoStatusId) {
+            return; // Impede ação inútil se soltar o card na mesma coluna
+        }
+
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
             'arquivo_nome' => "Alteração via Fluxo (Drag/Drop)", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
@@ -85,11 +90,23 @@ class KanbanBoard extends Component
             'statusDestinoLote' => 'required|exists:status_inscricoes,id'
         ]);
 
+        // TRAVA INTELIGENTE
+        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionados)
+            ->where('status_inscricao_id', '!=', $this->statusDestinoLote)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($inscricoesValidas)) {
+            $this->dispatch('aviso', msg: 'Todas as inscrições selecionadas já estão na coluna de destino!');
+            return;
+        }
+
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração em Lote via Fluxo", 'status' => 'na_fila', 'total_linhas' => count($this->selecionados), 'linhas_processadas' => 0,
+            'arquivo_nome' => "Alteração em Lote via Fluxo", 'status' => 'na_fila', 'total_linhas' => count($inscricoesValidas), 'linhas_processadas' => 0,
         ]);
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $this->selecionados, $this->statusDestinoLote))->afterResponse();
+        
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $inscricoesValidas, $this->statusDestinoLote))->afterResponse();
 
         $this->reset(['selecionados', 'statusDestinoLote']);
         $this->dispatch('sucesso', msg: 'Ação enviada para processamento em background!');
@@ -137,6 +154,12 @@ class KanbanBoard extends Component
     #[On('quick-change-status-crm')]
     public function quickChangeStatus($id, $status)
     {
+        $inscricao = Inscricao::find($id);
+        if ($inscricao && $inscricao->status_inscricao_id == $status) {
+            $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
+            return;
+        }
+
         $this->atualizarStatus($id, $status);
         $this->dispatch('sucesso', msg: 'Ação enviada para processamento!');
     }
