@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
 use App\Modules\Comunicacao\Services\EmailParserService;
+use App\Modules\Comunicacao\Domain\Models\Comunicado;
 
 class DispararAutomacaoJob implements ShouldQueue
 {
@@ -33,9 +34,20 @@ class DispararAutomacaoJob implements ShouldQueue
         $htmlFormatado = EmailParserService::parseTexto($this->template->corpo, $this->inscricao, $this->dadosExtras);
         $assuntoFormatado = EmailParserService::parseTexto($this->template->assunto, $this->inscricao, $this->dadosExtras);
 
-        dd($assuntoFormatado);
-        Mail::html($htmlFormatado, function ($msg) use ($assuntoFormatado) {
-            $msg->to($this->emailDestino)->subject($assuntoFormatado);
-        });
+        // Cria o registro no banco para exibir no histórico do painel
+        $comunicado = Comunicado::create([
+            'template_id' => $this->template->id,
+            'destinatarios' => [$this->emailDestino],
+            'status' => 'enviando'
+        ]);
+
+        try {
+            Mail::html($htmlFormatado, function ($msg) use ($assuntoFormatado) {
+                $msg->to($this->emailDestino)->subject($assuntoFormatado);
+            });
+            $comunicado->update(['status' => 'concluido']);
+        } catch (\Exception $e) {
+            $comunicado->update(['status' => 'erro']);
+        }
     }
 }
