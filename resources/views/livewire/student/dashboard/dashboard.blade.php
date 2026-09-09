@@ -1,6 +1,6 @@
 <div>
     @if($student->matriculado)
-        {{-- TELA 1: ALUNO MATRICULADO (O que já existia) --}}
+        {{-- TELA 1: ALUNO MATRICULADO --}}
         <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Bem-vindo de volta! Aqui está o seu progresso.</p>
 
@@ -29,26 +29,54 @@
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                    
+                    {{-- COLUNA ESQUERDA: CURSO E INTERESSE --}}
+                    <div class="lg:col-span-1">
                         <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-graduation-cap text-lg"></i> Interesse Acadêmico</h4>
-                        <div class="space-y-2 bg-slate-50 dark:bg-gray-900/50 p-4 rounded-lg border border-slate-100 dark:border-gray-700">
-                            <p class="text-sm text-slate-800 dark:text-slate-300"><b>Curso:</b> {{ $inscricao->curso->nome ?? '-' }}</p>
-                            <p class="text-sm text-slate-800 dark:text-slate-300"><b>Unidade:</b> {{ $inscricao->unidade->nome ?? '-' }}</p>
-                            <p class="text-sm text-slate-800 dark:text-slate-300"><b>Turno:</b> {{ $inscricao->turno->nome ?? '-' }}</p>
+                        <div class="flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/50 p-5 rounded-xl border border-slate-100 dark:border-gray-700 h-full">
+                            <div>
+                                <span class="block text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-0.5">Curso Escolhido</span>
+                                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricao->curso->nome ?? '-' }}</span>
+                            </div>
+                            <div class="w-8 h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+                            <div>
+                                <span class="block text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-0.5">Unidade / Sede</span>
+                                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricao->unidade->nome ?? '-' }}</span>
+                            </div>
+                            <div class="w-8 h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+                            <div>
+                                <span class="block text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-0.5">Turno</span>
+                                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ $inscricao->turno->nome ?? '-' }}</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div>
+                    {{-- COLUNA DIREITA: DADOS DO FORMULÁRIO --}}
+                    <div class="lg:col-span-2">
                         <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-list-dashes text-lg"></i> Dados Informados</h4>
-                        <div class="space-y-2 bg-slate-50 dark:bg-gray-900/50 p-4 rounded-lg border border-slate-100 dark:border-gray-700">
+                        <div class="bg-slate-50 dark:bg-gray-900/50 p-4 rounded-xl border border-slate-100 dark:border-gray-700">
                             @if($inscricao->dados_dinamicos)
-                                @foreach($inscricao->dados_dinamicos as $chave => $valor)
-                                    @php $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor; @endphp
-                                    <p class="text-sm text-slate-800 dark:text-slate-300"><b class="capitalize">{{ str_replace('_', ' ', $chave) }}:</b> {{ $valorFormatado ?: '-' }}</p>
-                                @endforeach
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    @foreach($inscricao->dados_dinamicos as $chave => $valor)
+                                        {{-- Remove do visual as chaves do sistema --}}
+                                        @continue(str_contains(strtolower($chave), 'form_config'))
+                                        
+                                        @php 
+                                            $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor; 
+                                            $labelOriginal = str_replace('_', ' ', $chave);
+                                        @endphp
+                                        
+                                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-center min-h-[60px]">
+                                            <span class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5 truncate" title="{{ $labelOriginal }}">{{ $labelOriginal }}</span>
+                                            <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $valorFormatado ?: '-' }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
                             @else
-                                <p class="text-sm text-slate-500 italic">Nenhum dado complementar registrado.</p>
+                                <div class="text-center py-8">
+                                    <p class="text-sm text-slate-500 italic">Nenhum dado complementar registrado no formulário.</p>
+                                </div>
                             @endif
                         </div>
                     </div>

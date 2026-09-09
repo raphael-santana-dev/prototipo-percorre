@@ -9,12 +9,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
 use App\Models\Importacao;
-use App\Modules\Comunicacao\Domain\Models\Automacao;
-use App\Modules\Student\Domain\Models\Student;
 
 class AvancarStatusNoFunilJob implements ShouldQueue
 {
@@ -37,12 +34,9 @@ class AvancarStatusNoFunilJob implements ShouldQueue
         $inscricoes = Inscricao::whereIn('id', $this->inscricoesIds)->get();
         $linhasProcessadas = 0;
 
-        // Cache das automações ativas para evitar lentidão no banco
-        $automacoesCache = Automacao::where('status', true)->get()->keyBy('evento_gatilho');
-
         foreach ($inscricoes as $inscricao) {
             
-            // 1. Descobrir a ordem atual do candidato no ciclo[cite: 14]
+            // 1. Descobrir a ordem atual do candidato no ciclo
             $pivotAtual = DB::table('ciclo_status_inscricao')
                 ->where('ciclo_id', $inscricao->ciclo_id)
                 ->where('status_inscricao_id', $inscricao->status_inscricao_id)
@@ -50,7 +44,7 @@ class AvancarStatusNoFunilJob implements ShouldQueue
 
             $ordemAtual = $pivotAtual ? $pivotAtual->ordem : -1;
 
-            // 2. Descobrir o PRÓXIMO status baseado na ordem[cite: 14]
+            // 2. Descobrir o PRÓXIMO status baseado na ordem
             $proximoPivot = DB::table('ciclo_status_inscricao')
                 ->where('ciclo_id', $inscricao->ciclo_id)
                 ->where('ordem', '>', $ordemAtual)
@@ -61,27 +55,13 @@ class AvancarStatusNoFunilJob implements ShouldQueue
                 $statusNovo = StatusInscricao::find($proximoPivot->status_inscricao_id);
 
                 if ($statusNovo) {
-                    
-                    if (strtolower($statusNovo->nome) === 'aprovado') {
-                        if (empty($inscricao->token_matricula)) $inscricao->token_matricula = Str::random(60);
-                        
-                        if (!$inscricao->student_id) {
-                            $estudante = Student::firstOrCreate(
-                                ['email' => $inscricao->email],
-                                ['name' => $inscricao->nome, 'password' => Hash::make(Str::random(12)), 'is_active' => true]
-                            );
-                            $inscricao->student_id = $estudante->id;
-                        }
-                    }
-
+                    // Atualiza o banco
                     $inscricao->status_inscricao_id = $statusNovo->id;
                     $inscricao->save();
 
-                    // Dispara E-mail automaticamente se houver regra
+                    // Delega para o Motor Central
                     $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
-                    if ($automacoesCache->has($eventoGatilho)) {
-                        dispatch(new ProcessarDisparoAutomacaoJob($automacoesCache->get($eventoGatilho), $inscricao));
-                    }
+                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
                 }
             }
 

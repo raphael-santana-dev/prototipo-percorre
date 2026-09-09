@@ -67,40 +67,38 @@
 
                     <!-- CORPO DO E-MAIL (QUILL.JS) -->
                     <div class="w-full">
-                        <label class="block text-sm font-bold text-gray-800 mb-2">Corpo da Mensagem <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-bold text-gray-800 mb-1">Corpo da Mensagem <span class="text-red-500">*</span></label>
                         
-                        <div wire:ignore>
-                            <div x-data="{
-                                quill: null,
-                                init() {
-                                    // Inicializa o Quill
-                                    this.quill = new Quill(this.$refs.editor, {
-                                        theme: 'snow',
-                                        placeholder: 'Escreva a mensagem do e-mail aqui...',
-                                        modules: {
-                                            toolbar: [
-                                                [{ 'header': [1, 2, 3, false] }],
-                                                ['bold', 'italic', 'underline', 'strike'],
-                                                [{ 'color': [] }, { 'background': [] }],
-                                                [{ 'align': [] }],
-                                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                                ['link', 'image', 'video'],
-                                                ['clean']
-                                            ]
-                                        }
-                                    });
+                        {{-- O wire:ignore impede o Livewire de apagar o editor, e o x-data sincroniza a variável do backend ($wire.corpo) --}}
+                        <div class="mt-2 bg-white rounded-md shadow-sm border border-gray-300" wire:ignore x-data="{
+                            conteudo: @entangle('corpo'),
+                            init() {
+                                let quill = new Quill(this.$refs.quillEditor, {
+                                    theme: 'snow',
+                                    modules: {
+                                        toolbar: [
+                                            [{ 'header': [1, 2, 3, false] }],
+                                            ['bold', 'italic', 'underline', 'strike'],
+                                            [{ 'color': [] }, { 'background': [] }],
+                                            [{ 'align': [] }],
+                                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                            ['link', 'image', 'video'],
+                                            ['clean']
+                                        ]
+                                    }
+                                });
 
-                                    // Seta o conteúdo que já veio do banco (se for edição)
-                                    this.quill.root.innerHTML = @this.get('corpo') || '';
+                                // 1. Carrega o conteúdo inicial do banco de dados para dentro do editor
+                                quill.clipboard.dangerouslyPasteHTML(this.conteudo || '');
 
-                                    // Ouve as mudanças no editor e passa para o Livewire
-                                    this.quill.on('text-change', () => {
-                                        @this.set('corpo', this.quill.root.innerHTML);
-                                    });
-                                }
-                            }">
-                                <div x-ref="editor" class="bg-white"></div>
-                            </div>
+                                // 2. Sempre que você digitar, ele joga o valor de volta pro Livewire
+                                quill.on('text-change', () => {
+                                    this.conteudo = quill.root.innerHTML;
+                                });
+                            }
+                        }">
+                            {{-- A div real onde o Quill se instala --}}
+                            <div x-ref="quillEditor" class="min-h-[350px] border-0 rounded-b-md text-base"></div>
                         </div>
                         @error('corpo') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                     </div>

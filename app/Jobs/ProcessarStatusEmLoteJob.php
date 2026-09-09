@@ -11,9 +11,6 @@ use App\Models\Inscricao;
 use App\Models\StatusInscricao;
 use App\Models\Importacao;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
-use App\Modules\Comunicacao\Domain\Models\Automacao;
-use App\Modules\Student\Domain\Models\Student;
 
 class ProcessarStatusEmLoteJob implements ShouldQueue
 {
@@ -41,37 +38,15 @@ class ProcessarStatusEmLoteJob implements ShouldQueue
         $inscricoes = Inscricao::whereIn('id', $this->inscricoesIds)->get();
         $linhasProcessadas = 0;
         
-        // Busca se existe automação ativa para este exato status
         $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
-        $automacao = Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
 
         foreach ($inscricoes as $inscricao) {
-            // REGRA EXCLUSIVA PARA APROVADOS: Gera Token de Matrícula e cria o Acesso do Aluno
-            if (strtolower($statusNovo->nome) === 'aprovado') {
-                if (empty($inscricao->token_matricula)) {
-                    $inscricao->token_matricula = Str::random(60);
-                }
-                
-                if (!$inscricao->student_id) {
-                    $estudante = Student::firstOrCreate(
-                        ['email' => $inscricao->email],
-                        [
-                            'name' => $inscricao->nome,
-                            'password' => Hash::make(Str::random(12)),
-                            'is_active' => true,
-                        ]
-                    );
-                    $inscricao->student_id = $estudante->id;
-                }
-            }
-
+            // 1. Apenas atualiza o banco
             $inscricao->status_inscricao_id = $statusNovo->id;
             $inscricao->save();
 
-            // Dispara e-mail automaticamente se houver regra configurada no sistema
-            if ($automacao) {
-                dispatch(new ProcessarDisparoAutomacaoJob($automacao, $inscricao));
-            }
+            // 2. Delega TODA a inteligência (E-mail e Criação de Aluno) para o Motor Central
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
 
             $linhasProcessadas++;
             if ($linhasProcessadas % 10 === 0 && $tracking) {

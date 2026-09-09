@@ -33,6 +33,7 @@ class DispararAutomacaoJob implements ShouldQueue
         $htmlFormatado = EmailParserService::parseTexto($this->template->corpo, $this->inscricao, $this->dadosExtras);
         $assuntoFormatado = EmailParserService::parseTexto($this->template->assunto, $this->inscricao, $this->dadosExtras);
 
+        dd($assuntoFormatado);
         Mail::html($htmlFormatado, function ($msg) use ($assuntoFormatado) {
             $msg->to($this->emailDestino)->subject($assuntoFormatado);
         });
