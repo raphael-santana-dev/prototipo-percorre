@@ -14,6 +14,7 @@ class AutomacaoForm extends Component
     public $nome = '';
     public $evento_gatilho = '';
     public $template_id = '';
+    public $tipo_acao = 'enviar_email';
     public $status = true;
 
     public $eventosDisponiveis = [];
@@ -21,23 +22,20 @@ class AutomacaoForm extends Component
     public function mount($id = null)
     {
         $statusInscricoes = \App\Models\StatusInscricao::orderBy('nome')->get();
-        
         foreach ($statusInscricoes as $st) {
             $slug = \Illuminate\Support\Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
 
         $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
-        $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
         
-        // GATILHOS DO HELPDESK ADICIONADOS AQUI:
-        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
-        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
-
-        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
+        // NOVO GATILHO SOLICITADO:
+        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa "Finalizado")';
+        
         $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Helpdesk: Solicitação de Cadastro de Inscrição';
         $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
         $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
+        $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
 
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);
@@ -48,6 +46,7 @@ class AutomacaoForm extends Component
             $this->nome = $automacao->nome;
             $this->evento_gatilho = $automacao->evento_gatilho;
             $this->template_id = $automacao->template_id;
+            $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
             $this->status = $automacao->status;
         }
     }
@@ -58,12 +57,14 @@ class AutomacaoForm extends Component
             'nome' => 'required|string|max:255',
             'evento_gatilho' => 'required|string',
             'template_id' => 'required|exists:email_templates,id',
+            'tipo_acao' => 'required|string',
         ]);
 
         $dados = [
             'nome' => $this->nome,
             'evento_gatilho' => $this->evento_gatilho,
             'template_id' => $this->template_id,
+            'tipo_acao' => $this->tipo_acao,
             'status' => $this->status,
         ];
 

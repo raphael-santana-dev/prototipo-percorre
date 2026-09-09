@@ -26,6 +26,8 @@ class EmailParserService
                 '{{link_matricula}}'  => 'Botão seguro para o Portal de Matrícula',
                 '{{link_retomada}}'   => 'Botão para o candidato concluir a Inscrição',
                 '{{link_assinatura}}' => 'Link direto para a assinatura do contrato',
+                '{{link_login}}'      => 'Link para a tela de login do Portal do Aluno',
+                '{{senha_provisoria}}'=> 'Senha de acesso gerada automaticamente',
             ],
             'Central de Solicitações (Helpdesk)' => [
                 '{{nome_solicitante}}' => 'Nome do usuário que solicitou a ação',
@@ -78,9 +80,6 @@ class EmailParserService
         $justificativa = $dadosExtras['justificativa'] ?? 'Não informada.';
 
         $tags = [
-            // ==============================================
-            // NOVO PADRÃO UNIFICADO
-            // ==============================================
             '{{nome}}'             => $nome,
             '{{cpf}}'              => $cpf,
             '{{curso}}'            => $curso,
@@ -94,18 +93,8 @@ class EmailParserService
             '{{nome_solicitante}}' => $nomeSolicitante,
             '{{justificativa}}'    => $justificativa,
             '{{link_painel}}'      => $linkPainel,
-
-            // ==============================================
-            // RETROCOMPATIBILIDADE (Evita quebrar e-mails antigos)
-            // ==============================================
-            '[nome_candidato]'   => $nome,
-            '[cpf_candidato]'    => $cpf,
-            '[curso_aprovado]'   => $curso,
-            '[link_matricula]'   => $botaoMatricula,
-            '[link_retomada]'    => $botaoRetomada,
-            '[nome_solicitante]' => $nomeSolicitante,
-            '[justificativa]'    => $justificativa,
-            '[link_painel]'      => $linkPainel
+            '{{link_login}}'       => $dadosExtras['link_login'] ?? url('/aluno/login'),
+            '{{senha_provisoria}}' => $dadosExtras['senha_provisoria'] ?? 'Senha não gerada.',
         ];
 
         return str_replace(array_keys($tags), array_values($tags), $texto);

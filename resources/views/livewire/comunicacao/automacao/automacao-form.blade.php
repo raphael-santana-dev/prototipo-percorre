@@ -20,6 +20,15 @@
                 @error('nome') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
             </div>
 
+            <div>
+                <label class="block text-sm font-bold text-gray-800 mb-1">Ação Executada <span class="text-red-500">*</span></label>
+                <select wire:model="tipo_acao" class="w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 shadow-sm bg-gray-50 font-bold">
+                    <option value="enviar_email">Apenas disparar o E-mail / Template</option>
+                    <option value="criar_aluno_enviar_email">Criar Acesso do Aluno (Student) e Disparar E-mail</option>
+                </select>
+                <p class="text-[10px] text-gray-500 mt-1 font-medium">Se escolher criar o acesso, você pode usar as tags <code class="text-blue-500 font-bold">@{{senha_provisoria}}</code> e <code class="text-blue-500 font-bold">@{{link_login}}</code> no seu template.</p>
+            </div>
+
             <div class="p-5 bg-blue-50 border border-blue-200 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                 <div>
                     <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1">

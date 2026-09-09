@@ -7,6 +7,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\On; 
 use App\Models\Inscricao;
+use App\Models\Ciclo;
+use App\Models\Etapa;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Str;
@@ -26,6 +28,7 @@ class RegistrationManager extends Component
     public $filtroUnidade = '';
     public $filtroTurno = '';
     public $filtroCurso = '';
+    public $filtroEtapa = '';
 
     // Variáveis de Lote e Modais
     public array $selecionadas = []; 
@@ -55,6 +58,13 @@ class RegistrationManager extends Component
         ];
 
         $this->permiteGrid = true;
+
+        // Inicia automaticamente filtrando pelo ciclo ativo mais recente
+        $cicloAtivo = Ciclo::where('status', true)->latest()->first();
+        if ($cicloAtivo) {
+            $this->filtroCiclo = $cicloAtivo->id;
+            $this->ciclo_id = $cicloAtivo->id; // Já preenche o modal de nova inscrição também
+        }
     }
 
     public function fecharModal()
@@ -69,7 +79,6 @@ class RegistrationManager extends Component
         $this->cpf = '';
         $this->email = '';
         $this->celular = '';
-        $this->ciclo_id = null;
         $this->resetErrorBag();
     }
 
@@ -78,8 +87,7 @@ class RegistrationManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.criar'), 403, 'Sem permissão');
 
         $this->resetValidation();
-        $this->reset(['nome', 'cpf', 'email', 'celular', 'ciclo_id']);
-
+        $this->reset(['nome', 'cpf', 'email', 'celular']);
         $this->modalAberto = true;
     }
 
@@ -114,16 +122,11 @@ class RegistrationManager extends Component
             'criado_por' => auth()->id() 
         ];
 
-        // MÁGICA DE PERMISSÃO E INTEGRAÇÃO
         if (auth()->user()->hasRole('dev|admin') || auth()->user()->can('inscricao.aprovar')) {
             $inscricao = \App\Models\Inscricao::create($payload);
-            
-            // Refatorado para usar o Módulo de Comunicação Oficial Nativo
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
-
             $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
         } else {
-            // ENTRA NO FLUXO DE APROVAÇÃO
             $solicitacao = \App\Models\Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
                 'solicitante_type' => \App\Models\User::class,
@@ -135,7 +138,6 @@ class RegistrationManager extends Component
 
             $emailSistema = \App\Models\ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
             
-            // Serviço nativo substituindo a classe solta
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.solicitacao_cadastro', $emailSistema, [
                 'nome_solicitante' => auth()->user()->name,
                 'justificativa' => $solicitacao->justificativa
@@ -164,9 +166,14 @@ class RegistrationManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo', 'filtroNome', 'filtroStatus'])) {
+        if (in_array($nomePropriedade, ['filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroCiclo', 'filtroNome', 'filtroStatus', 'filtroEtapa'])) {
             $this->resetPage();
             $this->desmarcarTodas(); 
+            
+            // MÁGICA AQUI: Se o ciclo mudar, zera a etapa escolhida pois as etapas do novo ciclo podem ser diferentes
+            if ($nomePropriedade === 'filtroCiclo') {
+                $this->filtroEtapa = '';
+            }
         }
     }
 
@@ -185,33 +192,13 @@ class RegistrationManager extends Component
         if (!empty($this->filtroTurno)) $query->where('turno_id', $this->filtroTurno);
         if (!empty($this->filtroCurso)) $query->where('curso_id', $this->filtroCurso);
         if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
+        if (!empty($this->filtroEtapa)) $query->where('etapa_atual', $this->filtroEtapa);
 
         return $query; 
     }
 
-    #[On('quick-change-status')]
-    public function alterarStatusQuickView($id, $statusId)
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        
-        // Manda o ID único pra fila e deixa o Worker criar conta/mandar email
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'inscricoes',
-            'operacao' => 'atualizacao_lote',
-            'formato' => 'system',
-            'arquivo_nome' => "Alteração Individual via QuickView",
-            'status' => 'na_fila',
-            'total_linhas' => 1,
-            'linhas_processadas' => 0,
-        ]);
-
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$id], $statusId))->afterResponse();
-        
-        $this->dispatch('sucesso', msg: 'Status do candidato enviado para processamento!');
-        $this->showQuickView($id);
-    }
-
+    // ... [MÉTODOS QUICK VIEW E AÇÕES EM LOTE PERMANECEM INTACTOS] ...
+    
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
@@ -254,10 +241,22 @@ class RegistrationManager extends Component
         ]);
     }
 
+    #[On('quick-change-status')]
+    public function alterarStatusQuickView($id, $statusId)
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+            'arquivo_nome' => "Alteração Individual via QuickView", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
+        ]);
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$id], $statusId))->afterResponse();
+        $this->dispatch('sucesso', msg: 'Status do candidato enviado para processamento!');
+        $this->showQuickView($id);
+    }
+
     public function selecionarQuantidade($quantidade)
     {
         $this->desmarcarTodas();
-        
         $query = $this->obterQueryFiltrada();
         $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
         $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
@@ -277,19 +276,11 @@ class RegistrationManager extends Component
         }
 
         $this->resetPage();
-
-        $this->selecionadas = $query->take((int) $quantidade)
-                                    ->pluck('id')
-                                    ->map(fn($id) => (string) $id)
-                                    ->toArray();
-                                    
+        $this->selecionadas = $query->take((int) $quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
     }
 
-    public function abrirModalSelecaoAvancada()
-    {
-        $this->modalSelecaoAvancadaAberto = true;
-    }
+    public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
 
     public function executarSelecaoAvancada()
     {
@@ -303,12 +294,9 @@ class RegistrationManager extends Component
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
-
                 $queryInsc = $this->obterQueryFiltrada()
-                    ->where('ciclo_id', $oferta->ciclo_id)
-                    ->where('unidade_id', $oferta->unidade_id)
-                    ->where('curso_id', $oferta->curso_id)
-                    ->where('turno_id', $oferta->turno_id)
+                    ->where('ciclo_id', $oferta->ciclo_id)->where('unidade_id', $oferta->unidade_id)
+                    ->where('curso_id', $oferta->curso_id)->where('turno_id', $oferta->turno_id)
                     ->whereNotIn('id', $idsSelecionados);
 
                 if ((clone $queryInsc)->whereNotNull('posicao_ranking')->exists()) {
@@ -325,22 +313,18 @@ class RegistrationManager extends Component
         } else {
             if ($this->selecaoModo === 'global') {
                 $query = $this->obterQueryFiltrada();
-                
                 if ($this->selecaoBase === 'ranking_geral') $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
                 elseif ($this->selecaoBase === 'ranking_turma') $query->orderByRaw('posicao_ranking ASC NULLS LAST');
                 else $query->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
-                
                 $idsSelecionados = $query->limit($this->selecaoQtd)->pluck('id')->toArray();
             } else {
                 $agrupadas = $this->obterQueryFiltrada()->get()->groupBy(function($item) {
                     return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
                 });
-
                 foreach ($agrupadas as $grupo) {
                     if ($this->selecaoBase === 'ranking_geral') $grupo = $grupo->sortBy('posicao_ranking_geral');
                     elseif ($this->selecaoBase === 'ranking_turma') $grupo = $grupo->sortBy('posicao_ranking');
                     else $grupo = $grupo->sortByDesc('pontuacao_total');
-
                     $ids = $grupo->take($this->selecaoQtd)->pluck('id')->toArray();
                     $idsSelecionados = array_merge($idsSelecionados, $ids);
                 }
@@ -363,12 +347,8 @@ class RegistrationManager extends Component
 
     public function getInscricoesModal()
     {
-        if (!$this->modalLoteAberto || empty($this->selecionadas)) {
-            return collect();
-        }
-        return Inscricao::with(['curso', 'unidade', 'statusInscricao'])
-            ->whereIn('id', $this->selecionadas)
-            ->get();
+        if (!$this->modalLoteAberto || empty($this->selecionadas)) return collect();
+        return Inscricao::with(['curso', 'unidade', 'statusInscricao'])->whereIn('id', $this->selecionadas)->get();
     }
 
     public function desmarcarIndividual($id)
@@ -377,9 +357,7 @@ class RegistrationManager extends Component
             unset($this->selecionadas[$key]);
             $this->selecionadas = array_values($this->selecionadas);
         }
-        if (count($this->selecionadas) === 0) {
-            $this->modalLoteAberto = false;
-        }
+        if (count($this->selecionadas) === 0) $this->modalLoteAberto = false;
     }
 
     public function alterarStatusLoteRapido($statusId)
@@ -388,26 +366,17 @@ class RegistrationManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         if (count($this->selecionadas) === 0) return;
-        
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($this->selecionadas);
 
         $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'inscricoes',
-            'operacao' => 'atualizacao_lote',
-            'formato' => 'system',
-            'arquivo_nome' => "Alteração em Lote: {$qtd} registros para '{$statusNovo->nome}'",
-            'status' => 'na_fila',
-            'total_linhas' => $qtd,
-            'linhas_processadas' => 0,
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+            'arquivo_nome' => "Alteração em Lote: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
         ]);
 
         dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $this->selecionadas, $statusId))->afterResponse();
-        
         $this->desmarcarTodas();
         $this->modalLoteAberto = false;
-        
         $this->dispatch('sucesso', msg: 'Ação enviada para a Nuvem! Acompanhe o progresso no Gerenciador de Integrações.');
     }
 
@@ -451,13 +420,12 @@ class RegistrationManager extends Component
         ]);
 
         dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
-
         $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
         $this->resetPage();
     }
 
@@ -564,9 +532,16 @@ class RegistrationManager extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
+        // Busca as etapas formatadas com base no ciclo selecionado no filtro (ou o ativo)
+        $etapasDb = collect();
+        if (!empty($this->filtroCiclo)) {
+            $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->get();
+        }
+
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
+            'etapasDb' => $etapasDb,
             'statusInscricoesDb' => \App\Models\StatusInscricao::orderBy('nome')->get(),
             'ciclosDb' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),

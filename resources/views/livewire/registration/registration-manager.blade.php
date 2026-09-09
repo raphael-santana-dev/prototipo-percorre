@@ -48,6 +48,21 @@
 
             <div>
                 <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <i class="ph ph-steps text-purpura-500"></i> Etapa (Formulário)
+                </label>
+                <select wire:model.live="filtroEtapa" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    <option value="">Todas as Etapas</option>
+                    @if(isset($etapasDb))
+                        @foreach($etapasDb as $etp)
+                            <option value="{{ $etp->numero }}">Passo {{ $etp->numero }} - {{ $etp->titulo ?? $etp->nome ?? 'Formulário' }}</option>
+                        @endforeach
+                    @endif
+                    <option value="Finalizado">Finalizado (Concluído)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
                     <i class="ph ph-buildings text-purpura-500"></i> Unidade
                 </label>
                 <select wire:model.live="filtroUnidade" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
