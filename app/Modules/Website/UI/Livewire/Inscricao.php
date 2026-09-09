@@ -322,9 +322,9 @@ class Inscricao extends Component
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
                 
-                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+                $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
                 if ($inscricaoDB) {
-                    $inscricaoDB->update(['etapa_atual' => 'Finalizado']);
+                    $inscricaoDB->update(['etapa_atual' => 100]); // Salva 100 para representar Espera
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -338,10 +338,10 @@ class Inscricao extends Component
             $this->etapaAtual++;
         } else {
             // MÁGICA: Formulário Concluído com Sucesso!
-            $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+            $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
             if ($inscricaoDB) {
-                // Salva "Finalizado" no banco (ao invés de um número)
-                $inscricaoDB->update(['etapa_atual' => 'Finalizado']);
+                // Salva o 99 no banco para representar o status Finalizado
+                $inscricaoDB->update(['etapa_atual' => 99]);
                 
                 // Dispara o Gatilho. O painel decide se manda e-mail e se cria a conta.
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);

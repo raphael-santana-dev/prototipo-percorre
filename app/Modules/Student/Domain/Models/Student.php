@@ -30,7 +30,8 @@ class Student extends Authenticatable implements CanResetPasswordContract
         'is_aprendiz',
         'empresa_id',
         'gestor_id',
-        'must_change_password'
+        'must_change_password',
+        'matriculado'
     ];
 
     protected $hidden = [

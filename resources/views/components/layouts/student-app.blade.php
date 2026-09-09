@@ -68,7 +68,7 @@
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center h-12 gap-1 lg:gap-2">
                     <a href="{{ route('student.dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
-                        <i class="text-lg ph ph-books"></i> Meus Cursos
+                        <i class="text-lg ph ph-books"></i> Meu Painel
                     </a>
                     
                     <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
@@ -105,7 +105,7 @@
 
             <div class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 <a href="{{ route('student.dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
-                    <i class="text-lg ph ph-books"></i> Meus Cursos
+                    <i class="text-lg ph ph-books"></i> Meu Painel
                 </a>
                 <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
                     <i class="text-lg ph ph-clipboard-text"></i> Avaliações

@@ -182,7 +182,13 @@
                 </td>
                 
                 <td class="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    Passo {{ $inscricao->etapa_atual }}
+                    @if($inscricao->etapa_atual == 99)
+                        <span class="font-bold text-green-600 dark:text-green-400"><i class="ph-bold ph-check-circle"></i> Finalizado</span>
+                    @elseif($inscricao->etapa_atual == 100)
+                        <span class="font-bold text-yellow-600 dark:text-yellow-400"><i class="ph-bold ph-clock"></i> Em Espera</span>
+                    @else
+                        Passo {{ $inscricao->etapa_atual }}
+                    @endif
                 </td>
 
                 {{-- 1. SCORE --}}
@@ -341,9 +347,15 @@
 
                     <!-- Rodapé do Card (Info extra) -->
                     <div class="flex items-center justify-between mt-2">
-                        <div class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            <div class="flex items-center gap-1.5"><i class="text-sm ph ph-graduation-cap"></i><span class="truncate max-w-[120px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</span></div>
-                            <div class="flex items-center gap-1.5 text-[10px]"><i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> Via {{ ucfirst($inscricao->origem) }}</div>
+                        <div class="flex items-center gap-1.5 text-[10px]">
+                            <i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> Via {{ ucfirst($inscricao->origem) }} • 
+                            @if($inscricao->etapa_atual == 99)
+                                <span class="font-bold text-green-600 dark:text-green-400">Finalizado</span>
+                            @elseif($inscricao->etapa_atual == 100)
+                                <span class="font-bold text-yellow-600 dark:text-yellow-400">Em Espera</span>
+                            @else
+                                Passo {{ $inscricao->etapa_atual }}
+                            @endif
                         </div>
                         <div class="flex flex-col items-end gap-1">
                         <div class="text-xs font-bold text-gray-600 dark:text-gray-300">

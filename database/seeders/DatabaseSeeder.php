@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             HelpdeskTemplatesSeeder::class,
             CompanyUsersSeeder::class,
             MaisStatusInscricaoSeeder::class,
+            InscricaoRecebidaTemplateSeeder::class
         ]);
     }
 }

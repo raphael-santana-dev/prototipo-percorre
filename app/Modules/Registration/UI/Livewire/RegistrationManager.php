@@ -192,7 +192,13 @@ class RegistrationManager extends Component
         if (!empty($this->filtroTurno)) $query->where('turno_id', $this->filtroTurno);
         if (!empty($this->filtroCurso)) $query->where('curso_id', $this->filtroCurso);
         if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
-        if (!empty($this->filtroEtapa)) $query->where('etapa_atual', $this->filtroEtapa);
+        if (!empty($this->filtroEtapa)) {
+            if ($this->filtroEtapa === 'Finalizado') {
+                $query->where('etapa_atual', 99);
+            } else {
+                $query->where('etapa_atual', $this->filtroEtapa);
+            }
+        }
 
         return $query; 
     }

@@ -90,6 +90,19 @@
                         </span>
                     </div>
                 </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                        @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
+                            <x-toggle :status="$student->matriculado" action="toggleMatriculado({{ $student->id }})" />
+                        @else
+                            <span class="w-2 h-2 rounded-full {{ $student->matriculado ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                        @endif
+                        <span class="text-[10px] font-bold {{ $student->matriculado ? 'text-green-600' : 'text-gray-400' }}">
+                            {{ $student->matriculado ? 'MATRICULADO' : 'PENDENTE' }}
+                        </span>
+                    </div>
+                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">

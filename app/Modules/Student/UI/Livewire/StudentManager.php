@@ -166,9 +166,18 @@ class StudentManager extends Component
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'name', 'label' => 'Aluno', 'sortable' => true],
             ['key' => 'unidade_nome', 'label' => 'Unidade', 'sortable' => true],
-            ['key' => 'is_active', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'is_active', 'label' => 'Acesso', 'sortable' => true],
+            ['key' => 'matriculado', 'label' => 'Matrícula', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
+    }
+
+    public function toggleMatriculado($id)
+    {
+        $student = \App\Modules\Student\Domain\Models\Student::findOrFail($id);
+        $student->matriculado = !$student->matriculado;
+        $student->save();
+        $this->dispatch('sucesso', msg: 'Status de matrícula do aluno alterado com sucesso!');
     }
 
     public function toggleStatus($id)
