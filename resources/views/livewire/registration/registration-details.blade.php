@@ -31,7 +31,6 @@
                     {{ \App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Sem Status' }}
                 </span>
 
-                {{-- CONTROLE DE STATUS RÁPIDO --}}
                 @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
                     <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
                         <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors">
@@ -74,15 +73,39 @@
         </div>
     </x-details-card>
 
-    <!-- Grelha Inferior (Colunas) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         
-        <!-- ========================================== -->
-        <!-- COLUNA ESQUERDA (Tamanho Duplo): Respostas -->
-        <!-- ========================================== -->
         <div class="lg:col-span-2 space-y-6">
             
-            <!-- Painel Extra: Nome Social e PcD -->
+            <!-- ========================================== -->
+            <!-- PAINEL NOVO: ENDEREÇO COMPLETO             -->
+            <!-- ========================================== -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                    <i class="ph-fill ph-map-pin text-lg text-purpura-500"></i> Endereço Completo
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 md:col-span-3">
+                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Logradouro</span>
+                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->logradouro ?? '-' }}, {{ $inscricao->numero ?? 'S/N' }} {{ $inscricao->complemento ? ' - ' . $inscricao->complemento : '' }}</span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bairro</span>
+                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->bairro ?? '-' }}</span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cidade / UF</span>
+                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->cidade ?? '-' }} / {{ $inscricao->estado ?? '-' }}</span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CEP & Região</span>
+                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->cep ?? '-' }} {{ $inscricao->regiao ? '(' . ucfirst($inscricao->regiao) . ')' : '' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel: Nome Social e PcD -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
                     <i class="ph-fill ph-identification-card text-lg text-purpura-500"></i> Informações Adicionais
@@ -117,28 +140,55 @@
                 @if(is_array($dinamicos) && count($dinamicos) > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @foreach($dinamicos as $chave => $valor)
-                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors">
-                                <span class="block text-[10px] text-purpura-600 uppercase font-bold tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</span>
-                                <span class="block text-sm font-bold text-gray-900 break-words">
-                                    {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
-                                </span>
-                            </div>
+                            @continue(str_contains(strtolower($chave), 'form_config'))
+                            
+                            @php
+                                // Detecta se o array é associativo (Ex: "instagram" => "@user")
+                                $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
+                            @endphp
+
+                            @if($isAssociative)
+                                {{-- RENDERIZAÇÃO INTELIGENTE DE REDES SOCIAIS / ARRAYS NOMEADOS --}}
+                                @foreach($valor as $rede => $usuario)
+                                    @continue(empty($usuario))
+                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-white border border-gray-200 shadow-sm">
+                                            @if($rede === 'instagram') <i class="ph-fill ph-instagram-logo text-xl text-pink-500"></i>
+                                            @elseif($rede === 'facebook') <i class="ph-fill ph-facebook-logo text-xl text-blue-600"></i>
+                                            @elseif($rede === 'youtube') <i class="ph-fill ph-youtube-logo text-xl text-red-600"></i>
+                                            @elseif($rede === 'tiktok') <i class="ph-fill ph-tiktok-logo text-xl text-gray-900"></i>
+                                            @elseif($rede === 'linkedin') <i class="ph-fill ph-linkedin-logo text-xl text-blue-700"></i>
+                                            @else <i class="ph-fill ph-link text-xl text-gray-500"></i>
+                                            @endif
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <span class="block text-[10px] text-purpura-600 uppercase font-bold tracking-wider mb-0.5 truncate">Rede Social ({{ ucfirst($rede) }})</span>
+                                            <span class="block text-sm font-bold text-gray-900 truncate" title="{{ $usuario }}">{{ $usuario }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @else
+                                {{-- RENDERIZAÇÃO DE CAMPOS NORMAIS --}}
+                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors">
+                                    <span class="block text-[10px] text-purpura-600 uppercase font-bold tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</span>
+                                    <span class="block text-sm font-bold text-gray-900 break-words">
+                                        {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
+                                    </span>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 @else
                     <div class="p-8 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
                         <i class="ph-fill ph-text-align-center text-3xl text-gray-300 mb-2"></i>
-                        <p class="text-gray-500 text-sm font-medium">Nenhum dado de formulário extra registrado para este aluno.</p>
+                        <p class="text-gray-500 text-sm font-medium">Nenhum dado complementar registrado para este candidato.</p>
                     </div>
                 @endif
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- COLUNA DIREITA: Auditoria de Pontuação     -->
-        <!-- ========================================== -->
+        <!-- COLUNA DIREITA: Auditoria de Pontuação -->
         <div class="lg:col-span-1 space-y-6">
-            
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-400 rounded-bl-full -z-0 opacity-10"></div>
                 
@@ -167,7 +217,6 @@
                                         <div class="flex-1 pr-3">
                                             <span class="text-[10px] font-bold text-gray-900 uppercase block">{{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}</span>
                                             
-                                            <!-- Se for regra especial, destaca o texto -->
                                             @if(isset($info['tipo_regra']) && $info['tipo_regra'] === 'especial')
                                                 <p class="text-[10px] text-indigo-600 font-bold mt-1 leading-tight">{{ $info['condicao'] ?? 'Bônus/Multiplicador aplicado' }}</p>
                                             @else
@@ -197,7 +246,6 @@
                 </div>
             </div>
             
-            <!-- Metadata do Ciclo (Info rápida) -->
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 shadow-sm text-center">
                 <span class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Ciclo Operacional</span>
                 <span class="block text-sm font-bold text-indigo-900">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>

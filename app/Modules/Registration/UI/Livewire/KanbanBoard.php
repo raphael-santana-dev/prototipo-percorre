@@ -178,7 +178,8 @@ class KanbanBoard extends Component
 
     public function removerConflitoAntiSpam($idConflito)
     {
-        $this->conflitosAntiSpam = array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito);
+        // CORREÇÃO: O array_values reorganiza a lista para o Livewire não quebrar o Javascript
+        $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
         $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
 
         if (empty($this->conflitosAntiSpam)) {

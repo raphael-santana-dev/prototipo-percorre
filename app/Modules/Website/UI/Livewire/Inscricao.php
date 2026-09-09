@@ -71,7 +71,7 @@ class Inscricao extends Component
             // Pré-aloca o array de respostas para evitar erros de undefined index no Blade
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
-                    $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz']) ? [] : '';
+                    $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz', 'social']) ? [] : '';
                 }
             }
 

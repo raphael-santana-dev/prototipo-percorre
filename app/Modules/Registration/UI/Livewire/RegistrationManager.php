@@ -419,7 +419,8 @@ class RegistrationManager extends Component
 
     public function removerConflitoAntiSpam($idConflito)
     {
-        $this->conflitosAntiSpam = array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito);
+        // CORREÇÃO: O array_values reorganiza a lista para o Livewire não quebrar o Javascript
+        $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
         $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
 
         if (empty($this->conflitosAntiSpam)) {
@@ -459,7 +460,7 @@ class RegistrationManager extends Component
         $this->desmarcarTodas();
         
         $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
-        if (count($ids) == 1) $this->showQuickView($ids[0]);
+        // if (count($ids) == 1) $this->showQuickView($ids[0]);
     }
 
     public function salvarStatusEmLote()

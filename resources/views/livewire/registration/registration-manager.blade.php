@@ -1,6 +1,6 @@
 <div class="p-6 mx-auto font-sans relative max-w-7xl" 
-     x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto') }" 
-     x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto)">   
+     x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
+     x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
     {{-- A mágica acontece aqui: Todo o topo em um único componente --}}
     <x-page-header 
         title="Inscrições" 
@@ -613,7 +613,8 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach($conflitosAntiSpam as $conflito)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                    {{-- CORREÇÃO: wire:key adicionado na <tr> --}}
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
                                         <td class="px-4 py-3">
                                             <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
                                             <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>

@@ -205,7 +205,8 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach($conflitosAntiSpam as $conflito)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                    {{-- CORREÇÃO: wire:key adicionado na <tr> --}}
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
                                         <td class="px-4 py-3">
                                             <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
                                             <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
