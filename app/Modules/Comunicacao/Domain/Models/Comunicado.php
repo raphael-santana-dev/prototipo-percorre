@@ -19,6 +19,17 @@ class Comunicado extends Model
         'data_agendamento' => 'datetime',
     ];
 
+    public $fillable = [
+        'inscricao_id',
+        'template_id',
+        'destinatarios',
+        'cc',
+        'bcc',
+        'anexos',
+        'data_agendamento',
+        'status',
+    ];
+
     public function template()
     {
         return $this->belongsTo(EmailTemplate::class, 'template_id');

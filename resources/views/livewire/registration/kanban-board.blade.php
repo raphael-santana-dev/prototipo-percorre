@@ -178,4 +178,59 @@
         @endif
 
     </div>
+
+    {{-- MODAL ANTI-SPAM (INTERCEPTAÇÃO DE DUPLICIDADE) --}}
+    @if($modalAntiSpamAberto)
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
+                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+                        <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
+                    </h3>
+                    <button wire:click="cancelarAntiSpam" class="text-gray-400 hover:text-red-600 transition"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto custom-scrollbar">
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium">
+                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $dadosAcaoPendente['nomeStatus'] ?? 'selecionada' }}</strong>.
+                    </p>
+
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-2 font-bold uppercase text-[10px]">Candidato</th>
+                                    <th class="px-4 py-2 font-bold uppercase text-[10px] text-right">Ação de Remoção</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach($conflitosAntiSpam as $conflito)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                        <td class="px-4 py-3">
+                                            <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
+                                            <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="text-xs font-bold text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-1 rounded transition shadow-sm">
+                                                Tirar da Lista
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center gap-4">
+                    <button wire:click="cancelarAntiSpam" class="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancelar Tudo
+                    </button>
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition flex items-center gap-2">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar E-mail
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

@@ -94,6 +94,7 @@ class ComunicadoForm extends Component
         // 5. Criação do Registro Principal
         $comunicado = Comunicado::create([
             'template_id' => $this->template_id,
+            'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,
             'destinatarios' => $this->destinatarios,
             'cc' => $this->cc,
             'bcc' => $this->bcc,

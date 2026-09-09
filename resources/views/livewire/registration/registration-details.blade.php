@@ -205,4 +205,32 @@
 
         </div>
     </div>
+
+    @if($modalAntiSpamAberto)
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
+                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+                        <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta Anti-Spam
+                    </h3>
+                </div>
+                
+                <div class="p-6">
+                    <p class="text-sm text-gray-700 dark:text-gray-300 font-medium text-center">
+                        Este candidato <strong>já recebeu</strong> o e-mail automático configurado para esta etapa anteriormente.
+                    </p>
+                    <p class="text-xs text-gray-500 text-center mt-2">Deseja alterar o status e disparar o e-mail novamente?</p>
+                </div>
+
+                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row justify-center gap-3">
+                    <button wire:click="cancelarAntiSpam" class="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancelar Alteração
+                    </button>
+                    <button wire:click="executarMudancaStatusFinal" class="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Sim, Reenviar E-mail
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

@@ -21,7 +21,6 @@ class RegistrationManager extends Component
     use WithPagination;
     use ComPadraoListagem;
 
-    // Filtros
     public $filtroNome = '';
     public $filtroStatus = '';
     public $filtroCiclo = ''; 
@@ -30,7 +29,6 @@ class RegistrationManager extends Component
     public $filtroCurso = '';
     public $filtroEtapa = '';
 
-    // Variáveis de Lote e Modais
     public array $selecionadas = []; 
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
@@ -45,6 +43,11 @@ class RegistrationManager extends Component
 
     public $nome, $cpf, $email, $celular, $ciclo_id;
     public $modalAberto = false; 
+
+    // VARIÁVEIS DE CONTROLE DO MOTOR ANTI-SPAM
+    public bool $modalAntiSpamAberto = false;
+    public array $conflitosAntiSpam = [];
+    public array $dadosAcaoPendente = [];
     
     public function mount()
     {
@@ -59,11 +62,10 @@ class RegistrationManager extends Component
 
         $this->permiteGrid = true;
 
-        // Inicia automaticamente filtrando pelo ciclo ativo mais recente
         $cicloAtivo = Ciclo::where('status', true)->latest()->first();
         if ($cicloAtivo) {
             $this->filtroCiclo = $cicloAtivo->id;
-            $this->ciclo_id = $cicloAtivo->id; // Já preenche o modal de nova inscrição também
+            $this->ciclo_id = $cicloAtivo->id; 
         }
     }
 
@@ -170,7 +172,6 @@ class RegistrationManager extends Component
             $this->resetPage();
             $this->desmarcarTodas(); 
             
-            // MÁGICA AQUI: Se o ciclo mudar, zera a etapa escolhida pois as etapas do novo ciclo podem ser diferentes
             if ($nomePropriedade === 'filtroCiclo') {
                 $this->filtroEtapa = '';
             }
@@ -203,8 +204,6 @@ class RegistrationManager extends Component
         return $query; 
     }
 
-    // ... [MÉTODOS QUICK VIEW E AÇÕES EM LOTE PERMANECEM INTACTOS] ...
-    
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
@@ -251,23 +250,12 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
-        
         $inscricao = Inscricao::find($id);
-        
-        // TRAVA: Impede alterar para o status que já está
         if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
             $this->dispatch('erro', msg: 'O candidato já está neste status!');
             return;
         }
-
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração Individual via QuickView", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
-        ]);
-        
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$id], $statusId))->afterResponse();
-        $this->dispatch('sucesso', msg: 'Status do candidato enviado para processamento!');
-        $this->showQuickView($id);
+        $this->verificarAntiSpam(collect([$inscricao]), $statusId, false);
     }
 
     public function selecionarQuantidade($quantidade)
@@ -379,34 +367,99 @@ class RegistrationManager extends Component
     public function alterarStatusLoteRapido($statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-
         if (count($this->selecionadas) === 0) return;
         
-        // TRAVA INTELIGENTE: Filtra removendo da lista quem JÁ ESTÁ neste status
-        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionadas)
-            ->where('status_inscricao_id', '!=', $statusId)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($inscricoesValidas)) {
+        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
+        if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
             return;
         }
 
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        $qtd = count($inscricoesValidas);
+        $this->verificarAntiSpam($inscricoesValidas, $statusId, true);
+    }
 
+    // ==============================================
+    // METODOS DO MOTOR ANTI-SPAM 
+    // ==============================================
+    private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
+
+        $conflitos = [];
+        if ($automacao) {
+            foreach ($inscricoesValidas as $insc) {
+                // Checa no histórico se essa inscrição já recebeu esse template
+                $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
+                    ->where('inscricao_id', $insc->id)
+                    ->exists();
+
+                if ($jaRecebeu) {
+                    $conflitos[] = ['id' => $insc->id, 'nome' => $insc->nome, 'email' => $insc->email];
+                }
+            }
+        }
+
+        $idsValidos = $inscricoesValidas->pluck('id')->toArray();
+
+        if (count($conflitos) > 0) {
+            $this->conflitosAntiSpam = $conflitos;
+            $this->dadosAcaoPendente = [
+                'statusId' => $statusId, 'idsOriginais' => $idsValidos, 
+                'isLote' => $isLote, 'nomeStatus' => $statusNovo->nome
+            ];
+            $this->modalAntiSpamAberto = true;
+            $this->modalLoteAberto = false; // Fecha modal anterior se estiver aberto
+            return; // Pausa a execução para o usuário decidir
+        }
+
+        $this->executarMudancaStatusFinal($idsValidos, $statusId);
+    }
+
+    public function removerConflitoAntiSpam($idConflito)
+    {
+        $this->conflitosAntiSpam = array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito);
+        $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
+
+        if (empty($this->conflitosAntiSpam)) {
+            if (empty($this->dadosAcaoPendente['idsOriginais'])) {
+                $this->cancelarAntiSpam();
+                $this->dispatch('erro', msg: 'Nenhuma inscrição restou para ser processada.');
+                return;
+            }
+            $this->prosseguirComReenvioAntiSpam();
+        }
+    }
+
+    public function prosseguirComReenvioAntiSpam()
+    {
+        $this->executarMudancaStatusFinal($this->dadosAcaoPendente['idsOriginais'], $this->dadosAcaoPendente['statusId']);
+        $this->cancelarAntiSpam();
+    }
+
+    public function cancelarAntiSpam()
+    {
+        $this->modalAntiSpamAberto = false;
+        $this->conflitosAntiSpam = [];
+        $this->dadosAcaoPendente = [];
+    }
+
+    private function executarMudancaStatusFinal($ids, $statusId)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $qtd = count($ids);
+        
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração em Lote: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
+            'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
         ]);
 
-        // Manda pro Job apenas os IDs válidos!
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $inscricoesValidas, $statusId))->afterResponse();
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
         $this->desmarcarTodas();
-        $this->modalLoteAberto = false;
-        $this->dispatch('sucesso', msg: 'Ação enviada para a Nuvem! Acompanhe o progresso no Gerenciador de Integrações.');
+        
+        $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
+        if (count($ids) == 1) $this->showQuickView($ids[0]);
     }
 
     public function salvarStatusEmLote()
@@ -561,7 +614,6 @@ class RegistrationManager extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        // Busca as etapas formatadas com base no ciclo selecionado no filtro (ou o ativo)
         $etapasDb = collect();
         if (!empty($this->filtroCiclo)) {
             $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->get();

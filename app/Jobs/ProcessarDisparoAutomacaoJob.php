@@ -37,6 +37,7 @@ class ProcessarDisparoAutomacaoJob implements ShouldQueue
 
         $comunicado = Comunicado::create([
             'template_id' => $template->id,
+            'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,
             'destinatarios' => [$this->inscricao->email],
             'status' => 'enviando'
         ]);

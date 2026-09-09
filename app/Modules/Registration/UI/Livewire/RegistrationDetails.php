@@ -14,6 +14,7 @@ class RegistrationDetails extends Component
 {
     public Inscricao $inscricao;
     public $status_selecionado; 
+    public bool $modalAntiSpamAberto = false; // VARIÁVEL DE CONTROLE AQUI
 
     public function mount($id)
     {
@@ -38,15 +39,42 @@ class RegistrationDetails extends Component
         $statusNovo = StatusInscricao::find($this->status_selecionado);
         if (!$statusNovo) return;
 
-        // Atualiza apenas o banco
+        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
+
+        // MOTOR ANTI-SPAM
+        if ($automacao) {
+            $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
+                ->where('inscricao_id', $this->inscricao->id)
+                ->exists();
+
+            if ($jaRecebeu) {
+                $this->modalAntiSpamAberto = true;
+                return; // Pausa a execução e mostra o Modal
+            }
+        }
+
+        $this->executarMudancaStatusFinal();
+    }
+
+    public function cancelarAntiSpam() 
+    {
+        $this->modalAntiSpamAberto = false;
+        $this->status_selecionado = $this->inscricao->status_inscricao_id; // Reseta o select para o que estava
+    }
+
+    public function executarMudancaStatusFinal()
+    {
+        $statusNovo = StatusInscricao::find($this->status_selecionado);
+        
         $this->inscricao->status_inscricao_id = $statusNovo->id;
         $this->inscricao->save();
 
-        // Delega 100% da inteligência para o Motor Central (Ele decide se cria aluno e manda e-mail)
         $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
         \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $this->inscricao);
 
         $this->inscricao->refresh(); 
+        $this->modalAntiSpamAberto = false;
         $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
     }
 

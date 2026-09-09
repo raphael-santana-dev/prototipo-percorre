@@ -27,6 +27,10 @@ class KanbanBoard extends Component
     public $filtroDataFim = '';
     public $ordenacao = 'recentes'; 
 
+    public bool $modalAntiSpamAberto = false;
+    public array $conflitosAntiSpam = [];
+    public array $dadosAcaoPendente = [];
+
     // Controle de Scroll Infinito
     public $limitesPorColuna = [];
 
@@ -43,7 +47,6 @@ class KanbanBoard extends Component
         }
     }
 
-    // Zera os limites caso o usuário altere algum filtro
     public function updating($nomePropriedade)
     {
         if (in_array($nomePropriedade, ['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao'])) {
@@ -56,7 +59,6 @@ class KanbanBoard extends Component
         $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna']);
     }
 
-    // Método acionado pelo AlpineJS quando o usuário chega no fim da rolagem da coluna
     public function carregarMais($statusId)
     {
         $atual = $this->limitesPorColuna[$statusId] ?? 7;
@@ -66,50 +68,24 @@ class KanbanBoard extends Component
     public function atualizarStatus($inscricaoId, $novoStatusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-        
         $inscricao = Inscricao::find($inscricaoId);
-        if ($inscricao && $inscricao->status_inscricao_id == $novoStatusId) {
-            return; // Impede ação inútil se soltar o card na mesma coluna
-        }
-
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração via Fluxo (Drag/Drop)", 'status' => 'na_fila', 'total_linhas' => 1, 'linhas_processadas' => 0,
-        ]);
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, [$inscricaoId], $novoStatusId))->afterResponse();
+        if ($inscricao && $inscricao->status_inscricao_id == $novoStatusId) return; 
+        
+        $this->verificarAntiSpam(collect([$inscricao]), $novoStatusId, false);
     }
 
     public function moverLote()
     {
         abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
-        
-        $this->validate([
-            'selecionados' => 'required|array|min:1',
-            'statusDestinoLote' => 'required|exists:status_inscricoes,id'
-        ]);
+        $this->validate(['selecionados' => 'required|array|min:1', 'statusDestinoLote' => 'required|exists:status_inscricoes,id']);
 
-        // TRAVA INTELIGENTE
-        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionados)
-            ->where('status_inscricao_id', '!=', $this->statusDestinoLote)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($inscricoesValidas)) {
-            $this->dispatch('aviso', msg: 'Todas as inscrições selecionadas já estão na coluna de destino!');
+        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionados)->where('status_inscricao_id', '!=', $this->statusDestinoLote)->get();
+        if ($inscricoesValidas->isEmpty()) {
+            $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão na coluna de destino!');
             return;
         }
 
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração em Lote via Fluxo", 'status' => 'na_fila', 'total_linhas' => count($inscricoesValidas), 'linhas_processadas' => 0,
-        ]);
-        
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $inscricoesValidas, $this->statusDestinoLote))->afterResponse();
-
-        $this->reset(['selecionados', 'statusDestinoLote']);
-        $this->dispatch('sucesso', msg: 'Ação enviada para processamento em background!');
+        $this->verificarAntiSpam($inscricoesValidas, $this->statusDestinoLote, true);
     }
 
     public function showQuickView(int $id)
@@ -159,9 +135,89 @@ class KanbanBoard extends Component
             $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
             return;
         }
+        $this->verificarAntiSpam(collect([$inscricao]), $status, false);
+    }
 
-        $this->atualizarStatus($id, $status);
-        $this->dispatch('sucesso', msg: 'Ação enviada para processamento!');
+    // ==============================================
+    // METODOS DO MOTOR ANTI-SPAM 
+    // ==============================================
+    private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
+
+        $conflitos = [];
+        if ($automacao) {
+            foreach ($inscricoesValidas as $insc) {
+                $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
+                    ->where('inscricao_id', $insc->id)
+                    ->exists();
+
+                if ($jaRecebeu) {
+                    $conflitos[] = ['id' => $insc->id, 'nome' => $insc->nome, 'email' => $insc->email];
+                }
+            }
+        }
+
+        $idsValidos = $inscricoesValidas->pluck('id')->toArray();
+
+        if (count($conflitos) > 0) {
+            $this->conflitosAntiSpam = $conflitos;
+            $this->dadosAcaoPendente = [
+                'statusId' => $statusId, 'idsOriginais' => $idsValidos, 
+                'isLote' => $isLote, 'nomeStatus' => $statusNovo->nome
+            ];
+            $this->modalAntiSpamAberto = true;
+            $this->reset(['selecionados', 'statusDestinoLote']);
+            return; 
+        }
+
+        $this->executarMudancaStatusFinal($idsValidos, $statusId);
+    }
+
+    public function removerConflitoAntiSpam($idConflito)
+    {
+        $this->conflitosAntiSpam = array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito);
+        $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
+
+        if (empty($this->conflitosAntiSpam)) {
+            if (empty($this->dadosAcaoPendente['idsOriginais'])) {
+                $this->cancelarAntiSpam();
+                $this->dispatch('erro', msg: 'Nenhuma inscrição restou para ser processada.');
+                return;
+            }
+            $this->prosseguirComReenvioAntiSpam();
+        }
+    }
+
+    public function prosseguirComReenvioAntiSpam()
+    {
+        $this->executarMudancaStatusFinal($this->dadosAcaoPendente['idsOriginais'], $this->dadosAcaoPendente['statusId']);
+        $this->cancelarAntiSpam();
+    }
+
+    public function cancelarAntiSpam()
+    {
+        $this->modalAntiSpamAberto = false;
+        $this->conflitosAntiSpam = [];
+        $this->dadosAcaoPendente = [];
+    }
+
+    private function executarMudancaStatusFinal($ids, $statusId)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $qtd = count($ids);
+        
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+            'arquivo_nome' => "Alteração de Status via Fluxo: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
+        
+        $this->reset(['selecionados', 'statusDestinoLote']);
+        $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
     }
 
     public function render()
@@ -169,7 +225,6 @@ class KanbanBoard extends Component
         $ciclo = Ciclo::with('statusPipeline')->find($this->cicloId);
         $colunas = $ciclo ? $ciclo->statusPipeline : collect();
 
-        // 1. Constrói a Query Base com os filtros
         $queryBase = Inscricao::where('ciclo_id', $this->cicloId);
 
         if (!empty($this->filtroBusca)) {
@@ -188,7 +243,6 @@ class KanbanBoard extends Component
             $queryBase->where('created_at', '<=', $dataFim);
         }
 
-        // 2. Extração Rápida de Totais (Uma única query no BD usando GroupBy e Count)
         $totaisRaw = (clone $queryBase)
             ->selectRaw('status_inscricao_id, count(*) as total')
             ->groupBy('status_inscricao_id')
@@ -196,7 +250,6 @@ class KanbanBoard extends Component
 
         $totalInscricoes = $totaisRaw->sum();
         
-        // 3. Busca Isolada por Coluna respeitando o Limite (Scroll)
         $inscricoesGrupadas = [];
         $resumo = [];
 
@@ -208,7 +261,6 @@ class KanbanBoard extends Component
                 'total' => $totalColuna
             ];
 
-            // Define limite de 7 inicial, senão pega o limite guardado pelo scroll
             $limite = $this->limitesPorColuna[$col->id] ?? 7;
 
             if ($totalColuna > 0) {

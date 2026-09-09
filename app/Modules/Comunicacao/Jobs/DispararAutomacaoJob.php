@@ -37,6 +37,7 @@ class DispararAutomacaoJob implements ShouldQueue
         // Cria o registro no banco para exibir no histórico do painel
         $comunicado = Comunicado::create([
             'template_id' => $this->template->id,
+            'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,
             'destinatarios' => [$this->emailDestino],
             'status' => 'enviando'
         ]);
