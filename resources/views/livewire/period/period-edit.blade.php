@@ -143,7 +143,7 @@
             <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                 <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                 <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                    Ativar este ciclo imediatamente no portal público (desativará outros ciclos simultâneos)[cite: 37]
+                    Ativar este ciclo imediatamente no portal público (desativará outros ciclos simultâneos)
                 </label>
             </div>
         </div>
@@ -157,10 +157,10 @@
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                         <i class="ph-fill ph-tree-structure text-purpura-500"></i> Matriz de Seleção Cascata
                     </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Navegue pelas colunas para habilitar os itens disponíveis no formulário deste semestre.[cite: 37]</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Navegue pelas colunas para habilitar os itens disponíveis no formulário deste semestre.</p>
                 </div>
                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700">
-                    Estilo macOS Finder[cite: 2]
+                    Estilo macOS Finder
                 </span>
             </div>
             
@@ -168,7 +168,7 @@
                 {{-- COLUNA 1: UNIDADES --}}
                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        1. Unidades Ofertadas[cite: 37]
+                        1. Unidades Ofertadas
                     </div>
                     <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                         @foreach($unidadesDb as $u)
@@ -187,7 +187,7 @@
                 {{-- COLUNA 2: CURSOS DA UNIDADE --}}
                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        2. Cursos da Unidade[cite: 37]
+                        2. Cursos da Unidade
                     </div>
                     <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                         @if($activeUnidadeId)
@@ -213,7 +213,7 @@
                 {{-- COLUNA 3: TURNOS DO CURSO --}}
                 <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        3. Turnos Vinculados[cite: 37]
+                        3. Turnos Vinculados
                     </div>
                     <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                         @if($activeCursoId)
@@ -246,7 +246,7 @@
                         <i class="ph-fill ph-users-three text-purpura-500"></i> Ofertas e Limites de Vagas
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina vagas e restrições etárias. Apenas as combinações marcadas na Estrutura Acadêmica aparecerão nas seleções abaixo.[cite: 37]
+                        Defina vagas e restrições etárias. Apenas as combinações marcadas na Estrutura Acadêmica aparecerão nas seleções abaixo.
                     </p>
                 </div>
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
@@ -261,7 +261,7 @@
                     <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
                         {{-- Unidade --}}
                         <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
                             <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
                                 <option value="">Selecione...</option>
                                 @foreach($unidadesDb as $u) 
@@ -274,7 +274,7 @@
                         
                         {{-- Curso --}}
                         <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
                             <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
                                 <option value="">Selecione...</option>
                                 @if($oferta['unidade_id'])
@@ -289,7 +289,7 @@
                         
                         {{-- Turno --}}
                         <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
                             <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
                                 <option value="">Selecione...</option>
                                 @if($oferta['curso_id'])
@@ -307,15 +307,15 @@
 
                         {{-- Quantidades e Idades --}}
                         <div class="w-full xl:w-24">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400 text-center">
                         </div>
                         <div class="w-full xl:w-20">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                         </div>
                         <div class="w-full xl:w-20">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx[cite: 37]</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                         </div>
 
@@ -330,8 +330,8 @@
                 @empty
                     <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
                         <i class="ph ph-warning-circle text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma oferta de vaga configurada neste ciclo.[cite: 37]</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Adicione ofertas para limitar inscrições ou estipular faixas etárias por curso e unidade.[cite: 37]</p>
+                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma oferta de vaga configurada neste ciclo.</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Adicione ofertas para limitar inscrições ou estipular faixas etárias por curso e unidade.</p>
                     </div>
                 @endforelse
             </div>
@@ -363,7 +363,7 @@
                         <h3 class="text-base font-bold text-gray-900 dark:text-white m-0 flex items-center gap-2">
                             <i class="ph-fill ph-funnel text-purpura-500"></i> Sequência do Funil Kanban
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Arraste os status pelas alças para ajustar a ordem exata das colunas deste processo seletivo.[cite: 37]</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Arraste os status pelas alças para ajustar a ordem exata das colunas deste processo seletivo.</p>
                     </div>
                     
                     <div class="flex items-center gap-2 w-full md:w-auto">
@@ -401,7 +401,7 @@
                         @endif
                     @empty
                         <div class="text-center p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-400">
-                            Nenhum status configurado para a pipeline deste ciclo.[cite: 37]
+                            Nenhum status configurado para a pipeline deste ciclo.
                         </div>
                     @endforelse
                 </div>
@@ -418,7 +418,7 @@
                         <i class="ph-fill ph-files text-purpura-500"></i> Documentos Exigidos no Portal de Matrícula
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina quais comprovações serão solicitadas aos candidatos aprovados deste ciclo.[cite: 37]
+                        Defina quais comprovações serão solicitadas aos candidatos aprovados deste ciclo.
                     </p>
                 </div>
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
@@ -461,8 +461,8 @@
                 @empty
                     <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
                         <i class="ph ph-files text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum documento exigido neste ciclo.[cite: 37]</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Adicione exigências documentais para ativar o portal de validação automática por IA.[cite: 37]</p>
+                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum documento exigido neste ciclo.</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Adicione exigências documentais para ativar o portal de validação automática por IA.</p>
                     </div>
                 @endforelse
             </div>

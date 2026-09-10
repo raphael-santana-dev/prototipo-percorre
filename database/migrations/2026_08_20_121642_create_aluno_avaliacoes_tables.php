@@ -15,23 +15,23 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete(); // Corrigido para a tabela atual de estudantes
             $table->foreignId('turma_id')->constrained('turmas')->cascadeOnDelete();
             $table->string('fase', 1);
-            $table->char('status', 1)->default('1'); // 1=Gerada, 2=Respondida[cite: 38]
+            $table->char('status', 1)->default('1'); // 1=Gerada, 2=Respondida
             $table->date('data_resposta')->nullable();
             $table->string('hora_resposta', 5)->nullable();
             $table->timestamps();
             $table->softDeletes();
             
-            // Impede duplicidade da mesma fase para o mesmo aluno/turma/periodo[cite: 38]
+            // Impede duplicidade da mesma fase para o mesmo aluno/turma/periodo
             $table->unique(['periodo_id', 'student_id', 'turma_id', 'fase']); 
         });
 
-        // 2. Itens: Respostas dos Critérios (NPS e Metas)[cite: 38]
+        // 2. Itens: Respostas dos Critérios (NPS e Metas)
         Schema::create('aluno_avaliacao_itens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('aluno_avaliacao_id')->constrained('aluno_avaliacoes')->cascadeOnDelete();
             $table->foreignId('criterio_id')->constrained('criterios_avaliacao');
-            $table->tinyInteger('nivel_nps')->nullable(); // Nota de 0 a 10[cite: 38]
-            $table->text('aval_metas')->nullable(); // Justificativa/Metas[cite: 38]
+            $table->tinyInteger('nivel_nps')->nullable(); // Nota de 0 a 10
+            $table->text('aval_metas')->nullable(); // Justificativa/Metas
             $table->timestamps();
         });
 
@@ -40,10 +40,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('aluno_avaliacao_id')->constrained('aluno_avaliacoes')->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
-            $table->json('criterios_selecionados'); // Array de IDs dos critérios[cite: 43]
+            $table->json('criterios_selecionados'); // Array de IDs dos critérios
             $table->text('motivo');
-            $table->string('status')->default('pendente'); // pendente, aprovada, reprovada[cite: 43, 55]
-            $table->foreignId('avaliador_id')->nullable()->constrained('users'); // Usuário (Professor/Admin) que aprovou/reprovou[cite: 55]
+            $table->string('status')->default('pendente'); // pendente, aprovada, reprovada
+            $table->foreignId('avaliador_id')->nullable()->constrained('users'); // Usuário (Professor/Admin) que aprovou/reprovou
             $table->timestamps();
         });
     }

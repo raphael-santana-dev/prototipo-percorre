@@ -178,7 +178,6 @@ class KanbanBoard extends Component
 
     public function removerConflitoAntiSpam($idConflito)
     {
-        // CORREÇÃO: O array_values reorganiza a lista para o Livewire não quebrar o Javascript
         $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
         $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
 
@@ -226,7 +225,8 @@ class KanbanBoard extends Component
         $ciclo = Ciclo::with('statusPipeline')->find($this->cicloId);
         $colunas = $ciclo ? $ciclo->statusPipeline : collect();
 
-        $queryBase = Inscricao::where('ciclo_id', $this->cicloId);
+        // MÁGICA DE CORREÇÃO: Usando a Trait "apenasVinculosPermitidos()" para garantir o bloqueio do professor!
+        $queryBase = Inscricao::where('ciclo_id', $this->cicloId)->apenasVinculosPermitidos();
 
         if (!empty($this->filtroBusca)) {
             $queryBase->where(function($q) {
