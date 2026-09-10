@@ -10,6 +10,22 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
+                <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
+                    <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
+                        <i class="text-lg ph ph-export"></i> Exportar <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
+                        <div class="py-1">
+                            <button wire:click="solicitarExportacao('xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 font-bold text-left gap-2">
+                                <i class="ph-fill ph-file-xls text-lg"></i> Formato Excel (.xlsx)
+                            </button>
+                            <button wire:click="solicitarExportacao('csv')" class="flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-bold text-left gap-2">
+                                <i class="ph-fill ph-file-csv text-lg"></i> Formato CSV (.csv)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.cria')))
                 <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
                     <i class="ph ph-plus text-lg"></i> Nova Inscrição

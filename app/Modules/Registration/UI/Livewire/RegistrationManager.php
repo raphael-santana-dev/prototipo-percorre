@@ -44,7 +44,6 @@ class RegistrationManager extends Component
     public $nome, $cpf, $email, $celular, $ciclo_id;
     public $modalAberto = false; 
 
-    // VARIÁVEIS DE CONTROLE DO MOTOR ANTI-SPAM
     public bool $modalAntiSpamAberto = false;
     public array $conflitosAntiSpam = [];
     public array $dadosAcaoPendente = [];
@@ -378,9 +377,6 @@ class RegistrationManager extends Component
         $this->verificarAntiSpam($inscricoesValidas, $statusId, true);
     }
 
-    // ==============================================
-    // METODOS DO MOTOR ANTI-SPAM 
-    // ==============================================
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
     {
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
@@ -390,7 +386,6 @@ class RegistrationManager extends Component
         $conflitos = [];
         if ($automacao) {
             foreach ($inscricoesValidas as $insc) {
-                // Checa no histórico se essa inscrição já recebeu esse template
                 $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
                     ->where('inscricao_id', $insc->id)
                     ->exists();
@@ -410,8 +405,8 @@ class RegistrationManager extends Component
                 'isLote' => $isLote, 'nomeStatus' => $statusNovo->nome
             ];
             $this->modalAntiSpamAberto = true;
-            $this->modalLoteAberto = false; // Fecha modal anterior se estiver aberto
-            return; // Pausa a execução para o usuário decidir
+            $this->modalLoteAberto = false; 
+            return; 
         }
 
         $this->executarMudancaStatusFinal($idsValidos, $statusId);
@@ -419,7 +414,6 @@ class RegistrationManager extends Component
 
     public function removerConflitoAntiSpam($idConflito)
     {
-        // CORREÇÃO: O array_values reorganiza a lista para o Livewire não quebrar o Javascript
         $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
         $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
 
@@ -460,13 +454,53 @@ class RegistrationManager extends Component
         $this->desmarcarTodas();
         
         $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
-        // if (count($ids) == 1) $this->showQuickView($ids[0]);
     }
 
     public function salvarStatusEmLote()
     {
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
         $this->alterarStatusLoteRapido($this->novoStatusId);
+    }
+
+    // ===============================================
+    // NOVO MÉTODO DE EXPORTAÇÃO FILTRADA
+    // ===============================================
+    public function solicitarExportacao($formato = 'csv')
+    {
+        // abort_if(!feature('importacao.exportar'), 403);
+        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
+        
+        $filtrosAtuais = [
+            'nome' => $this->filtroNome,
+            'status' => $this->filtroStatus,
+            'ciclo' => $this->filtroCiclo,
+            'unidade' => $this->filtroUnidade,
+            'turno' => $this->filtroTurno,
+            'curso' => $this->filtroCurso,
+            'etapa' => $this->filtroEtapa,
+        ];
+
+        $queryCount = $this->obterQueryFiltrada()->count();
+
+        if ($queryCount === 0) {
+            $this->dispatch('erro', msg: 'Não há registros com os filtros atuais para exportar.');
+            return;
+        }
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'exportacao',
+            'formato' => strtolower($formato),
+            'arquivo_nome' => 'Exportação de Inscrições (' . strtoupper($formato) . ')',
+            'status' => 'na_fila',
+            'total_linhas' => $queryCount,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($tracking->id, $filtrosAtuais))->afterResponse();
+
+        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
     }
 
     public function recalcularScoresGlobais()

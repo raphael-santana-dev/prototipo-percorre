@@ -25,7 +25,7 @@ class ImportacaoManager extends Component
     public $modalMapeamentoAberto = false;
     public $modalDetalhesAberto = false;
     public $modalReprocessarAberto = false;
-    public $modalMonitoramentoAberto = false; // NOVO: Controle do modal de monitoramento
+    public $modalMonitoramentoAberto = false;
     public $importacaoReprocessarId = null;
 
     public $arquivo;
@@ -42,17 +42,14 @@ class ImportacaoManager extends Component
     public $cabecalhos = [];
     public $mapeamento = [];
     
-    // NOVO: Variável para armazenar os dados da importação em andamento
     public $importacaoMonitoramento = null;
     
-    // Filtros
     public $filtro_tipo = '';
     public $filtro_status = '';
     public $filtro_usuario = '';
     public $filtro_data_inicio = '';
     public $filtro_data_fim = '';
 
-    // Mapeamento Dinâmico
     public $camposDinamicosDisponiveis = [];
 
     public array $previewCabecalhos = [];
@@ -171,6 +168,28 @@ class ImportacaoManager extends Component
         $this->modalReprocessarAberto = true;
     }
 
+    private function carregarCamposDinamicos()
+    {
+        $camposDoCiclo = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
+            ->get();
+        
+        $this->camposDinamicosDisponiveis = [];
+        foreach ($camposDoCiclo as $campo) {
+            if (str_contains(strtolower($campo->name), 'form_config')) continue;
+            
+            if ($campo->tipo === 'social') {
+                $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $redes = $config['redes_permitidas'] ?? [];
+                foreach ($redes as $rede) {
+                    $this->camposDinamicosDisponiveis["{$campo->name}.{$rede}"] = "{$campo->label} (" . ucfirst($rede) . ")";
+                }
+            } else {
+                $this->camposDinamicosDisponiveis[$campo->name] = $campo->label;
+            }
+        }
+    }
+
     public function reprocessar($modo)
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
@@ -234,10 +253,7 @@ class ImportacaoManager extends Component
             $this->mesclarDuplicadas = filter_var($mapa['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             if ($importacao->tipo === 'inscricoes') {
-                $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
-                    ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
-                    ->pluck('label', 'name')
-                    ->toArray();
+                $this->carregarCamposDinamicos();
             }
 
             $this->mapeamento = [];
@@ -270,7 +286,6 @@ class ImportacaoManager extends Component
 
             $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
             
-            // NOVO: Chama a tela de monitoramento
             $this->importacaoAtualId = $importacao->id;
             $this->modalMonitoramentoAberto = true;
             $this->dispatch('sucesso', msg: 'A importação foi enviada para processamento!');
@@ -345,11 +360,7 @@ class ImportacaoManager extends Component
             $this->modalUploadAberto = false;
 
             if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-                $this->camposDinamicosDisponiveis = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloSelecionadoId)
-                    ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
-                    ->pluck('label', 'name')
-                    ->toArray();
-                
+                $this->carregarCamposDinamicos();
                 $this->inicializarMapeamentoManualmente();
                 $this->modalMapeamentoAberto = true;
             } else {
@@ -418,7 +429,6 @@ class ImportacaoManager extends Component
             $mapaFinal['linhas_reprocessar'] = $importacao->mapeamento['linhas_reprocessar'];
         }
 
-        // Blindagem contra perda de chaves do Livewire
         if (is_array($this->cabecalhos) && is_array($this->mapeamento)) {
             foreach($this->cabecalhos as $index => $colunaNome) {
                  if (isset($this->mapeamento[$index])) {
@@ -444,28 +454,22 @@ class ImportacaoManager extends Component
             'status' => 'na_fila'
         ]);
 
-        // Fecha o modal de cruzamento e abre o de monitoramento em tempo real imediatamente
         $this->modalMapeamentoAberto = false;
         $this->modalMonitoramentoAberto = true;
 
-        // Limpa a memória usando o método nativo do Livewire (evita o erro 500 silencioso)
         $this->reset(['camposDinamicosDisponiveis', 'mapeamento', 'cabecalhos', 'arquivo']);
         
-        // Removemos o ->afterResponse() para forçar o servidor a liberar a sua tela na hora,
-        // enquanto o Job vai diretamente para a fila em segundo plano.
         dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao));
     }
 
-    // NOVO: Método que o AlpineJS vai chamar a cada X segundos para trazer o progresso real
     public function monitorarProgresso()
     {
         if ($this->importacaoAtualId) {
             $this->importacaoMonitoramento = Importacao::find($this->importacaoAtualId);
             
-            // Se concluiu ou deu erro, ele fecha o modal sozinho
             if ($this->importacaoMonitoramento && in_array($this->importacaoMonitoramento->status, ['concluido', 'erro', 'erro_parcial'])) {
                 $this->modalMonitoramentoAberto = false;
-                $this->verDetalhes($this->importacaoAtualId); // Já abre o relatório
+                $this->verDetalhes($this->importacaoAtualId); 
             }
         }
     }
@@ -490,7 +494,6 @@ class ImportacaoManager extends Component
         $importacao = Importacao::find($this->importacaoAtualId);
         if (!$importacao) return;
 
-        // Força a parada do Job no background alterando o status
         $erros = json_decode($importacao->erro_mensagem, true) ?? [];
         $erros[] = [
             'linha' => '-',
@@ -504,10 +507,8 @@ class ImportacaoManager extends Component
             'erro_mensagem' => json_encode($erros)
         ]);
 
-        // Regras para "Cancelar e Apagar" (Rollback) corrigidas sem usar "criado_por"
         if ($apagarDados) {
             if ($importacao->tipo === 'inscricoes') {
-                // CORREÇÃO: Usa a origem "importacao" no lugar da coluna inexistente
                 \App\Models\Inscricao::where('criado_por', $importacao->user_id)
                     ->where('created_at', '>=', $importacao->created_at)
                     ->delete();
@@ -610,7 +611,6 @@ class ImportacaoManager extends Component
                         ];
                     });
                 } catch (\Exception $e) {
-                    // Ignora o preview
                 }
             }
         }
