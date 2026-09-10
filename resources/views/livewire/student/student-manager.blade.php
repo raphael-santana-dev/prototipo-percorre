@@ -19,12 +19,15 @@
             <div class="flex gap-2">
                 <input wire:model.live.debounce.300ms="filtro_busca" type="text" placeholder="Buscar nome ou e-mail..." class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 w-56">
                 
-                <select wire:model.live="filtro_unidade" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todas as Unidades</option>
-                    @foreach($unidades as $unidade)
-                        <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
-                    @endforeach
-                </select>
+                {{-- CORREÇÃO: Filtro volta a existir APENAS para os Administradores! --}}
+                @if(auth()->user()->temVisaoGlobal('estudantes'))
+                    <select wire:model.live="filtro_unidade" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todas as Unidades</option>
+                        @foreach($unidades as $unidade)
+                            <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                        @endforeach
+                    </select>
+                @endif
 
                 <select wire:model.live="filtro_status" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Status...</option>
@@ -155,7 +158,6 @@
                             <i class="ph-fill ph-map-pin text-purpura-500 mt-1"></i> {{ $student->unidade->nome }}<br>
                         @endif
                         
-                        {{-- APLICANDO A BADGE NO MOBILE TAMBÉM --}}
                         @if($student->is_aprendiz)
                             <i class="ph-fill ph-buildings text-indigo-500 mt-1"></i> {{ $student->empresa->nome_fantasia ?? 'Sem Empresa' }}
                         @endif
@@ -181,7 +183,7 @@
 
                                 <a href="{{ route('students.show', $student->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Perfil Completo">
                                     <i class="text-lg ph ph-eye"></i>
-                                </a>
+                                </button>
                             @endif
                         
                             @if(feature('estudante.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('estudante.editar')))
@@ -246,7 +248,6 @@
                                 @error('unidade_id') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- AJAXUSTADO O LAYOUT (FLEX COL) PARA OS SWITCHES NÃO ENCAVALAREM --}}
                             <div class="sm:col-span-2 pt-2 flex flex-col gap-3">
                                 <label class="flex items-center gap-2 cursor-pointer w-max">
                                     <input type="checkbox" wire:model="is_active" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
@@ -286,5 +287,4 @@
             </div>
         </div>
     @endif
-    
 </div>

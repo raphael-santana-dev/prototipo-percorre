@@ -42,8 +42,8 @@ class StudentManager extends Component
     public array $breadcrumbs = [];
 
     public $filtro_busca = '';
-    public $filtro_unidade = '';
     public $filtro_status = '';
+    public $filtro_unidade = '';
 
     public function mount()
     {
@@ -51,7 +51,6 @@ class StudentManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.listar'), 403, 'Você não tem permissão para listar alunos.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
-
         $this->permiteGrid = true;
     }
 
@@ -73,7 +72,7 @@ class StudentManager extends Component
 
     public function limparFiltros()
     {
-        $this->reset(['filtro_busca', 'filtro_unidade', 'filtro_status']);
+        $this->reset(['filtro_busca', 'filtro_status', 'filtro_unidade']);
         $this->resetPage();
     }
 
@@ -91,7 +90,6 @@ class StudentManager extends Component
         $this->is_active = $student->is_active;
         $this->unidade_id = $student->unidade_id;
 
-        // Carrega dados de Aprendizagem
         $this->is_aprendiz = $student->is_aprendiz;
         $this->empresa_id = $student->empresa_id;
         
@@ -113,7 +111,7 @@ class StudentManager extends Component
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:students,email' . ($this->studentId ? ',' . $this->studentId : ''),
             'unidade_id' => 'required|exists:unidades,id',
-            'empresa_id' => 'required_if:is_aprendiz,true', // Validação Condicional
+            'empresa_id' => 'required_if:is_aprendiz,true',
         ];
 
         if (!$this->isEditMode) {
@@ -133,7 +131,7 @@ class StudentManager extends Component
             'unidade_id' => $this->unidade_id,
             'slug' => Str::slug($this->name),
             'is_aprendiz' => $this->is_aprendiz,
-            'empresa_id' => $this->is_aprendiz ? $this->empresa_id : null, // Se não for aprendiz, remove a empresa
+            'empresa_id' => $this->is_aprendiz ? $this->empresa_id : null,
         ];
 
         if (!empty($this->password)) {
@@ -224,7 +222,6 @@ class StudentManager extends Component
         $this->is_active = true;
         $this->unidade_id = auth()->user()->unidades->first()->id ?? null;
         
-        // Limpa os campos de aprendizagem
         $this->is_aprendiz = false;
         $this->empresa_id = null;
 
@@ -234,7 +231,15 @@ class StudentManager extends Component
 
     public function render()
     {
-        $query = Student::query()->with(['unidade', 'empresa'])->apenasVinculosPermitidos();
+        $user = auth()->user();
+        $query = Student::query()->with(['unidade', 'empresa']);
+
+        // MÁGICA DE ISOLAMENTO: O professor só vê alunos que tenham ao menos UMA inscrição compatível com as permissões dele
+        if (!$user->temVisaoGlobal('estudantes')) {
+            $query->whereHas('inscricoes', function($q) {
+                $q->apenasVinculosPermitidos();
+            });
+        }
 
         $query->when($this->filtro_busca, function($q) {
             $q->where(function($sub) {
@@ -245,10 +250,7 @@ class StudentManager extends Component
         ->when($this->filtro_unidade, fn($q) => $q->where('unidade_id', $this->filtro_unidade))
         ->when($this->filtro_status !== '', fn($q) => $q->where('is_active', $this->filtro_status));
 
-        // Aplica a ordenação no banco de dados
         if ($this->ordenacaoCampo) {
-            
-            // LÓGICA ESPECIAL PARA RELACIONAMENTO
             if ($this->ordenacaoCampo === 'unidade_nome') {
                 $query->orderBy(
                     \App\Modules\Unidade\Domain\Models\Unidade::select('nome')
@@ -256,17 +258,14 @@ class StudentManager extends Component
                     $this->ordenacaoDirecao
                 );
             } else {
-                // Ordenação padrão para colunas da própria tabela (name, id, is_active)
                 $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
             }
-
         } else {
             $query->orderBy('id', 'desc');
         }
 
         $estudantes = $query->paginate($this->porPagina);
 
-        // Busca todas as empresas ativas para o dropdown do Modal
         $empresas = \App\Modules\Company\Domain\Models\Empresa::where('is_active', true)
                   ->orderBy('nome_fantasia')
                   ->get();

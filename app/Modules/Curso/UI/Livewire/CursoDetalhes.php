@@ -22,14 +22,26 @@ class CursoDetalhes extends Component
         $this->cursoId = $id; 
     }
 
-    // ==========================================
-    // PROPRIEDADES COMPUTADAS (Apenas Leitura)
-    // ==========================================
-    
     #[Computed]
     public function curso()
     {
-        return Curso::with(['unidades', 'turnosVinculados'])->findOrFail($this->cursoId);
+        $user = auth()->user();
+        
+        return Curso::with([
+            // Filtra os relacionamentos cruzando as tabelas pivot automaticamente pelo Eloquent
+            'unidades' => function($q) use ($user) {
+                if (!$user->temVisaoGlobal('cursos')) {
+                    $idsUnidades = $user->unidades->pluck('id')->toArray();
+                    $q->whereIn('unidades.id', count($idsUnidades) > 0 ? $idsUnidades : [0]);
+                }
+            },
+            'turnosVinculados' => function($q) use ($user) {
+                if (!$user->temVisaoGlobal('cursos')) {
+                    $idsTurnos = $user->turnos->pluck('id')->toArray();
+                    $q->whereIn('turnos.id', count($idsTurnos) > 0 ? $idsTurnos : [0]);
+                }
+            }
+        ])->findOrFail($this->cursoId);
     }
     
     #[Computed]
@@ -44,7 +56,11 @@ class CursoDetalhes extends Component
     #[Computed]
     public function inscricoesRecentes()
     {
-        return $this->curso->inscricoes()->latest()->take(10)->get();
+        return \App\Models\Inscricao::where('curso_id', $this->cursoId)
+            ->apenasVinculosPermitidos()
+            ->latest()
+            ->take(10)
+            ->get();
     }
 
     public function render()

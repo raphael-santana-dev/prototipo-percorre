@@ -61,4 +61,9 @@ class Student extends Authenticatable implements CanResetPasswordContract
     {
         return $this->belongsTo(\App\Modules\Company\Domain\Models\Empresa::class, 'empresa_id');
     }
+
+    public function inscricoes()
+    {
+        return $this->hasMany(\App\Models\Inscricao::class, 'student_id');
+    }
 }

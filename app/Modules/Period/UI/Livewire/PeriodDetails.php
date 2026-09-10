@@ -26,13 +26,20 @@ class PeriodDetails extends Component
     public Ciclo $ciclo;
     public string $modelClass = \App\Models\Ciclo::class; 
     public $cursoSelecionado = '';
+    
+    public $abaAtiva = 'visao-geral'; 
 
-    // Filtros
+    // Filtros Inscrições (Aba 2)
     public $filtroNome = '';
     public $filtroStatus = '';
     public $filtroUnidade = '';
     public $filtroTurno = '';
     public $filtroCurso = '';
+
+    // Filtros das Vagas (Aba 1)
+    public $filtroUnidadeVagas = '';
+    public $filtroCursoVagas = '';
+    public $filtroTurnoVagas = '';
 
     // Ações em Lote
     public array $selecionadas = [];
@@ -40,8 +47,6 @@ class PeriodDetails extends Component
     public $novoStatusId = '';
 
     public array $breadcrumbs = [];
-
-    public bool $unicoAtivo = true;
 
     public function mount($id, ?string $slug = null)
     {
@@ -71,11 +76,13 @@ class PeriodDetails extends Component
         }
     }
 
+    // ==========================================
+    // GESTÃO DO CICLO (CURSOS OFERTADOS) E VAGAS
+    // ==========================================
     public function adicionarCurso()
     {
         abort_if(!feature('ciclo.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
-        
         if (empty($this->cursoSelecionado)) {
             $this->dispatch('erro', msg: 'Selecione um curso na lista primeiro!');
             return;
@@ -88,15 +95,7 @@ class PeriodDetails extends Component
         } else {
             $this->dispatch('erro', msg: 'Este curso já está ofertado neste ciclo.');
         }
-        
         $this->cursoSelecionado = '';
-    }
-
-    public function limparFiltros()
-    {
-        $this->reset(['filtroNome', 'filtroStatus', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
-        $this->resetPage();
-        $this->desmarcarTodas();
     }
 
     public function removerCurso($cursoId)
@@ -107,6 +106,18 @@ class PeriodDetails extends Component
         $this->ciclo->cursos()->detach($cursoId);
         $this->ciclo->load('cursos');
         $this->dispatch('sucesso', msg: 'Curso removido do ciclo.');
+    }
+
+    public function limparFiltrosVagas()
+    {
+        $this->reset(['filtroUnidadeVagas', 'filtroCursoVagas', 'filtroTurnoVagas']);
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroUnidade', 'filtroTurno', 'filtroCurso']);
+        $this->resetPage();
+        $this->desmarcarTodas();
     }
 
     protected function obterQueryFiltrada()
@@ -128,6 +139,9 @@ class PeriodDetails extends Component
         return $query; 
     }
 
+    // ==========================================
+    // MÉTODOS DE STATUS E LOTE
+    // ==========================================
     private function aplicarMudancaDeStatus($inscricoes, $statusId)
     {
         $statusNovo = StatusInscricao::find($statusId);
@@ -206,13 +220,9 @@ class PeriodDetails extends Component
         ]);
     }
 
-    public function selecionarQuantidade($quantidade)
-    {
-        $this->selecionadas = $this->obterQueryFiltrada()->limit($quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
-    }
-
+    public function selecionarQuantidade($quantidade) { $this->selecionadas = $this->obterQueryFiltrada()->limit($quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray(); }
     public function desmarcarTodas() { $this->selecionadas = []; }
-
+    
     public function abrirModalLote()
     {
         if (count($this->selecionadas) === 0) return;
@@ -249,11 +259,7 @@ class PeriodDetails extends Component
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
         $regras = is_string($this->ciclo->regras_pontuacao) ? json_decode($this->ciclo->regras_pontuacao, true) : $this->ciclo->regras_pontuacao;
-        
-        if (empty($regras)) {
-            $this->dispatch('erro', msg: 'Não há regras de pontuação configuradas neste ciclo.');
-            return;
-        }
+        if (empty($regras)) { $this->dispatch('erro', msg: 'Não há regras de pontuação configuradas neste ciclo.'); return; }
 
         $atualizados = 0;
         $this->ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
@@ -289,9 +295,7 @@ class PeriodDetails extends Component
 
                         if ($pontuou) {
                             $total += $pontos;
-                            $detalhes['auditoria_detalhada'][] = [
-                                'campo_avaliado' => $campo, 'resposta_dada' => $valorResposta, 'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)
-                            ];
+                            $detalhes['auditoria_detalhada'][] = ['campo_avaliado' => $campo, 'resposta_dada' => $valorResposta, 'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)];
                         }
                     }
                 }
@@ -308,14 +312,11 @@ class PeriodDetails extends Component
     public function gerarRanking()
     {
         abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
-
+        
         Inscricao::where('ciclo_id', $this->ciclo->id)
             ->update([
-                'posicao_ranking' => null, 
-                'posicao_ranking_geral' => null,
-                'posicao_ranking_unidade' => null,
-                'posicao_ranking_curso' => null,
+                'posicao_ranking' => null, 'posicao_ranking_geral' => null,
+                'posicao_ranking_unidade' => null, 'posicao_ranking_curso' => null,
             ]);
 
         $inscricoes = $this->ciclo->inscricoes()->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc')->get();
@@ -332,7 +333,7 @@ class PeriodDetails extends Component
         $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) { return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id; });
         foreach ($agrupadoTurma as $grupo) { $pos = 1; foreach ($grupo as $inscricao) { $inscricao->update(['posicao_ranking' => $pos++]); } }
 
-        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} classificados nos 4 níveis.");
+        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} classificados.");
     }
 
     public function getHeadersProperty()
@@ -351,6 +352,7 @@ class PeriodDetails extends Component
 
     public function render()
     {
+        // 1. QUERY DE INSCRIÇÕES (Aba 2)
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
         $metricas = [
@@ -368,9 +370,8 @@ class PeriodDetails extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        // CORREÇÃO: "ofertas_vagas" com "s" em "ofertas" conforme a tabela no Postgres!
-        // Além de adicionar a seleção base `select('ofertas_vagas.*')` antes do addSelect.
-        $ofertasVagas = \App\Models\OfertaVaga::with(['unidade', 'curso', 'turno'])
+        // 2. QUERY DA NOVA TABELA DE VAGAS (Aba 1)
+        $queryVagas = \App\Models\OfertaVaga::with(['unidade', 'curso', 'turno'])
             ->where('ciclo_id', $this->ciclo->id)
             ->select('ofertas_vagas.*')
             ->addSelect([
@@ -382,8 +383,27 @@ class PeriodDetails extends Component
                     ->whereHas('statusInscricao', function ($q) {
                         $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
                     })
-            ])
-            ->get();
+            ]);
+
+        // MÁGICA: Isolamento de Visão para a aba de Vagas!
+        $user = auth()->user();
+        if (!$user->temVisaoGlobal('ciclos')) {
+            $idsUnidades = $user->unidades->pluck('id')->toArray();
+            $idsCursos = $user->cursos->pluck('id')->toArray();
+            $idsTurnos = $user->turnos->pluck('id')->toArray();
+
+            $queryVagas->whereIn('unidade_id', count($idsUnidades) > 0 ? $idsUnidades : [0])
+                       ->whereIn('curso_id', count($idsCursos) > 0 ? $idsCursos : [0])
+                       ->whereIn('turno_id', count($idsTurnos) > 0 ? $idsTurnos : [0]);
+        }
+
+        // Filtros das vagas
+        if (!empty($this->filtroUnidadeVagas)) $queryVagas->where('unidade_id', $this->filtroUnidadeVagas);
+        if (!empty($this->filtroCursoVagas)) $queryVagas->where('curso_id', $this->filtroCursoVagas);
+        if (!empty($this->filtroTurnoVagas)) $queryVagas->where('turno_id', $this->filtroTurnoVagas);
+
+        // Usamos ->get() em vez de paginate() para evitar conflitos na view
+        $ofertasVagas = $queryVagas->orderBy('id', 'asc')->get();
 
         return view('livewire.period.period-details', [
             'registros' => $inscricoes,

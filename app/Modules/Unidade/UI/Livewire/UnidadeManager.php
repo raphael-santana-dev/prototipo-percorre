@@ -27,7 +27,6 @@ class UnidadeManager extends Component
     public bool $showModal = false;
     public bool $isEditMode = false;
     
-    // Variáveis atualizadas com a nova base de dados
     public ?int $unidadeId = null;
     public string $nome = '';
     public string $status = 'Ativa';
@@ -38,11 +37,7 @@ class UnidadeManager extends Component
     public string $telefone = '';
 
     public array $cursosSelecionados = [];
-
-     public $modelClass = Ciclo::class;
-
     public array $breadcrumbs = [];
-
 
     public function mount() 
     { 
@@ -50,7 +45,6 @@ class UnidadeManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.listar'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
-
         $this->permiteGrid = true;
     }
 
@@ -92,7 +86,6 @@ class UnidadeManager extends Component
             'email' => $this->email,
             'telefone' => $this->telefone,
             'data_inauguracao' => $this->data_inauguracao,
-            // Campos de endereço
             'cep' => $this->cep,
             'logradouro' => $this->logradouro,
             'numero' => $this->numero,
@@ -108,10 +101,9 @@ class UnidadeManager extends Component
             $unidadeId = $this->unidadeId;
         } else {
             $unidadeCriada = $service->criarUnidade($dados);
-            $unidadeId = $unidadeCriada->id; // Pega o ID da unidade recém criada
+            $unidadeId = $unidadeCriada->id; 
         }
 
-        // Delega a sincronização dos relacionamentos para o Serviço
         $service->sincronizarCursos($unidadeId, $this->cursosSelecionados);
 
         $this->showModal = false;
@@ -135,7 +127,6 @@ class UnidadeManager extends Component
         $this->email = $unidade->email ?? '';
         $this->telefone = $unidade->telefone ?? '';
         
-        // Povoando os campos de endereço
         $this->cep = $unidade->cep;
         $this->logradouro = $unidade->logradouro;
         $this->numero = $unidade->numero;
@@ -171,9 +162,8 @@ class UnidadeManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
         
         $unidade = $service->buscarPorId($id);
-        $unidade->load('cursos'); // Carrega a quantidade de cursos
+        $unidade->load('cursos'); 
 
-        // Dispara o evento passando o array exato que o seu QuickViewDrawer espera
         $this->dispatch('load-quick-view', [
             'title' => $unidade->nome,
             'subtitle' => 'Status: ' . $unidade->status,
@@ -183,7 +173,6 @@ class UnidadeManager extends Component
                 'E-mail' => $unidade->email ?: 'Não informado',
                 'Telefone' => $unidade->telefone ?: 'Não informado',
                 'Cursos Ofertados' => $unidade->cursos->count() . ' cursos vinculados',
-                // Como sua view renderiza HTML ({!! $value !!}), podemos passar o link direto!
                 'Mais Detalhes' => '<a href="'.route('unidades.show', $unidade->id).'" class="font-bold text-purpura-600 hover:underline">Ver Página Completa</a>'
             ]
         ]);
@@ -216,8 +205,18 @@ class UnidadeManager extends Component
 
     public function render(UnidadeService $service) 
     {
-        // 1. LEITURA NO LIVEWIRE (CQRS): Consulta direta para permitir paginação nativa
         $query = Unidade::query();
+
+        // MÁGICA DE ISOLAMENTO DE UNIDADES
+        $user = auth()->user();
+        if (!$user->temVisaoGlobal('unidades')) {
+            $unidadesIds = $user->unidades->pluck('id')->toArray();
+            if (count($unidadesIds) > 0) {
+                $query->whereIn('id', $unidadesIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -228,7 +227,7 @@ class UnidadeManager extends Component
         $unidades = $query->paginate($this->porPagina);
 
         return view('livewire.unidade.unidade-manager', [
-            'registros' => $unidades, // Passa os registros paginados para a view
+            'registros' => $unidades, 
             'cursosDisponiveis' => \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get() 
         ]);
     }

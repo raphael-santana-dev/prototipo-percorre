@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'visao-geral' }">
+<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
     
     <x-breadcrumb :items="$breadcrumbs" />
 
@@ -63,7 +63,7 @@
     </div>
 
     {{-- ABA 1: VISÃO GERAL & ESTRUTURA ACADÊMICA --}}
-    <div x-show="abaAtiva === 'visao-geral'" x-cloak class="space-y-6">
+    <div x-show="abaAtiva === 'visao-geral'" x-cloak class="space-y-6" wire:key="aba-visao-geral">
         
         @if(isset($metricas))
             <x-summary-cards :metricas="$metricas" />
@@ -127,12 +127,32 @@
             </div>
         </div>
 
-        <!-- DETALHAMENTO DE VAGAS OFERTADAS -->
+        <!-- DETALHAMENTO DE VAGAS OFERTADAS SEM CONFLITO DE PAGINAÇÃO -->
         <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
                 <h3 class="font-extrabold text-gray-900 dark:text-white text-sm flex items-center gap-2">
                     <i class="ph-bold ph-chart-bar text-purpura-600"></i> Distribuição e Ocupação de Vagas
                 </h3>
+            </div>
+            
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <select wire:model.live="filtroUnidadeVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Todas as Unidades</option>
+                        @foreach($ciclo->unidades as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                    </select>
+                    <select wire:model.live="filtroCursoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Todos os Cursos</option>
+                        @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                    </select>
+                    <select wire:model.live="filtroTurnoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Todos os Turnos</option>
+                        @foreach($ciclo->turnos as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                    </select>
+                    <button wire:click="limparFiltrosVagas" class="w-full flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 text-xs py-2">
+                        <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
+                    </button>
+                </div>
             </div>
             
             <div class="overflow-x-auto custom-scrollbar">
@@ -185,7 +205,7 @@
                             <tr>
                                 <td colspan="5" class="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
                                     <i class="ph-fill ph-warning-circle text-2xl text-gray-300 mb-2"></i><br>
-                                    Nenhuma oferta de vaga foi configurada para este ciclo na aba de Matrizes.
+                                    Nenhuma oferta de vaga foi configurada para os filtros selecionados.
                                 </td>
                             </tr>
                         @endforelse
@@ -196,7 +216,7 @@
     </div>
 
     {{-- ABA 2: INSCRIÇÕES (TABELA, FILTROS E OPERAÇÕES) --}}
-    <div x-show="abaAtiva === 'inscricoes'" x-cloak class="space-y-4">
+    <div x-show="abaAtiva === 'inscricoes'" x-cloak class="space-y-4" wire:key="aba-inscricoes">
         
         {{-- AÇÕES DE RECALCULO E AUDITORIA --}}
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -273,6 +293,7 @@
 
         {{-- TABELA DE DADOS --}}
         <x-table
+            wire:key="tabela-inscricoes-ciclo"
             :headers="$this->headers"
             :registros="$registros"
             :ordenacaoCampo="$ordenacaoCampo"
