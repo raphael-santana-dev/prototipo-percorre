@@ -48,7 +48,6 @@ class PeriodDetails extends Component
         abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
 
-        // Alterado: Adicionando 'unidades' e 'turnos' na query para resolver a falta de dados
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
         
         $this->breadcrumbs = BreadcrumbHelper::generate();
@@ -60,10 +59,7 @@ class PeriodDetails extends Component
         abort_if(!feature('ciclo.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
-        // 1. Executa a lógica original da Trait (Desativar outros e salvar no banco)
         $this->traitToggleStatus($id);
-        
-        // 2. Força a variável da tela a buscar os dados atualizados direto do banco
         $this->ciclo->refresh(); 
     }
 
@@ -75,19 +71,16 @@ class PeriodDetails extends Component
         }
     }
 
-    // ==========================================
-    // GESTÃO DO CICLO (CURSOS OFERTADOS)
-    // ==========================================
     public function adicionarCurso()
     {
         abort_if(!feature('ciclo.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        
         if (empty($this->cursoSelecionado)) {
             $this->dispatch('erro', msg: 'Selecione um curso na lista primeiro!');
             return;
         }
         
-        // Compara especificamente pelo ID para evitar erros de tipagem (string vs int)
         if (!$this->ciclo->cursos->contains('id', $this->cursoSelecionado)) {
             $this->ciclo->cursos()->attach($this->cursoSelecionado);
             $this->ciclo->load('cursos');
@@ -116,12 +109,8 @@ class PeriodDetails extends Component
         $this->dispatch('sucesso', msg: 'Curso removido do ciclo.');
     }
 
-    // ==========================================
-    // LISTAGEM E FILTROS DE INSCRIÇÕES
-    // ==========================================
     protected function obterQueryFiltrada()
     {
-        // Trava a busca APENAS neste ciclo
         $query = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
                           ->where('ciclo_id', $this->ciclo->id);
         
@@ -139,9 +128,6 @@ class PeriodDetails extends Component
         return $query; 
     }
 
-    // ==========================================
-    // QUICK VIEW E MUDANÇA DE STATUS (C/ ESTUDANTE)
-    // ==========================================
     private function aplicarMudancaDeStatus($inscricoes, $statusId)
     {
         $statusNovo = StatusInscricao::find($statusId);
@@ -220,20 +206,20 @@ class PeriodDetails extends Component
         ]);
     }
 
-    // ==========================================
-    // AÇÕES EM LOTE
-    // ==========================================
     public function selecionarQuantidade($quantidade)
     {
         $this->selecionadas = $this->obterQueryFiltrada()->limit($quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
     }
+
     public function desmarcarTodas() { $this->selecionadas = []; }
+
     public function abrirModalLote()
     {
         if (count($this->selecionadas) === 0) return;
         $this->novoStatusId = '';
         $this->modalLoteAberto = true;
     }
+
     public function salvarStatusEmLote()
     {
         abort_if(!feature('inscricao.editar'), 403);
@@ -246,6 +232,7 @@ class PeriodDetails extends Component
         $this->desmarcarTodas(); 
         $this->dispatch('sucesso', msg: 'Status alterado em lote com sucesso!');
     }
+
     public function alterarStatusLoteRapido($statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
@@ -258,9 +245,6 @@ class PeriodDetails extends Component
         $this->dispatch('sucesso', msg: 'Status alterado rapidamente com sucesso!');
     }
 
-    // ==========================================
-    // RECÁLCULO E RANKING ESPECÍFICO DESTE CICLO
-    // ==========================================
     public function recalcularPontuacoes()
     {
         abort_if(!auth()->user()->hasRole('dev|admin'), 403);
@@ -384,9 +368,27 @@ class PeriodDetails extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
+        // CORREÇÃO: "ofertas_vagas" com "s" em "ofertas" conforme a tabela no Postgres!
+        // Além de adicionar a seleção base `select('ofertas_vagas.*')` antes do addSelect.
+        $ofertasVagas = \App\Models\OfertaVaga::with(['unidade', 'curso', 'turno'])
+            ->where('ciclo_id', $this->ciclo->id)
+            ->select('ofertas_vagas.*')
+            ->addSelect([
+                'preenchidas' => \App\Models\Inscricao::selectRaw('COUNT(*)')
+                    ->whereColumn('inscricoes.unidade_id', 'ofertas_vagas.unidade_id')
+                    ->whereColumn('inscricoes.curso_id', 'ofertas_vagas.curso_id')
+                    ->whereColumn('inscricoes.turno_id', 'ofertas_vagas.turno_id')
+                    ->where('inscricoes.ciclo_id', $this->ciclo->id)
+                    ->whereHas('statusInscricao', function ($q) {
+                        $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+                    })
+            ])
+            ->get();
+
         return view('livewire.period.period-details', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
+            'ofertasVagas' => $ofertasVagas, 
             'statusInscricoesDb' => StatusInscricao::orderBy('nome')->get(),
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
             'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),

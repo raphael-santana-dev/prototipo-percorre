@@ -184,6 +184,73 @@ class PeriodManager extends Component
         $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!');
     }
 
+    // =========================================
+    // QUICK VIEW DO CICLO
+    // =========================================
+    public function showQuickView(int $id)
+    {
+        // Traz o ciclo, faz contagem de inscritos e carrega as relações
+        $ciclo = Ciclo::withCount('inscricoes')
+            ->with(['cursos', 'unidades'])
+            ->findOrFail($id);
+
+        // Processa totais de Vagas ofertadas e preenchidas
+        $vagasOfertadas = \App\Models\OfertaVaga::where('ciclo_id', $id)->sum('vagas');
+        $vagasPreenchidas = \App\Models\Inscricao::where('ciclo_id', $id)
+            ->whereHas('statusInscricao', function ($q) {
+                $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+            })->count();
+
+        $percentual = $vagasOfertadas > 0 ? round(($vagasPreenchidas / $vagasOfertadas) * 100, 1) : 0;
+        $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+
+        // Gera as Labels visuais do HTML para injetar
+        $statusLabel = $ciclo->status 
+            ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] uppercase font-bold rounded border border-green-200 shadow-sm"><i class="ph-fill ph-check-circle"></i> ATIVO</span>' 
+            : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] uppercase font-bold rounded border border-gray-200 shadow-sm"><i class="ph-fill ph-minus-circle"></i> INATIVO</span>';
+
+        // Formata os Cursos
+        $cursosTags = $ciclo->cursos->take(8)->pluck('nome')->map(fn($c) => "<span class='px-2 py-1 bg-orange-50 border border-orange-200 rounded-md text-[10px] font-bold text-orange-700'>$c</span>")->implode(' ');
+        if ($ciclo->cursos->count() > 8) {
+            $cursosTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->cursos->count() - 8) . " cursos</span>";
+        }
+
+        // Formata as Unidades
+        $unidadesTags = $ciclo->unidades->take(8)->pluck('nome')->map(fn($u) => "<span class='px-2 py-1 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-md text-[10px]'><i class=\"ph-fill ph-map-pin\"></i> $u</span>")->implode(' ');
+        if ($ciclo->unidades->count() > 8) {
+            $unidadesTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->unidades->count() - 8) . " unidades</span>";
+        }
+
+        // Constrói a barra de ocupação HTML para o Modal
+        $barraOcupacao = '
+            <div class="w-full mt-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div class="flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-wider">
+                    <span class="text-gray-500">'.$vagasPreenchidas.' Preenchidas</span>
+                    <span class="text-gray-800">'.$vagasOfertadas.' Total Ofertado</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden shadow-inner">
+                    <div class="'.$corBarra.' h-2 rounded-full transition-all duration-500" style="width: '.min($percentual, 100).'%"></div>
+                </div>
+                <span class="text-[10px] font-bold text-gray-400 mt-1 block">'.$percentual.'% da capacidade ocupada.</span>
+            </div>
+        ';
+
+        // Dispara o evento global
+        $this->dispatch('load-quick-view', [
+            'title' => $ciclo->nome,
+            'subtitle' => "Semestre {$ciclo->ano}.{$ciclo->semestre} • De " . $ciclo->data_inicio->format('d/m/Y') . " até " . $ciclo->data_fim->format('d/m/Y'),
+            'icon' => 'ph-calendar-check',
+            'data' => [
+                'Status do Ciclo' => $statusLabel,
+                'Inscrições Realizadas' => '<span class="font-black text-2xl text-purpura-600 bg-purpura-50 px-3 py-1 rounded-lg border border-purpura-100 shadow-sm inline-flex items-center gap-2"><i class="ph-fill ph-users"></i> '.$ciclo->inscricoes_count.'</span>',
+                'Ocupação de Vagas' => $barraOcupacao,
+                'Cursos Ofertados' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($cursosTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhum</span>') . '</div>',
+                'Unidades Vinculadas' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($unidadesTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhuma</span>') . '</div>',
+                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:text-purpura-800 hover:underline text-sm flex items-center gap-1 mt-2"><i class="ph-bold ph-arrow-square-out"></i> Acessar Ficha Completa do Ciclo</a>'
+            ]
+        ]);
+    }
+
     public function getHeadersProperty()
     {
         return [
@@ -202,7 +269,6 @@ class PeriodManager extends Component
     {
         $query = Ciclo::query()->withCount('inscricoes');
         
-        // MÁGICA: Subqueries para trazer as Vagas e Preenchidas sem gerar peso (N+1) no banco de dados!
         $query->addSelect([
             'total_vagas' => \App\Models\OfertaVaga::selectRaw('COALESCE(SUM(vagas), 0)')
                 ->whereColumn('ciclo_id', 'ciclos.id'),

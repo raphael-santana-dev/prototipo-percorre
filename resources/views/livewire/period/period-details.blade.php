@@ -126,6 +126,73 @@
                 </div>
             </div>
         </div>
+
+        <!-- DETALHAMENTO DE VAGAS OFERTADAS -->
+        <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+                <h3 class="font-extrabold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                    <i class="ph-bold ph-chart-bar text-purpura-600"></i> Distribuição e Ocupação de Vagas
+                </h3>
+            </div>
+            
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="p-4 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unidade</th>
+                            <th class="p-4 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Curso</th>
+                            <th class="p-4 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Turno</th>
+                            <th class="p-4 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Capacidade Total</th>
+                            <th class="p-4 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ocupação (Progresso)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @forelse($ofertasVagas as $oferta)
+                            @php
+                                $total = $oferta->vagas ?? 0;
+                                $preenchidas = $oferta->preenchidas ?? 0;
+                                $percentual = $total > 0 ? round(($preenchidas / $total) * 100, 1) : 0;
+                                $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                            @endphp
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <td class="p-4 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    {{ $oferta->unidade->nome ?? '-' }}
+                                </td>
+                                <td class="p-4 text-sm font-bold text-gray-900 dark:text-white">
+                                    {{ $oferta->curso->nome ?? '-' }}
+                                </td>
+                                <td class="p-4 text-center">
+                                    <span class="px-2 py-1 text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600">
+                                        {{ $oferta->turno->nome ?? '-' }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center">
+                                    <span class="text-sm font-black text-gray-800 dark:text-gray-200">{{ $total }}</span>
+                                </td>
+                                <td class="p-4 w-64">
+                                    <div class="flex flex-col w-full min-w-[150px]">
+                                        <div class="flex justify-between w-full text-[10px] font-bold mb-1">
+                                            <span class="text-gray-500 dark:text-gray-400">{{ $preenchidas }} preenchidas</span>
+                                            <span class="{{ $percentual >= 100 ? 'text-red-600' : 'text-gray-700 dark:text-gray-300' }}">{{ $percentual }}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
+                                            <div class="{{ $corBarra }} h-1.5 rounded-full transition-all duration-500" style="width: {{ min($percentual, 100) }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                                    <i class="ph-fill ph-warning-circle text-2xl text-gray-300 mb-2"></i><br>
+                                    Nenhuma oferta de vaga foi configurada para este ciclo na aba de Matrizes.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     {{-- ABA 2: INSCRIÇÕES (TABELA, FILTROS E OPERAÇÕES) --}}
