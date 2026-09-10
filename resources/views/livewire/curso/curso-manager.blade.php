@@ -158,44 +158,55 @@
                             </div>
                         </div>
 
-                        <!-- Relacionamentos: Unidades e Turnos -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
-                            
-                            <!-- Box de Unidades -->
-                            <div>
-                                <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    <i class="ph ph-buildings text-purpura-500"></i> Unidades que ofertam
-                                </label>
-                                <div class="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-40 overflow-y-auto">
-                                    @forelse($unidadesDisponiveis as $unidade)
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model="unidadesSelecionadas" value="{{ $unidade->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                                            <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300">{{ $unidade->nome }}</span>
-                                        </label>
-                                    @empty
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Nenhuma unidade ativa.</p>
-                                    @endforelse
+                        <!-- Relacionamentos: Unidades e Turnos (macOS Explorer Style) -->
+                            <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                        <i class="ph-fill ph-tree-structure text-purpura-500"></i> Estrutura de Oferta
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Selecione as unidades onde este curso será oferecido e os turnos disponíveis.</p>
+                                </div>
+                                
+                                <div class="flex flex-col md:flex-row h-[320px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                                    {{-- COLUNA 1: UNIDADES --}}
+                                    <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                                            1. Unidades Vinculadas
+                                        </div>
+                                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                            @forelse($unidadesDisponiveis as $unidade)
+                                                <div class="flex items-center p-2.5 rounded-lg transition hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                    <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                        <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $unidade->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $unidade->nome }}</span>
+                                                    </label>
+                                                </div>
+                                            @empty
+                                                <div class="p-4 text-center text-gray-500 text-xs italic">Nenhuma unidade cadastrada.</div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                    {{-- COLUNA 2: TURNOS --}}
+                                    <div class="flex-1 flex flex-col bg-gray-50/50 dark:bg-gray-900/80">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                                            2. Turnos Habilitados
+                                        </div>
+                                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                            @forelse($turnosDisponiveis as $turno)
+                                                <div class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                                    <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                        <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $turno->nome }}</span>
+                                                    </label>
+                                                </div>
+                                            @empty
+                                                <div class="p-4 text-center text-gray-500 text-xs italic">Nenhum turno cadastrado.</div>
+                                            @endforelse
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Box de Turnos -->
-                            <div>
-                                <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    <i class="ph ph-clock text-ponkan-500"></i> Turnos de aula
-                                </label>
-                                <div class="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-40 overflow-y-auto">
-                                    @forelse($turnosDisponiveis as $turno)
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                                            <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300">{{ $turno->nome }}</span>
-                                        </label>
-                                    @empty
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Nenhum turno cadastrado.</p>
-                                    @endforelse
-                                </div>
-                            </div>
-
-                        </div>
 
                         <!-- Configurações Adicionais -->
                         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">

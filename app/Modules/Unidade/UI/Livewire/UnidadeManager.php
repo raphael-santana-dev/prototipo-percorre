@@ -37,6 +37,9 @@ class UnidadeManager extends Component
     public string $telefone = '';
 
     public array $cursosSelecionados = [];
+    public array $turnosSelecionados = [];
+    public $activeCursoId = null; // MÁGICA: Controla qual curso está focado no Explorer
+
     public array $breadcrumbs = [];
 
     public function mount() 
@@ -46,6 +49,27 @@ class UnidadeManager extends Component
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
+    }
+
+    public function setActiveCurso($id)
+    {
+        $this->activeCursoId = $id;
+    }
+
+    public function updatedCursosSelecionados()
+    {
+        $turnosValidosIds = [];
+        
+        if (!empty($this->cursosSelecionados)) {
+            $cursos = \App\Models\Curso::with('turnosVinculados')->whereIn('id', $this->cursosSelecionados)->get();
+            foreach ($cursos as $c) {
+                if ($c->turnosVinculados) {
+                    $turnosValidosIds = array_merge($turnosValidosIds, $c->turnosVinculados->pluck('id')->toArray());
+                }
+            }
+        }
+        
+        $this->turnosSelecionados = array_values(array_intersect($this->turnosSelecionados, array_unique($turnosValidosIds)));
     }
 
     public function openModal() 
@@ -106,6 +130,11 @@ class UnidadeManager extends Component
 
         $service->sincronizarCursos($unidadeId, $this->cursosSelecionados);
 
+        $unidadeObj = Unidade::find($unidadeId);
+        if (method_exists($unidadeObj, 'turnos')) {
+            $unidadeObj->turnos()->sync($this->turnosSelecionados);
+        }
+
         $this->showModal = false;
         $this->resetInputFields();
         $this->dispatch('sucesso', msg: $this->isEditMode ? 'Unidade atualizada!' : 'Unidade cadastrada!');
@@ -119,6 +148,10 @@ class UnidadeManager extends Component
         $this->resetInputFields();
         $unidade = $service->buscarPorId($id);
         $unidade->load('cursos'); 
+        
+        if (method_exists($unidade, 'turnos')) {
+            $unidade->load('turnos');
+        }
         
         $this->unidadeId = $unidade->id;
         $this->nome = $unidade->nome;
@@ -136,6 +169,8 @@ class UnidadeManager extends Component
         $this->estado = $unidade->estado;
         
         $this->cursosSelecionados = $unidade->cursos->pluck('id')->toArray();
+        $this->turnosSelecionados = method_exists($unidade, 'turnos') && $unidade->turnos ? $unidade->turnos->pluck('id')->toArray() : [];
+        
         $this->isEditMode = true;
         $this->showModal = true;
     }
@@ -151,7 +186,7 @@ class UnidadeManager extends Component
 
     private function resetInputFields() 
     {
-        $this->reset(['unidadeId', 'nome', 'data_inauguracao', 'email', 'telefone', 'cursosSelecionados', 'isEditMode', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado']);
+        $this->reset(['unidadeId', 'nome', 'data_inauguracao', 'email', 'telefone', 'cursosSelecionados', 'turnosSelecionados', 'activeCursoId', 'isEditMode', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado']);
         $this->status = 'Ativa';
         $this->resetErrorBag();
     }
@@ -207,7 +242,6 @@ class UnidadeManager extends Component
     {
         $query = Unidade::query();
 
-        // MÁGICA DE ISOLAMENTO DE UNIDADES
         $user = auth()->user();
         if (!$user->temVisaoGlobal('unidades')) {
             $unidadesIds = $user->unidades->pluck('id')->toArray();
@@ -226,9 +260,11 @@ class UnidadeManager extends Component
 
         $unidades = $query->paginate($this->porPagina);
 
+        $cursosComTurnos = \App\Models\Curso::with('turnosVinculados')->whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get();
+
         return view('livewire.unidade.unidade-manager', [
             'registros' => $unidades, 
-            'cursosDisponiveis' => \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get() 
+            'cursosDisponiveis' => $cursosComTurnos
         ]);
     }
 }

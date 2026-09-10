@@ -225,22 +225,73 @@
                                 <input type="date" wire:model="data_inauguracao" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             </div>
 
-                            <!-- Seção de Relacionamento: Cursos da Unidade -->
-                            <div class="col-span-1 pt-4 mt-2 border-t border-gray-100 md:col-span-2 dark:border-gray-700">
-                                <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos oferecidos nesta unidade
-                                </label>
-                                <div class="grid grid-cols-1 gap-2 p-4 border border-gray-200 rounded-lg sm:grid-cols-2 lg:grid-cols-3 bg-gray-50 dark:bg-gray-900/50 dark:border-gray-600 max-h-48 overflow-y-auto">
-                                    @forelse($cursosDisponiveis as $curso)
-                                        <label class="flex items-center gap-2 p-2 transition-colors border border-transparent rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
-                                            <input type="checkbox" wire:model="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-500">
-                                            <span class="text-sm font-medium text-gray-700 truncate dark:text-gray-300" title="{{ $curso->nome }}">
-                                                {{ $curso->nome }}
-                                            </span>
-                                        </label>
-                                    @empty
-                                        <p class="text-sm text-gray-500 col-span-full dark:text-gray-400">Nenhum curso ativo cadastrado no sistema.</p>
-                                    @endforelse
+                            <!-- Relacionamentos: Cursos e Turnos (macOS Explorer Style) -->
+                            <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                        <i class="ph-fill ph-tree-structure text-purpura-500"></i> Estrutura Acadêmica (Matriz)
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Navegue pelos cursos para habilitar os turnos disponíveis nesta unidade.</p>
+                                </div>
+                                
+                                <div class="flex flex-col md:flex-row h-[320px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                                    {{-- COLUNA 1: CURSOS --}}
+                                    <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                                            1. Cursos Oferecidos
+                                        </div>
+                                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                            @forelse($cursosDisponiveis as $curso)
+                                                <div wire:click="setActiveCurso({{ $curso->id }})" 
+                                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $curso->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                                    <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                                        <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                                        <span class="text-sm font-bold {{ $activeCursoId == $curso->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $curso->nome }}</span>
+                                                    </label>
+                                                    <i class="ph ph-caret-right text-lg {{ $activeCursoId == $curso->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                                                </div>
+                                            @empty
+                                                <div class="p-4 text-center text-gray-500 text-xs italic">Nenhum curso cadastrado.</div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                    {{-- COLUNA 2: TURNOS DO CURSO --}}
+                                    <div class="flex-1 flex flex-col bg-gray-50/50 dark:bg-gray-800/80">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                                            2. Turnos Vinculados
+                                        </div>
+                                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                            @if($activeCursoId)
+                                                @if(in_array((string)$activeCursoId, $cursosSelecionados) || in_array($activeCursoId, $cursosSelecionados))
+                                                    @php $cursoAtivo = $cursosDisponiveis->firstWhere('id', $activeCursoId); @endphp
+                                                    @forelse($cursoAtivo->turnosVinculados ?? [] as $turno)
+                                                        <div class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                                <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $turno->nome }}</span>
+                                                            </label>
+                                                        </div>
+                                                    @empty
+                                                        <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
+                                                            <i class="ph-fill ph-warning-circle text-3xl mb-2 text-yellow-500"></i>
+                                                            <span class="text-xs font-bold uppercase tracking-wider text-center">Este curso não possui turnos cadastrados.</span>
+                                                        </div>
+                                                    @endforelse
+                                                @else
+                                                    <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
+                                                        <i class="ph-fill ph-check-square-offset text-3xl mb-2"></i>
+                                                        <span class="text-xs font-bold uppercase tracking-wider text-center px-4">Marque a caixa do curso para habilitar a seleção de turnos.</span>
+                                                    </div>
+                                                @endif
+                                            @else
+                                                <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
+                                                    <i class="ph ph-graduation-cap text-3xl mb-2"></i>
+                                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso</span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
