@@ -81,6 +81,27 @@
                         {{ $ciclo->inscricoes_count ?? 0 }} INSCRIÇÕES
                     </span>
                 </td>
+
+                {{-- NOVA COLUNA: OCUPAÇÃO DE VAGAS --}}
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    @php
+                        $totalVagas = $ciclo->total_vagas ?? 0;
+                        $preenchidas = $ciclo->vagas_preenchidas ?? 0;
+                        $percentual = $totalVagas > 0 ? round(($preenchidas / $totalVagas) * 100, 1) : 0;
+                        
+                        $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                    @endphp
+                    <div class="flex flex-col items-center justify-center w-full min-w-[120px]">
+                        <div class="flex justify-between w-full text-[10px] font-bold mb-1">
+                            <span class="text-gray-500 dark:text-gray-400" title="Candidatos Aprovados">{{ $preenchidas }} preench.</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ $totalVagas }} total</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
+                            <div class="{{ $corBarra }} h-1.5 rounded-full transition-all duration-500" style="width: {{ min($percentual, 100) }}%"></div>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-400 mt-1">{{ $percentual }}% da capacidade</span>
+                    </div>
+                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
@@ -126,16 +147,22 @@
             </tr>
         @empty
             <tr>
-                <td colspan="7" class="px-4 py-8 text-center text-gray-400 text-sm">
+                <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-sm">
                     <p class="font-semibold text-gray-500">Nenhum ciclo encontrado.</p>
                     <p class="text-xs mt-1">Ajuste os filtros ou crie um novo ciclo.</p>
                 </td>
             </tr>
         @endforelse
 
-        {{-- VISÃO EM GRID (CARDS) --}}
+        {{-- VISÃO EM GRID (CARDS) ATUALIZADA COM AS VAGAS --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $ciclo )
+                @php
+                    $totalVagas = $ciclo->total_vagas ?? 0;
+                    $preenchidas = $ciclo->vagas_preenchidas ?? 0;
+                    $percentual = $totalVagas > 0 ? round(($preenchidas / $totalVagas) * 100, 1) : 0;
+                    $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                @endphp
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $ciclo->nome }}</div>
@@ -145,9 +172,22 @@
                         <span class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Abertura:</span> {{ $ciclo->data_inicio->format('d/m/Y H:i') }}<br>
                         <span class="block text-[10px] uppercase font-bold text-gray-400 mt-2 mb-1">Encerramento:</span> {{ $ciclo->data_fim->format('d/m/Y H:i') }}
                     </div>
-                    <div class="mb-4 text-xs font-bold text-purpura-600 dark:text-purpura-400 flex items-center gap-1">
+                    <div class="mb-3 text-xs font-bold text-purpura-600 dark:text-purpura-400 flex items-center gap-1">
                         <i class="ph-fill ph-users"></i> {{ $ciclo->inscricoes_count ?? 0 }} inscrições registradas
                     </div>
+
+                    {{-- PROGRESSO NO CARD --}}
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 mb-3">
+                        <div class="flex justify-between w-full text-[10px] font-bold mb-1">
+                            <span class="text-gray-500 dark:text-gray-400">{{ $preenchidas }} Vagas Preench.</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ $totalVagas }} Total</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex mb-1">
+                            <div class="{{ $corBarra }} h-1.5 rounded-full" style="width: {{ min($percentual, 100) }}%"></div>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-400">{{ $percentual }}% da capacidade ocupada</span>
+                    </div>
+
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div>
                             @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))

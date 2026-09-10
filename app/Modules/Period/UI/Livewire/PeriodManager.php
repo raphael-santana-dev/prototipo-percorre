@@ -191,7 +191,8 @@ class PeriodManager extends Component
             ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
-            ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true],
+            ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'ocupacao', 'label' => 'Ocupação de Vagas', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
@@ -201,11 +202,23 @@ class PeriodManager extends Component
     {
         $query = Ciclo::query()->withCount('inscricoes');
         
+        // MÁGICA: Subqueries para trazer as Vagas e Preenchidas sem gerar peso (N+1) no banco de dados!
+        $query->addSelect([
+            'total_vagas' => \App\Models\OfertaVaga::selectRaw('COALESCE(SUM(vagas), 0)')
+                ->whereColumn('ciclo_id', 'ciclos.id'),
+                
+            'vagas_preenchidas' => \App\Models\Inscricao::selectRaw('COUNT(*)')
+                ->whereColumn('ciclo_id', 'ciclos.id')
+                ->whereHas('statusInscricao', function ($q) {
+                    $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+                })
+        ]);
+        
         $query->when($this->filtro_ano, fn($q) => $q->where('ano', $this->filtro_ano))
               ->when($this->filtro_semestre, fn($q) => $q->where('semestre', $this->filtro_semestre))
               ->when($this->filtro_status !== '', fn($q) => $q->where('status', $this->filtro_status));
         
-        if ($this->ordenacaoCampo) {
+        if ($this->ordenacaoCampo && $this->ordenacaoCampo !== 'ocupacao') {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $query->orderBy('id', 'desc');
