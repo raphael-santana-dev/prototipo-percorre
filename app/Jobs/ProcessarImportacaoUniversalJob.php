@@ -50,7 +50,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $errosCriticos = 0;
 
         try {
-            // Garante que o status inicie corretamente
             $this->importacao->update(['status' => 'processando']);
             $caminhoAbsoluto = \Illuminate\Support\Facades\Storage::disk('local')->path($this->importacao->arquivo_caminho);
             $formato = $this->importacao->formato;
@@ -62,15 +61,13 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             foreach ($registros as $linhaOriginal) {
                 $linhaAtual++;
 
-                // 1. TRAVA PRINCIPAL DE CANCELAMENTO
                 if ($linhaAtual % 50 === 0) {
                     if ($this->importacao->fresh()->status !== 'processando') {
-                        break; // Se o status mudou (ex: para 'erro' via cancelamento), para a leitura na hora
+                        break; 
                     }
                     $this->importacao->update(['linhas_processadas' => $linhaAtual]);
                 }
 
-                // Pula as linhas se for uma re-tentativa parcial de falhas
                 if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
                     continue; 
                 }
@@ -117,15 +114,13 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     ];
                 }
 
-                // 2. PROTEÇÃO DE MEMÓRIA (Se tiver mais de 1000 linhas totalmente quebradas, aborta)
                 if ($errosCriticos >= 1000) {
                     throw new \Exception("Excesso de erros estruturais (1000+). Planilha corrompida ou fora do padrão. Operação abortada.");
                 }
 
-                // 3. ATUALIZAÇÃO CONSTANTE DE LOTE PARA O PROGRESSO
                 if ($linhaAtual % 10 === 0) {
                     if ($this->importacao->fresh()->status !== 'processando') {
-                        break; // Trava secundária de cancelamento
+                        break; 
                     }
                     
                     $this->importacao->update([
@@ -135,12 +130,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
             }
 
-            // 4. RETORNO IMEDIATO: Se a operação foi cancelada no meio do loop, encerra sem dar status de 'Concluído'
             if ($this->importacao->fresh()->status !== 'processando') {
                 return;
             }
 
-            // 5. RELATÓRIO DO MOTOR DE AUTO-CADASTRO (FUZZY LOGIC)
             if (!empty($this->relatorioAutoCadastro['novos']) || !empty($this->relatorioAutoCadastro['50_porcento'])) {
                 $msgRelatorio = "Mapeamento IA (50%+): \n";
                 
@@ -163,7 +156,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 ]);
             }
 
-            // 6. FINALIZAÇÃO OFICIAL
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
             
             $this->importacao->update([
@@ -172,7 +164,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
-            // 7. RASTRO DE AUDITORIA DO LOTE COMPLETO
             if ($this->importacao->tipo === 'inscricoes' && $linhaAtual > 0) {
                 $usuario = $this->importacao->user; 
                 \Illuminate\Support\Facades\DB::table('auditoria_logs')->insert([
@@ -327,7 +318,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             if (str_contains($classeModel, 'Unidade')) $dadosNovo['status'] = 'Ativa';
             
             $novo = $classeModel::create($dadosNovo);
-            
             $this->cacheVinculos[$classeModel]->push($novo);
             
             $this->relatorioAutoCadastro['novos'][$tipoVinculo][] = $nomePlanilha;
@@ -380,28 +370,23 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
             $tipoMapeado = $config['tipo'] ?? 'texto';
 
-            // ========================================================
-            // CORREÇÃO: INTERPRETADOR UNIVERSAL DE DATAS
-            // ========================================================
             if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data')) {
-                $valData = str_replace('/', '-', $valorPlanilha); // Padroniza tudo para hífen
+                $valData = str_replace('/', '-', $valorPlanilha); 
                 
-                // Formato de 2 dígitos no ano (DD-MM-YY ou MM-DD-YY)
                 if (preg_match('/^(\d{2})-(\d{2})-(\d{2})$/', $valData, $m)) {
                     $p1 = (int)$m[1];
                     $p2 = (int)$m[2];
                     $y = (int)$m[3];
-                    $year = $y < 50 ? 2000 + $y : 1900 + $y; // Assume que 00-49 é anos 2000, e 50-99 é 1900
+                    $year = $y < 50 ? 2000 + $y : 1900 + $y;
                     
-                    if ($p1 > 12) { // Ex: 31-01-10 (DD-MM)
+                    if ($p1 > 12) {
                         $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
-                    } elseif ($p2 > 12) { // Ex: 01-31-10 (MM-DD)
+                    } elseif ($p2 > 12) {
                         $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p1, $p2);
-                    } else { // Assume padrão Brasileiro (DD-MM) para duvidosos
+                    } else {
                         $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
                     }
                 } 
-                // Formato de 4 dígitos no ano (DD-MM-YYYY ou MM-DD-YYYY)
                 elseif (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $valData, $m)) {
                     $p1 = (int)$m[1];
                     $p2 = (int)$m[2];
@@ -417,7 +402,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
             }
 
-            // Tratamento Monetário
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
                 $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); 
                 $valTemp = str_replace(',', '.', $valTemp);
@@ -520,6 +504,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $dadosFixos['status_inscricao_id'] = 1; 
         }
 
+        // SALVANDO A ORIGEM COMO IMPORTAÇÃO (Garante visualização correta)
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';

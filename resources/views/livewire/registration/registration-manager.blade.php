@@ -127,28 +127,35 @@
         </div>
 
         @if(count($selecionadas) > 0)
-        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-            <div class="flex items-center">
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm">
+            <div class="flex items-center shrink-0">
                 <span class="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
-                <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 hover:underline font-medium">Limpar seleção</button>
+                <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 hover:underline font-medium">Limpar seleção</button>
             </div>
             
-            <div class="flex flex-wrap items-center justify-end gap-2">
-                <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase mr-1">Alterar status para:</span>
-                
-                @foreach($statusInscricoesDb as $status)
-                    <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
-                        {{ $status->nome }}
+            <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase hidden sm:block">Alterar para:</span>
+                    <select wire:model="novoStatusId" class="w-full sm:w-auto border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-md py-1.5 px-3 focus:ring-purpura-500 text-xs font-bold shadow-sm">
+                        <option value="">Selecione o status...</option>
+                        @foreach($statusInscricoesDb as $status)
+                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="salvarStatusEmLote" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold transition shadow-sm shrink-0">
+                        Aplicar
                     </button>
-                @endforeach
+                </div>
 
-                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-2 hidden md:block"></div>
-                <button wire:click="avancarSelecionadas" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 hover:-translate-y-0.5">
+                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 hidden sm:block"></div>
+                
+                <button wire:click="avancarSelecionadas" class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 hover:-translate-y-0.5">
                     Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
                 </button>
 
-                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 mx-1 hidden md:block"></div>
-                <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition">
+                <div class="w-px h-6 bg-indigo-200 dark:bg-indigo-700 hidden sm:block"></div>
+                
+                <button wire:click="abrirModalLote" class="bg-purpura-500 hover:bg-purpura-600 text-white px-4 py-1.5 rounded-md shadow text-xs font-bold transition shrink-0">
                     Ver no Modal
                 </button>
             </div>
@@ -405,33 +412,31 @@
         <div class="fixed inset-0 z-[100] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
             
             <!-- HEADER DO MODAL -->
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
                 <div class="flex items-center gap-4 w-full md:w-auto">
                     <button wire:click="$set('modalLoteAberto', false)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg transition" title="Fechar e Cancelar">
                         <i class="text-2xl ph-bold ph-x"></i>
                     </button>
                     <div>
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <i class="ph-fill ph-check-square-offset text-purpura-500"></i> Alteração de Status em Lote
+                            <i class="ph-fill ph-check-square-offset text-purpura-500"></i> Alteração em Lote
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Você selecionou <strong>{{ count($selecionadas) }}</strong> inscrições para alterar simultaneamente.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Você selecionou <strong>{{ count($selecionadas) }}</strong> inscrições para alterar simultaneamente.</p>
                     </div>
                 </div>
                 
-                <!-- BOTÕES DE AÇÃO (STATUS) -->
-                <div class="flex items-center flex-wrap gap-2 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
-                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mr-2 hidden lg:block">Mover todos para:</span>
-                    @foreach($statusInscricoesDb as $status)
-                        @php $corHex = $status->cor ?? '#9CA3AF'; @endphp
-                        <button wire:click="alterarStatusLoteRapido({{ $status->id }})" 
-                                class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-2 shrink-0 hover:-translate-y-0.5"
-                                style="hover:border-color: {{ $corHex }};"
-                                onmouseover="this.style.borderColor='{{ $corHex }}'; this.style.color='{{ $corHex }}';"
-                                onmouseout="this.style.borderColor=''; this.style.color='';">
-                            <span class="w-2 h-2 rounded-full" style="background-color: {{ $corHex }};"></span>
-                            {{ $status->nome }}
-                        </button>
-                    @endforeach
+                <!-- BOTÕES DE AÇÃO (STATUS) SIMPLIFICADO -->
+                <div class="flex items-center gap-3 w-full md:w-auto bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase hidden lg:block ml-2">Mover para:</span>
+                    <select wire:model="novoStatusId" class="w-full md:w-56 text-sm font-bold border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md py-2 focus:ring-purpura-500 shadow-sm">
+                        <option value="">Selecione o novo status...</option>
+                        @foreach($statusInscricoesDb as $status)
+                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="salvarStatusEmLote" class="px-5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-md text-sm font-bold transition shadow-sm whitespace-nowrap">
+                        Confirmar Ação
+                    </button>
                 </div>
             </div>
             

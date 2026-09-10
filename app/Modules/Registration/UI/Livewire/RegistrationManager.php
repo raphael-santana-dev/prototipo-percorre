@@ -445,15 +445,36 @@ class RegistrationManager extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($ids);
         
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
-        ]);
+        // MÁGICA: Se for alteração rápida (ex: QuickView ou até 5 na tabela), faz na hora!
+        if ($qtd <= 5) {
+            $inscricoes = Inscricao::whereIn('id', $ids)->get();
+            $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
 
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
-        $this->desmarcarTodas();
-        
-        $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
+            foreach ($inscricoes as $insc) {
+                $insc->status_inscricao_id = $statusId;
+                $insc->save();
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $insc);
+            }
+
+            $this->desmarcarTodas();
+            $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
+            
+            // Recarrega o modal do quick-view
+            if ($qtd === 1) {
+                $this->showQuickView($ids[0]);
+            }
+        } else {
+            // Se for Lote gigante, manda pra Fila para não travar o navegador
+            $tracking = \App\Models\Importacao::create([
+                'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+                'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
+            ]);
+
+            dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
+            $this->desmarcarTodas();
+            
+            $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
+        }
     }
 
     public function salvarStatusEmLote()

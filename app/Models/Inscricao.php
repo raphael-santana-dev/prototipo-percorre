@@ -51,6 +51,7 @@ class Inscricao extends Model
         'posicao_ranking_curso',
         'slug',
         'criado_por',
+        'origem'
     ];
 
     protected $casts = [
