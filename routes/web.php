@@ -106,7 +106,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/crm/{id?}', \App\Modules\Registration\UI\Livewire\KanbanBoard::class)->name('ciclos.crm');
     // --- Validação de Matrículas e Inteligência Artificial ---
     Route::get('/matriculas/configuracao-ia', \App\Modules\Matricula\UI\Livewire\IaConfigManager::class)->name('matriculas.configuracao');
-    Route::get('/matriculas/analise-manual', \App\Modules\Matricula\UI\Livewire\AnaliseManualManager::class)->name('matriculas.analise-manual');
     Route::get('/matriculas/acompanhamento', \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class)->name('matriculas.acompanhamento');
     
     // --- Formulários Dinâmicos ---

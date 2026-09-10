@@ -170,7 +170,6 @@
                                         <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                         
                                         <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Acompanhamento (Portal IA)</a>
-                                        <a href="{{ route('matriculas.analise-manual') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Central de Análise Manual</a>
                                         @role('dev')
                                             <a href="{{ route('matriculas.configuracao') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Configuração Motor IA</a>
                                         @endrole
@@ -338,7 +337,6 @@
                                         @can('matricula.criar') <a href="{{ route('matriculas.create') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Nova Matrícula</a> @endcan
                                         
                                         <a href="{{ route('matriculas.acompanhamento') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Acompanhamento (Portal IA)</a>
-                                        <a href="{{ route('matriculas.analise-manual') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Central de Análise Manual</a>
                                         @role('dev')
                                             <a href="{{ route('matriculas.configuracao') }}" class="block px-3 py-2 text-sm font-medium text-gray-500 rounded-lg dark:text-gray-400 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Config. Motor IA</a>
                                         @endrole

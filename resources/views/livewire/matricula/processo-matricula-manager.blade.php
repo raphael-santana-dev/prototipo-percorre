@@ -7,7 +7,7 @@
     </x-page-header>
 
     {{-- NAVEGAÇÃO ENTRE ABAS --}}
-    <div class="mb-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
+    <div class="mb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
         <nav class="flex gap-4 -mb-px">
             <button type="button" 
                     @click="abaAtiva = 'dossies'" 
@@ -32,14 +32,51 @@
         </nav>
     </div>
 
+    {{-- BARRA DE FILTROS GLOBAL (APLICA NAS DUAS ABAS) --}}
+    <div class="mb-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div class="md:col-span-2">
+                <input type="text" wire:model.live.debounce.500ms="filtroBusca" placeholder="Buscar por ID, Nome ou CPF..." class="w-full rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            </div>
+            <div>
+                <select wire:model.live="filtroUnidade" class="w-full rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todas as Unidades</option>
+                    @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                </select>
+            </div>
+            <div>
+                <select wire:model.live="filtroCurso" class="w-full rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todos os Cursos</option>
+                    @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                </select>
+            </div>
+            <div>
+                <select wire:model.live="filtroTurno" class="w-full rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todos os Turnos</option>
+                    @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                </select>
+            </div>
+            <div>
+                <select wire:model.live="filtroEtapa" class="w-full rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todas as Etapas</option>
+                    <option value="1">Passo 1 (Coleta)</option>
+                    <option value="2">Passo 2 (Em Análise)</option>
+                    <option value="3">Matriculado</option>
+                </select>
+            </div>
+        </div>
+        
+        @if($filtroBusca !== '' || $filtroCurso !== '' || $filtroUnidade !== '' || $filtroTurno !== '' || $filtroEtapa !== '')
+            <div class="flex justify-end mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <button wire:click="limparFiltros" class="px-4 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                    <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
+                </button>
+            </div>
+        @endif
+    </div>
+
     {{-- ABA 1: DOSSIÊS NORMAIS --}}
     <div x-show="abaAtiva === 'dossies'" x-cloak class="space-y-4" wire:key="aba-dossies">
-        
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3 w-full md:w-1/3">
-            <i class="ph-bold ph-magnifying-glass text-purpura-500"></i>
-            <input type="text" wire:model.live.debounce.500ms="termoBusca" placeholder="Buscar Dossiê por Nome ou CPF..." class="w-full text-sm border-0 focus:ring-0 p-0 dark:bg-gray-800 dark:text-white">
-        </div>
-
         <x-table
             wire:key="tabela-dossies"
             :headers="$this->headers"
@@ -56,7 +93,10 @@
                     </td>
                     <td class="px-4 py-2.5 whitespace-nowrap">
                         <div class="font-bold text-gray-900 text-sm dark:text-white">{{ $inscricao->nome }}</div>
-                        <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"><i class="ph-fill ph-graduation-cap text-purpura-500"></i> {{ $inscricao->curso->nome ?? 'Sem Curso' }}</div>
+                        <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                            <i class="ph-fill ph-graduation-cap text-purpura-500"></i> {{ $inscricao->curso->nome ?? 'Sem Curso' }}
+                            <span class="ml-1"><i class="ph-fill ph-map-pin text-purpura-500"></i> {{ $inscricao->unidade->nome ?? 'N/A' }}</span>
+                        </div>
                     </td>
                     <td class="px-4 py-2.5 text-center whitespace-nowrap">
                         @php
@@ -106,20 +146,14 @@
         </x-table>
     </div>
 
-    {{-- ABA 2: REVISÃO DE INTELIGÊNCIA ARTIFICIAL (Antigo AnaliseManualManager) --}}
+    {{-- ABA 2: REVISÃO DE INTELIGÊNCIA ARTIFICIAL --}}
     <div x-show="abaAtiva === 'revisao'" x-cloak class="space-y-4" wire:key="aba-revisao">
-        
-        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-400 p-4 rounded-xl flex items-start gap-3 text-sm shadow-sm">
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-400 p-4 rounded-xl flex items-start gap-3 text-sm shadow-sm mb-4">
             <i class="ph-fill ph-warning-circle text-2xl mt-0.5"></i>
             <div>
                 <p class="font-bold">Atenção da Secretaria</p>
-                <p>Estes documentos falharam na validação automática da IA ou o robô ficou em dúvida. Clique na lupa para abrir o dossiê do aluno e julgar manualmente.</p>
+                <p>Estes documentos falharam na validação automática da IA ou o robô ficou em dúvida. Clique na pasta para abrir o dossiê do aluno e julgar manualmente.</p>
             </div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3 w-full md:w-1/3">
-            <i class="ph-bold ph-magnifying-glass text-red-500"></i>
-            <input type="text" wire:model.live.debounce.500ms="termoBuscaRevisao" placeholder="Buscar falha por Nome ou CPF..." class="w-full text-sm border-0 focus:ring-0 p-0 dark:bg-gray-800 dark:text-white">
         </div>
 
         <x-table 
@@ -154,7 +188,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="px-4 py-12 text-center text-gray-500">Nenhum documento aguardando revisão.</td></tr>
+                <tr><td colspan="5" class="px-4 py-12 text-center text-gray-500">Nenhum documento aguardando revisão de inteligência artificial.</td></tr>
             @endforelse
 
             <x-slot name="gridSlot"></x-slot>

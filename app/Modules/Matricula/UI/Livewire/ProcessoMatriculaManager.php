@@ -7,6 +7,9 @@ use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Inscricao;
+use App\Models\Curso;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use Illuminate\Support\Facades\Storage;
@@ -21,11 +24,14 @@ class ProcessoMatriculaManager extends Component
     // Controle de Abas
     public $abaAtiva = 'dossies';
 
-    // Filtros e Ordenação Aba 1 (Dossiês)
-    public $termoBusca = '';
+    // Filtros Globais (Aplicam-se em ambas as abas)
+    public $filtroBusca = '';
+    public $filtroCurso = '';
+    public $filtroUnidade = '';
+    public $filtroTurno = '';
+    public $filtroEtapa = '';
 
-    // Filtros e Ordenação Aba 2 (Fila da IA)
-    public $termoBuscaRevisao = '';
+    // Ordenação Aba 2 (Fila da IA)
     public $ordenacaoCampoRevisao = '';
     public $ordenacaoDirecaoRevisao = 'asc';
     
@@ -34,15 +40,27 @@ class ProcessoMatriculaManager extends Component
     public $inscricaoSelecionada = null;
     public $documentosExigidos = [];
     public $documentosEnviados = [];
-    public $motivosReprovacao = []; // Armazena a justificativa digitada para cada documento recusado
+    public $motivosReprovacao = [];
 
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.listar'), 403, 'Acesso restrito.');
     }
 
-    public function updatingTermoBusca() { $this->resetPage(); }
-    public function updatingTermoBuscaRevisao() { $this->resetPage('revisaoPage'); }
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroTurno', 'filtroEtapa'])) {
+            $this->resetPage();
+            $this->resetPage('revisaoPage');
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroTurno', 'filtroEtapa']);
+        $this->resetPage();
+        $this->resetPage('revisaoPage');
+    }
 
     // ==========================================
     // CONTROLE DE ORDENAÇÃO (X-TABLE) INTELIGENTE
@@ -103,7 +121,7 @@ class ProcessoMatriculaManager extends Component
                                                       ->get()
                                                       ->keyBy('documento_exigido_id');
 
-        $this->motivosReprovacao = []; // Reseta o histórico de textos ao abrir outro aluno
+        $this->motivosReprovacao = []; 
         $this->modalDossieAberto = true;
     }
 
@@ -120,7 +138,6 @@ class ProcessoMatriculaManager extends Component
 
     public function reprovarDocumento($documentoMatriculaId)
     {
-        // Valida se o usuário escreveu pelo menos 5 caracteres na textarea correspondente ao documento
         $this->validate([
             "motivosReprovacao.$documentoMatriculaId" => 'required|min:5'
         ], [
@@ -165,12 +182,26 @@ class ProcessoMatriculaManager extends Component
     public function render()
     {
         // 1. QUERY DOSSIÊS (Aba 1)
-        $queryDossies = Inscricao::with(['curso', 'ciclo'])
+        $queryDossies = Inscricao::with(['curso', 'ciclo', 'unidade'])
             ->whereNotNull('token_matricula')
-            ->when($this->termoBusca, function ($q) {
-                $q->where('nome', 'ilike', '%' . $this->termoBusca . '%')
-                  ->orWhere('cpf', 'ilike', '%' . $this->termoBusca . '%');
+            ->apenasVinculosPermitidos();
+
+        if (!empty($this->filtroBusca)) {
+            $queryDossies->where(function ($q) {
+                if (is_numeric($this->filtroBusca)) {
+                    $q->where('id', $this->filtroBusca)
+                      ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%');
+                } else {
+                    $q->where('nome', 'ilike', '%' . $this->filtroBusca . '%')
+                      ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%');
+                }
             });
+        }
+        
+        if (!empty($this->filtroCurso)) $queryDossies->where('curso_id', $this->filtroCurso);
+        if (!empty($this->filtroUnidade)) $queryDossies->where('unidade_id', $this->filtroUnidade);
+        if (!empty($this->filtroTurno)) $queryDossies->where('turno_id', $this->filtroTurno);
+        if (!empty($this->filtroEtapa)) $queryDossies->where('etapa_atual', $this->filtroEtapa);
 
         if ($this->ordenacaoCampo && $this->abaAtiva === 'dossies') {
             $queryDossies->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -179,14 +210,28 @@ class ProcessoMatriculaManager extends Component
         }
 
         // 2. QUERY REVISÃO DA IA (Aba 2)
-        $queryRevisao = DocumentoMatricula::with(['inscricao.curso', 'documentoExigido'])
-            ->whereIn('status_analise', ['analise_manual', 'invalido_ia'])
-            ->when($this->termoBuscaRevisao, function($q) {
-                $q->whereHas('inscricao', function($sub) {
-                    $sub->where('nome', 'ilike', '%' . $this->termoBuscaRevisao . '%')
-                        ->orWhere('cpf', 'ilike', '%' . $this->termoBuscaRevisao . '%');
+        $queryRevisao = DocumentoMatricula::with(['inscricao.curso', 'inscricao.unidade', 'documentoExigido'])
+            ->whereIn('status_analise', ['analise_manual', 'invalido_ia']);
+        
+        $queryRevisao->whereHas('inscricao', function($q) {
+            $q->apenasVinculosPermitidos();
+
+            if (!empty($this->filtroBusca)) {
+                $q->where(function ($sub) {
+                    if (is_numeric($this->filtroBusca)) {
+                        $sub->where('id', $this->filtroBusca)
+                            ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%');
+                    } else {
+                        $sub->where('nome', 'ilike', '%' . $this->filtroBusca . '%')
+                            ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%');
+                    }
                 });
-            });
+            }
+            if (!empty($this->filtroCurso)) $q->where('curso_id', $this->filtroCurso);
+            if (!empty($this->filtroUnidade)) $q->where('unidade_id', $this->filtroUnidade);
+            if (!empty($this->filtroTurno)) $q->where('turno_id', $this->filtroTurno);
+            if (!empty($this->filtroEtapa)) $q->where('etapa_atual', $this->filtroEtapa);
+        });
 
         if ($this->ordenacaoCampoRevisao && $this->abaAtiva === 'revisao') {
             $queryRevisao->orderBy($this->ordenacaoCampoRevisao, $this->ordenacaoDirecaoRevisao);
@@ -198,6 +243,9 @@ class ProcessoMatriculaManager extends Component
             'registros' => $queryDossies->paginate($this->porPagina),
             'revisoes' => $queryRevisao->paginate($this->porPagina, ['*'], 'revisaoPage'),
             'totalRevisoes' => (clone $queryRevisao)->count(),
+            'cursosDb' => Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->orderBy('nome')->get(),
+            'unidadesDb' => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'turnosDb' => Turno::orderBy('nome')->get(),
         ]);
     }
 }
