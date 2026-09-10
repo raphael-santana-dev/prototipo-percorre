@@ -30,7 +30,7 @@ class ForcePasswordChange extends Component
         session()->invalidate();
         session()->regenerateToken();
 
-        return redirect()->route('portal.login');
+        return redirect()->route('login');
     }
     public function salvar()
     {

@@ -63,14 +63,14 @@ class ResetPassword extends Component
         $status = Password::broker('students')->reset($credentials, $resetCallback);
         if ($status == Password::PASSWORD_RESET) {
             session()->flash('sucesso', 'Senha redefinida com sucesso! Você já pode fazer login.');
-            return redirect()->route('portal.login');
+            return redirect()->route('login');
         }
 
         // 3. Tenta nas empresas
         $status = Password::broker('company_users')->reset($credentials, $resetCallback);
         if ($status == Password::PASSWORD_RESET) {
             session()->flash('sucesso', 'Senha redefinida com sucesso! Você já pode fazer login.');
-            return redirect()->route('portal.login');
+            return redirect()->route('login');
         }
 
         // Se falhar (token inválido ou expirado)

@@ -41,7 +41,7 @@
                     Enviar Link
                 </button>
 
-                <a href="{{ route('portal.login') }}" wire:navigate class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:hover:text-white transition flex items-center gap-2">
+                <a href="{{ route('login') }}" wire:navigate class="text-sm font-medium text-gray-500 hover:text-gray-900 dark:hover:text-white transition flex items-center gap-2">
                     Voltar para o login
                 </a>
             </div>

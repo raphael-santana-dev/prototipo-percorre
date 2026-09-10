@@ -33,7 +33,7 @@
                     <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-md mx-auto">{{ $mensagemBloqueio }}</p>
                     
                     @if($exibirBotaoLogin)
-                        <a href="{{ route('portal.login') }}" class="mt-8 inline-flex items-center gap-2 bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
+                        <a href="{{ route('login') }}" class="mt-8 inline-flex items-center gap-2 bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
                             Fazer Login no Portal <i class="ph-bold ph-sign-in"></i>
                         </a>
                     @else
