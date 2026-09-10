@@ -18,21 +18,58 @@ class ProcessoMatriculaManager extends Component
 {
     use WithPagination, ComPadraoListagem;
 
+    // Controle de Abas
+    public $abaAtiva = 'dossies';
+
+    // Filtros e Ordenação Aba 1 (Dossiês)
     public $termoBusca = '';
+
+    // Filtros e Ordenação Aba 2 (Fila da IA)
+    public $termoBuscaRevisao = '';
+    public $ordenacaoCampoRevisao = '';
+    public $ordenacaoDirecaoRevisao = 'asc';
     
+    // Modal e Dossiê
     public $modalDossieAberto = false;
     public $inscricaoSelecionada = null;
     public $documentosExigidos = [];
     public $documentosEnviados = [];
+    public $motivosReprovacao = []; // Armazena a justificativa digitada para cada documento recusado
 
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.listar'), 403, 'Acesso restrito.');
     }
 
-    public function updatingTermoBusca()
+    public function updatingTermoBusca() { $this->resetPage(); }
+    public function updatingTermoBuscaRevisao() { $this->resetPage('revisaoPage'); }
+
+    // ==========================================
+    // CONTROLE DE ORDENAÇÃO (X-TABLE) INTELIGENTE
+    // ==========================================
+    public function sortBy($campo) { $this->aplicarOrdenacao($campo); }
+    public function ordenar($campo) { $this->aplicarOrdenacao($campo); }
+    public function sort($campo) { $this->aplicarOrdenacao($campo); }
+
+    private function aplicarOrdenacao($campo)
     {
-        $this->resetPage();
+        if ($this->abaAtiva === 'revisao') {
+            if ($this->ordenacaoCampoRevisao === $campo) {
+                $this->ordenacaoDirecaoRevisao = $this->ordenacaoDirecaoRevisao === 'asc' ? 'desc' : 'asc';
+            } else {
+                $this->ordenacaoCampoRevisao = $campo;
+                $this->ordenacaoDirecaoRevisao = 'asc';
+            }
+            $this->resetPage('revisaoPage');
+        } else {
+            if ($this->ordenacaoCampo === $campo) {
+                $this->ordenacaoDirecao = $this->ordenacaoDirecao === 'asc' ? 'desc' : 'asc';
+            } else {
+                $this->ordenacaoCampo = $campo;
+                $this->ordenacaoDirecao = 'asc';
+            }
+            $this->resetPage();
+        }
     }
 
     public function getHeadersProperty()
@@ -46,18 +83,27 @@ class ProcessoMatriculaManager extends Component
         ];
     }
 
+    public function getHeadersRevisaoProperty()
+    {
+        return [
+            ['key' => 'id', 'label' => '#', 'sortable' => true, 'class' => 'w-16 text-center'],
+            ['key' => 'candidato', 'label' => 'Candidato e Inscrição', 'sortable' => false],
+            ['key' => 'documento', 'label' => 'Documento Exigido', 'sortable' => false],
+            ['key' => 'tentativas', 'label' => 'Ações da IA', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'acoes', 'label' => 'Análise', 'sortable' => false, 'class' => 'text-right w-32'],
+        ];
+    }
+
     public function abrirDossie($inscricaoId)
     {
         $this->inscricaoSelecionada = Inscricao::with(['curso', 'unidade'])->findOrFail($inscricaoId);
         
-        // Puxa as regras de documentos para o ciclo desse aluno
         $this->documentosExigidos = DocumentoExigido::where('ciclo_id', $this->inscricaoSelecionada->ciclo_id)->get();
-        
-        // Puxa o que o aluno enviou
         $this->documentosEnviados = DocumentoMatricula::where('inscricao_id', $this->inscricaoSelecionada->id)
                                                       ->get()
                                                       ->keyBy('documento_exigido_id');
 
+        $this->motivosReprovacao = []; // Reseta o histórico de textos ao abrir outro aluno
         $this->modalDossieAberto = true;
     }
 
@@ -68,13 +114,20 @@ class ProcessoMatriculaManager extends Component
         
         $this->verificarConclusaoMatricula($doc->inscricao_id);
         
-        // Recarrega os dados do modal
         $this->abrirDossie($doc->inscricao_id);
-        $this->dispatch('sucesso', msg: 'Documento aprovado manualmente com sucesso!');
+        $this->dispatch('sucesso', msg: 'Documento aprovado manualmente!');
     }
 
     public function reprovarDocumento($documentoMatriculaId)
     {
+        // Valida se o usuário escreveu pelo menos 5 caracteres na textarea correspondente ao documento
+        $this->validate([
+            "motivosReprovacao.$documentoMatriculaId" => 'required|min:5'
+        ], [
+            "motivosReprovacao.$documentoMatriculaId.required" => 'Escreva o motivo da recusa para o candidato.',
+            "motivosReprovacao.$documentoMatriculaId.min" => 'O motivo deve ser mais descritivo.'
+        ]);
+
         $doc = DocumentoMatricula::findOrFail($documentoMatriculaId);
         
         if (Storage::disk('local')->exists($doc->arquivo_caminho)) {
@@ -85,7 +138,10 @@ class ProcessoMatriculaManager extends Component
             'status_analise' => 'pendente',
             'tentativas_ia' => 0,
             'avaliado_por' => auth()->id(),
-            'log_ia' => array_merge(is_array($doc->log_ia) ? $doc->log_ia : [], ['motivo_rejeicao_humana' => 'A secretaria rejeitou o documento. Envie uma nova foto.'])
+            'log_ia' => array_merge(
+                is_array($doc->log_ia) ? $doc->log_ia : [], 
+                ['motivo_rejeicao_humana' => $this->motivosReprovacao[$documentoMatriculaId]]
+            )
         ]);
 
         $this->abrirDossie($doc->inscricao_id);
@@ -108,22 +164,40 @@ class ProcessoMatriculaManager extends Component
 
     public function render()
     {
-        // Filtra apenas quem tem o token (ou seja, foi Aprovado e entrou no fluxo de matrícula)
-        $query = Inscricao::with(['curso', 'ciclo'])
+        // 1. QUERY DOSSIÊS (Aba 1)
+        $queryDossies = Inscricao::with(['curso', 'ciclo'])
             ->whereNotNull('token_matricula')
             ->when($this->termoBusca, function ($q) {
                 $q->where('nome', 'ilike', '%' . $this->termoBusca . '%')
                   ->orWhere('cpf', 'ilike', '%' . $this->termoBusca . '%');
             });
 
-        if ($this->ordenacaoCampo) {
-            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        if ($this->ordenacaoCampo && $this->abaAtiva === 'dossies') {
+            $queryDossies->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
-            $query->orderBy('updated_at', 'desc');
+            $queryDossies->orderBy('updated_at', 'desc');
+        }
+
+        // 2. QUERY REVISÃO DA IA (Aba 2)
+        $queryRevisao = DocumentoMatricula::with(['inscricao.curso', 'documentoExigido'])
+            ->whereIn('status_analise', ['analise_manual', 'invalido_ia'])
+            ->when($this->termoBuscaRevisao, function($q) {
+                $q->whereHas('inscricao', function($sub) {
+                    $sub->where('nome', 'ilike', '%' . $this->termoBuscaRevisao . '%')
+                        ->orWhere('cpf', 'ilike', '%' . $this->termoBuscaRevisao . '%');
+                });
+            });
+
+        if ($this->ordenacaoCampoRevisao && $this->abaAtiva === 'revisao') {
+            $queryRevisao->orderBy($this->ordenacaoCampoRevisao, $this->ordenacaoDirecaoRevisao);
+        } else {
+            $queryRevisao->orderBy('updated_at', 'asc');
         }
 
         return view('livewire.matricula.processo-matricula-manager', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros' => $queryDossies->paginate($this->porPagina),
+            'revisoes' => $queryRevisao->paginate($this->porPagina, ['*'], 'revisaoPage'),
+            'totalRevisoes' => (clone $queryRevisao)->count(),
         ]);
     }
 }
