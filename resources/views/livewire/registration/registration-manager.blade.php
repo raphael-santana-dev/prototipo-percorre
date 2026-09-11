@@ -1,7 +1,6 @@
 <div class="p-6 mx-auto font-sans relative max-w-7xl" 
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
-    {{-- A mágica acontece aqui: Todo o topo em um único componente --}}
     <x-page-header 
         title="Inscrições" 
         icon="ph ph-clipboard-text"

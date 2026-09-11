@@ -2,7 +2,7 @@
 
     {{-- CABEÇALHO UNIFICADO --}}
     <x-page-header 
-        title="Gerenciamento de Ciclos (Semestres)" 
+        title="Ciclos de Inscrições" 
         icon="ph ph-calendar-check"
         badge=""
         :breadcrumbs="$breadcrumbs" 
@@ -81,8 +81,6 @@
                         {{ $ciclo->inscricoes_count ?? 0 }} INSCRIÇÕES
                     </span>
                 </td>
-
-                {{-- NOVA COLUNA: OCUPAÇÃO DE VAGAS --}}
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     @php
                         $totalVagas = $ciclo->total_vagas ?? 0;

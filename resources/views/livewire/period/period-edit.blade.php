@@ -15,9 +15,9 @@
                     <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
                 </a>
                 {{-- BOTÃO SALVAR GERAL (TOPO) --}}
-                <button type="submit" form="formCicloPrincipal" class="px-5 py-2 text-xs font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
+                <!-- <button type="submit" form="formCicloPrincipal" class="px-5 py-2 text-xs font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
                     <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
-                </button>
+                </button> -->
             </div>
         </x-slot>
     </x-page-header>
@@ -31,7 +31,7 @@
                     :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
                 <i class="ph-bold ph-sliders text-base"></i>
-                <span>Geral & Vigência</span>
+                <span>Config. Geral</span>
             </button>
 
             {{-- ABA 2: ESTRUTURA ACADÊMICA --}}
@@ -40,7 +40,7 @@
                     :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
                 <i class="ph-bold ph-tree-structure text-base"></i>
-                <span>Estrutura Ofertada</span>
+                <span>Unidades/Curso/Turno</span>
                 @if(count($cursosSelecionados) > 0)
                     <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-purpura-100 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300 font-bold">
                         {{ count($cursosSelecionados) }}
@@ -68,7 +68,7 @@
                     :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
                 <i class="ph-bold ph-funnel text-base"></i>
-                <span>Funil CRM (Etapas)</span>
+                <span>Etapas do Ciclo</span>
                 @if(count($statusSelecionados) > 0)
                     <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-bold">
                         {{ count($statusSelecionados) }}
@@ -101,9 +101,9 @@
         <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
             <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
                 <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                    <i class="ph-fill ph-calendar text-purpura-600"></i> Informações do Período e Vigência
+                    <i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais
                 </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição pública, os semestres letivos e a janela de tempo em que as inscrições ficarão ativas.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, os semestres e a janela de tempo em que as inscrições ficarão ativas.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -143,7 +143,7 @@
             <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                 <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                 <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                    Ativar este ciclo imediatamente no portal público (desativará outros ciclos simultâneos)
+                    Ativar este ciclo imediatamente (desativará outros ciclos ativos)
                 </label>
             </div>
         </div>
@@ -155,13 +155,10 @@
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <i class="ph-fill ph-tree-structure text-purpura-500"></i> Matriz de Seleção Cascata
+                        <i class="ph-fill ph-tree-structure text-purpura-500"></i> Unidade/Curso/Turno
                     </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Navegue pelas colunas para habilitar os itens disponíveis no formulário deste semestre.</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Selecione as Unidades, Cursos e Turnos disponíveis no ciclo.</p>
                 </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700">
-                    Estilo macOS Finder
-                </span>
             </div>
             
             <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
@@ -243,15 +240,15 @@
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-users-three text-purpura-500"></i> Ofertas e Limites de Vagas
+                        <i class="ph-fill ph-users-three text-purpura-500"></i> Vagas
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina vagas e restrições etárias. Apenas as combinações marcadas na Estrutura Acadêmica aparecerão nas seleções abaixo.
+                        Defina a quantidade de vagas por unidade/curso/turno e restrições de idade.
                     </p>
                 </div>
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                     <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-plus text-sm"></i> Nova Oferta
+                        <i class="ph-bold ph-plus text-sm"></i>Adicionar
                     </button>
                 @endif
             </div>
@@ -361,9 +358,9 @@
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-4 gap-4">
                     <div>
                         <h3 class="text-base font-bold text-gray-900 dark:text-white m-0 flex items-center gap-2">
-                            <i class="ph-fill ph-funnel text-purpura-500"></i> Sequência do Funil Kanban
+                            <i class="ph-fill ph-funnel text-purpura-500"></i> Etapas do Ciclo
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Arraste os status pelas alças para ajustar a ordem exata das colunas deste processo seletivo.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status de Inscrições disponíveis no Ciclo.</p>
                     </div>
                     
                     <div class="flex items-center gap-2 w-full md:w-auto">
@@ -471,10 +468,9 @@
         {{-- BARRA INFERIOR COM BOTÃO SALVAR GERAL --}}
         <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
             <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                As alterações realizadas em qualquer aba serão sincronizadas em conjunto.
             </span>
             <button type="submit" class="px-6 py-2.5 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 hover:-translate-y-0.5">
-                <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo Completo
+                <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
             </button>
         </div>
     </form>

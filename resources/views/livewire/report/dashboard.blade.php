@@ -4,8 +4,8 @@
 
     <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200">
         <div>
-            <h2 class="text-2xl font-black text-gray-900 flex items-center gap-2"><i class="ph-fill ph-chart-pie-slice text-purpura-500"></i> Relatórios Analíticos</h2>
-            <p class="text-xs text-gray-500">Dados demográficos dinâmicos e funil de acompanhamento em tempo real.</p>
+            <h2 class="text-2xl font-black text-gray-900 flex items-center gap-2"><i class="ph-fill ph-chart-pie-slice text-purpura-500"></i>Gráficos</h2>
+            <p class="text-xs text-gray-500">Relatórios de inscrições</p>
         </div>
 
         <div class="flex items-center gap-4 w-full md:w-auto">

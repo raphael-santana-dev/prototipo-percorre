@@ -243,10 +243,10 @@ class PeriodManager extends Component
             'data' => [
                 'Status do Ciclo' => $statusLabel,
                 'Inscrições Realizadas' => '<span class="font-black text-2xl text-purpura-600 bg-purpura-50 px-3 py-1 rounded-lg border border-purpura-100 shadow-sm inline-flex items-center gap-2"><i class="ph-fill ph-users"></i> '.$ciclo->inscricoes_count.'</span>',
-                'Ocupação de Vagas' => $barraOcupacao,
+                'Ocupação' => $barraOcupacao,
                 'Cursos Ofertados' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($cursosTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhum</span>') . '</div>',
                 'Unidades Vinculadas' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($unidadesTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhuma</span>') . '</div>',
-                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:text-purpura-800 hover:underline text-sm flex items-center gap-1 mt-2"><i class="ph-bold ph-arrow-square-out"></i> Acessar Ficha Completa do Ciclo</a>'
+                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:text-purpura-800 hover:underline text-sm flex items-center gap-1 mt-2"><i class="ph-bold ph-arrow-square-out"></i> Acessar Detalhes do Ciclo</a>'
             ]
         ]);
     }
@@ -259,7 +259,7 @@ class PeriodManager extends Component
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
             ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'ocupacao', 'label' => 'Ocupação de Vagas', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'ocupacao', 'label' => 'Ocupação', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
