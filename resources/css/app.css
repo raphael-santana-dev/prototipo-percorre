@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-
+@source "../../app/Modules";
 
 /* Ensina o Tailwind v4 a ativar as classes dark: apenas quando a tag html tiver a classe .dark */
 @custom-variant dark (&:is(.dark *));

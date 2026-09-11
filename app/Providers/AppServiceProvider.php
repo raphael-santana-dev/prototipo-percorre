@@ -39,7 +39,6 @@ use App\Modules\Curso\Domain\Repositories\CursoRepositoryInterface;
 use App\Modules\Curso\Infrastructure\Persistence\EloquentCursoRepository;
 
 // Portal do Aluno
-use App\Modules\Portal\UI\Livewire\Auth\Login as PortalLogin;
 use App\Modules\Portal\UI\Livewire\Auth\LogoutButton as PortalLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
@@ -124,7 +123,6 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('inscricao.retomada', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class);
 
         // Portal do Aluno (Auth Isolada)
-        Livewire::component('portal.auth.login', PortalLogin::class);
         Livewire::component('portal.auth.logout-button', PortalLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
         Livewire::component('student.library', StudentLibrary::class);
