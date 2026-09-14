@@ -79,8 +79,8 @@
                     <div class="w-full {{ $formWidth }} {{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                         
                         <div class="mb-10 border-b border-gray-200 pb-6">
-                            <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Simulador da Inscrição</h1>
-                            <p class="text-gray-600">Abaixo está a estrutura de como o aluno verá este formulário.</p>
+                            <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Construtor de Formulários</h1>
+                            <p class="text-gray-600">Abaixo está a estrutura de como o usuário verá este formulário.</p>
                         </div>
 
                         @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
@@ -356,7 +356,7 @@
                                         </button>
                                         <button type="button" wire:click="setTipo('matriz')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-table text-xl {{ $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Matriz de Rádios</span>
+                                            <span class="text-xs font-bold">Matriz</span>
                                         </button>
                                         <button type="button" wire:click="setTipo('rating')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-star text-xl {{ $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>

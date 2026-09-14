@@ -1,6 +1,6 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     <x-page-header 
-        title="Gerenciamento de Unidades" 
+        title="Unidades" 
         icon="ph ph-buildings"
         badge=""
         :breadcrumbs="$breadcrumbs" 

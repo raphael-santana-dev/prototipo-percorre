@@ -32,7 +32,7 @@
                 </span>
 
                 @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg">
                         <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors">
                             @foreach($todosStatus as $status)
                                 <option value="{{ $status->id }}">{{ $status->nome }}</option>
@@ -75,115 +75,109 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         
-        <div class="lg:col-span-2 space-y-6">
-            
-            <!-- ========================================== -->
-            <!-- PAINEL NOVO: ENDEREÇO COMPLETO             -->
-            <!-- ========================================== -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
-                    <i class="ph-fill ph-map-pin text-lg text-purpura-500"></i> Endereço Completo
-                </h3>
+        <div class="lg:col-span-2">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 space-y-10">
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 md:col-span-3">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Logradouro</span>
-                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->logradouro ?? '-' }}, {{ $inscricao->numero ?? 'S/N' }} {{ $inscricao->complemento ? ' - ' . $inscricao->complemento : '' }}</span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bairro</span>
-                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->bairro ?? '-' }}</span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cidade / UF</span>
-                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->cidade ?? '-' }} / {{ $inscricao->estado ?? '-' }}</span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CEP & Região</span>
-                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->cep ?? '-' }} {{ $inscricao->regiao ? '(' . ucfirst($inscricao->regiao) . ')' : '' }}</span>
-                    </div>
-                </div>
-            </div>
+                <section>
+                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                        <i class="ph-fill ph-map-pin text-lg text-purpura-500"></i> Endereço Completo
+                    </h3>
+                    
+                    <dl class="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
+                        <div class="md:col-span-3">
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Logradouro</dt>
+                            <dd class="text-sm font-bold text-gray-900">{{ $inscricao->logradouro ?? '-' }}, {{ $inscricao->numero ?? 'S/N' }} {{ $inscricao->complemento ? ' - ' . $inscricao->complemento : '' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bairro</dt>
+                            <dd class="text-sm font-bold text-gray-900">{{ $inscricao->bairro ?? '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cidade / UF</dt>
+                            <dd class="text-sm font-bold text-gray-900">{{ $inscricao->cidade ?? '-' }} / {{ $inscricao->estado ?? '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CEP & Região</dt>
+                            <dd class="text-sm font-bold text-gray-900">{{ $inscricao->cep ?? '-' }} {{ $inscricao->regiao ? '(' . ucfirst($inscricao->regiao) . ')' : '' }}</dd>
+                        </div>
+                    </dl>
+                </section>
 
-            <!-- Painel: Nome Social e PcD -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
-                    <i class="ph-fill ph-identification-card text-lg text-purpura-500"></i> Informações Adicionais
-                </h3>
+                <section>
+                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                        <i class="ph-fill ph-identification-card text-lg text-purpura-500"></i> Informações Adicionais
+                    </h3>
+                    
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                        <div>
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nome Social</dt>
+                            <dd class="text-sm font-bold text-gray-900">{{ $inscricao->nome_social ?: 'Não possui' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">PcD (Deficiência)</dt>
+                            <dd class="text-sm font-bold text-gray-900">
+                                @if($inscricao->possui_deficiencia === 'sim')
+                                    <span class="inline-block mt-0.5 px-2 py-0.5 bg-red-50 text-red-700 font-bold text-xs rounded border border-red-200">Sim - {{ $inscricao->natureza_deficiencia }}</span>
+                                @else
+                                    Não declarada
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nome Social</span>
-                        <span class="block text-sm font-bold text-gray-900">{{ $inscricao->nome_social ?: 'Não possui' }}</span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                        <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">PcD (Deficiência)</span>
-                        @if($inscricao->possui_deficiencia === 'sim')
-                            <span class="inline-block mt-0.5 px-2 py-0.5 bg-red-50 text-red-700 font-bold text-xs rounded border border-red-200">Sim - {{ $inscricao->natureza_deficiencia }}</span>
-                        @else
-                            <span class="block text-sm font-bold text-gray-900">Não declarada</span>
-                        @endif
-                    </div>
-                </div>
-            </div>
+                <section>
+                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                        <i class="ph-fill ph-list-dashes text-lg text-purpura-500"></i> Questionário Complementar
+                    </h3>
+                    
+                    @php
+                        $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+                    @endphp
 
-            <!-- Dados Dinâmicos do Formulário -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
-                    <i class="ph-fill ph-list-dashes text-lg text-purpura-500"></i> Questionário Complementar
-                </h3>
-                
-                @php
-                    $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
-                @endphp
+                    @if(is_array($dinamicos) && count($dinamicos) > 0)
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                            @foreach($dinamicos as $chave => $valor)
+                                @continue(str_contains(strtolower($chave), 'form_config'))
+                                
+                                @php
+                                    $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
+                                @endphp
 
-                @if(is_array($dinamicos) && count($dinamicos) > 0)
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @foreach($dinamicos as $chave => $valor)
-                            @continue(str_contains(strtolower($chave), 'form_config'))
-                            
-                            @php
-                                // Detecta se o array é associativo (Ex: "instagram" => "@user")
-                                $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
-                            @endphp
-
-                            @if($isAssociative)
-                                {{-- RENDERIZAÇÃO INTELIGENTE DE REDES SOCIAIS / ARRAYS NOMEADOS --}}
-                                @foreach($valor as $rede => $usuario)
-                                    @continue(empty($usuario))
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-white border border-gray-200 shadow-sm">
-                                            @if($rede === 'instagram') <i class="ph-fill ph-instagram-logo text-xl text-pink-500"></i>
-                                            @elseif($rede === 'facebook') <i class="ph-fill ph-facebook-logo text-xl text-blue-600"></i>
-                                            @elseif($rede === 'youtube') <i class="ph-fill ph-youtube-logo text-xl text-red-600"></i>
-                                            @elseif($rede === 'tiktok') <i class="ph-fill ph-tiktok-logo text-xl text-gray-900"></i>
-                                            @elseif($rede === 'linkedin') <i class="ph-fill ph-linkedin-logo text-xl text-blue-700"></i>
-                                            @else <i class="ph-fill ph-link text-xl text-gray-500"></i>
-                                            @endif
+                                @if($isAssociative)
+                                    @foreach($valor as $rede => $usuario)
+                                        @continue(empty($usuario))
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-gray-50 border border-gray-200">
+                                                @if($rede === 'instagram') <i class="ph-fill ph-instagram-logo text-lg text-pink-500"></i>
+                                                @elseif($rede === 'facebook') <i class="ph-fill ph-facebook-logo text-lg text-blue-600"></i>
+                                                @elseif($rede === 'youtube') <i class="ph-fill ph-youtube-logo text-lg text-red-600"></i>
+                                                @elseif($rede === 'tiktok') <i class="ph-fill ph-tiktok-logo text-lg text-gray-900"></i>
+                                                @elseif($rede === 'linkedin') <i class="ph-fill ph-linkedin-logo text-lg text-blue-700"></i>
+                                                @else <i class="ph-fill ph-link text-lg text-gray-500"></i>
+                                                @endif
+                                            </div>
+                                            <div class="overflow-hidden">
+                                                <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5 truncate">Rede Social ({{ ucfirst($rede) }})</dt>
+                                                <dd class="block text-sm font-bold text-gray-900 truncate" title="{{ $usuario }}">{{ $usuario }}</dd>
+                                            </div>
                                         </div>
-                                        <div class="overflow-hidden">
-                                            <span class="block text-[10px] text-purpura-600 uppercase font-bold tracking-wider mb-0.5 truncate">Rede Social ({{ ucfirst($rede) }})</span>
-                                            <span class="block text-sm font-bold text-gray-900 truncate" title="{{ $usuario }}">{{ $usuario }}</span>
-                                        </div>
+                                    @endforeach
+                                @else
+                                    <div>
+                                        <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</dt>
+                                        <dd class="block text-sm font-bold text-gray-900 break-words">
+                                            {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
+                                        </dd>
                                     </div>
-                                @endforeach
-                            @else
-                                {{-- RENDERIZAÇÃO DE CAMPOS NORMAIS --}}
-                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-purpura-200 transition-colors">
-                                    <span class="block text-[10px] text-purpura-600 uppercase font-bold tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</span>
-                                    <span class="block text-sm font-bold text-gray-900 break-words">
-                                        {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
-                                    </span>
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                @else
-                    <div class="p-8 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
-                        <i class="ph-fill ph-text-align-center text-3xl text-gray-300 mb-2"></i>
+                                @endif
+                            @endforeach
+                        </dl>
+                    @else
                         <p class="text-gray-500 text-sm font-medium">Nenhum dado complementar registrado para este candidato.</p>
-                    </div>
-                @endif
+                    @endif
+                </section>
+
             </div>
         </div>
 
@@ -195,7 +189,7 @@
                 <div class="p-6 relative z-10">
                     <div class="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
                         <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2">
-                            <i class="ph-fill ph-calculator text-lg text-yellow-500"></i> Score Rating
+                            <i class="ph-fill ph-calculator text-lg text-yellow-500"></i> Pontuação
                         </h3>
                         <div class="text-center">
                             <span class="bg-gray-900 text-yellow-400 font-extrabold text-xl px-3 py-1 rounded-lg shadow-sm border border-gray-800">
@@ -213,7 +207,7 @@
                             <div class="space-y-3 mb-4">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
                                 @foreach($detalhes['auditoria_detalhada'] as $info)
-                                    <div class="bg-white border border-gray-200 shadow-sm p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors">
+                                    <div class="bg-white border border-white p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors">
                                         <div class="flex-1 pr-3">
                                             <span class="text-[10px] font-bold text-gray-900 uppercase block">{{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}</span>
                                             
@@ -233,7 +227,7 @@
                         
                         @if(isset($detalhes['motivo_auditoria']))
                             <div class="bg-gray-900 rounded-lg p-3 text-[10px] font-mono text-green-400 leading-relaxed border border-gray-800 mt-4 break-words">
-                                <span class="text-gray-500">&gt;_ sys.log:</span><br>
+                                <span class="text-gray-500">&gt; Motivo:</span><br>
                                 {{ $detalhes['motivo_auditoria'] }}
                             </div>
                         @endif

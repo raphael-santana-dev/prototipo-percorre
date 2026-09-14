@@ -151,9 +151,6 @@
                 @endforeach
             </div>
             
-            <div class="p-4 border-t border-gray-200 bg-white text-[10px] text-gray-500 text-center leading-relaxed">
-                As variáveis são substituídas automaticamente no momento do disparo. Use-as tanto no assunto quanto no corpo do e-mail.
-            </div>
         </div>
 
     </div>

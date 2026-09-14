@@ -38,7 +38,7 @@ class UnidadeManager extends Component
 
     public array $cursosSelecionados = [];
     public array $turnosSelecionados = [];
-    public $activeCursoId = null; // MÁGICA: Controla qual curso está focado no Explorer
+    public $activeCursoId = null;
 
     public array $breadcrumbs = [];
 

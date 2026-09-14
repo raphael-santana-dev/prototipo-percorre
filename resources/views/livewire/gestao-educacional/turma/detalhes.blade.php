@@ -3,7 +3,7 @@
     <x-page-header 
         title="{{ $turmaId ? 'Editar Turma' : 'Nova Turma' }}" 
         icon="ph ph-chalkboard"
-        badge="Dossiê Acadêmico">
+        badge="Detalhes Acadêmico">
         
         <x-slot name="actions">
             <a href="{{ route('turmas.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">

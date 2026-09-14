@@ -97,7 +97,7 @@ class ProcessoMatriculaManager extends Component
             ['key' => 'candidato', 'label' => 'Candidato / Curso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Progresso dos Documentos', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'etapa', 'label' => 'Etapa Atual', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'acoes', 'label' => 'Dossiê', 'sortable' => false, 'class' => 'text-right w-24'],
+            ['key' => 'acoes', 'label' => 'Detalhes', 'sortable' => false, 'class' => 'text-right w-24'],
         ];
     }
 

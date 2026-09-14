@@ -1,9 +1,8 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
     <x-page-header 
-        title="Dossiê da Empresa Parceira" 
+        title="Detalhes da Empresa" 
         icon="ph ph-buildings"
-        badge="Integração ERP"
         :breadcrumbs="$breadcrumbs">
 
         <x-slot name="actions">

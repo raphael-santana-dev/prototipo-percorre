@@ -449,7 +449,7 @@
                                     <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Remover</th>
                                     <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidato</th>
                                     <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Interesse</th>
-                                    <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Score Atual</th>
+                                    <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Pontuação Atual</th>
                                     <th class="p-4 font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status Atual</th>
                                 </tr>
                             </thead>
@@ -521,7 +521,7 @@
                             <div>
                                 <label class="block mb-1 text-xs font-bold text-gray-700 uppercase dark:text-gray-400">Base de Referência</label>
                                 <select wire:model="selecaoBase" class="w-full p-2 text-sm font-bold border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                                    <option value="pontuacao">Score / Pontuação</option>
+                                    <option value="pontuacao">Pontuação</option>
                                     <option value="ranking_geral">Ranking Geral</option>
                                     <option value="ranking_turma">Ranking da Turma</option>
                                 </select>

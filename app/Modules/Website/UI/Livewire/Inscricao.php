@@ -685,7 +685,7 @@ class Inscricao extends Component
                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                 } elseif ($tipo === 'multiplicador_percentual') {
                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
+                    $motivo = "Bônus de {$multiplicador}% aplicado sobre a Pontuação Base ({$scoreBase} pts).";
                 }
 
                 if ($pontosGanhos > 0) {

@@ -14,7 +14,7 @@
                     :class="abaAtiva === 'dossies' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'"
                     class="py-3 px-3 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
                 <i class="ph-bold ph-folder text-base"></i>
-                <span>Dossiês de Alunos</span>
+                <span>Detalhes dos Alunos</span>
             </button>
 
             <button type="button" 
@@ -122,7 +122,7 @@
                         </span>
                     </td>
                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
-                        <button wire:click="abrirDossie({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Abrir Dossiê">
+                        <button wire:click="abrirDossie({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Abrir">
                             <i class="text-xl ph-bold ph-folder-open"></i>
                         </button>
                     </td>
@@ -152,7 +152,7 @@
             <i class="ph-fill ph-warning-circle text-2xl mt-0.5"></i>
             <div>
                 <p class="font-bold">Atenção da Secretaria</p>
-                <p>Estes documentos falharam na validação automática da IA ou o robô ficou em dúvida. Clique na pasta para abrir o dossiê do aluno e julgar manualmente.</p>
+                <p>Estes documentos falharam na validação automática da IA ou o robô ficou em dúvida. Clique na pasta para abrir o documento do aluno e analisar manualmente.</p>
             </div>
         </div>
 
@@ -203,7 +203,7 @@
                 <div class="bg-white p-5 border-b border-gray-200 flex justify-between items-center shrink-0">
                     <div>
                         <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
-                            <i class="ph-fill ph-folder-user text-purpura-500"></i> Dossiê de Matrícula
+                            <i class="ph-fill ph-folder-user text-purpura-500"></i> Detalhes da Matrícula
                         </h3>
                         <p class="text-xs text-gray-500 font-medium mt-0.5">{{ $inscricaoSelecionada->nome }} • CPF: {{ $inscricaoSelecionada->cpf }}</p>
                     </div>

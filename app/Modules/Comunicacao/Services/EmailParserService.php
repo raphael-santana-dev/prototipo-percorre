@@ -41,7 +41,6 @@ class EmailParserService
     {
         if (empty($texto)) return '';
 
-        // 1. Limpa caracteres invisíveis (zero-width spaces) que atrapalham a leitura
         $texto = str_replace("\xE2\x80\x8B", "", $texto);
         $texto = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -75,12 +74,10 @@ class EmailParserService
             if ($rua) $enderecoUnidade = "{$rua}, {$num}";
         }
 
-        // Geração das variáveis dinâmicas de nome
         $nomeCompleto = $inscricao ? trim($inscricao->nome) : 'Candidato';
         $partesNome = explode(' ', $nomeCompleto);
         $primeiroNome = $partesNome[0] ?? 'Candidato';
 
-        // ARRAY SEM AS CHAVES: Facilita a busca limpa da regex
         $tags = [
             'nome'             => $nomeCompleto,
             'primeiro_nome'    => $primeiroNome,
@@ -98,17 +95,15 @@ class EmailParserService
             'link_painel'      => $linkPainel,
             'link_login'       => $dadosExtras['link_login'] ?? url('/aluno/login'),
             'senha_provisoria' => $dadosExtras['senha_provisoria'] ?? 'Senha não gerada.',
-            
-            // Retrocompatibilidade para quem ainda usa []
+        
             'nome_candidato'   => $nomeCompleto,
             'cpf_candidato'    => $inscricao ? $inscricao->cpf : '',
             'curso_aprovado'   => ($inscricao && $inscricao->curso) ? $inscricao->curso->nome : 'Sem Curso Vinculado'
         ];
 
-        // 2. REGEX INTELIGENTE: Encontra {{ tag }} ou [ tag ], ignora espaços extras por dentro, e busca direto no array $tags
         return preg_replace_callback('/(?:\{\{|\[)\s*([a-zA-Z0-9_]+)\s*(?:\}\}|\])/u', function($matches) use ($tags) {
             $key = strtolower(trim($matches[1]));
-            return $tags[$key] ?? $matches[0]; // Se a tag não existir na lista, mantém o texto original sem quebrar
+            return $tags[$key] ?? $matches[0];
         }, $texto);
     }
 }

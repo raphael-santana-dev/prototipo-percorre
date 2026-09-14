@@ -1,7 +1,7 @@
 <div class="p-6 max-w-4xl mx-auto font-sans relative">
     
     <x-page-header 
-        title="Protocolo #{{ str_pad($resposta->id, 5, '0', STR_PAD_LEFT) }}" 
+        title="Resposta #{{ str_pad($resposta->id, 5, '0', STR_PAD_LEFT) }}" 
         icon="ph ph-file-text"
         badge="Resposta">
         
@@ -10,13 +10,13 @@
                 <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
             <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 text-white bg-purpura-600 hover:bg-purpura-700 shadow-sm transition rounded-lg font-bold text-sm">
-                <i class="ph-bold ph-printer text-lg"></i> Imprimir Resposta
+                <i class="ph-bold ph-printer text-lg"></i> Imprimir
             </button>
         </x-slot>
     </x-page-header>
 
     <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        <i class="ph-fill ph-clock"></i> Formulário submetido em {{ $resposta->created_at->format('d \d\e F \d\e Y \à\s H:i') }}
+        <i class="ph-fill ph-clock"></i> Formulário respondido em {{ $resposta->created_at->format('d \d\e F \d\e Y \à\s H:i') }}
     </div>
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden print:shadow-none print:border-none">
@@ -28,7 +28,7 @@
             </div>
             <div>
                 <h3 class="text-lg font-extrabold text-indigo-900 dark:text-indigo-300 print:text-black">{{ $formulario->titulo }}</h3>
-                <p class="text-indigo-700 dark:text-indigo-400 text-sm mt-1 print:text-gray-600">Visualização de documento de resposta do usuário.</p>
+                <p class="text-indigo-700 dark:text-indigo-400 text-sm mt-1 print:text-gray-600">Visualização das respostas do usuário.</p>
             </div>
         </div>
 

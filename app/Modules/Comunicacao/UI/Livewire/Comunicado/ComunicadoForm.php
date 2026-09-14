@@ -90,11 +90,16 @@ class ComunicadoForm extends Component
         }
 
         $dataEnvio = $this->tipo_envio === 'agendado' ? \Carbon\Carbon::parse($this->data_agendamento) : now();
+        $inscricaoId = null;
+
+        if (isset($this->inscricao) && !empty($this->inscricao)) {
+            $inscricaoId = $this->inscricao->id;
+        }
 
         // 5. Criação do Registro Principal
         $comunicado = Comunicado::create([
             'template_id' => $this->template_id,
-            'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,
+            'inscricao_id' => $inscricaoId,
             'destinatarios' => $this->destinatarios,
             'cc' => $this->cc,
             'bcc' => $this->bcc,
@@ -108,14 +113,13 @@ class ComunicadoForm extends Component
         foreach ($this->destinatarios as $email) {
             $user = \App\Models\User::where('email', $email)->first();
             $inscricao = \App\Models\Inscricao::where('email', $email)->latest()->first();
-            $contexto = ['user' => $user, 'inscricao' => $inscricao];
 
             \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::create([
                 'comunicado_id' => $comunicado->id,
                 'origem' => 'comunicado',
                 'destinatario' => $email,
-                'assunto' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->assunto, $contexto),
-                'corpo' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->corpo, $contexto),
+                'assunto' => \App\Modules\Comunicacao\Services\EmailParserService::parseTexto($template->assunto, $inscricao, ['user' => $user]),
+                'corpo' => \App\Modules\Comunicacao\Services\EmailParserService::parseTexto($template->corpo, $inscricao, ['user' => $user]),
                 'anexos' => $caminhosAnexos,
                 'data_agendamento' => $dataEnvio,
                 'status' => 'pendente'

@@ -116,6 +116,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/form-builder', FormBuilderHub::class)->name('formbuilder.hub');
     Route::get('/formularios/novo', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.create'); // NOVA ROTA
     Route::get('/formularios/{id}/editar', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.edit'); // NOVA ROTA
+    Route::get('/formularios/{id}/planilha', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class)->name('formularios.planilha');
     
     // --- Comunicação e Automações ---
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');

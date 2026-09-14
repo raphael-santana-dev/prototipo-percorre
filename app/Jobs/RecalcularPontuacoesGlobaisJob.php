@@ -111,7 +111,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                                 } elseif ($tipo === 'multiplicador_percentual') {
                                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
+                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Pontuação ({$scoreBase} pts).";
                                 }
 
                                 if ($pontosGanhos > 0) {
@@ -127,7 +127,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
                         $inscricao->update([
                             'pontuacao_total' => $totalFinal,
-                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Background Job). Score Base: {$scoreBase}. Bônus: {$scoreBonus}. Total: {$totalFinal} pts."]) : null
+                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Background Job). Pontuação Base: {$scoreBase}. Bônus: {$scoreBonus}. Total: {$totalFinal} pts."]) : null
                         ]);
                         
                         $atualizados++;

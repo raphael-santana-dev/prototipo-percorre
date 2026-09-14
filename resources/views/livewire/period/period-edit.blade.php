@@ -405,19 +405,17 @@
             </div>
         </div>
 
-        {{-- ======================================================== --}}
-        {{-- ABA 5: DOCUMENTOS EXIGIDOS PARA MATRÍCULA                 --}}
-        {{-- ======================================================== --}}
         <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-files text-purpura-500"></i> Documentos Exigidos no Portal de Matrícula
+                        <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina quais comprovações serão solicitadas aos candidatos aprovados deste ciclo.
+                        Defina quais documentos serão solicitados aos candidatos aprovados deste ciclo.
                     </p>
                 </div>
+
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                     <button type="button" wire:click="addDocumento" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-plus text-sm"></i> Novo Documento

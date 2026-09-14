@@ -236,9 +236,9 @@
                 <div class="flex items-center gap-2">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <button wire:click="recalcularPontuacoes" 
-                                wire:confirm="Processar scores dos alunos Deste Ciclo?"
+                                wire:confirm="Processar pontuação dos alunos Deste Ciclo?"
                                 class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition">
-                            <i class="ph-bold ph-calculator text-sm"></i> Recalcular Scores
+                            <i class="ph-bold ph-calculator text-sm"></i> Recalcular Pontuação
                         </button>
                         <button wire:click="gerarRanking" 
                                 wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
