@@ -8,13 +8,13 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('solicitacoes', function (Blueprint $table) {
             $table->id();
-            $table->string('tema'); // Ex: 'avaliacao_reabertura', 'avaliacao_aluno_fase'
-            $table->morphs('solicitante'); // Pode ser App\Models\User ou App\Models\Student
-            $table->foreignId('responsavel_id')->nullable()->constrained('users'); // Se houver um avaliador específico
+            $table->string('tema');
+            $table->morphs('solicitante'); 
+            $table->foreignId('responsavel_id')->nullable()->constrained('users'); 
             $table->text('justificativa');
             $table->text('resposta_admin')->nullable();
-            $table->string('status')->default('pendente'); // pendente, aprovada, rejeitada, auto_aprovada
-            $table->json('payload')->nullable(); // Dados extras flexíveis (Ex: IDs das avaliações)
+            $table->string('status')->default('pendente');
+            $table->json('payload')->nullable();  
             $table->timestamps();
             $table->softDeletes();
         });

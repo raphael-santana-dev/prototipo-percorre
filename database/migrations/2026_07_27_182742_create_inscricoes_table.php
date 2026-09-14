@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ciclo_id')->nullable()->constrained('ciclos')->nullOnDelete();
             $table->foreignId('student_id')->nullable()->constrained('students')->nullOnDelete();
-            // Controle de Salvamento Progressivo
             $table->integer('etapa_atual')->default(1);
             
             $table->string('nome')->nullable();
@@ -35,7 +34,6 @@ return new class extends Migration
             $table->string('possui_deficiencia', 5)->nullable();
             $table->string('natureza_deficiencia', 50)->nullable();
 
-            // Controle de Sistema e Termos
             $table->integer('receber_informacoes')->nullable();
             $table->integer('autorizacao_uso_infos')->nullable();
             

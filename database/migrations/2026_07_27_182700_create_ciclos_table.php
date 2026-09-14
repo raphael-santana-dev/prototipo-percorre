@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('ciclos', function (Blueprint $table) {
             $table->id();
-            $table->string('nome'); // Ex: "Processo Seletivo 2026.1"
-            $table->integer('ano'); // Ex: 2026
-            $table->integer('semestre'); // Ex: 1 ou 2
+            $table->string('nome');
+            $table->integer('ano'); 
+            $table->integer('semestre'); 
             $table->dateTime('data_inicio');
             $table->dateTime('data_fim');
             $table->boolean('status')->default(false);

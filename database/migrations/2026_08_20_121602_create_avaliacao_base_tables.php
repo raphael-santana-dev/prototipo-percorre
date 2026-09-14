@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Critérios de Avaliação
         Schema::create('criterios_avaliacao', function (Blueprint $table) {
             $table->id();
             $table->string('codigo', 6)->unique(); 
@@ -18,29 +17,26 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // 2. Períodos de Avaliação (Header)
         Schema::create('periodos_avaliacao', function (Blueprint $table) {
             $table->id();
             $table->string('ano', 4);
             $table->string('ciclo', 1);
             $table->date('data_inicio');
             $table->date('data_fim');
-            $table->char('status', 1)->default('1'); // 1=Aberto, 2=Fechado
-            $table->boolean('trava_fases')->default(false); // Exige sequência
+            $table->char('status', 1)->default('1'); 
+            $table->boolean('trava_fases')->default(false); 
             $table->timestamps();
             $table->softDeletes();
         });
 
-        // 3. Fases do Período
         Schema::create('periodo_fases', function (Blueprint $table) {
             $table->id();
             $table->foreignId('periodo_id')->constrained('periodos_avaliacao')->cascadeOnDelete();
             $table->string('fase', 1);
-            $table->char('responsavel', 1); // 1=Aluno, 2=Professor, 3=Ambos
+            $table->char('responsavel', 1); 
             $table->timestamps();
         });
 
-        // 4. Critérios vinculados ao Período
         Schema::create('periodo_criterios', function (Blueprint $table) {
             $table->id();
             $table->foreignId('periodo_id')->constrained('periodos_avaliacao')->cascadeOnDelete();

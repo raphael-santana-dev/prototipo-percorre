@@ -10,7 +10,7 @@ class EtapaSeeder extends Seeder
     public function run(): void
     {
         Etapa::firstOrCreate(
-            ['numero' => 1], // Condição de busca
+            ['numero' => 1], 
             [
                 'nome' => 'Dados Pessoais',
                 'descricao' => 'Etapa padrão e obrigatória do sistema.',

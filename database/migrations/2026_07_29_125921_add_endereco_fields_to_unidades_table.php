@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('numero')->nullable()->after('logradouro');
             $table->string('complemento')->nullable()->after('numero');
             
-            // Mantemos a coluna original permitindo null para retrocompatibilidade
             $table->string('endereco')->nullable()->change();
         });
     }

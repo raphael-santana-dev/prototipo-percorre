@@ -15,10 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ciclo_id')->constrained('ciclos')->cascadeOnDelete();
             $table->foreignId('status_inscricao_id')->constrained('status_inscricoes')->cascadeOnDelete();
-            $table->integer('ordem')->default(0); // Define a posição da coluna no Kanban
+            $table->integer('ordem')->default(0); 
             $table->timestamps();
 
-            // Evita que o mesmo status seja vinculado duas vezes ao mesmo ciclo
             $table->unique(['ciclo_id', 'status_inscricao_id']);
         });
     }

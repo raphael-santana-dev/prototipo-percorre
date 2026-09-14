@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('inscricoes', function (Blueprint $table) {
-            // Coluna JSON para armazenar todas as respostas dinâmicas
             $table->json('dados_dinamicos')->nullable()->after('status_inscricao');
         });
     }

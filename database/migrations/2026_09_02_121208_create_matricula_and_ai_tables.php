@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Tabela de Configuração das IAs
         Schema::create('configuracoes_ia', function (Blueprint $table) {
             $table->id();
             $table->string('provedor'); 
@@ -18,7 +17,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Tabela de Documentos Exigidos pela Instituição
         Schema::create('documentos_exigidos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ciclo_id')->constrained('ciclos')->cascadeOnDelete();
@@ -28,7 +26,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Tabela do Cofre de Matrícula (Arquivos enviados)
         Schema::create('documentos_matricula', function (Blueprint $table) {
             $table->id();
             $table->foreignId('inscricao_id')->constrained('inscricoes')->cascadeOnDelete();

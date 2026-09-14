@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Torna a coluna slug opcional na tabela cursos
         Schema::table('cursos', function (Blueprint $table) {
             $table->string('slug')->nullable()->change();
         });
 
-        // Torna os horários opcionais na tabela turnos
         Schema::table('turnos', function (Blueprint $table) {
             $table->time('horario_inicio')->nullable()->change();
             $table->time('horario_fim')->nullable()->change();

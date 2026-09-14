@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('unidade_id')
                 ->nullable()
                 ->after('is_active')
-                ->constrained('unidades') // ajuste o nome da tabela referenciada se for diferente
+                ->constrained('unidades')
                 ->nullOnDelete();
         });
     }
