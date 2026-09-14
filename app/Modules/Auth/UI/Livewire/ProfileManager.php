@@ -12,11 +12,9 @@ use Illuminate\Validation\Rule;
 #[Title('Meu Perfil - Instituto Percorre')]
 class ProfileManager extends Component
 {
-    // Dados Pessoais
     public string $name = '';
     public string $email = '';
 
-    // Segurança
     public string $current_password = '';
     public string $new_password = '';
     public string $new_password_confirmation = '';
@@ -42,7 +40,6 @@ class ProfileManager extends Component
             'email' => strtolower($this->email),
         ]);
 
-        // Dispara um evento para o navegador atualizar o nome na Navbar instantaneamente (sem F5)
         $this->dispatch('profile-updated');
         $this->dispatch('sucesso', msg: 'Seus dados foram atualizados com sucesso!');
 

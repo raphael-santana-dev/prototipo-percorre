@@ -31,7 +31,6 @@ class ProcessarDisparoAutomacaoJob implements ShouldQueue
         $template = $this->automacao->template;
         if (!$template || empty($this->inscricao->email)) return;
 
-        // AGORA SIM: Usando o parser inteligente também no assunto!
         $corpoParseado = EmailParserService::parseTexto($template->corpo, $this->inscricao);
         $assuntoParseado = EmailParserService::parseTexto($template->assunto, $this->inscricao);
 

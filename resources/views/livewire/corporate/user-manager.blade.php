@@ -115,7 +115,6 @@
         </x-slot>
     </x-table>
 
-    <!-- Modal Multi-tenancy -->
     @if($showModal)
         <div class="fixed inset-0 z-[100] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
@@ -128,7 +127,6 @@
                     
                     <form wire:submit="save" class="space-y-6">
                         
-                        <!-- Dados Pessoais -->
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">Nome Completo</label>
@@ -157,7 +155,6 @@
                             </div>
                         </div>
 
-                        <!-- Vínculos Operacionais (Multi-Tenancy Grid) -->
                         <div class="pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
                             <h4 class="flex items-center gap-2 mb-2 text-sm font-bold tracking-wider text-gray-500 uppercase">
                                 <i class="text-ponkan-500 ph ph-git-merge"></i> Escopo de Acesso (Vínculos)
@@ -171,7 +168,6 @@
 
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 
-                                <!-- Unidades -->
                                 <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/50">
                                     <label class="block mb-2 text-xs font-bold text-gray-800 uppercase border-b border-gray-200 pb-2">
                                         <i class="ph ph-buildings text-purpura-500"></i> Unidades
@@ -186,7 +182,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Cursos -->
                                 <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/50">
                                     <label class="block mb-2 text-xs font-bold text-gray-800 uppercase border-b border-gray-200 pb-2">
                                         <i class="ph ph-graduation-cap text-purpura-500"></i> Cursos
@@ -203,7 +198,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Turnos -->
                                 <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/50">
                                     <label class="block mb-2 text-xs font-bold text-gray-800 uppercase border-b border-gray-200 pb-2">
                                         <i class="ph ph-clock text-purpura-500"></i> Turnos

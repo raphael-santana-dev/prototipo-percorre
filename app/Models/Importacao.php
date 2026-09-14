@@ -15,13 +15,11 @@ class Importacao extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relacionamento de quem disparou a ação
     public function user()
     {
         return $this->belongsTo(User::class);
     }
     
-    // Calcula automaticamente a porcentagem (0 a 100) para a barra de progresso do Frontend
     public function getProgressoAttribute()
     {
         if ($this->total_linhas === 0 && in_array($this->status, ['concluido', 'erro'])) return 100;
@@ -29,7 +27,6 @@ class Importacao extends Model
         return min(100, round(($this->linhas_processadas / $this->total_linhas) * 100));
     }
 
-    // Devolve o visual do Status (Cor, Ícone, Label)
     public function getStatusVisualAttribute()
     {
         return match($this->status) {
@@ -43,7 +40,6 @@ class Importacao extends Model
         };
     }
 
-    // Devolve o ícone correto baseado no formato do arquivo
     public function getFormatoIconeAttribute()
     {
         return match(strtolower($this->formato)) {

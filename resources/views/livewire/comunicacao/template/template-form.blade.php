@@ -1,10 +1,8 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans relative">
     
-    <!-- Quill.js CDN (CSS e JS) -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
-    <!-- Ajustes visuais para o Quill encaixar no nosso layout Tailwind -->
     <style>
         .ql-toolbar.ql-snow {
             border-top-left-radius: 0.5rem;
@@ -46,7 +44,6 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        <!-- COLUNA DA ESQUERDA: O FORMULÁRIO E O QUILL -->
         <div class="lg:col-span-8 space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <form wire:submit.prevent="salvar" class="space-y-6">
@@ -65,11 +62,9 @@
                         </div>
                     </div>
 
-                    <!-- CORPO DO E-MAIL (QUILL.JS) -->
                     <div class="w-full">
                         <label class="block text-sm font-bold text-gray-800 mb-1">Corpo da Mensagem <span class="text-red-500">*</span></label>
                         
-                        {{-- O wire:ignore impede o Livewire de apagar o editor, e o x-data sincroniza a variável do backend ($wire.corpo) --}}
                         <div class="mt-2 bg-white rounded-md shadow-sm border border-gray-300" wire:ignore x-data="{
                             conteudo: @entangle('corpo'),
                             init() {
@@ -97,7 +92,6 @@
                                 });
                             }
                         }">
-                            {{-- A div real onde o Quill se instala --}}
                             <div x-ref="quillEditor" class="min-h-[350px] border-0 rounded-b-md text-base"></div>
                         </div>
                         @error('corpo') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
@@ -115,7 +109,6 @@
             </div>
         </div>
 
-        <!-- COLUNA DA DIREITA: DICIONÁRIO DE VARIÁVEIS -->
         <div class="lg:col-span-4 bg-gray-50 rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden">
             <div class="p-5 border-b border-gray-200 bg-white flex items-center gap-3">
                 <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">

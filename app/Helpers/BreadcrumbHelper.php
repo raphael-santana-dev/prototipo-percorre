@@ -12,7 +12,7 @@ class BreadcrumbHelper
      */
     public static function generate($tituloPersonalizado = null)
     {
-        $routeName = Route::currentRouteName(); // Ex: ciclos.show
+        $routeName = Route::currentRouteName();
         if (!$routeName) return [];
 
         $segments = explode('.', $routeName); 
@@ -22,12 +22,9 @@ class BreadcrumbHelper
         foreach ($segments as $index => $segment) {
             $isLast = ($index === $total - 1);
             
-            // 1. Define o Rótulo (Label)
             if ($isLast && $tituloPersonalizado) {
-                // Se for a última etapa e você passou um nome, usa ele!
                 $label = $tituloPersonalizado;
             } else {
-                // Se não, traduz os termos técnicos do Laravel para português
                 $label = match($segment) {
                     'index' => 'Listagem',
                     'show' => 'Detalhes',
@@ -37,10 +34,8 @@ class BreadcrumbHelper
                 };
             }
 
-            // 2. Define a URL de forma segura
-            $url = '#'; // Para a aba ativa (última), não precisamos de link
+            $url = '#'; 
             if (!$isLast) {
-                // Tenta achar a rota de listagem oficial daquele módulo (Ex: ciclos.index)
                 if (Route::has($segment . '.index')) {
                     $url = route($segment . '.index');
                 } else {

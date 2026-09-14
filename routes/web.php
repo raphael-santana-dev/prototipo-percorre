@@ -110,13 +110,18 @@ Route::middleware('auth')->group(function () {
     
     // --- Formulários Dinâmicos ---
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
+    
+    // ATENÇÃO: As rotas com caminhos fixos devem vir ANTES das rotas com {slug?}
+    Route::get('/formularios/novo', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.create');
+    Route::get('/formularios/{id}/editar', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.edit');
+    Route::get('/formularios/{id}/planilha', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class)->name('formularios.planilha');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');
+    
+    // A Rota "show" genérica deve ser a última da lista
     Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show')->where('id', '[0-9]+');
+    
     Route::get('/construtor/{tipo}/{id}/{slug?}', DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
     Route::get('/form-builder', FormBuilderHub::class)->name('formbuilder.hub');
-    Route::get('/formularios/novo', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.create'); // NOVA ROTA
-    Route::get('/formularios/{id}/editar', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.edit'); // NOVA ROTA
-    Route::get('/formularios/{id}/planilha', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class)->name('formularios.planilha');
     
     // --- Comunicação e Automações ---
     Route::get('/templates', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class)->name('templates.index');

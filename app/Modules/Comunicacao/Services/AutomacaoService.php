@@ -32,10 +32,9 @@ class AutomacaoService
         foreach ($automacoes as $automacao) {
             $contextoEnvio = $dadosExtras;
 
-            // MÁGICA: Se a automação manda criar o aluno, cria no banco antes de mandar o e-mail!
             if ($automacao->tipo_acao === 'criar_aluno_enviar_email' && $inscricao) {
                 if (!$inscricao->student_id) {
-                    $senhaPlana = Str::random(8); // Gera senha provisória
+                    $senhaPlana = Str::random(8); 
 
                     $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
                         ['email' => $inscricao->email],
@@ -48,10 +47,8 @@ class AutomacaoService
                         ]
                     );
 
-                    // Vincula o acesso à inscrição
                     $inscricao->update(['student_id' => $estudante->id]);
 
-                    // Passa a senha para o e-mail
                     $contextoEnvio['senha_provisoria'] = $senhaPlana;
                     $contextoEnvio['link_login'] = url('/aluno/login');
                 } else {

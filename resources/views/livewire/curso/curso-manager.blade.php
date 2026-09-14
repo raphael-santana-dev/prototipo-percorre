@@ -38,7 +38,6 @@
                             {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
                         </div>
                     @else
-                        {{-- Se a feature estiver desligada OU ele não tiver permissão, vê apenas o emblema --}}
                         <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $curso->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
                             {{ $curso->status ? 'ATIVO' : 'INATIVO' }}
                         </span>
@@ -129,7 +128,6 @@
         
     </x-table>
 
-    <!-- Modal Integrado -->
     @if($showModal)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -158,7 +156,6 @@
                             </div>
                         </div>
 
-                        <!-- Relacionamentos: Unidades e Turnos (macOS Explorer Style) -->
                             <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
                                 <div class="mb-3">
                                     <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
@@ -168,7 +165,6 @@
                                 </div>
                                 
                                 <div class="flex flex-col md:flex-row h-[320px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                                    {{-- COLUNA 1: UNIDADES --}}
                                     <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                                             1. Unidades Vinculadas
@@ -187,7 +183,6 @@
                                         </div>
                                     </div>
 
-                                    {{-- COLUNA 2: TURNOS --}}
                                     <div class="flex-1 flex flex-col bg-gray-50/50 dark:bg-gray-900/80">
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                                             2. Turnos Habilitados
@@ -208,7 +203,6 @@
                                 </div>
                             </div>
 
-                        <!-- Configurações Adicionais -->
                         <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
                             <div class="flex items-start">
                                 <div class="flex items-center h-5">

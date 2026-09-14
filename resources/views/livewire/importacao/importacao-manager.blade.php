@@ -208,7 +208,6 @@
         </x-table>
     </div>
 
-    <!-- MODAL 1: NOVO UPLOAD -->
     @if($modalUploadAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -308,7 +307,6 @@
         </div>
     @endif
 
-    <!-- MODAL 2: AUTO-MAPEAMENTO -->
     @if($modalMapeamentoAberto)
         <div class="fixed inset-0 z-[60] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -379,7 +377,6 @@
         </div>
     @endif
 
-    <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
     @if($modalDetalhesAberto && $importacaoDetalhes)
         <div class="fixed inset-0 z-[70] overflow-y-auto" x-data="{ fullscreen: false, tab: 'logs' }">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -502,7 +499,6 @@
         </div>
     @endif
 
-    <!-- MODAL 4: ESCOLHA DE REPROCESSAMENTO -->
     @if($modalReprocessarAberto)
         <div class="fixed inset-0 z-[80] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -516,7 +512,6 @@
                     
                     <p class="text-sm text-gray-600 mb-4 font-medium">O arquivo original e o seu mapeamento de colunas estão salvos. Como você deseja executar o reprocessamento?</p>
                     
-                    <!-- CHECKBOX: Refazer Mapeamento -->
                     <div class="mb-4 p-3 bg-purpura-50/50 border border-purpura-100 rounded-lg">
                         <label class="flex items-start gap-3 cursor-pointer group">
                             <div class="flex items-center h-5 mt-0.5">
@@ -559,7 +554,6 @@
         </div>
     @endif
 
-    <!-- MODAL 5: MONITORAMENTO EM TEMPO REAL -->
     @if($modalMonitoramentoAberto)
         <div class="fixed inset-0 z-[90] overflow-y-auto" wire:poll.1s="monitorarProgresso">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -635,7 +629,6 @@
 
                     <div class="mt-6 border-t border-gray-100 pt-4" x-data="{ showCancelOptions: false }">
                         
-                        <!-- BOTÕES PADRÃO -->
                         <div x-show="!showCancelOptions" class="flex justify-between items-center w-full">
                             <button wire:click="fecharMonitoramento" class="text-xs font-bold text-gray-500 hover:text-gray-800 transition underline decoration-dashed underline-offset-4">
                                 Ocultar e processar em 2º plano
@@ -645,7 +638,6 @@
                             </button>
                         </div>
 
-                        <!-- MENU DE CANCELAMENTO EXPANDIDO -->
                         <div x-show="showCancelOptions" x-cloak class="flex flex-col items-center bg-red-50 p-4 rounded-xl border border-red-100 w-full animate-fade-in-up">
                             <span class="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
                                 <i class="ph-fill ph-warning-circle text-lg"></i> Interromper o processo?

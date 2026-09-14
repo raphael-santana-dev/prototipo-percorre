@@ -29,7 +29,6 @@ class ComunicadoMail extends Mailable
         return new Envelope(subject: $this->assunto);
     }
 
-    // O Laravel permite injetarmos HTML bruto diretamente aqui
     public function content(): Content
     {
         return new Content(htmlString: $this->corpoHtml);

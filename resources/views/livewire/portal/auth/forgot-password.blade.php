@@ -1,7 +1,6 @@
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
         
-        <!-- Logo -->
         <div class="flex justify-start">
             <div class="p-3 bg-[#461a63] rounded-xl flex items-center justify-center">
                 <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">

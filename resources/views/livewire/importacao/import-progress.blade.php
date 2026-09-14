@@ -1,15 +1,12 @@
-{{-- O poll.3s faz o componente se atualizar sozinho a cada 3 segundos --}}
 <div wire:poll.3s class="relative flex items-center">
     
     @if($totalAtivas > 0)
-        <!-- MODO ATIVO: Processos rodando na Fila -->
         <a href="{{ route('importacoes.index') }}" class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full hover:bg-blue-100 transition-colors group">
             <i class="ph ph-arrows-clockwise text-blue-600 animate-spin text-lg"></i>
             <span class="text-xs font-bold text-blue-700 hidden sm:inline-block">
                 {{ $totalAtivas }} processo(s)
             </span>
             
-            <!-- TOOLTIP DE PREVIEW (Aparece no Hover) -->
             <div class="hidden group-hover:block absolute top-full right-0 mt-3 w-64 bg-white border border-gray-200 shadow-xl rounded-xl p-4 z-50">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Em andamento na Nuvem</p>
                 
@@ -33,7 +30,6 @@
             </div>
         </a>
     @else
-        <!-- MODO OCIOSO: Apenas o ícone para acesso rápido -->
         <a href="{{ route('importacoes.index') }}" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 transition-colors rounded-full" title="Gerenciador de Integrações">
             <i class="ph ph-arrows-left-right text-xl"></i>
         </a>

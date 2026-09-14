@@ -46,7 +46,6 @@
             </div>
         </x-slot>
 
-        <!-- Slot Inferior (Grid de Metadados Principais) -->
         <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nascimento (Idade)</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">
@@ -181,7 +180,6 @@
             </div>
         </div>
 
-        <!-- COLUNA DIREITA: Auditoria de Pontuação -->
         <div class="lg:col-span-1 space-y-6">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-400 rounded-bl-full -z-0 opacity-10"></div>

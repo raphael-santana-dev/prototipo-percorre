@@ -23,7 +23,6 @@
             @endif
         </x-slot>
 
-        <!-- Slot Inferior (Grid de Metadados) -->
         <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Unidade Local</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">{{ $student->unidade?->nome ?? 'Não alocado' }}</span>

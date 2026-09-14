@@ -30,7 +30,7 @@ class SolicitacoesManager extends Component
     {
         $this->reset(['textoResposta']);
         $this->solicitacaoAtiva = Solicitacao::findOrFail($id);
-        $this->acaoResposta = $acao; // 'aprovar' ou 'rejeitar'
+        $this->acaoResposta = $acao; 
         $this->modalResposta = true;
     }
 
@@ -46,24 +46,20 @@ class SolicitacoesManager extends Component
             'responsavel_id' => auth()->id()
         ]);
 
-        // MÁGICA: Se foi APROVADA, executa a ação baseada no TEMA!
         if ($statusFinal === 'aprovada') {
             $payload = $this->solicitacaoAtiva->payload;
 
             if ($this->solicitacaoAtiva->tema === 'cadastro_nova_inscricao') {
                 $inscricao = \App\Models\Inscricao::create($payload);
                 
-                // Dispara o template de automação cadastrado pelo Administrador no Painel
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
             }
 
             if ($this->solicitacaoAtiva->tema === 'avaliacao_aluno_fase') {
-                // Desbloqueia a fase específica do aluno
                 AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])->update(['status' => '1', 'data_resposta' => null]);
             }
             
             if ($this->solicitacaoAtiva->tema === 'avaliacao_prof_total') {
-                // Desbloqueia as fases do professor/ambos para aquela matrícula
                 AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])->update(['status' => '1', 'data_resposta' => null]);
             }
         }
@@ -80,10 +76,9 @@ class SolicitacoesManager extends Component
             $query->where('status', $this->filtroStatus);
         }
 
-        // Professores só veem solicitações direcionadas a eles (ex: de alunos)
         if (auth()->user()->hasRole('professor') && !auth()->user()->hasRole('dev|admin')) {
             $query->where('responsavel_id', auth()->id())
-                  ->orWhereNull('responsavel_id'); // Ou que estejam livres na fila geral (depende da sua regra de negócio)
+                  ->orWhereNull('responsavel_id'); 
         }
 
         return view('livewire.admin.solicitacoes-manager', [

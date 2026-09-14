@@ -15,7 +15,7 @@ class GerarRankingGlobalJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 3600; // Limite de 1 hora
+    public $timeout = 3600;
     protected $trackingId;
 
     public function __construct($trackingId)
@@ -41,7 +41,6 @@ class GerarRankingGlobalJob implements ShouldQueue
 
         try {
             foreach ($ciclos as $ciclo) {
-                // 1. Limpa os rankings antigos deste ciclo (via query única direta no DB)
                 Inscricao::where('ciclo_id', $ciclo->id)->update([
                     'posicao_ranking' => null, 
                     'posicao_ranking_geral' => null,
@@ -49,25 +48,21 @@ class GerarRankingGlobalJob implements ShouldQueue
                     'posicao_ranking_curso' => null,
                 ]);
 
-                // 2. Carrega todos ordenados pela maior nota
                 $inscricoes = $ciclo->inscricoes()
                     ->orderBy('pontuacao_total', 'desc')
                     ->orderBy('created_at', 'asc')
                     ->get();
 
-                // RANKING 1: GERAL
                 foreach ($inscricoes as $index => $inscricao) {
                     $inscricao->posicao_ranking_geral = $index + 1;
                 }
 
-                // RANKING 2: POR UNIDADE
                 $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
                 foreach ($agrupadoUnidade as $grupo) {
                     $pos = 1;
                     foreach ($grupo as $inscricao) { $inscricao->posicao_ranking_unidade = $pos++; }
                 }
 
-                // RANKING 3: POR CURSO (Unidade + Curso)
                 $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) {
                     return $item->unidade_id . '-' . $item->curso_id;
                 });
@@ -76,7 +71,6 @@ class GerarRankingGlobalJob implements ShouldQueue
                     foreach ($grupo as $inscricao) { $inscricao->posicao_ranking_curso = $pos++; }
                 }
 
-                // RANKING 4: POR TURMA (Unidade + Curso + Turno)
                 $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) {
                     return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
                 });
@@ -85,9 +79,8 @@ class GerarRankingGlobalJob implements ShouldQueue
                     foreach ($grupo as $inscricao) { $inscricao->posicao_ranking = $pos++; }
                 }
 
-                // 3. Salva no banco de forma otimizada
                 foreach ($inscricoes as $inscricao) {
-                    $inscricao->saveQuietly(); // Impede gatilhos desnecessários no banco
+                    $inscricao->saveQuietly(); 
                     $processados++;
                     
                     if ($processados % 100 === 0 && $tracking) {

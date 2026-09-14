@@ -6,11 +6,9 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
         
-        {{-- ÁREA DOS FILTROS (Com injeção dinâmica de Hora via Alpine.js) --}}
         <x-slot name="filters">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                 
-                <!-- Buscar Keyword -->
                 <div class="md:col-span-4">
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                         <i class="ph ph-text-aa text-purpura-500"></i> Buscar
@@ -18,7 +16,6 @@
                     <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Usuário, IP ou ID do Registro..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
 
-                <!-- Seletor de Ação -->
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                         <i class="ph ph-tag text-purpura-500"></i> Ação
@@ -31,7 +28,6 @@
                     </select>
                 </div>
 
-                <!-- Seletor de Tabela -->
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                         <i class="ph ph-database text-purpura-500"></i> Tabela
@@ -44,7 +40,6 @@
                     </select>
                 </div>
 
-                <!-- Data de Início (De) com Alpine.js -->
                 <div class="md:col-span-2" x-data="{
                     initZero(e) {
                         if (!e.target.value) {
@@ -66,7 +61,6 @@
                            class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
 
-                <!-- Data Fim (Até) com Alpine.js -->
                 <div class="md:col-span-2" x-data="{
                     initEnd(e) {
                         if (!e.target.value) {
@@ -101,7 +95,6 @@
 
     </x-page-header>
 
-    {{-- Explicação de Contexto --}}
     <div class="mb-6 -mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
         Rastreabilidade completa de alterações no banco de dados e acessos.
     </div>

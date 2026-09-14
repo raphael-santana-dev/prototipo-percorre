@@ -32,7 +32,6 @@
             @endif
         </x-slot>
 
-        {{-- FILTROS: O header renderiza a caixa branca, você só passa o Grid interno --}}
         <x-slot name="filters" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
                 <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
@@ -116,7 +115,6 @@
         </x-slot>
     </x-page-header>
 
-    {{-- BOTÕES DE SELEÇÃO RÁPIDA E BARRA DE LOTE --}}
     @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
         <div class="flex items-center justify-end gap-2 mb-4">
             <span class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">Selecionar rápido:</span>
@@ -162,7 +160,6 @@
         @endif
     @endif
 
-    {{-- TABELA DE DADOS --}}
     <x-table
         :headers="$this->headers"
         :registros="$registros"
@@ -171,7 +168,6 @@
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
 
-        {{-- SLOT PADRÃO (LISTA MINIMALISTA) --}}
         @forelse($registros as $inscricao)
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                 
@@ -213,14 +209,12 @@
                     @endif
                 </td>
 
-                {{-- 1. SCORE --}}
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     <span class="px-2 py-1 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-700' }} rounded-full inline-block">
                         {{ $inscricao->pontuacao_total ?? 0 }} pts
                     </span>
                 </td>
                 
-                {{-- 2. RANKING GERAL --}}
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->posicao_ranking_geral)
                         <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-[11px] font-bold">
@@ -231,7 +225,6 @@
                     @endif
                 </td>
 
-                {{-- 3. RANKING UNIDADE --}}
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->posicao_ranking_unidade)
                         <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 text-[11px] font-bold">
@@ -242,7 +235,6 @@
                     @endif
                 </td>
 
-                {{-- 4. RANKING CURSO --}}
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->posicao_ranking_curso)
                         <span class="bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 text-[11px] font-bold">
@@ -253,7 +245,6 @@
                     @endif
                 </td>
                 
-                {{-- 5. RANKING TURMA --}}
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->posicao_ranking)
                         @php
@@ -280,7 +271,6 @@
                     </span>
                 </td>
                 
-                {{-- AÇÕES CORRIGIDAS (Com div flex e whitespace-nowrap) --}}
                 <td class="px-4 py-2.5 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
@@ -317,12 +307,10 @@
             </tr>   
         @endforelse
 
-        {{-- SLOT DO GRID (CARDS MINIMALISTAS) --}}
         <x-slot name="gridSlot">
             @foreach($registros as $inscricao)
                 <div wire:key="card-inscricao-{{ $inscricao->id }}" class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
                     
-                    <!-- Topo do Card (Status + Ações) -->
                     <div class="flex items-center justify-between mb-4">
                         @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
                         <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1.5" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
@@ -354,7 +342,6 @@
                         </div>
                     </div>
 
-                    <!-- Meio do Card (Avatar/Icone e Nome) -->
                     <div class="flex items-center gap-3 mb-4">
                         <div class="flex items-center justify-center w-10 h-10 text-xl text-gray-400 bg-gray-50 rounded-full dark:bg-gray-700 dark:text-gray-300 shrink-0">
                             <i class="ph ph-user"></i>
@@ -367,7 +354,6 @@
 
                     <div class="border-t border-gray-50 dark:border-gray-700/50 border-dashed my-2"></div>
 
-                    <!-- Rodapé do Card (Info extra) -->
                     <div class="flex items-center justify-between mt-2">
                         <div class="flex items-center gap-1.5 text-[10px]">
                             <i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> Via {{ ucfirst($inscricao->origem) }} • 
@@ -406,11 +392,9 @@
 
     </x-table>
 
-    {{-- MODAL DE ALTERAÇÃO EM LOTE FULL-SCREEN --}}
     @if($modalLoteAberto)
         <div class="fixed inset-0 z-[100] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
             
-            <!-- HEADER DO MODAL -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
                 <div class="flex items-center gap-4 w-full md:w-auto">
                     <button wire:click="$set('modalLoteAberto', false)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg transition" title="Fechar e Cancelar">
@@ -424,7 +408,6 @@
                     </div>
                 </div>
                 
-                <!-- BOTÕES DE AÇÃO (STATUS) SIMPLIFICADO -->
                 <div class="flex items-center gap-3 w-full md:w-auto bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                     <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase hidden lg:block ml-2">Mover para:</span>
                     <select wire:model="novoStatusId" class="w-full md:w-56 text-sm font-bold border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md py-2 focus:ring-purpura-500 shadow-sm">
@@ -439,7 +422,6 @@
                 </div>
             </div>
             
-            <!-- CORPO DO MODAL: TABELA -->
             <div class="flex-1 overflow-auto p-4 md:p-6 custom-scrollbar">
                 <div class="max-w-7xl mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
@@ -490,7 +472,6 @@
         </div>
     @endif
 
-    {{-- MODAL DE SELEÇÃO AVANÇADA --}}
     @if($modalSelecaoAvancadaAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-md">
             <div class="flex flex-col w-full max-w-2xl overflow-hidden bg-white shadow-2xl dark:bg-gray-800 rounded-xl">
@@ -607,7 +588,6 @@
         </x-modal>
     @endif
 
-    {{-- MODAL ANTI-SPAM (INTERCEPTAÇÃO DE DUPLICIDADE) --}}
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -633,7 +613,6 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach($conflitosAntiSpam as $conflito)
-                                    {{-- CORREÇÃO: wire:key adicionado na <tr> --}}
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
                                         <td class="px-4 py-3">
                                             <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>

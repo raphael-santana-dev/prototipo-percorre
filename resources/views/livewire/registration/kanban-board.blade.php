@@ -9,14 +9,12 @@
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-    <!-- HEADER DO FLUXO E FILTROS -->
     <div class="mb-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo de Inscrição: {{ $ciclo->nome ?? 'Nenhum Ciclo Ativo' }}
             </h2>
 
-            <!-- BARRA AÇÃO EM LOTE -->
             @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
                 <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak class="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
                     <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
@@ -65,10 +63,8 @@
         </div>
     </div>
 
-    <!-- AREA PRINCIPAL: KANBAN + RESUMO LATERAL (Contornos) -->
     <div class="flex-1 flex gap-4 overflow-hidden">
         
-        <!-- KANBAN -->
         <div class="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar pb-4"
              x-data="{
                  initSortable() {
@@ -92,7 +88,6 @@
             <div class="flex h-full gap-4 items-start w-max px-1">
                 @if($ciclo)
                     @foreach($colunas as $coluna)
-                        <!-- COLUNA -->
                         <div class="w-80 flex flex-col max-h-full bg-gray-100/50 border border-gray-200 rounded-xl overflow-hidden shrink-0">
                             
                             <div class="p-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center shrink-0">
@@ -102,7 +97,6 @@
                                 </span>
                             </div>
 
-                            <!-- DROPZONE (COM EVENTO DE SCROLL INFINITO) -->
                             <div class="p-3 flex-1 overflow-y-auto custom-scrollbar kanban-coluna space-y-3 min-h-[150px]" 
                                  data-status="{{ $coluna->id }}"
                                  x-on:scroll.debounce.150ms="if ($el.scrollTop + $el.clientHeight >= $el.scrollHeight - 60) { $wire.carregarMais({{ $coluna->id }}) }">
@@ -110,7 +104,6 @@
                                 @if(isset($inscricoesGrupadas[$coluna->id]))
                                     @foreach($inscricoesGrupadas[$coluna->id] as $inscricao)
                                         
-                                        <!-- CARD DO ALUNO (COM WIRE:KEY OBRIGATÓRIO) -->
                                         <div wire:key="card-{{ $inscricao->id }}" class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-purpura-400 hover:shadow-md transition group relative" data-id="{{ $inscricao->id }}">
                                             <div class="flex justify-between items-start mb-2">
                                                 <div class="flex items-center gap-2">
@@ -139,7 +132,6 @@
                                     @endforeach
                                 @endif
 
-                                <!-- SPINNER DO LAZY LOAD -->
                                 @if(isset($resumo[$coluna->id]) && $resumo[$coluna->id]['total'] > count($inscricoesGrupadas[$coluna->id] ?? []))
                                     <div class="py-3 flex flex-col items-center justify-center text-purpura-400 opacity-60">
                                         <i class="ph-bold ph-spinner animate-spin text-xl mb-1"></i>
@@ -157,7 +149,6 @@
             </div>
         </div>
 
-        <!-- RESUMO LATERAL OUTLINE -->
         @if($ciclo)
             <div class="w-56 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
                 
@@ -179,7 +170,6 @@
 
     </div>
 
-    {{-- MODAL ANTI-SPAM (INTERCEPTAÇÃO DE DUPLICIDADE) --}}
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -205,7 +195,6 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach($conflitosAntiSpam as $conflito)
-                                    {{-- CORREÇÃO: wire:key adicionado na <tr> --}}
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
                                         <td class="px-4 py-3">
                                             <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>

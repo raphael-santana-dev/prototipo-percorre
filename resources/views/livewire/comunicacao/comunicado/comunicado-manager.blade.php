@@ -52,7 +52,6 @@
 
     </x-page-header>
 
-    {{-- O Poller atualiza a tela para vermos se um "Pendente" virou "Concluído" --}}
     <div wire:poll.10s>
         <x-table 
             :headers="$this->headers" 

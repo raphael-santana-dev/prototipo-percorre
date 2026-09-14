@@ -10,7 +10,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Acesso ao Sistema' }}</title>
 
-    <!-- Script Bloqueante (FOUC) Consolidado -->
     <script>
         if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -20,14 +19,12 @@
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="h-full flex items-center justify-center transition-colors duration-500 bg-slate-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased">
     
     {{ $slot }}
 
-    <!-- Componente Global embutido por segurança -->
     <livewire:components.quick-view-drawer />
     @livewireScripts
 </body>

@@ -14,7 +14,6 @@
             </x-slot>
         @endif
 
-        {{-- FILTROS INTEGRADOS AO HEADER --}}
         <x-slot name="filters" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
                 <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
@@ -85,7 +84,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO DE GRID (CARDS) --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $permission )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -111,7 +109,6 @@
         </x-slot>
     </x-table>
 
-    <!-- Modal Multi-Insert / Edit -->
     @if($modalAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">

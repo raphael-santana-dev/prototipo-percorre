@@ -36,7 +36,6 @@ class AvancarStatusNoFunilJob implements ShouldQueue
 
         foreach ($inscricoes as $inscricao) {
             
-            // 1. Descobrir a ordem atual do candidato no ciclo
             $pivotAtual = DB::table('ciclo_status_inscricao')
                 ->where('ciclo_id', $inscricao->ciclo_id)
                 ->where('status_inscricao_id', $inscricao->status_inscricao_id)
@@ -44,7 +43,6 @@ class AvancarStatusNoFunilJob implements ShouldQueue
 
             $ordemAtual = $pivotAtual ? $pivotAtual->ordem : -1;
 
-            // 2. Descobrir o PRÓXIMO status baseado na ordem
             $proximoPivot = DB::table('ciclo_status_inscricao')
                 ->where('ciclo_id', $inscricao->ciclo_id)
                 ->where('ordem', '>', $ordemAtual)
@@ -55,11 +53,8 @@ class AvancarStatusNoFunilJob implements ShouldQueue
                 $statusNovo = StatusInscricao::find($proximoPivot->status_inscricao_id);
 
                 if ($statusNovo) {
-                    // Atualiza o banco
                     $inscricao->status_inscricao_id = $statusNovo->id;
                     $inscricao->save();
-
-                    // Delega para o Motor Central
                     $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
                     \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
                 }

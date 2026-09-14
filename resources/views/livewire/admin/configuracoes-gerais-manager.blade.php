@@ -9,17 +9,14 @@
     </x-page-header>
 
     <div class="flex flex-col md:flex-row gap-6 mt-6">
-        <!-- Lado Esquerdo: Menu de Temas -->
         <div class="w-full md:w-1/4 shrink-0">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1">
                 <button @click="abaLateral = 'gestao_educacional'" :class="abaLateral === 'gestao_educacional' ? 'bg-purpura-50 text-purpura-700 border-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400' : 'border-transparent text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-lg border transition text-left">
                     <i class="ph-fill ph-graduation-cap text-lg"></i> Gestão Educacional
                 </button>
-                <!-- Mais temas podem ser adicionados aqui futuramente -->
             </div>
         </div>
 
-        <!-- Lado Direito: Opções do Tema -->
         <div class="w-full md:w-3/4">
             <div x-show="abaLateral === 'gestao_educacional'" x-cloak class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
                 
@@ -31,7 +28,6 @@
                 </div>
 
                 <div class="space-y-4">
-                    <!-- Config 1: Visibilidade -->
                     <label class="flex items-start gap-4 p-4 border rounded-xl cursor-pointer transition {{ $ocultar_fases_restritas ? 'border-purpura-400 bg-purpura-50/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100' }}">
                         <div class="pt-0.5">
                             <input type="checkbox" wire:model="ocultar_fases_restritas" class="w-5 h-5 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300 shadow-sm">
@@ -42,7 +38,6 @@
                         </div>
                     </label>
 
-                    <!-- Config 2: Edição da fase Ambos -->
                     <label class="flex items-start gap-4 p-4 border rounded-xl cursor-pointer transition {{ $permitir_aluno_responder_ambos ? 'border-purpura-400 bg-purpura-50/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100' }}">
                         <div class="pt-0.5">
                             <input type="checkbox" wire:model="permitir_aluno_responder_ambos" class="w-5 h-5 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300 shadow-sm">

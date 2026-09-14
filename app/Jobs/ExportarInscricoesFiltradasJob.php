@@ -19,7 +19,7 @@ class ExportarRespostasFormularioJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600; // Tempo extra para grandes volumes
+    public $timeout = 600;
     public $trackingId;
     public $formularioId;
     public $filtros;
@@ -39,14 +39,12 @@ class ExportarRespostasFormularioJob implements ShouldQueue
         $tracking->update(['status' => 'processando']);
         $formulario = Formulario::find($this->formularioId);
         
-        // 1. Busca os campos do formulário (que serão as colunas da planilha)
         $campos = CampoFormulario::where('formulario_id', $this->formularioId)
             ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
             ->orderBy('etapa')
             ->orderBy('ordem')
             ->get();
 
-        // 2. Monta a Query aplicando ordenação e busca passados pela tela
         $query = RespostaFormulario::where('formulario_id', $this->formularioId);
 
         if (!empty($this->filtros['search'])) {
@@ -61,10 +59,8 @@ class ExportarRespostasFormularioJob implements ShouldQueue
         $sortDirection = $this->filtros['sortDirection'] ?? 'desc';
         $query->orderBy($sortField, $sortDirection);
 
-        // Processamos as respostas em chunk para economizar RAM caso tenham muitas
         $respostas = $query->get();
 
-        // 3. Configura o Spatie SimpleExcel
         $fileName = 'respostas_' . Str::slug($formulario->titulo ?? 'formulario') . '_' . time() . '.' . $tracking->formato;
         $caminhoRelativo = 'exportacoes/' . $fileName;
         Storage::disk('public')->makeDirectory('exportacoes');
@@ -77,24 +73,19 @@ class ExportarRespostasFormularioJob implements ShouldQueue
 
         $linhasProcessadas = 0;
 
-        // 4. Escreve os dados no arquivo linha por linha
         foreach ($respostas as $resp) {
-            // Mapeia colunas fixas
             $linha = [
                 'Protocolo (ID)' => $resp->id,
                 'Data de Envio' => $resp->created_at->format('d/m/Y H:i:s'),
             ];
 
-            // Mapeia colunas dinâmicas (respostas do JSON)
             $respostasSalvas = is_string($resp->respostas) ? json_decode($resp->respostas, true) : ($resp->respostas ?? []);
 
             foreach ($campos as $campo) {
                 $val = $respostasSalvas[$campo->name] ?? '-';
-                // Garante que arrays (ex: múltiplos checkboxes) virem texto corrido
                 $linha[$campo->label] = is_array($val) ? implode(' | ', $val) : (string) $val;
             }
 
-            // O SimpleExcelWriter lê as chaves da Array associativa e monta o cabeçalho automaticamente na 1º iteração
             $writer->addRow($linha);
 
             $linhasProcessadas++;
@@ -103,7 +94,6 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             }
         }
 
-        // 5. Finaliza a importação no banco
         $tracking->update([
             'status' => 'concluido',
             'linhas_processadas' => $linhasProcessadas,

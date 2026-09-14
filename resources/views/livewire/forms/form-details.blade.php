@@ -10,19 +10,38 @@
                 <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
 
+            <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
+                <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700">
+                    <i class="text-lg ph ph-export"></i> Exportar <i class="ph ph-caret-down"></i>
+                </button>
+                <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50 dark:bg-gray-800 dark:border-gray-700">
+                    <div class="py-1">
+                        <button wire:click="solicitarExportacao('xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 font-bold text-left gap-2 dark:text-green-400 dark:hover:bg-gray-700">
+                            <i class="ph-fill ph-file-xls text-lg"></i> Formato Excel (.xlsx)
+                        </button>
+                        <button wire:click="solicitarExportacao('csv')" class="flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-bold text-left gap-2 dark:text-blue-400 dark:hover:bg-gray-700">
+                            <i class="ph-fill ph-file-csv text-lg"></i> Formato CSV (.csv)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <a href="{{ route('formularios.planilha', $formulario->id) }}" wire:navigate class="flex items-center gap-2 px-4 py-2 text-green-700 bg-green-50 hover:bg-green-100 transition rounded-lg font-bold shadow-sm text-sm dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 border border-green-200 mr-2">
+                <i class="ph-bold ph-table text-lg"></i> Ver em Planilha
+            </a>
+
             <a href="{{ route('formularios.publico', ['id' => $formulario->id, 'slug' => $formulario->slug]) }}" target="_blank" class="flex items-center gap-2 px-4 py-2 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition rounded-lg font-bold shadow-sm text-sm dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800 border border-indigo-200">
                 <i class="ph-bold ph-link text-lg"></i> Link Público
             </a>
             
             @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
-                <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formulario->id]) }}" class="flex items-center gap-2 px-4 py-2 text-white bg-purpura-600 hover:bg-purpura-700 shadow-sm transition rounded-lg font-bold text-sm">
+                <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formulario->id]) }}" class="flex items-center gap-2 ml-2 px-4 py-2 text-white bg-purpura-600 hover:bg-purpura-700 shadow-sm transition rounded-lg font-bold text-sm">
                     <i class="ph-bold ph-pencil-simple text-lg"></i> Editar Estrutura
                 </a>
             @endif
         </x-slot>
     </x-page-header>
 
-    <!-- CARDS DE INFORMAÇÃO -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl">
@@ -55,7 +74,6 @@
         </div>
     </div>
 
-    <!-- HEADER DA TABELA + BOTÃO TOGGLE -->
     <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
         <h3 class="font-bold text-gray-800 dark:text-gray-200 text-lg">Respostas Recebidas</h3>
         
@@ -69,7 +87,6 @@
         </div>
     </div>
 
-    <!-- TABELA COMPONENTE -->
     <div class="custom-scrollbar {{ $tipoVisao === 'tabela' ? 'overflow-x-auto' : '' }}">
         <x-table
             :headers="$this->headers"

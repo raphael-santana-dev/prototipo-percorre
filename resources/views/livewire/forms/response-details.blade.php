@@ -21,7 +21,6 @@
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden print:shadow-none print:border-none">
         
-        <!-- Cabeçalho do Documento -->
         <div class="bg-indigo-50 border-b border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800 p-6 flex items-start gap-4 print:bg-white print:border-b-2 print:border-gray-800">
             <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-sm print:text-black print:bg-gray-100 shrink-0">
                 <i class="ph-fill ph-file-text"></i>
@@ -32,11 +31,9 @@
             </div>
         </div>
 
-        <!-- Corpo das Respostas -->
         <div class="p-6 md:p-8 space-y-8">
             
             @php 
-                // Garante que a resposta é um array iterável
                 $respostasSalvas = is_string($resposta->respostas) ? json_decode($resposta->respostas, true) : $resposta->respostas;
             @endphp
 
@@ -63,7 +60,6 @@
                                     <p class="text-gray-400 dark:text-gray-500 text-sm italic border-l-2 border-gray-300 dark:border-gray-600 pl-3">Nenhuma resposta fornecida ou campo ocultado por regra condicional.</p>
                                 @else
                                     
-                                    {{-- Renderização Específica para Checkboxes (Array de Strings) --}}
                                     @if($campo->tipo === 'check' && is_array($valor))
                                         <div class="flex flex-wrap gap-2 mt-2">
                                             @foreach($valor as $v)
@@ -73,7 +69,6 @@
                                             @endforeach
                                         </div>
 
-                                    {{-- Renderização Específica para Matriz --}}
                                     @elseif($campo->tipo === 'matriz' && is_array($valor))
                                         @php
                                             $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
@@ -94,7 +89,6 @@
                                             </table>
                                         </div>
 
-                                    {{-- Renderização Específica para Avaliação em Estrelas --}}
                                     @elseif($campo->tipo === 'rating')
                                         @php $maxStars = $cfg['max_stars'] ?? 5; @endphp
                                         <div class="flex gap-1 text-2xl text-yellow-400 mt-1">
@@ -104,7 +98,6 @@
                                             <span class="ml-2 text-sm text-gray-500 font-bold self-center">({{ $valor }}/{{ $maxStars }})</span>
                                         </div>
 
-                                    {{-- Renderização Padrão (Texto, Select, Radio) --}}
                                     @else
                                         <p class="text-gray-900 dark:text-white text-base border-l-2 border-indigo-400 dark:border-indigo-600 pl-3 bg-white dark:bg-transparent py-1 print:border-none print:pl-0 print:font-bold">
                                             {{ $valor }}

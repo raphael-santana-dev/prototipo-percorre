@@ -24,7 +24,6 @@ class Login extends Component
             'password' => 'required'
         ]);
 
-        // Proteção contra Força Bruta
         $throttleKey = Str::lower($this->email) . '|' . request()->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
@@ -36,28 +35,24 @@ class Login extends Component
 
         $credenciais = ['email' => $this->email, 'password' => $this->password];
 
-        // 1ª Tentativa: Administrador / Equipe Interna
         if (Auth::guard('web')->attempt($credenciais, $this->remember)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
             return redirect()->route('dashboard');
         }
 
-        // 2ª Tentativa: Estudante / Aluno
         if (Auth::guard('student')->attempt($credenciais, $this->remember)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
             return redirect()->route('student.dashboard');
         }
 
-        // 3ª Tentativa: Contato de Empresa / Parceiro
         if (Auth::guard('company')->attempt($credenciais, $this->remember)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
             return redirect()->route('company.dashboard'); 
         }
 
-        // Falha em todos os guards
         RateLimiter::hit($throttleKey);
         
         $this->addError('email', 'As credenciais fornecidas estão incorretas.');

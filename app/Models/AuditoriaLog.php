@@ -22,7 +22,6 @@ class AuditoriaLog extends Model
         'navegador',
     ];
 
-    // Isso faz o Laravel converter Arrays para JSON ao salvar, e JSON para Array ao ler
     protected $casts = [
         'informacao_anterior' => 'array',
         'nova_informacao' => 'array',
@@ -30,7 +29,6 @@ class AuditoriaLog extends Model
 
     public function usuario()
     {
-        // Se a coluna no seu banco for 'user_id', use a linha abaixo:
         return $this->belongsTo(User::class, 'usuario_id'); 
     }
 }

@@ -7,32 +7,33 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Importacao;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 use App\Models\CampoFormulario;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\SimpleExcel\SimpleExcelWriter;
 
 class ExportarRespostasFormularioJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;
-    protected $importacaoId;
-    protected $formularioId;
-    protected $filtros;
+    public $trackingId;
+    public $formularioId;
+    public $filtros;
 
-    public function __construct($importacaoId, $formularioId, $filtros)
+    public function __construct($trackingId, $formularioId, $filtros)
     {
-        $this->importacaoId = $importacaoId;
+        $this->trackingId = $trackingId;
         $this->formularioId = $formularioId;
         $this->filtros = $filtros;
     }
 
-    public function handle()
+    public function handle(): void
     {
-        $tracking = Importacao::find($this->importacaoId);
+        $tracking = Importacao::find($this->trackingId);
         if (!$tracking) return;
 
         $tracking->update(['status' => 'processando']);
@@ -50,8 +51,26 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             $search = $this->filtros['search'];
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
-                  ->orWhere('respostas', 'like', "%{$search}%");
+                  ->orWhere('respostas', 'ilike', "%{$search}%");
             });
+        }
+        if (!empty($this->filtros['data_inicio'])) {
+            $query->where('created_at', '>=', $this->filtros['data_inicio'] . ' 00:00:00');
+        }
+        if (!empty($this->filtros['data_fim'])) {
+            $query->where('created_at', '<=', $this->filtros['data_fim'] . ' 23:59:59');
+        }
+        if (!empty($this->filtros['filtro_curso'])) {
+            $curso = \App\Models\Curso::find($this->filtros['filtro_curso']);
+            if ($curso) $query->where('respostas', 'ilike', "%{$curso->nome}%");
+        }
+        if (!empty($this->filtros['filtro_unidade'])) {
+            $unidade = \App\Modules\Unidade\Domain\Models\Unidade::find($this->filtros['filtro_unidade']);
+            if ($unidade) $query->where('respostas', 'ilike', "%{$unidade->nome}%");
+        }
+        if (!empty($this->filtros['filtro_turno'])) {
+            $turno = \App\Modules\Turno\Domain\Models\Turno::find($this->filtros['filtro_turno']);
+            if ($turno) $query->where('respostas', 'ilike', "%{$turno->nome}%");
         }
 
         $sortField = $this->filtros['sortField'] ?? 'created_at';
@@ -59,60 +78,39 @@ class ExportarRespostasFormularioJob implements ShouldQueue
         $query->orderBy($sortField, $sortDirection);
 
         $respostas = $query->get();
-        
-        // Monta o Cabeçalho
-        $header = ['Protocolo (ID)', 'Data de Envio'];
-        foreach ($campos as $campo) {
-            $header[] = $campo->label;
-        }
 
-        $dados = [];
-        $dados[] = $header;
+        $fileName = 'respostas_' . Str::slug($formulario->titulo ?? 'formulario') . '_' . time() . '.' . $tracking->formato;
+        $caminhoRelativo = 'exportacoes/' . $fileName;
+        Storage::disk('public')->makeDirectory('exportacoes');
+        $caminhoAbsoluto = Storage::disk('public')->path($caminhoRelativo);
 
-        $processados = 0;
+        $writer = SimpleExcelWriter::create($caminhoAbsoluto);
+        if ($tracking->formato === 'csv') $writer->useDelimiter(';');
+
+        $linhasProcessadas = 0;
+
         foreach ($respostas as $resp) {
             $linha = [
-                $resp->id,
-                $resp->created_at->format('d/m/Y H:i:s')
+                'Protocolo (ID)' => $resp->id,
+                'Data de Envio' => $resp->created_at->format('d/m/Y H:i:s'),
             ];
 
             $respostasSalvas = is_string($resp->respostas) ? json_decode($resp->respostas, true) : ($resp->respostas ?? []);
 
             foreach ($campos as $campo) {
                 $val = $respostasSalvas[$campo->name] ?? '-';
-                $linha[] = is_array($val) ? implode(' | ', $val) : (string) $val;
+                $linha[$campo->label] = is_array($val) ? implode(' | ', $val) : (string) $val;
             }
 
-            $dados[] = $linha;
-            $processados++;
-            
-            if ($processados % 100 == 0) {
-                $tracking->update(['linhas_processadas' => $processados]);
-            }
-        }
-
-        $nomeArquivo = 'exportacoes/respostas_' . Str::slug($formulario->titulo) . '_' . date('Ymd_His') . '.' . $tracking->formato;
-        
-        // Aqui chamamos o exportador Genérico (ajuste conforme a lib que usa no `ExportarInscricoesFiltradasJob`)
-        // Se você usar Maatwebsite\Excel, ficaria algo como:
-        // \Maatwebsite\Excel\Facades\Excel::store(new \App\Exports\GenericExport($dados), $nomeArquivo, 'public');
-        
-        // Abordagem nativa para CSV (garantia de funcionar sem lib extra):
-        if ($tracking->formato == 'csv') {
-            $caminhoCompleto = storage_path('app/public/' . $nomeArquivo);
-            if (!file_exists(dirname($caminhoCompleto))) {
-                mkdir(dirname($caminhoCompleto), 0755, true);
-            }
-            $file = fopen($caminhoCompleto, 'w');
-            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
-            foreach ($dados as $linha) { fputcsv($file, $linha, ';'); }
-            fclose($file);
+            $writer->addRow($linha);
+            $linhasProcessadas++;
+            if ($linhasProcessadas % 50 === 0) $tracking->update(['linhas_processadas' => $linhasProcessadas]);
         }
 
         $tracking->update([
             'status' => 'concluido',
-            'linhas_processadas' => $processados,
-            'arquivo_caminho' => $nomeArquivo
+            'linhas_processadas' => $linhasProcessadas,
+            'arquivo_gerado_caminho' => $caminhoRelativo
         ]);
     }
 }

@@ -14,7 +14,6 @@
 
     <form wire:submit.prevent="salvar" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {{-- COLUNA ESQUERDA: DADOS BASE --}}
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200">Estrutura da Matrícula</h3>
@@ -92,7 +91,6 @@
             </div>
         </div>
 
-        {{-- COLUNA DIREITA: VÍNCULOS COM TURMAS --}}
         <div class="space-y-6">
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full">
                 <h3 class="text-sm font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200">

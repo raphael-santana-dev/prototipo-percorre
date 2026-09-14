@@ -10,9 +10,6 @@
 
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
         
-        <!-- ========================================== -->
-        <!-- OVERLAY ESCURO COM EFEITO BLUR             -->
-        <!-- ========================================== -->
         <div x-show="open" 
              x-transition:enter="ease-in-out duration-300" 
              x-transition:enter-start="opacity-0" 
@@ -28,7 +25,6 @@
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
             <div class="fixed inset-y-0 right-0 flex max-w-full pl-10 pointer-events-none sm:pl-16">
                 
-                <!-- Painel Deslizante (O Navigation Drawer) -->
                 <div x-show="open"
                      x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
                      x-transition:enter-start="translate-x-full"
@@ -40,7 +36,6 @@
                      
                     <div class="flex flex-col h-full bg-white shadow-2xl dark:bg-gray-800">
                         
-                        <!-- Header do Drawer -->
                         <div class="px-6 py-6 bg-purpura-700 sm:px-8">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-center gap-3 text-white">
@@ -57,7 +52,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Botão Fechar -->
                                 <div class="flex items-center ml-3 h-7">
                                     <button @click="open = false" type="button" class="text-purpura-200 hover:text-white focus:outline-none transition-colors">
                                         <i class="text-2xl ph ph-x"></i>
@@ -66,20 +60,16 @@
                             </div>
                         </div>
 
-                        <!-- Corpo (Listagem Dinâmica dos Dados) -->
                         <div class="relative flex-1 px-6 py-6 overflow-y-auto sm:px-8">
                             <div class="space-y-6">
                                 @forelse($data as $key => $value)
                                     <div>
-                                        <!-- Chave (Nome do campo) -->
                                         <dt class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
                                             {{ $key }}
                                         </dt>
-                                        <!-- Valor do campo -->
                                         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
                                             {!! $value !!}
                                         </dd>
-                                        <!-- Linha divisória -->
                                         @if(!$loop->last)
                                             <div class="mt-4 border-b border-gray-100 dark:border-gray-700"></div>
                                         @endif
@@ -90,7 +80,6 @@
                             </div>
                         </div>
                         
-                        <!-- Footer -->
                         <div class="flex flex-shrink-0 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             <button @click="open = false" type="button" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white border-gray-300 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                                 Fechar Painel

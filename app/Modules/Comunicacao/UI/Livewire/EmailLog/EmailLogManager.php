@@ -14,12 +14,10 @@ class EmailLogManager extends Component
 
     public array $breadcrumbs = [];
     
-    // Variáveis dos Modais
     public $modalPreviewAberto = false;
     public $modalErroAberto = false;
     public $logSelecionado = null;
 
-    // Filtros
     public $filtro_status = '';
     public $filtro_origem = '';
 

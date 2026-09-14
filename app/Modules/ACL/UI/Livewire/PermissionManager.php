@@ -23,11 +23,10 @@ class PermissionManager extends Component
     public $modelClass = Permission::class;
     public array $breadcrumbs = [];
 
-    // Filtros
+     
     public $filtro_module = '';
     public $filtro_keyword = '';
 
-    // Array para inserção múltipla / edição
     public array $items = [];
 
     public function mount()
@@ -123,7 +122,6 @@ class PermissionManager extends Component
             $fullName = $moduleFinal . '.' . $actionFinal;
 
             if ($this->permissionId) {
-                // Modo Edição (Apenas 1 item é processado)
                 if (Permission::where('name', $fullName)->where('id', '!=', $this->permissionId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta permissão já existe.');
                     return;
@@ -135,7 +133,6 @@ class PermissionManager extends Component
                     'description' => $item['description']
                 ]);
             } else {
-                // Modo Criação Múltipla
                 if (Permission::where('name', $fullName)->exists()) {
                     $this->addError("items.{$index}.action", "A permissão {$fullName} já existe.");
                     continue; 
@@ -145,7 +142,7 @@ class PermissionManager extends Component
                     'module' => $moduleFinal,
                     'name' => $fullName,
                     'description' => $item['description'],
-                    'guard_name' => 'web' // Padrão do Spatie ACL
+                    'guard_name' => 'web'
                 ]);
             }
         }
@@ -176,7 +173,6 @@ class PermissionManager extends Component
 
     public function render()
     {
-        // Padrão CQRS: Consulta direto no banco permitindo paginação e busca nativa
         $query = Permission::query()
             ->when($this->filtro_module, fn($q) => $q->where('module', $this->filtro_module))
             ->when($this->filtro_keyword, function($q) {

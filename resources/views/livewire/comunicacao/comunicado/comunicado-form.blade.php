@@ -11,7 +11,6 @@
         </x-slot>
     </x-page-header>
 
-    <!-- Script Alpine de Tags de Email -->
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('emailTags', (entangledArray) => ({
@@ -45,7 +44,6 @@
     <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
         <form wire:submit.prevent="salvar" class="space-y-6">
             
-            <!-- TEMPLATE -->
             <div>
                 <label class="block text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
                     <i class="ph-fill ph-layout text-purpura-500"></i> Template Selecionado <span class="text-red-500">*</span>
@@ -61,13 +59,11 @@
 
             <hr class="border-gray-100">
 
-            <!-- SELEÇÃO DE DESTINATÁRIOS (INTELIGENTE) -->
             <div>
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                     <i class="ph-fill ph-users text-purpura-500"></i> Como deseja selecionar os destinatários?
                 </label>
 
-                <!-- TABS -->
                 <div class="flex gap-4 mb-4 border-b border-gray-200">
                     <button type="button" wire:click="$set('modo_selecao', 'manual')" class="pb-2 text-sm font-bold transition-colors border-b-2 px-2 {{ $modo_selecao === 'manual' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-400 hover:text-gray-700' }}">
                         1. Digitar / Colar E-mails
@@ -77,7 +73,6 @@
                     </button>
                 </div>
 
-                <!-- CONTEÚDO MODO MANUAL -->
                 @if($modo_selecao === 'manual')
                     <div x-data="emailTags(@entangle('destinatarios'))" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="text-xs text-gray-600 mb-2 font-medium">Digite o e-mail e aperte <kbd class="bg-white px-1 rounded border shadow-sm">Enter</kbd> ou <b>cole uma lista do Excel/Word.</b></p>
@@ -94,7 +89,6 @@
                     </div>
                 @endif
 
-                <!-- CONTEÚDO MODO DINÂMICO -->
                 @if($modo_selecao === 'dinamico')
                     <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
                         <p class="text-xs text-blue-700 mb-4 font-medium">O sistema fará a varredura e extrairá os e-mails do público escolhido no momento do envio.</p>
@@ -111,7 +105,6 @@
                                 </select>
                             </div>
 
-                            <!-- Filtros Secundários Baseados na Seleção -->
                             @if($filtro_publico === 'grupo')
                                 <div>
                                     <label class="block text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">Qual Grupo (Role)?</label>
@@ -149,7 +142,6 @@
                 @error('destinatarios') <span class="text-xs text-red-500 font-bold block mt-2"><i class="ph-fill ph-warning-circle"></i> {{ $message }}</span> @enderror
             </div>
 
-            <!-- CÓPIA (CC) E OCULTA (BCC) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div x-data="emailTags(@entangle('cc'))">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cópia (CC) - Opcional</label>
@@ -178,7 +170,6 @@
                 </div>
             </div>
 
-            <!-- ANEXOS -->
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label class="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
                     <i class="ph-fill ph-paperclip text-purpura-500"></i> Arquivos Anexos (Opcional)
@@ -211,7 +202,6 @@
 
             <hr class="border-gray-100">
 
-            <!-- AGENDAMENTO -->
             <div>
                 <label class="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                     <i class="ph-fill ph-clock text-purpura-500"></i> Momento do Envio
@@ -237,7 +227,6 @@
                 @endif
             </div>
 
-            <!-- BOTÕES -->
             <div class="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-100">
                 <a href="{{ route('comunicados.index') }}" class="px-5 py-2.5 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancelar</a>
                 

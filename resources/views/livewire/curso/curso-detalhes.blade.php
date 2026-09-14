@@ -32,10 +32,8 @@
         </div>
     </x-details-card>
 
-    <!-- Estrutura Inferior de Conteúdo -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         
-        <!-- Coluna Esquerda: Unidades e Professores -->
         <div class="space-y-6 lg:col-span-1">
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-5">
                 <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
@@ -89,7 +87,6 @@
             </div>
         </div>
 
-        <!-- Coluna Direita: Lista de Inscrições Recentes -->
         <div class="lg:col-span-2">
             <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">

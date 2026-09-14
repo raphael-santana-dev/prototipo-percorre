@@ -9,6 +9,9 @@ use Livewire\Attributes\Title;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 use App\Models\CampoFormulario;
+use App\Models\Curso;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
@@ -18,7 +21,15 @@ class FormSpreadsheet extends Component
     use WithPagination;
 
     public Formulario $formulario;
+    
+    // Filtros Adicionados
     public $search = '';
+    public $data_inicio = '';
+    public $data_fim = '';
+    public $filtro_curso = '';
+    public $filtro_unidade = '';
+    public $filtro_turno = '';
+
     public $sortField = 'created_at';
     public $sortDirection = 'desc';
     public $porPagina = 50;
@@ -31,8 +42,16 @@ class FormSpreadsheet extends Component
         $this->formulario = Formulario::findOrFail($id);
     }
 
-    public function updatingSearch()
+    public function updating($property)
     {
+        if (in_array($property, ['search', 'data_inicio', 'data_fim', 'filtro_curso', 'filtro_unidade', 'filtro_turno'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['search', 'data_inicio', 'data_fim', 'filtro_curso', 'filtro_unidade', 'filtro_turno']);
         $this->resetPage();
     }
 
@@ -55,18 +74,50 @@ class FormSpreadsheet extends Component
             ->get();
     }
 
+    protected function getQuery()
+    {
+        $query = RespostaFormulario::where('formulario_id', $this->formulario->id);
+
+        if ($this->search) {
+            $query->where(function($q) {
+                $q->where('id', 'like', "%{$this->search}%")
+                  ->orWhere('respostas', 'ilike', "%{$this->search}%");
+            });
+        }
+        if ($this->data_inicio) {
+            $query->where('created_at', '>=', $this->data_inicio . ' 00:00:00');
+        }
+        if ($this->data_fim) {
+            $query->where('created_at', '<=', $this->data_fim . ' 23:59:59');
+        }
+        if ($this->filtro_curso) {
+            $curso = Curso::find($this->filtro_curso);
+            if ($curso) $query->where('respostas', 'ilike', "%{$curso->nome}%");
+        }
+        if ($this->filtro_unidade) {
+            $unidade = Unidade::find($this->filtro_unidade);
+            if ($unidade) $query->where('respostas', 'ilike', "%{$unidade->nome}%");
+        }
+        if ($this->filtro_turno) {
+            $turno = Turno::find($this->filtro_turno);
+            if ($turno) $query->where('respostas', 'ilike', "%{$turno->nome}%");
+        }
+
+        return $query;
+    }
+
     public function solicitarExportacao($formato = 'csv')
     {
-        $queryCount = RespostaFormulario::where('formulario_id', $this->formulario->id)->count();
+        $queryCount = $this->getQuery()->count();
 
         if ($queryCount === 0) {
-            $this->dispatch('erro', msg: 'Não há registros para exportar.');
+            $this->dispatch('erro', msg: 'Não há registros para exportar com base nesta busca.');
             return;
         }
 
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(),
-            'tipo' => 'respostas_formulario', // Identificador para o I/O
+            'tipo' => 'respostas_formulario',
             'operacao' => 'exportacao',
             'formato' => strtolower($formato),
             'arquivo_nome' => 'Respostas - ' . Str::limit($this->formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
@@ -77,33 +128,31 @@ class FormSpreadsheet extends Component
 
         $filtrosAtuais = [
             'search' => $this->search,
+            'data_inicio' => $this->data_inicio,
+            'data_fim' => $this->data_fim,
+            'filtro_curso' => $this->filtro_curso,
+            'filtro_unidade' => $this->filtro_unidade,
+            'filtro_turno' => $this->filtro_turno,
             'sortField' => $this->sortField,
             'sortDirection' => $this->sortDirection,
         ];
 
-        // Dispara o Job em background
         dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $this->formulario->id, $filtrosAtuais))->afterResponse();
 
-        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
+        $this->dispatch('sucesso', msg: 'Exportação processada em background. Acompanhe a aba de Integrações (I/O).');
     }
 
     public function render()
     {
-        $query = RespostaFormulario::where('formulario_id', $this->formulario->id);
-
-        if ($this->search) {
-            $query->where(function($q) {
-                $q->where('id', 'like', "%{$this->search}%")
-                  ->orWhere('respostas', 'like', "%{$this->search}%"); // Busca bruta no JSON
-            });
-        }
-
-        // Ordenação dinâmica (Suporta JSON no Postgres: respostas->campo)
+        $query = $this->getQuery();
         $query->orderBy($this->sortField, $this->sortDirection);
 
         return view('livewire.forms.form-spreadsheet', [
             'respostas' => $query->paginate($this->porPagina),
-            'campos' => $this->campos
+            'campos' => $this->campos,
+            'cursosDb' => Curso::orderBy('nome')->get(),
+            'unidadesDb' => Unidade::orderBy('nome')->get(),
+            'turnosDb' => Turno::orderBy('nome')->get(),
         ]);
     }
 }

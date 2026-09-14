@@ -34,7 +34,6 @@
                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ Str::limit($form->descricao, 50) }}</div>
                 </td>
                 
-                {{-- Coluna Nova: Regras de Acesso --}}
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex flex-col gap-1">
                         @if($form->acesso_livre)
@@ -72,6 +71,19 @@
                         <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                             <i class="text-lg ph ph-arrow-square-in"></i>
                         </a>
+
+                        <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
+                            <i class="text-lg ph ph-table"></i>
+                        </a>
+
+                        <button wire:click="solicitarExportacao({{ $form->id }}, 'xlsx')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-600 hover:bg-green-50 dark:hover:bg-gray-600" title="Exportar Respostas (Excel)">
+                            <i class="text-lg ph ph-file-xls"></i>
+                        </button>
+                        <button wire:click="solicitarExportacao({{ $form->id }}, 'csv')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-600" title="Exportar Respostas (CSV)">
+                            <i class="text-lg ph ph-file-csv"></i>
+                        </button>
+                       
+
                         @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
                             <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
                                 <i class="text-lg ph ph-list-dashes"></i>
@@ -125,6 +137,9 @@
                             <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                                 <i class="text-lg ph ph-arrow-square-in"></i>
                             </a>
+                            <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
+                                <i class="text-lg ph ph-table"></i>
+                            </a>
                             @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
                                 <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
                                     <i class="text-lg ph ph-list-dashes"></i>
@@ -145,7 +160,6 @@
         </x-slot>
     </x-table>
 
-    <!-- Modal Enriquecido -->
     @if($modalAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -163,7 +177,6 @@
                     
                     <form wire:submit.prevent="salvar" class="space-y-6">
                         
-                        {{-- 1. Dados Básicos --}}
                         <div class="space-y-4">
                             <div>
                                 <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Título Interno do Formulário <span class="text-red-500">*</span></label>
@@ -177,7 +190,6 @@
                             </div>
                         </div>
 
-                        {{-- 2. Restrições de Prazo (Trava de Tempo) --}}
                         <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                             <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2"><i class="ph-bold ph-calendar"></i> Período de Disponibilidade</h4>
                             <div class="grid grid-cols-2 gap-4">
@@ -192,13 +204,11 @@
                             </div>
                         </div>
 
-                        {{-- 3. Travas de Acesso (Privacidade) --}}
                         <div class="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800">
                             <h4 class="text-sm font-extrabold uppercase tracking-wider text-indigo-800 dark:text-indigo-400 mb-4 flex items-center gap-2">
                                 <i class="ph-bold ph-shield-check text-xl"></i> Níveis de Acesso
                             </h4>
                             
-                            <!-- Toggle Principal: Livre vs Restrito -->
                             <div class="flex gap-6 mb-6 pb-4 border-b border-indigo-200/60">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="radio" wire:model.live="acesso_livre" value="1" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300">
@@ -210,7 +220,6 @@
                                 </label>
                             </div>
 
-                            <!-- OPÇÕES PARA ACESSO LIVRE -->
                             @if($acesso_livre)
                                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
                                     <label class="flex items-start gap-3 cursor-pointer">
@@ -223,11 +232,9 @@
                                 </div>
                             @endif
 
-                            <!-- OPÇÕES PARA ACESSO RESTRITO -->
                             @if(!$acesso_livre)
                                 <div class="space-y-6">
                                     
-                                    <!-- Bloco 1: Permissões de Estudantes -->
                                     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
                                         <label class="flex items-center gap-2 cursor-pointer mb-3">
                                             <input type="checkbox" wire:model.live="apenas_estudantes" class="w-5 h-5 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
@@ -261,7 +268,6 @@
                                         @endif
                                     </div>
 
-                                    <!-- Bloco 2: Permissões da Equipe Interna -->
                                     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200">
                                         <p class="text-sm font-bold text-gray-900 dark:text-white mb-3">Permitir Colaboradores Administrativos / Web</p>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

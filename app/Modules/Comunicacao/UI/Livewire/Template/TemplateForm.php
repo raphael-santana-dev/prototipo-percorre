@@ -59,7 +59,6 @@ class TemplateForm extends Component
             'corpo' => $this->corpo,
         ];
 
-        // Se tiver ID, atualiza. Se não tiver, cria um novo (evitando o erro de NULL no PostgreSQL)
         if ($this->templateId) {
             EmailTemplate::findOrFail($this->templateId)->update($dados);
         } else {

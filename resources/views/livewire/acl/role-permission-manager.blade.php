@@ -17,7 +17,6 @@
         <form wire:submit.prevent="save">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse($permissionsByModule as $module => $permissions)
-                    <!-- Card do Módulo -->
                     <div class="p-5 border border-gray-200 rounded-xl bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700 hover:border-purpura-300 transition-colors">
                         <h3 class="flex items-center gap-2 mb-4 text-xs font-bold tracking-wider text-gray-500 uppercase border-b border-gray-200 pb-2 dark:text-gray-400 dark:border-gray-600">
                             <i class="ph-fill ph-squares-four text-purpura-500 text-lg"></i> {{ $module }}

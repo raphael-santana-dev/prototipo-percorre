@@ -40,7 +40,6 @@
     @sucesso.window="dispararToast($event.detail.msg || $event.detail[0], 'success')"
     @erro.window="dispararToast($event.detail.msg || $event.detail[0], 'error')"
     
-    {{-- Animações de entrada e saída --}}
     x-show="show"
     x-transition:enter="transition ease-out duration-300"
     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -49,7 +48,6 @@
     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
     
-    {{-- Design Flutuante no Canto Inferior Direito --}}
     class="fixed bottom-6 right-6 z-[200] flex items-center justify-between w-full max-w-sm p-4 space-x-4 text-white rounded-xl shadow-2xl overflow-hidden"
     :class="{ 'bg-green-600': type === 'success', 'bg-red-600': type === 'error' }"
     style="display: none;"

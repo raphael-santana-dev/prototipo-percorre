@@ -22,14 +22,12 @@ class GestoresManager extends Component
     public $busca = '';
     public $modalAberto = false;
     
-    // Campos do Formulário
     public $gestorId, $name, $email, $documento, $is_active = true;
 
     public function mount()
     {
         $usuario = Auth::guard('company')->user();
         
-        // Proteção estrita: Apenas contatos principais podem acessar esta tela
         abort_if($usuario->tipo_acesso !== 'contato_principal', 403, 'Acesso restrito ao Contato Principal da empresa.');
     }
 
@@ -46,7 +44,6 @@ class GestoresManager extends Component
         if ($id) {
             $empresaUser = Auth::guard('company')->user();
             
-            // Garante que só pode editar usuários da mesma empresa
             $gestor = CompanyUser::where('empresa_id', $empresaUser->empresa_id)
                 ->where('tipo_acesso', 'gestor_avaliador')
                 ->findOrFail($id);
@@ -68,15 +65,13 @@ class GestoresManager extends Component
             'email' => [
                 'required',
                 'email',
-                // O uso do Rule::unique resolve o bug do Postgres, pois ele ignora o ID se for nulo
                 Rule::unique('company_users', 'email')->ignore($this->gestorId) 
             ],
             'documento' => [
                 'required',
                 'string',
-                // Validação Matemática Real de CPF
                 function ($attribute, $value, $fail) {
-                    $c = preg_replace('/\D/', '', $value); // Remove tudo que não for número
+                    $c = preg_replace('/\D/', '', $value);
                     
                     if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) {
                         return $fail('O CPF informado é inválido.');
@@ -104,7 +99,6 @@ class GestoresManager extends Component
             'is_active' => $this->is_active,
         ];
 
-        // Se for cadastro novo, gera uma senha padrão
         if (!$this->gestorId) {
             $dados['password'] = \Illuminate\Support\Facades\Hash::make('mudar123');
         }

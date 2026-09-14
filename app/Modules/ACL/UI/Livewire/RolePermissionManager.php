@@ -15,7 +15,6 @@ class RolePermissionManager extends Component
     public int $roleId;
     public string $roleName;
     
-    // Array que armazenará o nome das permissões marcadas nos checkboxes
     public array $selectedPermissions = [];
 
     public function mount(int $roleId)
@@ -27,7 +26,6 @@ class RolePermissionManager extends Component
         $this->roleId = $role->id;
         $this->roleName = $role->name;
 
-        // Preenche o array com as permissões que a role já possui no banco
         $this->selectedPermissions = $role->permissions->pluck('name')->toArray();
     }
 
@@ -35,7 +33,6 @@ class RolePermissionManager extends Component
     {
         $role = Role::findOrFail($this->roleId);
         
-        // O Sync apaga o que foi desmarcado e salva o que foi marcado automaticamente
         $role->syncPermissions($this->selectedPermissions);
 
         $this->dispatch('sucesso', msg: 'Permissões atualizadas com sucesso!');

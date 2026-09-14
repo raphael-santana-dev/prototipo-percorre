@@ -15,7 +15,6 @@ class Dashboard extends Component
     {
         $usuario = Auth::guard('company')->user();
 
-        // Aqui, no futuro, buscaremos os dados reais do Protheus ou das avaliações geradas
         $metricas = [
             'total_aprendizes' => 0,
             'avaliacoes_pendentes' => 0,

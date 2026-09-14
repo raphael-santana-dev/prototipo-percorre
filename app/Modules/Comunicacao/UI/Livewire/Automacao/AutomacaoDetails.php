@@ -15,7 +15,6 @@ class AutomacaoDetails extends Component
     public Automacao $automacao;
     public array $breadcrumbs = [];
 
-    // Variáveis de Filtro
     public $filtro_busca = '';
     public $filtro_data_inicio = '';
     public $filtro_data_fim = '';
@@ -46,7 +45,6 @@ class AutomacaoDetails extends Component
     {
         $log = Comunicado::with('template')->findOrFail($id);
 
-        // Formata a lista de destinatários para exibição no drawer
         $destinatariosHtml = '';
         if (is_array($log->destinatarios)) {
             $destinatariosHtml = '<ul class="list-disc pl-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">';
@@ -75,7 +73,6 @@ class AutomacaoDetails extends Component
         $query = Comunicado::where('template_id', $this->automacao->template_id)
             ->where('status', 'concluido');
 
-        // Aplicação dos Filtros
         $query->when($this->filtro_busca, function($q) {
             $q->where('destinatarios', 'like', '%' . $this->filtro_busca . '%');
         })

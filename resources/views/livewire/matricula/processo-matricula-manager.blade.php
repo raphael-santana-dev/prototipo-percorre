@@ -6,7 +6,6 @@
         badge="Portal de Validação">
     </x-page-header>
 
-    {{-- NAVEGAÇÃO ENTRE ABAS --}}
     <div class="mb-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
         <nav class="flex gap-4 -mb-px">
             <button type="button" 
@@ -32,7 +31,6 @@
         </nav>
     </div>
 
-    {{-- BARRA DE FILTROS GLOBAL (APLICA NAS DUAS ABAS) --}}
     <div class="mb-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
             <div class="md:col-span-2">
@@ -75,7 +73,6 @@
         @endif
     </div>
 
-    {{-- ABA 1: DOSSIÊS NORMAIS --}}
     <div x-show="abaAtiva === 'dossies'" x-cloak class="space-y-4" wire:key="aba-dossies">
         <x-table
             wire:key="tabela-dossies"
@@ -146,7 +143,6 @@
         </x-table>
     </div>
 
-    {{-- ABA 2: REVISÃO DE INTELIGÊNCIA ARTIFICIAL --}}
     <div x-show="abaAtiva === 'revisao'" x-cloak class="space-y-4" wire:key="aba-revisao">
         <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-400 p-4 rounded-xl flex items-start gap-3 text-sm shadow-sm mb-4">
             <i class="ph-fill ph-warning-circle text-2xl mt-0.5"></i>
@@ -195,7 +191,6 @@
         </x-table>
     </div>
 
-    <!-- MODAL DO DOSSIÊ (COMPARTILHADO PELAS DUAS ABAS) -->
     @if($modalDossieAberto && $inscricaoSelecionada)
         <div class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div class="bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -245,7 +240,6 @@
                                         @endif
                                     </div>
                                     
-                                    {{-- FEEDBACK DA IA (Aparece se tiver problema) --}}
                                     @if($status === 'analise_manual' || $status === 'invalido_ia')
                                         <div class="mt-2 mb-3 bg-red-50 p-3 rounded-lg border border-red-100 text-xs">
                                             <span class="font-bold text-red-700 block mb-1"><i class="ph-fill ph-robot"></i> Parecer da IA:</span>
@@ -253,23 +247,19 @@
                                         </div>
                                     @endif
 
-                                    {{-- BOTÕES DE AÇÃO COM INTELIGÊNCIA ALPINE --}}
                                     @if(!in_array($status, ['valido_ia', 'aprovado_manual']))
                                         <div x-data="{ subAcao: '' }" class="w-full mt-3 border-t border-gray-100 pt-3">
                                             
-                                            {{-- BOTÕES INICIAIS --}}
                                             <div class="flex gap-2" x-show="subAcao === ''">
                                                 <button @click="subAcao = 'aprovar'" class="flex-1 text-[10px] uppercase tracking-wider font-bold py-2 rounded-md bg-green-50 text-green-700 hover:bg-green-600 hover:text-white transition border border-green-200 flex items-center justify-center gap-1"><i class="ph-bold ph-check text-sm"></i> Aprovar</button>
                                                 <button @click="subAcao = 'reprovar'" class="flex-1 text-[10px] uppercase tracking-wider font-bold py-2 rounded-md bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition border border-red-200 flex items-center justify-center gap-1"><i class="ph-bold ph-x text-sm"></i> Recusar</button>
                                             </div>
 
-                                            {{-- SE CLICOU EM APROVAR --}}
                                             <div x-show="subAcao === 'aprovar'" x-cloak class="flex flex-col gap-2">
                                                 <button wire:click="aprovarDocumento({{ $enviado->id }})" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-md shadow-sm text-xs uppercase tracking-wider transition">Confirmar Aprovação Segura</button>
                                                 <button @click="subAcao = ''" class="text-xs text-gray-500 font-bold hover:underline text-center">Cancelar ação</button>
                                             </div>
 
-                                            {{-- SE CLICOU EM REPROVAR (MOSTRA CAIXA DE TEXTO) --}}
                                             <div x-show="subAcao === 'reprovar'" x-cloak class="flex flex-col gap-2">
                                                 <textarea wire:model="motivosReprovacao.{{ $enviado->id }}" rows="2" class="w-full text-xs rounded-md border-gray-300 focus:border-red-500 focus:ring-red-500 shadow-sm" placeholder="Escreva o motivo para orientar o candidato..."></textarea>
                                                 @error('motivosReprovacao.'.$enviado->id) <span class="text-[10px] text-red-500 font-bold block leading-tight">{{ $message }}</span> @enderror

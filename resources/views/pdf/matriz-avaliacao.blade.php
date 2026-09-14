@@ -40,7 +40,6 @@
     </div>
 
     <div class="row">
-        <!-- DADOS DO ESTUDANTE -->
         <div class="col-6">
             <div class="box">
                 <div class="box-title">Dados do Estudante</div>
@@ -51,7 +50,6 @@
             </div>
         </div>
 
-        <!-- DADOS ACADÊMICOS -->
         <div class="col-6 right">
             <div class="box">
                 <div class="box-title">Dados Acadêmicos</div>
@@ -73,7 +71,6 @@
         <h3>Média Parcial (F1 e F2): <b>{{ $mediaParcial }}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Média Final (F3): <b>{{ $mediaFinal }}</b></h3>
     </div>
 
-    <!-- MATRIZ DE RESPOSTAS -->
     <table>
         <thead>
             <tr>

@@ -1,14 +1,11 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
     
-    {{-- CABEÇALHO UNIFICADO VIA COMPONENTE --}}
     <x-page-header 
         :title="$ciclo->nome"
         icon="ph ph-calendar-check"
         :breadcrumbs="$breadcrumbs">
 
-        {{-- AÇÕES: status + navegação --}}
         <x-slot name="actions">
-            {{-- Badge de status (preserva cor verde/cinza do original) --}}
             <span class="px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold tracking-wider {{ $ciclo->status ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800' : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600' }}">
                 {{ $ciclo->status ? 'Ativo' : 'Encerrado' }}
             </span>
@@ -28,7 +25,6 @@
             @endif
         </x-slot>
 
-        {{-- METADADOS DO CICLO (ano/semestre + período) --}}
         <x-slot name="filters">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                 <span class="flex items-center gap-1.5">
@@ -47,7 +43,6 @@
         </x-slot>
     </x-page-header>
 
-    {{-- NAVEGAÇÃO ENTRE ABAS --}}
     <div class="mb-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
         <nav class="flex flex-wrap gap-4 -mb-px">
             <button type="button" 
@@ -79,21 +74,18 @@
         </nav>
     </div>
 
-    {{-- ABA 1: VISÃO GERAL & ESTRUTURA ACADÊMICA --}}
     <div x-show="abaAtiva === 'visao-geral'" x-cloak class="space-y-6" wire:key="aba-visao-geral">
         
         @if(isset($metricas))
             <x-summary-cards :metricas="$metricas" />
         @endif
 
-        {{-- ESTRUTURA ACADÊMICA MINIMALISTA --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
             <h3 class="font-extrabold text-gray-900 dark:text-white mb-4 text-xs uppercase tracking-wider flex items-center gap-2">
                 <i class="ph-bold ph-tree-structure text-purpura-600"></i> Estrutura Acadêmica Vinculada
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                {{-- CURSOS --}}
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         <i class="ph-bold ph-graduation-cap text-orange-500 text-sm"></i>
@@ -113,7 +105,6 @@
                     </div>
                 </div>
 
-                {{-- UNIDADES --}}
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         <i class="ph-bold ph-map-pin text-purpura-500 text-sm"></i>
@@ -135,7 +126,6 @@
             </div>
         </div>
 
-        {{-- DISTRIBUIÇÃO DE VAGAS --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                 <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
@@ -223,10 +213,8 @@
         </div>
     </div>
 
-    {{-- ABA 2: INSCRIÇÕES --}}
     <div x-show="abaAtiva === 'inscricoes'" x-cloak class="space-y-4" wire:key="aba-inscricoes">
         
-        {{-- BARRA DE AÇÕES E FILTROS --}}
         <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -269,7 +257,6 @@
             </div>
         </div>
 
-        {{-- SELEÇÃO EM LOTE --}}
         @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
             <div class="flex justify-between items-center px-1">
                 <div class="flex items-center gap-2">
@@ -300,7 +287,6 @@
             @endif
         @endif
 
-        {{-- TABELA DE DADOS --}}
         <x-table
             wire:key="tabela-inscricoes-ciclo"
             :headers="$this->headers"
@@ -373,7 +359,6 @@
         </x-table>
     </div>
 
-    {{-- ABA 3: REGRAS DO CICLO (LISTAGEM) --}}
     <div x-show="abaAtiva === 'regras'" x-cloak class="space-y-6" wire:key="aba-regras">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700">
@@ -434,7 +419,6 @@
         </div>
     </div>
 
-    {{-- MODAL DE ALTERAÇÃO EM LOTE --}}
     @if($modalLoteAberto)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700">

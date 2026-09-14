@@ -24,7 +24,6 @@
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
 
-        {{-- VISÃO EM LISTA --}}
         @forelse($registros as $unidade)
             <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 
@@ -86,7 +85,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO EM GRID (CARDS) --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $unidade )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -157,7 +155,6 @@
                                 @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
                             
-                            <!-- Seção de Endereço -->
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2 p-4 border border-gray-100 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 dark:border-gray-700">
                                 
                                 <div class="col-span-1 md:col-span-12 mb-1">
@@ -225,7 +222,6 @@
                                 <input type="date" wire:model="data_inauguracao" class="w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             </div>
 
-                            <!-- Relacionamentos: Cursos e Turnos (macOS Explorer Style) -->
                             <div class="col-span-1 md:col-span-2 pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
                                 <div class="mb-3">
                                     <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
@@ -235,7 +231,6 @@
                                 </div>
                                 
                                 <div class="flex flex-col md:flex-row h-[320px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                                    {{-- COLUNA 1: CURSOS --}}
                                     <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                                             1. Cursos Oferecidos
@@ -256,7 +251,6 @@
                                         </div>
                                     </div>
 
-                                    {{-- COLUNA 2: TURNOS DO CURSO --}}
                                     <div class="flex-1 flex flex-col bg-gray-50/50 dark:bg-gray-800/80">
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                                             2. Turnos Vinculados

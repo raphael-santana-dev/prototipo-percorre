@@ -1,6 +1,5 @@
 <div class="flex min-h-screen bg-white dark:bg-gray-900 w-full">
     
-    <!-- Lado Esquerdo: Imagem e Branding -->
     <div class="hidden lg:flex lg:w-1/2 relative bg-[#2b0940] items-center justify-center overflow-hidden">
         <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen" style="background-image: url('{{ Vite::asset('resources/images/bg-hero.svg') }}');"></div>
         
@@ -11,7 +10,6 @@
         </div>
     </div>
 
-    <!-- Lado Direito: Formulário Único -->
     <div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-gray-50 dark:bg-gray-950">
         
         <div class="w-full max-w-md space-y-8 animate-fade-in-down">

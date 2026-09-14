@@ -66,7 +66,6 @@
         <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700">{{ $solicitacoes->links() }}</div>
     </div>
 
-    <!-- MODAL DE RESPOSTA -->
     @if($modalResposta)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">

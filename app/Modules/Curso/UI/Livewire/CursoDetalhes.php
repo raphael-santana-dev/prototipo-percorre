@@ -28,7 +28,6 @@ class CursoDetalhes extends Component
         $user = auth()->user();
         
         return Curso::with([
-            // Filtra os relacionamentos cruzando as tabelas pivot automaticamente pelo Eloquent
             'unidades' => function($q) use ($user) {
                 if (!$user->temVisaoGlobal('cursos')) {
                     $idsUnidades = $user->unidades->pluck('id')->toArray();

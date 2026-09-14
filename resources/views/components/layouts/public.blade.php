@@ -63,7 +63,6 @@
     
     <div x-data="{ drawerOpen: false }">
         
-        <!-- NAVBAR PÚBLICA -->
         <nav class="transition-colors duration-300 bg-[#310B47] border-b border-white/10 dark:bg-gray-900 dark:border-gray-800 relative z-30">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -111,7 +110,6 @@
             </div>
         </nav>
 
-        <!-- NAVIGATION DRAWER (MOBILE) -->
         <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
 
         <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-900 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
@@ -146,12 +144,10 @@
         </div>
     </div>
 
-    <!-- Conteúdo da Página -->
     <main class="flex-1 flex flex-col">
         {{ $slot }}
     </main>
 
-    <!-- RODAPÉ INSTITUCIONAL -->
     <footer class="bg-[#1f072e] text-gray-300 pt-16 pb-12 transition-colors duration-300 mt-auto relative z-10 dark:bg-gray-950 dark:border-t dark:border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">

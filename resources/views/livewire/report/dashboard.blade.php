@@ -22,14 +22,12 @@
     </div>
 
     @if($carregando)
-        <!-- Skeleton Loading Unificado -->
         <div class="flex flex-col gap-6 animate-pulse">
             @for ($i = 0; $i < 4; $i++)
                 <div class="h-80 bg-gray-200 dark:bg-gray-700 rounded-xl w-full"></div>
             @endfor
         </div>
     @else
-        <!-- RESULTADO DRILL DOWN -->
         @if(!empty($graficoDetalhado))
             <div class="mb-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-indigo-200 border-t-4 border-t-indigo-500 transition-all">
                 <div class="flex justify-between items-center mb-4">
@@ -60,11 +58,9 @@
         <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-users-three text-purpura-500"></i> Perfil e Demografia (Campos Nativos e Form Builder)</h3>
         <div class="grid grid-cols-1 gap-6">
             
-            <!-- Gráficos Demográficos Nativos -->
             <livewire:chart-widget chartId="grafico-idades" :config="$graficoIdades" wire:key="widget-idades-{{ $filtroCiclo }}" />
             <livewire:chart-widget chartId="grafico-pcd" :config="$graficoPCD" wire:key="widget-pcd-{{ $filtroCiclo }}" />
 
-            <!-- Loop Inteligente: Imprime TODOS os Selects/Radios criados no Form Builder -->
             @foreach($graficosDinamicos as $grafico)
                 <livewire:chart-widget 
                     chartId="{{ $grafico['id'] }}" 
