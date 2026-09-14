@@ -153,27 +153,27 @@ class Dashboard extends Component
 
         // --- Montagem Nativos ---
         $this->graficoInscricoesDia = [
-            'title' => 'Evolução Diária de Inscrições', 'type' => 'area', 'height' => 350,
+            'title' => 'Inscrições diárias', 'type' => 'area', 'height' => 350,
             'labels' => $labelsDias,
             'series' => [['name' => 'Novas Inscrições', 'data' => $dadosDias]]
         ];
         $this->graficoVagas = [
-            'title' => 'Ocupação de Vagas Geração', 'type' => 'donut', 'height' => 350,
+            'title' => 'Vagas disponíveis', 'type' => 'donut', 'height' => 350,
             'labels' => ['Vagas Preenchidas', 'Vagas Abertas'],
             'series' => [$vagasPreenchidas, max(0, $totalVagas - $vagasPreenchidas)]
         ];
         $this->graficoInscricoes = [
-            'title' => 'Status do Funil', 'type' => 'bar', 'height' => 350,
+            'title' => 'Status', 'type' => 'bar', 'height' => 350,
             'labels' => array_keys($statusContagem),
             'series' => [['name' => 'Inscritos', 'data' => array_values($statusContagem)]]
         ];
         $this->graficoCursos = [
-            'title' => 'Procura por Curso', 'type' => 'area', 'height' => 350,
+            'title' => 'Cursos', 'type' => 'area', 'height' => 350,
             'labels' => array_keys($cursoContagem),
             'series' => [['name' => 'Inscritos', 'data' => array_values($cursoContagem)]]
         ];
         $this->graficoUnidades = [
-            'title' => 'Candidatos por Unidade', 'type' => 'donut', 'height' => 350,
+            'title' => 'Unidades', 'type' => 'donut', 'height' => 350,
             'labels' => array_keys($unidadeContagem),
             'series' => array_values($unidadeContagem)
         ];
@@ -231,7 +231,7 @@ class Dashboard extends Component
             $valores = $detalhes->pluck('total')->toArray();
 
             $this->graficoDetalhado = [
-                'title' => "Distribuição do status '{$label}'",
+                'title' => "Status '{$label}'",
                 'type' => 'bar',
                 'height' => 350,
                 'series' => [['name' => 'Quantidade', 'data' => $valores]],

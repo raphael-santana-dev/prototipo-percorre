@@ -19,23 +19,23 @@ class HelpdeskTemplatesSeeder extends Seeder
 
         // 2. Template: Helpdesk (Cadastro de Inscrição)
         $t2 = EmailTemplate::firstOrCreate(['nome' => 'Admin: Solicitação de Novo Cadastro'], [
-            'assunto' => 'Helpdesk: Liberação de Cadastro de Inscrição',
+            'assunto' => 'Liberação de Cadastro de Inscrição',
             'corpo' => '<p>Olá!</p><p>O usuário <strong>{{nome_solicitante}}</strong> solicitou a inclusão de uma nova inscrição via painel e precisa de autorização.</p><p><strong>Justificativa:</strong> {{justificativa}}</p><br>{{link_painel}}'
         ]);
-        Automacao::firstOrCreate(['evento_gatilho' => 'inscricao.solicitacao_cadastro'], ['nome' => 'Helpdesk: Novo Cadastro', 'template_id' => $t2->id, 'status' => true]);
+        Automacao::firstOrCreate(['evento_gatilho' => 'inscricao.solicitacao_cadastro'], ['nome' => 'Novo Cadastro', 'template_id' => $t2->id, 'status' => true]);
 
         // 3. Template: Helpdesk (Aluno -> Professor)
         $t3 = EmailTemplate::firstOrCreate(['nome' => 'Admin: Aluno pede reabertura'], [
-            'assunto' => 'Helpdesk: Solicitação de Aluno',
+            'assunto' => 'Solicitação de Aluno',
             'corpo' => '<p>Olá!</p><p>O estudante <strong>{{nome_solicitante}}</strong> solicitou a reabertura de uma fase de avaliação.</p><p><strong>Justificativa:</strong> {{justificativa}}</p><br>{{link_painel}}'
         ]);
-        Automacao::firstOrCreate(['evento_gatilho' => 'avaliacao.solicitacao_aluno'], ['nome' => 'Helpdesk: Pedido do Aluno', 'template_id' => $t3->id, 'status' => true]);
+        Automacao::firstOrCreate(['evento_gatilho' => 'avaliacao.solicitacao_aluno'], ['nome' => 'Pedido do Aluno', 'template_id' => $t3->id, 'status' => true]);
 
         // 4. Template: Helpdesk (Professor -> Admin)
         $t4 = EmailTemplate::firstOrCreate(['nome' => 'Admin: Professor pede reabertura de matriz'], [
-            'assunto' => 'Helpdesk: Matriz Bloqueada',
+            'assunto' => 'Matriz Bloqueada',
             'corpo' => '<p>Olá!</p><p>O professor <strong>{{nome_solicitante}}</strong> solicitou o desbloqueio geral de uma matriz finalizada.</p><p><strong>Motivo:</strong> {{justificativa}}</p><br>{{link_painel}}'
         ]);
-        Automacao::firstOrCreate(['evento_gatilho' => 'avaliacao.solicitacao_admin'], ['nome' => 'Helpdesk: Pedido do Professor', 'template_id' => $t4->id, 'status' => true]);
+        Automacao::firstOrCreate(['evento_gatilho' => 'avaliacao.solicitacao_admin'], ['nome' => 'Pedido do Professor', 'template_id' => $t4->id, 'status' => true]);
     }
 }

@@ -55,7 +55,7 @@ class RegistrationManager extends Component
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Processos Seletivos'],
+            ['label' => 'Processos Seletivos', 'url' => route('ciclos.index')],
             ['label' => 'Inscrições', 'url' => route('inscricoes.index')],
         ];
 
@@ -588,7 +588,7 @@ class RegistrationManager extends Component
                 'confirm' => 'Gerar a posição de ranking cruzado para todas as inscrições ativas? O motor analisará Unidade, Curso e Turno em segundo plano.'
             ],
             [
-                'label' => 'Recalcular Scores',
+                'label' => 'Recalcular Pontuação',
                 'icon' => 'ph ph-calculator',
                 'wire_click' => 'recalcularScoresGlobais',
                 'always_show_label' => true,

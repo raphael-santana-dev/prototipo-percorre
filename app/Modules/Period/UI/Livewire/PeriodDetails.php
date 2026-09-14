@@ -25,7 +25,6 @@ class PeriodDetails extends Component
 
     public Ciclo $ciclo;
     public string $modelClass = \App\Models\Ciclo::class; 
-    public $cursoSelecionado = '';
     
     public $abaAtiva = 'visao-geral'; 
 
@@ -47,6 +46,9 @@ class PeriodDetails extends Component
     public $novoStatusId = '';
 
     public array $breadcrumbs = [];
+    
+    // Armazena as Regras de Pontuação decodificadas para a Aba 3
+    public array $regrasDecodificadas = [];
 
     public function mount($id, ?string $slug = null)
     {
@@ -54,6 +56,11 @@ class PeriodDetails extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
 
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
+        
+        // Decodifica o JSON de regras na inicialização para mandar para a tela
+        $this->regrasDecodificadas = is_string($this->ciclo->regras_pontuacao) 
+            ? json_decode($this->ciclo->regras_pontuacao, true) 
+            : ($this->ciclo->regras_pontuacao ?? []);
         
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
@@ -74,38 +81,6 @@ class PeriodDetails extends Component
             $this->resetPage();
             $this->desmarcarTodas();
         }
-    }
-
-    // ==========================================
-    // GESTÃO DO CICLO (CURSOS OFERTADOS) E VAGAS
-    // ==========================================
-    public function adicionarCurso()
-    {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
-        if (empty($this->cursoSelecionado)) {
-            $this->dispatch('erro', msg: 'Selecione um curso na lista primeiro!');
-            return;
-        }
-        
-        if (!$this->ciclo->cursos->contains('id', $this->cursoSelecionado)) {
-            $this->ciclo->cursos()->attach($this->cursoSelecionado);
-            $this->ciclo->load('cursos');
-            $this->dispatch('sucesso', msg: 'Curso vinculado ao ciclo com sucesso!');
-        } else {
-            $this->dispatch('erro', msg: 'Este curso já está ofertado neste ciclo.');
-        }
-        $this->cursoSelecionado = '';
-    }
-
-    public function removerCurso($cursoId)
-    {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
-
-        $this->ciclo->cursos()->detach($cursoId);
-        $this->ciclo->load('cursos');
-        $this->dispatch('sucesso', msg: 'Curso removido do ciclo.');
     }
 
     public function limparFiltrosVagas()
@@ -257,83 +232,39 @@ class PeriodDetails extends Component
 
     public function recalcularPontuacoes()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403);
-        $regras = is_string($this->ciclo->regras_pontuacao) ? json_decode($this->ciclo->regras_pontuacao, true) : $this->ciclo->regras_pontuacao;
-        if (empty($regras)) { $this->dispatch('erro', msg: 'Não há regras de pontuação configuradas neste ciclo.'); return; }
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        
+        $trackingScore = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
+            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
 
-        $atualizados = 0;
-        $this->ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados) {
-            foreach ($inscricoes as $inscricao) {
-                $total = 0;
-                $detalhes = ['auditoria_detalhada' => []];
-                $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+        $trackingRank = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
+            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
 
-                foreach ($regras as $regra) {
-                    $campo = trim($regra['campo'] ?? '');
-                    $operador = trim($regra['operador'] ?? '=');
-                    $pontos = (int) ($regra['pontos'] ?? 0);
-                    $valorResposta = null;
-
-                    if ($campo === 'idade' && $inscricao->data_nascimento) $valorResposta = \Carbon\Carbon::parse($inscricao->data_nascimento)->age;
-                    elseif (in_array($campo, ['estado', 'cidade', 'curso_id', 'turno_id', 'possui_deficiencia'])) $valorResposta = $inscricao->$campo;
-                    elseif (isset($respostas[$campo])) $valorResposta = $respostas[$campo];
-
-                    if ($valorResposta !== null && $valorResposta !== '') {
-                        $valorAlvoStr = trim((string)($regra['valor'] ?? ''));
-                        $valoresEsperados = in_array($operador, ['between', 'in']) ? array_map('trim', explode(',', $valorAlvoStr)) : [$valorAlvoStr];
-                        $valorAlvo = $valoresEsperados[0] ?? null;
-                        $pontuou = false;
-
-                        switch ($operador) {
-                            case '=': $pontuou = (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo))); break;
-                            case '!=': $pontuou = (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo))); break;
-                            case '>=': $pontuou = ((float)$valorResposta >= (float)$valorAlvo); break;
-                            case '<=': $pontuou = ((float)$valorResposta <= (float)$valorAlvo); break;
-                            case 'between': $pontuou = ((float)$valorResposta >= (float)($valoresEsperados[0] ?? 0) && (float)$valorResposta <= (float)($valoresEsperados[1] ?? 0)); break;
-                            case 'in': $pontuou = in_array(strtolower(trim((string)$valorResposta)), array_map('strtolower', $valoresEsperados)); break;
-                        }
-
-                        if ($pontuou) {
-                            $total += $pontos;
-                            $detalhes['auditoria_detalhada'][] = ['campo_avaliado' => $campo, 'resposta_dada' => $valorResposta, 'pontos_ganhos' => $pontos, 'condicao' => "{$operador} " . implode(', ', $valoresEsperados)];
-                        }
-                    }
-                }
-                $inscricao->update([
-                    'pontuacao_total' => $total,
-                    'pontuacao_detalhes' => $total > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo do Ciclo. Total: {$total} pts."]) : null
-                ]);
-                $atualizados++;
-            }
-        });
-        $this->dispatch('sucesso', msg: "{$atualizados} inscrições recalculadas com sucesso!");
+        \Illuminate\Support\Facades\Bus::chain([
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
+        ])->dispatch();
+        
+        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
     }
 
     public function gerarRanking()
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        
-        Inscricao::where('ciclo_id', $this->ciclo->id)
-            ->update([
-                'posicao_ranking' => null, 'posicao_ranking_geral' => null,
-                'posicao_ranking_unidade' => null, 'posicao_ranking_curso' => null,
-            ]);
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        $inscricoes = $this->ciclo->inscricoes()->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc')->get();
-        $totalGeral = 0;
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
+            'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+        ]);
 
-        foreach ($inscricoes as $index => $inscricao) { $inscricao->update(['posicao_ranking_geral' => $index + 1]); $totalGeral++; }
-        
-        $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
-        foreach ($agrupadoUnidade as $grupo) { $pos = 1; foreach ($grupo as $inscricao) { $inscricao->update(['posicao_ranking_unidade' => $pos++]); } }
-
-        $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) { return $item->unidade_id . '-' . $item->curso_id; });
-        foreach ($agrupadoCurso as $grupo) { $pos = 1; foreach ($grupo as $inscricao) { $inscricao->update(['posicao_ranking_curso' => $pos++]); } }
-
-        $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) { return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id; });
-        foreach ($agrupadoTurma as $grupo) { $pos = 1; foreach ($grupo as $inscricao) { $inscricao->update(['posicao_ranking' => $pos++]); } }
-
-        $this->dispatch('sucesso', msg: "Rankings gerados! {$totalGeral} classificados.");
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
+        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
     }
 
     public function getHeadersProperty()
@@ -352,7 +283,6 @@ class PeriodDetails extends Component
 
     public function render()
     {
-        // 1. QUERY DE INSCRIÇÕES (Aba 2)
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
         $metricas = [
@@ -370,7 +300,6 @@ class PeriodDetails extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        // 2. QUERY DA NOVA TABELA DE VAGAS (Aba 1)
         $queryVagas = \App\Models\OfertaVaga::with(['unidade', 'curso', 'turno'])
             ->where('ciclo_id', $this->ciclo->id)
             ->select('ofertas_vagas.*')
@@ -385,7 +314,6 @@ class PeriodDetails extends Component
                     })
             ]);
 
-        // MÁGICA: Isolamento de Visão para a aba de Vagas!
         $user = auth()->user();
         if (!$user->temVisaoGlobal('ciclos')) {
             $idsUnidades = $user->unidades->pluck('id')->toArray();
@@ -397,12 +325,10 @@ class PeriodDetails extends Component
                        ->whereIn('turno_id', count($idsTurnos) > 0 ? $idsTurnos : [0]);
         }
 
-        // Filtros das vagas
         if (!empty($this->filtroUnidadeVagas)) $queryVagas->where('unidade_id', $this->filtroUnidadeVagas);
         if (!empty($this->filtroCursoVagas)) $queryVagas->where('curso_id', $this->filtroCursoVagas);
         if (!empty($this->filtroTurnoVagas)) $queryVagas->where('turno_id', $this->filtroTurnoVagas);
 
-        // Usamos ->get() em vez de paginate() para evitar conflitos na view
         $ofertasVagas = $queryVagas->orderBy('id', 'asc')->get();
 
         return view('livewire.period.period-details', [

@@ -37,14 +37,14 @@ class AutomacaoService
                 if (!$inscricao->student_id) {
                     $senhaPlana = Str::random(8); // Gera senha provisória
 
-                    // Cria o acesso do Aluno
                     $estudante = \App\Modules\Student\Domain\Models\Student::firstOrCreate(
                         ['email' => $inscricao->email],
                         [
                             'name' => $inscricao->nome,
                             'password' => Hash::make($senhaPlana),
                             'is_active' => true,
-                            'must_change_password' => true
+                            'must_change_password' => true,
+                            'unidade_id' => $inscricao->unidade_id
                         ]
                     );
 

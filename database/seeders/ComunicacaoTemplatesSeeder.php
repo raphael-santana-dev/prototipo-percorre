@@ -32,7 +32,7 @@ class ComunicacaoTemplatesSeeder extends Seeder
         $tplSolAluno = EmailTemplate::firstOrCreate(
             ['nome' => 'Aviso: Aluno solicitou reabertura de matriz'],
             [
-                'assunto' => 'Helpdesk: Nova Solicitação de Aluno',
+                'assunto' => 'Nova Solicitação de Aluno',
                 'corpo' => '<p>Olá!</p><p>Um estudante acabou de solicitar a reabertura de uma das fases da matriz de avaliação socioemocional vinculada a você.</p><p>Acesse o painel do sistema e navegue até a <strong>Central de Solicitações</strong> para aprovar ou recusar o pedido, avaliando a justificativa informada.</p>'
             ]
         );
@@ -40,7 +40,7 @@ class ComunicacaoTemplatesSeeder extends Seeder
         Automacao::firstOrCreate(
             ['evento_gatilho' => 'avaliacao.solicitacao_aluno'],
             [
-                'nome' => 'Helpdesk: Notificar Professor sobre Pedido do Aluno',
+                'nome' => 'Notificar Professor sobre Pedido do Aluno',
                 'template_id' => $tplSolAluno->id,
                 'status' => true
             ]
@@ -50,7 +50,7 @@ class ComunicacaoTemplatesSeeder extends Seeder
         $tplSolAdmin = EmailTemplate::firstOrCreate(
             ['nome' => 'Aviso: Professor solicitou desbloqueio de matriz'],
             [
-                'assunto' => 'Helpdesk: Matriz de Avaliação Bloqueada',
+                'assunto' => 'Matriz de Avaliação Bloqueada',
                 'corpo' => '<p>Olá, Coordenação!</p><p>Um professor solicitou o desbloqueio geral de uma matriz de avaliação que já havia sido finalizada.</p><p>Acesse a <strong>Central de Solicitações</strong> no painel administrativo para analisar os motivos operacionais da requisição e liberar a edição do documento.</p>'
             ]
         );
@@ -58,7 +58,7 @@ class ComunicacaoTemplatesSeeder extends Seeder
         Automacao::firstOrCreate(
             ['evento_gatilho' => 'avaliacao.solicitacao_admin'],
             [
-                'nome' => 'Helpdesk: Notificar Admin sobre Pedido do Professor',
+                'nome' => 'Notificar Admin sobre Pedido do Professor',
                 'template_id' => $tplSolAdmin->id,
                 'status' => true
             ]

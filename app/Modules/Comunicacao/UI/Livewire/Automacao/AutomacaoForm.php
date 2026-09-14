@@ -29,12 +29,11 @@ class AutomacaoForm extends Component
 
         $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
         
-        // NOVO GATILHO SOLICITADO:
         $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa "Finalizado")';
         
-        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Helpdesk: Solicitação de Cadastro de Inscrição';
-        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Helpdesk: Aluno solicita reabertura de fase';
-        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Helpdesk: Professor solicita reabertura de matriz';
+        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Solicitação de Cadastro de Inscrição';
+        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Aluno solicita reabertura de fase';
+        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Professor solicita reabertura de matriz';
         $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
 
         if ($id) {
