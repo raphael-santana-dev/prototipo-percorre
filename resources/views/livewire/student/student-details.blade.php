@@ -46,8 +46,7 @@
         </div>
     </x-details-card>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 mt-6">
-        <!-- Vida Acadêmica e Histórico -->
+    <!-- <div class="grid grid-cols-1 lg:grid-cols-2 mt-6">
         <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
             <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
                 <h2 class="flex items-center gap-2 text-lg font-bold text-gray-900">
@@ -66,5 +65,5 @@
                 <p class="text-xs font-medium text-gray-500 mt-1 max-w-xs mx-auto">O histórico consolidado de turmas, faltas e notas avaliativas será integrado nesta seção futuramente.</p>
             </div>
         </div>
-    </div>
+    </div> -->
 </div>
