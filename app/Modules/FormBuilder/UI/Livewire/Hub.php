@@ -19,7 +19,6 @@ class Hub extends Component
         abort_if(!feature('formulario.listar'), 403, 'Módulo desativado.');
         abort_if(!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('formulario.listar'), 403, 'Acesso restrito.');
         
-        // Busca ciclos recentes para facilitar a seleção na modal
         $this->ciclos = Ciclo::orderBy('id', 'desc')->take(10)->get();
     }
 

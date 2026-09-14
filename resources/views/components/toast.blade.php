@@ -2,11 +2,10 @@
     x-data="{ 
         show: false, 
         message: '', 
-        type: 'success', // 'success' ou 'error'
+        type: 'success',
         timeout: null,
         
         init() {
-            // 1. Escuta as sessões nativas do Laravel em Português
             @if(session()->has('sucesso'))
                 this.dispararToast('{{ session('sucesso') }}', 'success');
             @endif
@@ -15,7 +14,6 @@
                 this.dispararToast('{{ session('erro') }}', 'error');
             @endif
 
-            // 2. Escuta as sessões nativas legadas em Inglês
             @if(session()->has('success'))
                 this.dispararToast('{{ session('success') }}', 'success');
             @endif
@@ -30,10 +28,8 @@
             this.type = type;
             this.show = true;
             
-            // Limpa o tempo anterior se disparar dois seguidos
             clearTimeout(this.timeout);
             
-            // Some automaticamente após 4 segundos
             this.timeout = setTimeout(() => { this.show = false; }, 4000);
         }
     }"

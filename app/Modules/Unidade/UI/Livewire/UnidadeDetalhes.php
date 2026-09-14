@@ -21,7 +21,6 @@ class UnidadeDetalhes extends Component
         
         $this->unidade = $service->buscarPorId($id);
 
-        // MÁGICA: Ocultando os Cursos caso o professor não tenha vínculo com eles
         $user = auth()->user();
         if (!$user->temVisaoGlobal('unidades')) {
             $cursosPermitidos = $user->cursos->pluck('id')->toArray();
@@ -30,7 +29,7 @@ class UnidadeDetalhes extends Component
                 if (count($cursosPermitidos) > 0) {
                     $q->whereIn('cursos.id', $cursosPermitidos);
                 } else {
-                    $q->whereRaw('1 = 0'); // Força não retornar nada
+                    $q->whereRaw('1 = 0');
                 }
             }]);
         } else {

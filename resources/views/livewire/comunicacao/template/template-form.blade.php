@@ -83,10 +83,8 @@
                                     }
                                 });
 
-                                // 1. Carrega o conteúdo inicial do banco de dados para dentro do editor
                                 quill.clipboard.dangerouslyPasteHTML(this.conteudo || '');
 
-                                // 2. Sempre que você digitar, ele joga o valor de volta pro Livewire
                                 quill.on('text-change', () => {
                                     this.conteudo = quill.root.innerHTML;
                                 });

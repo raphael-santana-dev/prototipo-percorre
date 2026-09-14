@@ -10,7 +10,6 @@ class ComunicacaoTemplatesSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Template: Nova Inscrição (Candidato)
         $tplInscricao = EmailTemplate::firstOrCreate(
             ['nome' => 'Boas-Vindas e Acesso ao Formulário'],
             [
@@ -28,7 +27,6 @@ class ComunicacaoTemplatesSeeder extends Seeder
             ]
         );
 
-        // 2. Template: Helpdesk (Aluno -> Professor)
         $tplSolAluno = EmailTemplate::firstOrCreate(
             ['nome' => 'Aviso: Aluno solicitou reabertura de matriz'],
             [
@@ -46,7 +44,6 @@ class ComunicacaoTemplatesSeeder extends Seeder
             ]
         );
 
-        // 3. Template: Helpdesk (Professor -> Admin)
         $tplSolAdmin = EmailTemplate::firstOrCreate(
             ['nome' => 'Aviso: Professor solicitou desbloqueio de matriz'],
             [

@@ -10,15 +10,10 @@ use App\Modules\FeatureToggle\Domain\Models\Feature;
 
 class SystemPermissionsAndFeaturesSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // 1. Limpa o cache do Spatie antes de inserir novas permissões
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 2. Lista unificada e limpa (sem duplicidades)
         $recursos = [
             'acl.permissao.listar',
             'acl.permissao.criar',
@@ -116,16 +111,12 @@ class SystemPermissionsAndFeaturesSeeder extends Seeder
             'curso.visualizar'
         ];
 
-        // Remover qualquer duplicidade acidental no array processado
         $recursos = array_unique($recursos);
 
         foreach ($recursos as $recurso) {
-            // Extrai o nome do módulo dinamicamente (ex: 'usuario.listar' -> 'usuario')
             $partes = explode('.', $recurso);
-            array_pop($partes); // Remove a última parte (ação)
-            $modulo = implode('.', $partes); // Junta o restante para formar o módulo
-
-            // 3. Cadastra a Feature (1:1 com a permissão)
+            array_pop($partes); 
+            $modulo = implode('.', $partes);
             Feature::updateOrCreate(
                 ['name' => $recurso],
                 [
@@ -135,7 +126,6 @@ class SystemPermissionsAndFeaturesSeeder extends Seeder
                 ]
             );
 
-            // 4. Cadastra a Permissão (Spatie)
             Permission::updateOrCreate(
                 ['name' => $recurso, 'guard_name' => 'web'],
                 [
@@ -145,7 +135,6 @@ class SystemPermissionsAndFeaturesSeeder extends Seeder
             );
         }
 
-        // 5. Garantia Operacional: Criar o papel de 'dev' e atribuir todas as permissões
         $devRole = Role::firstOrCreate(['name' => 'dev', 'guard_name' => 'web']);
         $devRole->syncPermissions(Permission::all());
     }

@@ -27,12 +27,10 @@ class FeatureManager extends Component
     public $modelClass = Feature::class;
     public array $breadcrumbs = [];
 
-    // Filtros
     public $filtro_module = '';
     public $filtro_keyword = '';
     public $filtro_status = '';
 
-    // Array para inserção múltipla / edição
     public array $items = [];
 
     public function mount()
@@ -93,7 +91,6 @@ class FeatureManager extends Component
         $this->modalAberto = false;
     }
 
-    // Injeção de dependência do Service gerenciado pelo Laravel
     public function salvar(FeatureService $featureService)
     {
         $this->validate([
@@ -112,7 +109,6 @@ class FeatureManager extends Component
             $fullName = $moduleFinal . '.' . $actionFinal;
 
             if ($this->featureId) {
-                // Modo Edição (Apenas 1 item é processado)
                 if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta feature já está cadastrada.');
                     return;
@@ -130,7 +126,6 @@ class FeatureManager extends Component
                 Cache::forget("feature_status_{$nomeAntigo}");
                 Cache::forget("feature_status_{$fullName}");
             } else {
-                // Modo Criação Múltipla via Service (DDD)
                 if (Feature::where('name', $fullName)->exists()) {
                     $this->addError("items.{$index}.action", "A feature {$fullName} já existe.");
                     continue; 
@@ -159,7 +154,6 @@ class FeatureManager extends Component
         $feature = Feature::findOrFail($id);
         $service = app(FeatureService::class);
         
-        // Passa a responsabilidade de salvar e limpar cache para o Service
         $service->toggle($feature->name, !$feature->is_active);
         
         $this->dispatch('sucesso', msg: 'Status da feature alterado!');

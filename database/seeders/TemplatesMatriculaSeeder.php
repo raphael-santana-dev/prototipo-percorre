@@ -9,7 +9,6 @@ class TemplatesMatriculaSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Inscrito aprovado sem documento (1º Contato)
         EmailTemplate::firstOrCreate(
             ['nome' => '1. Aprovado sem documento (1º Aviso)'],
             [
@@ -23,7 +22,6 @@ class TemplatesMatriculaSeeder extends Seeder
             ]
         );
 
-        // 2. Inscrito aprovado sem documento (Lembrete 20/07)
         EmailTemplate::firstOrCreate(
             ['nome' => '2. Aprovado sem documento (Lembrete)'],
             [
@@ -37,7 +35,6 @@ class TemplatesMatriculaSeeder extends Seeder
             ]
         );
 
-        // 3. Inscrito aprovado + documento - assinatura
         EmailTemplate::firstOrCreate(
             ['nome' => '3. Documentos Aprovados - Assinatura do Contrato'],
             [
@@ -52,7 +49,6 @@ class TemplatesMatriculaSeeder extends Seeder
             ]
         );
 
-        // 4. Matrícula finalizada (Padrão)
         EmailTemplate::firstOrCreate(
             ['nome' => '4. Matrícula Finalizada (Com Detalhes)'],
             [
@@ -74,7 +70,6 @@ class TemplatesMatriculaSeeder extends Seeder
             ]
         );
 
-        // 5. Matrícula finalizada (Versão RD Station)
         EmailTemplate::firstOrCreate(
             ['nome' => '5. Matrícula Finalizada (Versão RD / WhatsApp)'],
             [

@@ -34,10 +34,8 @@ trait RegistraAuditoria
             $novo = $model->getAttributes();
         } elseif ($acao === 'atualizacao') {
             $novo = $model->getChanges();
-            // Pega o estado original apenas das colunas que sofreram alteração
             $antigo = array_intersect_key($model->getOriginal(), $novo);
             
-            // Prevenção: Se clicou em salvar sem alterar nada, ignora o log
             if (empty($novo)) return; 
         } elseif ($acao === 'exclusao') {
             $antigo = $model->getOriginal();

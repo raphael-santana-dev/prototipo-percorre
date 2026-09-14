@@ -12,14 +12,13 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $user = User::updateOrCreate(
-            ['email' => 'dev@percorre.com'], // Mude para o seu e-mail se quiser
+            ['email' => 'dev@percorre.com'],
             [
                 'name' => 'Desenvolvedor',
-                'password' => Hash::make('password'), // Senha padrão
+                'password' => Hash::make('password'), 
             ]
         );
 
-        // Atribui a role 'dev' ao usuário
         $user->assignRole('dev');
     }
 }

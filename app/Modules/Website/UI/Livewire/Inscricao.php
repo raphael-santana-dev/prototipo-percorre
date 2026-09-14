@@ -24,7 +24,6 @@ class Inscricao extends Component
     public $cicloAtivoId = null;
     public $inscricoesAbertas = false;
 
-    // Campos estáticos - Etapa 1
     public $nome, $nome_social, $cpf, $email, $celular, $data_nascimento, $cep, $logradouro, $bairro, $cidade, $estado, $numero, $complemento, $unidade, $turno, $curso, $natureza_deficiencia;
     public $possui_deficiencia = 'nao';
     public $possui_nome_social = 'nao';
@@ -34,14 +33,12 @@ class Inscricao extends Component
     public $camposDinamicos = [];
     public $respostas = [];
 
-    // Arrays de Cascata
     public array $unidadesDisponiveis = [];
     public array $turnosDisponiveis = [];
     public array $cursosDisponiveis = [];
     
-    // Configurações do Form Builder
     public array $formSettings = [];
-    public bool $use_vacancy_limit = false; // Controle da Trava
+    public bool $use_vacancy_limit = false; 
 
     public function mount()
     {
@@ -68,16 +65,12 @@ class Inscricao extends Component
             $maxEtapaDinamica = $this->camposDinamicos->max('etapa') ?? 1;
             $this->totalEtapas = max(1, $maxEtapaDinamica);
 
-            // Pré-aloca o array de respostas para evitar erros de undefined index no Blade
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
                     $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz', 'social']) ? [] : '';
                 }
             }
 
-            // =========================================================
-            // RETOMADA DE INSCRIÇÃO: Carrega dados caso exista sessão
-            // =========================================================
             if (session()->has('inscricao_retomada_id')) {
                 $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
                 
@@ -85,14 +78,12 @@ class Inscricao extends Component
                     $this->inscricaoId = $inscricaoRetomada->id;
                     $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                     
-                    // Bloqueia avançar se a inscrição já estiver finalizada
                     if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado'])) {
                         $this->etapaAtual = 99;
                         session()->forget('inscricao_retomada_id');
                         return;
                     }
 
-                    // Carrega os campos fixos
                     $this->nome = $inscricaoRetomada->nome;
                     $this->cpf = $inscricaoRetomada->cpf;
                     $this->email = $inscricaoRetomada->email;
@@ -116,7 +107,6 @@ class Inscricao extends Component
                     $this->curso = $inscricaoRetomada->curso_id;
                     $this->turno = $inscricaoRetomada->turno_id;
 
-                    // Carrega as respostas dos campos dinâmicos (JSON)
                     $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
                     if (is_array($dadosAntigos)) {
                         foreach ($dadosAntigos as $chave => $valor) {
@@ -124,11 +114,9 @@ class Inscricao extends Component
                         }
                     }
 
-                    // Força a recarga das cascatas de cursos e unidades baseadas na data de nascimento injetada
                     $this->restaurarDeDadosSalvos();
                 }
                 
-                // Limpa a sessão para não afetar próximas inscrições no mesmo PC
                 session()->forget('inscricao_retomada_id');
             }
         }
@@ -150,7 +138,6 @@ class Inscricao extends Component
     {
         $cpfLimpo = preg_replace('/[^0-9]/', '', $value);
         
-        // Só busca no banco quando o CPF estiver completamente digitado
         if (strlen($cpfLimpo) === 11) {
             $inscricaoRetomada = InscricaoModel::with('statusInscricao')
                 ->where('cpf', $cpfLimpo)
@@ -158,13 +145,11 @@ class Inscricao extends Component
                 ->first();
 
             if ($inscricaoRetomada) {
-                // Se o status já for de uma inscrição concluída, bloqueia
                 if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado', 'pendente'])) {
                     $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada neste ciclo.');
                     return;
                 }
 
-                // Carrega os dados básicos
                 $this->inscricaoId = $inscricaoRetomada->id;
                 $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                 $this->nome = $inscricaoRetomada->nome;
@@ -187,7 +172,6 @@ class Inscricao extends Component
                 $this->curso = $inscricaoRetomada->curso_id;
                 $this->turno = $inscricaoRetomada->turno_id;
 
-                // Carrega os campos dinâmicos do JSON
                 $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
                 if (is_array($dadosAntigos)) {
                     foreach ($dadosAntigos as $chave => $valor) {
@@ -195,31 +179,22 @@ class Inscricao extends Component
                     }
                 }
 
-                // Reconstrói as cascatas de cursos baseadas nos dados puxados
                 $this->restaurarDeDadosSalvos();
 
-                // Notifica o usuário visualmente no frontend
                 $this->dispatch('sucesso', msg: 'Encontramos uma inscrição em andamento! Recuperamos seus dados de onde você parou.');
             }
         }
     }
 
-    /**
-     * MOTOR ULTRA RÁPIDO DE CHECAGEM DE VAGAS
-     * Retorna um Array associativo apenas com as combinações (Unidade-Curso-Turno)
-     * que ainda possuem vagas > inscritos aprovados.
-     */
     private function getOfertasValidas()
     {
-        if (!$this->use_vacancy_limit) return null; // Retorna null se a trava estiver desligada no construtor
+        if (!$this->use_vacancy_limit) return null;
 
         $ofertas = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloAtivoId)->get();
 
-        // Faz 1 única query GROUP BY para contar todas as inscrições aprovadas do ciclo!
         $ocupadas = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
             ->where('ciclo_id', $this->cicloAtivoId)
             ->whereHas('statusInscricao', function($q) {
-                // Considera a vaga ocupada se o status for de aprovação
                 $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
             })
             ->groupBy('curso_id', 'unidade_id', 'turno_id')
@@ -233,7 +208,6 @@ class Inscricao extends Component
             $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
             $qtdOcupada = isset($ocupadas[$key]) ? $ocupadas[$key]->total : 0;
             
-            // Só disponibiliza se a quantidade de vagas da matriz for maior que o preenchido
             if ($oferta->vagas > $qtdOcupada) {
                 $validas[$key] = true;
             }
@@ -324,7 +298,7 @@ class Inscricao extends Component
                 
                 $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
                 if ($inscricaoDB) {
-                    $inscricaoDB->update(['etapa_atual' => 100]); // Salva 100 para representar Espera
+                    $inscricaoDB->update(['etapa_atual' => 100]);
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -337,17 +311,13 @@ class Inscricao extends Component
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            // MÁGICA: Formulário Concluído com Sucesso!
             $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
             if ($inscricaoDB) {
-                // Salva o 99 no banco para representar o status Finalizado
                 $inscricaoDB->update(['etapa_atual' => 99]);
                 
-                // Dispara o Gatilho. O painel decide se manda e-mail e se cria a conta.
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
             }
 
-            // Status visual "99" para renderizar a tela de "Parabéns" no Frontend
             $this->etapaAtual = 99; 
             $this->dispatch('inscricao-concluida');
         }
@@ -482,10 +452,8 @@ class Inscricao extends Component
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true], true)) continue;
             
-            // FALLBACK INTELIGENTE: Pega o estado do banco. Se for nulo, extrai a UF do nome (Ex: "SP" de "SP - Hortolândia")
             $estadoUnidade = $oferta->unidade->estado ?: trim(explode('-', $oferta->unidade->nome)[0]);
 
-            // TRAVA DE UF CORRIGIDA
             if (strtoupper($estadoUnidade) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
                 continue;
             }
@@ -526,7 +494,6 @@ class Inscricao extends Component
         $ofertasValidas = $this->getOfertasValidas();
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
-        // Fallback do estado para a unidade selecionada
         $estadoUnidadeSelecionada = $unidadeSelecionada->estado ?: trim(explode('-', $unidadeSelecionada->nome)[0]);
 
         $ofertasDaUnidade = \App\Models\OfertaVaga::with(['curso', 'turno'])
@@ -543,7 +510,6 @@ class Inscricao extends Component
         foreach ($ofertasDaUnidade as $oferta) {
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             
-            // TRAVA DE UF NO CURSO
             if ($unidadeSelecionada && strtoupper($estadoUnidadeSelecionada) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
                 continue;
             }

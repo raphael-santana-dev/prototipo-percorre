@@ -22,7 +22,6 @@ class Dashboard extends Component
     public $ciclosDb = [];
     public bool $carregando = true;
 
-    // Gráficos Nativos e Estruturais
     public array $graficoInscricoesDia = [];
     public array $graficoVagas = [];
     public array $graficoInscricoes = [];
@@ -31,10 +30,8 @@ class Dashboard extends Component
     public array $graficoIdades = [];
     public array $graficoPCD = [];
 
-    // Array que guardará todos os gráficos gerados dinamicamente a partir do Form Builder
     public array $graficosDinamicos = [];
 
-    // Drill-down
     public array $graficoDetalhado = [];
     public string $tituloDetalhado = '';
 
@@ -65,18 +62,15 @@ class Dashboard extends Component
     {
         if (!$this->filtroCiclo) return;
 
-        // 1. Busca os campos do formulário deste ciclo que não são texto livre
         $camposFormulario = CampoFormulario::where('ciclo_id', $this->filtroCiclo)
             ->whereIn('tipo', ['select', 'radio'])
             ->get();
 
-        // 2. Extrai TODA a base de Inscrições do Ciclo (Alta Performance) incluindo o created_at
         $inscricoes = Inscricao::select('id', 'status_inscricao_id', 'curso_id', 'unidade_id', 'data_nascimento', 'possui_deficiencia', 'dados_dinamicos', 'created_at')
             ->with(['statusInscricao:id,nome', 'curso:id,nome', 'unidade:id,nome'])
             ->where('ciclo_id', $this->filtroCiclo)
             ->get();
 
-        // 3. Inicializadores de Contagem
         $totalVagas = OfertaVaga::where('ciclo_id', $this->filtroCiclo)->sum('vagas');
         $inscricoesPorDia = [];
         $statusContagem = []; $cursoContagem = []; $unidadeContagem = [];
@@ -84,7 +78,6 @@ class Dashboard extends Component
         $pcdContagem = ['Sim' => 0, 'Não' => 0];
         $vagasPreenchidas = 0;
         
-        // Inicializa contadores para os campos dinâmicos do formulário
         $contadoresDinamicos = [];
         foreach ($camposFormulario as $campo) {
             $contadoresDinamicos[$campo->name] = [
@@ -93,15 +86,12 @@ class Dashboard extends Component
             ];
         }
 
-        // 4. Processamento em Memória RAM
         foreach ($inscricoes as $insc) {
-            // Evolução por Dia
             if ($insc->created_at) {
                 $dataStr = $insc->created_at->format('Y-m-d');
                 $inscricoesPorDia[$dataStr] = ($inscricoesPorDia[$dataStr] ?? 0) + 1;
             }
 
-            // Nativos: Status, Curso e Unidade
             $status = $insc->statusInscricao->nome ?? 'Pendente';
             $statusContagem[$status] = ($statusContagem[$status] ?? 0) + 1;
             if (in_array($status, ['Aprovado', 'Selecionado'])) $vagasPreenchidas++;
@@ -112,7 +102,6 @@ class Dashboard extends Component
             $unidade = $insc->unidade->nome ?? 'Sem Unidade';
             $unidadeContagem[$unidade] = ($unidadeContagem[$unidade] ?? 0) + 1;
 
-            // Nativos: Faixa Etária
             if ($insc->data_nascimento) {
                 $idade = Carbon::parse($insc->data_nascimento)->age;
                 if ($idade < 18) $idadesContagem['Menor de 18']++;
@@ -122,11 +111,9 @@ class Dashboard extends Component
                 else $idadesContagem['Acima de 45']++;
             }
 
-            // Nativos: PCD
             $isPcd = in_array(strtolower(trim($insc->possui_deficiencia)), ['sim', 's', '1', 'true']) ? 'Sim' : 'Não';
             $pcdContagem[$isPcd]++;
 
-            // Lendo o JSON Dinâmico do Form Builder
             $dinamicos = is_string($insc->dados_dinamicos) ? json_decode($insc->dados_dinamicos, true) : ($insc->dados_dinamicos ?? []);
             
             foreach ($camposFormulario as $campo) {
@@ -141,9 +128,8 @@ class Dashboard extends Component
         }
 
         arsort($cursoContagem);
-        ksort($inscricoesPorDia); // Ordena cronologicamente os dias (Y-m-d)
+        ksort($inscricoesPorDia);
 
-        // Prepara os dados do gráfico diário (formatando rótulo para d/m)
         $labelsDias = [];
         $dadosDias = [];
         foreach ($inscricoesPorDia as $data => $qtd) {
@@ -151,7 +137,6 @@ class Dashboard extends Component
             $dadosDias[] = $qtd;
         }
 
-        // --- Montagem Nativos ---
         $this->graficoInscricoesDia = [
             'title' => 'Inscrições diárias', 'type' => 'area', 'height' => 350,
             'labels' => $labelsDias,
@@ -188,18 +173,16 @@ class Dashboard extends Component
             'series' => array_values($pcdContagem)
         ];
 
-        // --- Montagem Inteligente dos Gráficos do Form Builder ---
         $this->graficosDinamicos = [];
         foreach ($contadoresDinamicos as $name => $dados) {
-            arsort($dados['opcoes']); // Ordena do maior para o menor
+            arsort($dados['opcoes']); 
             
-            // Inteligência visual: Se tiver muitas opções (Ex: Escolas, Profissões), usa barra. Se for poucas (Sim/Não, Gênero), usa Donut.
             $tipoGrafico = count($dados['opcoes']) > 5 ? 'bar' : 'donut';
 
             $this->graficosDinamicos[] = [
                 'id' => 'grafico-dinamico-' . $name,
                 'config' => [
-                    'title' => Str::limit($dados['label'], 45), // Limita o título para não quebrar a tela
+                    'title' => Str::limit($dados['label'], 45),
                     'type' => $tipoGrafico,
                     'height' => 350,
                     'labels' => array_keys($dados['opcoes']),

@@ -15,7 +15,6 @@ class DynamicFields extends Component
 {
     use WithFileUploads;
     
-    // Propriedades Base
     public $campoId = null;
     public $etapa = 1;
     public $ordem = 1;
@@ -39,7 +38,6 @@ class DynamicFields extends Component
     public $matriz_linhas = '';
     public $matriz_colunas = '';
 
-    // Propriedades de Configuração Geral do Formulário (Aba 2)
     public $slug = '';
     public $bg_image_upload;
     public array $formSettings = [
@@ -52,7 +50,7 @@ class DynamicFields extends Component
         'use_vacancy_limit' => false,
     ];
 
-    public string $contextoTipo; // 'ciclo' ou 'formulario'
+    public string $contextoTipo; 
     public int $contextoId;
     public string $contextoNome = '';
 
@@ -161,13 +159,11 @@ class DynamicFields extends Component
 
         if ($this->campoId) {
             $campoAtual = CampoFormulario::find($this->campoId);
-            // Se ele for mantido na MESMA etapa, o limite é o número atual de itens
             if ($campoAtual && $campoAtual->etapa == $this->etapa) {
                 return max(1, $count);
             }
         }
 
-        // Se for um bloco novo OU estiver sendo movido para uma etapa diferente, o limite aumenta 1
         return $count + 1;
     }
 
@@ -179,7 +175,6 @@ class DynamicFields extends Component
 
     public function updatedEtapa()
     {
-        // Sempre que o usuário troca a etapa no dropdown, atualizamos os limites de ordem daquela página
         $this->atualizarProximaOrdem();
     }
 
@@ -332,7 +327,6 @@ class DynamicFields extends Component
             $configToSave['redes_permitidas'] = array_values(array_filter($this->configuracoes['redes_permitidas'] ?? []));
         }
 
-        // --- SISTEMA INTELIGENTE DE REORGANIZAÇÃO ---
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
@@ -341,7 +335,6 @@ class DynamicFields extends Component
             $etapaNova = $this->etapa;
 
             if ($etapaAntiga == $etapaNova) {
-                // Cenário 1: Reorganização dentro da MESMA página
                 if ($ordemAntiga != $ordemNova) {
                     if ($ordemNova < $ordemAntiga) {
                         CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
@@ -350,14 +343,10 @@ class DynamicFields extends Component
                     }
                 }
             } else {
-                // Cenário 2: Movimentação ENTRE páginas diferentes
-                // Fecha o "buraco" na etapa antiga
                 CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaAntiga)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemAntiga)->decrement('ordem');
-                // Abre o espaço na etapa nova
                 CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->where('ordem', '>=', $ordemNova)->increment('ordem');
             }
         } else {
-            // Cenário 3: Inserção de um bloco totalmente NOVO
             CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
         }
 
@@ -406,7 +395,6 @@ class DynamicFields extends Component
         $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
     }
 
-    // --- FUNÇÕES DE PÁGINAS / FASES ---
     public function adicionarEtapa()
     {
         $proxNumero = $this->etapasDisponiveis->max('numero') + 1;

@@ -28,26 +28,22 @@ class PeriodDetails extends Component
     
     public $abaAtiva = 'visao-geral'; 
 
-    // Filtros Inscrições (Aba 2)
     public $filtroNome = '';
     public $filtroStatus = '';
     public $filtroUnidade = '';
     public $filtroTurno = '';
     public $filtroCurso = '';
 
-    // Filtros das Vagas (Aba 1)
     public $filtroUnidadeVagas = '';
     public $filtroCursoVagas = '';
     public $filtroTurnoVagas = '';
 
-    // Ações em Lote
     public array $selecionadas = [];
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
 
     public array $breadcrumbs = [];
     
-    // Armazena as Regras de Pontuação decodificadas para a Aba 3
     public array $regrasDecodificadas = [];
 
     public function mount($id, ?string $slug = null)
@@ -57,7 +53,6 @@ class PeriodDetails extends Component
 
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
         
-        // Decodifica o JSON de regras na inicialização para mandar para a tela
         $this->regrasDecodificadas = is_string($this->ciclo->regras_pontuacao) 
             ? json_decode($this->ciclo->regras_pontuacao, true) 
             : ($this->ciclo->regras_pontuacao ?? []);
@@ -113,10 +108,6 @@ class PeriodDetails extends Component
 
         return $query; 
     }
-
-    // ==========================================
-    // MÉTODOS DE STATUS E LOTE
-    // ==========================================
     private function aplicarMudancaDeStatus($inscricoes, $statusId)
     {
         $statusNovo = StatusInscricao::find($statusId);

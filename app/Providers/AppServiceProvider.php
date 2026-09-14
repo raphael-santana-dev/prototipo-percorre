@@ -25,20 +25,16 @@ use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 
 use App\Modules\Report\UI\Livewire\ChartWidget;
 
-// Turno (DDD)
 use App\Modules\Turno\Domain\Repositories\TurnoRepositoryInterface;
 use App\Modules\Turno\Infrastructure\Persistence\EloquentTurnoRepository;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
 
-// Unidade (DDD)
 use App\Modules\Unidade\Domain\Repositories\UnidadeRepositoryInterface;
 use App\Modules\Unidade\Infrastructure\Persistence\EloquentUnidadeRepository;
 
-// Curso (DDD) - NOVO!
 use App\Modules\Curso\Domain\Repositories\CursoRepositoryInterface;
 use App\Modules\Curso\Infrastructure\Persistence\EloquentCursoRepository;
 
-// Portal do Aluno
 use App\Modules\Portal\UI\Livewire\Auth\LogoutButton as PortalLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
 use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
@@ -48,20 +44,14 @@ use Illuminate\Auth\Events\Logout;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
+    
     public function register(): void
     {
-        // Bindings do Padrão Repository (DDD)
         $this->app->bind(TurnoRepositoryInterface::class, EloquentTurnoRepository::class);
         $this->app->bind(UnidadeRepositoryInterface::class, EloquentUnidadeRepository::class);
-        $this->app->bind(CursoRepositoryInterface::class, EloquentCursoRepository::class); // <- NOVO
+        $this->app->bind(CursoRepositoryInterface::class, EloquentCursoRepository::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
 
@@ -90,7 +80,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('turno.turno-manager', TurnoManager::class);
         Livewire::component('unidade.unidade-manager', \App\Modules\Unidade\UI\Livewire\UnidadeManager::class);
         Livewire::component('unidade.unidade-detalhes', \App\Modules\Unidade\UI\Livewire\UnidadeDetalhes::class);
-        Livewire::component('curso.curso-manager', \App\Modules\Curso\UI\Livewire\CursoManager::class); // <- NOVO
+        Livewire::component('curso.curso-manager', \App\Modules\Curso\UI\Livewire\CursoManager::class); 
 
         Livewire::component('period.period-manager', \App\Modules\Period\UI\Livewire\PeriodManager::class);
         Livewire::component('period.dynamic-fields', \App\Modules\FormBuilder\UI\Livewire\DynamicFields::class);
@@ -100,7 +90,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('period.regras-manager', \App\Modules\Period\UI\Livewire\RegrasManager::class);
 
         Livewire::component('registration.registration-manager', \App\Modules\Registration\UI\Livewire\RegistrationManager::class);
-        Livewire::component('registration.status-manager', \App\Modules\Registration\UI\Livewire\StatusManager::class); // <- NOVO
+        Livewire::component('registration.status-manager', \App\Modules\Registration\UI\Livewire\StatusManager::class); 
         Livewire::component('registration.registration-details', \App\Modules\Registration\UI\Livewire\RegistrationDetails::class);
         Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
         
@@ -205,7 +195,7 @@ class AppServiceProvider extends ServiceProvider
             $usuario = $event->user;
             
             AuditoriaLog::create([
-                'tabela_alterada' => 'users', // Tabela referência
+                'tabela_alterada' => 'users', 
                 'registro_id' => $usuario->id,
                 'acao' => 'login',
                 'informacao_anterior' => null,

@@ -16,7 +16,7 @@ class Unidade extends Model
 
     protected $fillable = [
         'nome', 'slug', 'status', 'data_inauguracao', 'endereco', 'email', 'telefone', 'foto_path',
-        'cep', 'estado', 'cidade', 'bairro', 'logradouro', 'numero', 'complemento' // <- Adicionados
+        'cep', 'estado', 'cidade', 'bairro', 'logradouro', 'numero', 'complemento'
     ];
     
     public function usuarios()
@@ -24,13 +24,11 @@ class Unidade extends Model
         return $this->belongsToMany(User::class, 'unidade_user');
     }
 
-    // NOVA Relação (Cursos ministrados na Unidade)
     public function cursos()
     {
         return $this->belongsToMany(Curso::class, 'curso_unidade');
     }
 
-    // Relacionamento com os Ciclos (Processos Seletivos)
     public function ciclos()
     {
         return $this->belongsToMany(\App\Models\Ciclo::class, 'ciclo_unidade', 'unidade_id', 'ciclo_id');

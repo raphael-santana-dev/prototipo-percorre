@@ -21,9 +21,8 @@ use Faker\Factory as Faker;
 class GeradorMock extends Component
 {
     public $ambienteGerado = false;
-    public $quantidadeInjecao = 1; // Input do usuário
-    public $alunosGerados = []; // Guarda as credenciais geradas no loop
-
+    public $quantidadeInjecao = 1; 
+    public $alunosGerados = []; 
     public function mount()
     {
         abort_if(!feature('ferramenta.mock'), 403, 'Gerador desativado.');
@@ -43,7 +42,6 @@ class GeradorMock extends Component
         DB::beginTransaction();
 
         try {
-            // 1. GARANTIR A ESTRUTURA BASE (Usa existente ou cria 1 padrão)
             $unidadeId = DB::table('unidades')->inRandomOrder()->value('id') ?? DB::table('unidades')->insertGetId([
                 'nome' => 'Sede Principal (Mock)', 'slug' => 'sede-principal-mock-' . Str::random(4), 'endereco' => 'Rua Mock, 123', 'status' => 'Ativa', 'created_at' => now()
             ]);
@@ -60,7 +58,6 @@ class GeradorMock extends Component
                 'nome' => '2026 - 1º Semestre', 'ano' => 2026, 'semestre' => 1, 'data_inicio' => now(), 'data_fim' => now()->addMonths(6), 'status' => true, 'created_at' => now()
             ]);
 
-            // 2. GARANTIR UM PERÍODO DE AVALIAÇÃO ABERTO E CRITÉRIOS
             $crit1 = CriterioAvaliacao::firstOrCreate(['codigo' => 'COM001'], ['nome' => 'Comunicação Interpessoal', 'status' => true]);
             $crit2 = CriterioAvaliacao::firstOrCreate(['codigo' => 'PRO002'], ['nome' => 'Proatividade e Iniciativa', 'status' => true]);
             $crit3 = CriterioAvaliacao::firstOrCreate(['codigo' => 'RES003'], ['nome' => 'Resolução de Problemas', 'status' => true]);
@@ -75,7 +72,6 @@ class GeradorMock extends Component
             PeriodoFase::firstOrCreate(['periodo_id' => $periodo->id, 'fase' => '2'], ['responsavel' => '2']);
             PeriodoFase::firstOrCreate(['periodo_id' => $periodo->id, 'fase' => '3'], ['responsavel' => '3']);
 
-            // 3. GARANTIR UM PROFESSOR
             Role::firstOrCreate(['name' => 'professor', 'guard_name' => 'web']);
             $professor = User::role('professor')->inRandomOrder()->first();
             if (!$professor) {
@@ -83,14 +79,10 @@ class GeradorMock extends Component
                 $professor->assignRole('professor');
             }
 
-            $this->alunosGerados = []; // Limpa o array de credenciais para a tela
+            $this->alunosGerados = []; 
 
-            // ==========================================
-            // LOOP DE INJEÇÃO DINÂMICA
-            // ==========================================
             for ($i = 0; $i < $this->quantidadeInjecao; $i++) {
                 
-                // Cria Estudante Único (REMOVIDO O unidade_id AQUI, ESTAVA CAUSANDO O ERRO)
                 $alunoEmail = 'aluno.' . $faker->unique()->numerify('#####') . '@sistema.com';
                 $aluno = Student::create([
                     'name' => $faker->name, 
@@ -101,9 +93,8 @@ class GeradorMock extends Component
                     'slug' => Str::slug($faker->name . '-' . Str::random(4))
                 ]);
 
-                // Pega uma Turma Aleatória ou cria se não existir nenhuma
                 $turma = Turma::inRandomOrder()->first();
-                if (!$turma || rand(1, 10) > 8) { // 20% de chance de criar uma turma nova para variar os dados
+                if (!$turma || rand(1, 10) > 8) { 
                     $turma = Turma::create([
                         'nome' => 'Turma ' . $faker->bothify('?##'),
                         'ciclo_id' => $cicloId,
@@ -115,11 +106,9 @@ class GeradorMock extends Component
                     ]);
                     DB::table('professor_turma')->insert(['turma_id' => $turma->id, 'user_id' => $professor->id, 'created_at' => now()]);
                 } else {
-                    // Garante que o professor está na turma selecionada
                     DB::table('professor_turma')->updateOrInsert(['turma_id' => $turma->id, 'user_id' => $professor->id], ['created_at' => now()]);
                 }
 
-                // Cria Matrícula
                 $matriculaId = DB::table('matriculas')->insertGetId([
                     'numero_matricula' => 'MAT' . $faker->unique()->numerify('######'),
                     'student_id' => $aluno->id,
@@ -131,7 +120,6 @@ class GeradorMock extends Component
                 ]);
                 DB::table('matricula_turma')->insert(['matricula_id' => $matriculaId, 'turma_id' => $turma->id, 'created_at' => now()]);
 
-                // Gera as Matrizes de Avaliação
                 foreach (['1', '2', '3'] as $faseStr) {
                     $avaliacao = AlunoAvaliacao::create([
                         'periodo_id' => $periodo->id,
@@ -155,7 +143,6 @@ class GeradorMock extends Component
                     AlunoAvaliacaoItem::insert($itensData);
                 }
 
-                // Salva a credencial gerada para exibir na View
                 $this->alunosGerados[] = [
                     'nome' => $aluno->name,
                     'login' => $aluno->email,

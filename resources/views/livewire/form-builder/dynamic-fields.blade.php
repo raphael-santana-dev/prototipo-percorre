@@ -100,7 +100,6 @@
                                             $isActive = $campoId == $c->id; 
                                             $colSpan = "col-span-12 md:col-span-{$c->largura}";
                                             $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                            // Puxa a configuração de layout na preview se for o campo ativo, senão puxa do banco
                                             $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
                                         @endphp
 

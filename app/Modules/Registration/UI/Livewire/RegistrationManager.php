@@ -445,7 +445,6 @@ class RegistrationManager extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($ids);
         
-        // MÁGICA: Se for alteração rápida (ex: QuickView ou até 5 na tabela), faz na hora!
         if ($qtd <= 5) {
             $inscricoes = Inscricao::whereIn('id', $ids)->get();
             $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
@@ -459,12 +458,10 @@ class RegistrationManager extends Component
             $this->desmarcarTodas();
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
             
-            // Recarrega o modal do quick-view
             if ($qtd === 1) {
                 $this->showQuickView($ids[0]);
             }
         } else {
-            // Se for Lote gigante, manda pra Fila para não travar o navegador
             $tracking = \App\Models\Importacao::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
@@ -483,14 +480,8 @@ class RegistrationManager extends Component
         $this->alterarStatusLoteRapido($this->novoStatusId);
     }
 
-    // ===============================================
-    // NOVO MÉTODO DE EXPORTAÇÃO FILTRADA
-    // ===============================================
     public function solicitarExportacao($formato = 'csv')
     {
-        // abort_if(!feature('importacao.exportar'), 403);
-        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
-        
         $filtrosAtuais = [
             'nome' => $this->filtroNome,
             'status' => $this->filtroStatus,

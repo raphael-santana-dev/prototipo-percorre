@@ -9,7 +9,6 @@ class InscricoesSeeder extends Seeder
 {
     public function run(): void
     {
-        // Funcoes para resolver as chaves estrangeiras automaticamente e evitar duplicatas
         $resolveUnidade = function($name) {
             if (!$name) return null;
             static $cache = [];
@@ -51,7 +50,7 @@ class InscricoesSeeder extends Seeder
             $cicloId = DB::table('ciclos')->insertGetId(['ano' => 2026, 'semestre' => 2]);
         }
 
-        // Total de registros: 6534
+
         $inscricoes = [
             [
                 'nome' => 'Mykaiyo Victor Oliveira de Jesus',

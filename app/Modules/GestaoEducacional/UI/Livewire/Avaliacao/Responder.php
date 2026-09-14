@@ -355,9 +355,6 @@ class Responder extends Component
         $this->dispatch('sucesso', msg: 'Sua solicitação foi enviada aos administradores.');
     }
 
-    // =======================================================
-    // 3. INTEGRAÇÃO NATIVA COM O SERVIÇO DE AUTOMAÇÃO
-    // =======================================================
     private function dispararAutomacoesFila($eventoGatilho)
     {
         $adminDevs = User::role(['dev', 'admin'])->get();

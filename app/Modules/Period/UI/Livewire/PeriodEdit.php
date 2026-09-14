@@ -26,7 +26,7 @@ class PeriodEdit extends Component
     public $novoStatusSelecionado = ''; 
 
     public array $ofertasVagas = [];
-    public array $documentosExigidos = []; // NOVA VARIÁVEL
+    public array $documentosExigidos = []; 
 
     public $activeUnidadeId = null;
     public $activeCursoId = null;
@@ -61,7 +61,6 @@ class PeriodEdit extends Component
             ];
         }
 
-        // CARREGA OS DOCUMENTOS EXIGIDOS DO CICLO
         $docs = DocumentoExigido::where('ciclo_id', $id)->get();
         foreach ($docs as $doc) {
             $this->documentosExigidos[] = [
@@ -97,7 +96,6 @@ class PeriodEdit extends Component
     public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null]; }
     public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
 
-    // --- MÉTODOS DE DOCUMENTOS EXIGIDOS ---
     public function addDocumento() {
         $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true];
     }
@@ -156,7 +154,6 @@ class PeriodEdit extends Component
             }
         }
 
-        // SALVA OS DOCUMENTOS DO CICLO
         foreach ($this->documentosExigidos as $docData) {
             if (!empty(trim($docData['nome']))) {
                 DocumentoExigido::updateOrCreate(

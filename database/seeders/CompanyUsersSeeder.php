@@ -11,7 +11,6 @@ class CompanyUsersSeeder extends Seeder
 {
     public function run(): void
     {
-        // Busca todas as empresas já cadastradas pelo EmpresasSeeder
         $empresas = DB::table('empresas')->get();
 
         if ($empresas->isEmpty()) {
@@ -20,26 +19,24 @@ class CompanyUsersSeeder extends Seeder
         }
 
         $usuarios = [];
-        $senhaPadrao = Hash::make('senha123'); // Senha unificada para facilitar seus testes
+        $senhaPadrao = Hash::make('senha123');
 
         foreach ($empresas as $empresa) {
             $dominio = Str::slug($empresa->nome_fantasia, '') . '.com.br';
 
-            // 1. Contato Principal (Administrador da Empresa)
             $usuarios[] = [
                 'name' => 'Admin ' . $empresa->nome_fantasia,
                 'email' => 'admin@' . $dominio,
                 'password' => $senhaPadrao,
-                'documento' => $this->gerarCpfFalso(), // Simulando o CPF do Gestor
+                'documento' => $this->gerarCpfFalso(),
                 'empresa_id' => $empresa->id,
                 'tipo_acesso' => 'contato_principal',
                 'is_active' => true,
-                'must_change_password' => false, // false para não travar você na tela de redefinir senha agora
+                'must_change_password' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
 
-            // 2. Gestor Avaliador (Apenas responde as avaliações dos estudantes)
             $usuarios[] = [
                 'name' => 'Avaliador ' . $empresa->nome_fantasia,
                 'email' => 'avaliador@' . $dominio,
@@ -54,7 +51,6 @@ class CompanyUsersSeeder extends Seeder
             ];
         }
 
-        // Insere ou atualiza os usuários no banco
         foreach ($usuarios as $user) {
             DB::table('company_users')->updateOrInsert(
                 ['email' => $user['email']], 

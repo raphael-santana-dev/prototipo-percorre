@@ -14,7 +14,7 @@ class RegistrationDetails extends Component
 {
     public Inscricao $inscricao;
     public $status_selecionado; 
-    public bool $modalAntiSpamAberto = false; // VARIÁVEL DE CONTROLE AQUI
+    public bool $modalAntiSpamAberto = false;
 
     public function mount($id)
     {
@@ -30,7 +30,6 @@ class RegistrationDetails extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        // TRAVA: Impede salvar se o status for exatamente o mesmo que o atual
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
             return;
@@ -42,7 +41,6 @@ class RegistrationDetails extends Component
         $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
         $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
 
-        // MOTOR ANTI-SPAM
         if ($automacao) {
             $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
                 ->where('inscricao_id', $this->inscricao->id)
@@ -50,7 +48,7 @@ class RegistrationDetails extends Component
 
             if ($jaRecebeu) {
                 $this->modalAntiSpamAberto = true;
-                return; // Pausa a execução e mostra o Modal
+                return; 
             }
         }
 
@@ -60,7 +58,7 @@ class RegistrationDetails extends Component
     public function cancelarAntiSpam() 
     {
         $this->modalAntiSpamAberto = false;
-        $this->status_selecionado = $this->inscricao->status_inscricao_id; // Reseta o select para o que estava
+        $this->status_selecionado = $this->inscricao->status_inscricao_id; 
     }
 
     public function executarMudancaStatusFinal()

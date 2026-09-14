@@ -184,17 +184,12 @@ class PeriodManager extends Component
         $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!');
     }
 
-    // =========================================
-    // QUICK VIEW DO CICLO
-    // =========================================
     public function showQuickView(int $id)
     {
-        // Traz o ciclo, faz contagem de inscritos e carrega as relações
         $ciclo = Ciclo::withCount('inscricoes')
             ->with(['cursos', 'unidades'])
             ->findOrFail($id);
 
-        // Processa totais de Vagas ofertadas e preenchidas
         $vagasOfertadas = \App\Models\OfertaVaga::where('ciclo_id', $id)->sum('vagas');
         $vagasPreenchidas = \App\Models\Inscricao::where('ciclo_id', $id)
             ->whereHas('statusInscricao', function ($q) {
@@ -204,24 +199,20 @@ class PeriodManager extends Component
         $percentual = $vagasOfertadas > 0 ? round(($vagasPreenchidas / $vagasOfertadas) * 100, 1) : 0;
         $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
 
-        // Gera as Labels visuais do HTML para injetar
         $statusLabel = $ciclo->status 
             ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] uppercase font-bold rounded border border-green-200 shadow-sm"><i class="ph-fill ph-check-circle"></i> ATIVO</span>' 
             : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] uppercase font-bold rounded border border-gray-200 shadow-sm"><i class="ph-fill ph-minus-circle"></i> INATIVO</span>';
 
-        // Formata os Cursos
         $cursosTags = $ciclo->cursos->take(8)->pluck('nome')->map(fn($c) => "<span class='px-2 py-1 bg-orange-50 border border-orange-200 rounded-md text-[10px] font-bold text-orange-700'>$c</span>")->implode(' ');
         if ($ciclo->cursos->count() > 8) {
             $cursosTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->cursos->count() - 8) . " cursos</span>";
         }
 
-        // Formata as Unidades
         $unidadesTags = $ciclo->unidades->take(8)->pluck('nome')->map(fn($u) => "<span class='px-2 py-1 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-md text-[10px]'><i class=\"ph-fill ph-map-pin\"></i> $u</span>")->implode(' ');
         if ($ciclo->unidades->count() > 8) {
             $unidadesTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->unidades->count() - 8) . " unidades</span>";
         }
 
-        // Constrói a barra de ocupação HTML para o Modal
         $barraOcupacao = '
             <div class="w-full mt-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
                 <div class="flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-wider">
@@ -235,7 +226,6 @@ class PeriodManager extends Component
             </div>
         ';
 
-        // Dispara o evento global
         $this->dispatch('load-quick-view', [
             'title' => $ciclo->nome,
             'subtitle' => "Semestre {$ciclo->ano}.{$ciclo->semestre} • De " . $ciclo->data_inicio->format('d/m/Y') . " até " . $ciclo->data_fim->format('d/m/Y'),

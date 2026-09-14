@@ -27,7 +27,6 @@ class RegrasManager extends Component
                     ? json_decode($this->ciclo->regras_pontuacao, true) 
                     : ($this->ciclo->regras_pontuacao ?? []);
                     
-        // Retrocompatibilidade: Garante que regras antigas tenham as novas chaves
         $this->regras = array_map(function($regra) {
             $regra['tipo_regra'] = $regra['tipo_regra'] ?? 'padrao';
             $regra['escopo'] = $regra['escopo'] ?? 'especifico';
@@ -65,7 +64,7 @@ class RegrasManager extends Component
     {
         $this->regras[] = [
             'tipo_regra' => 'padrao', 
-            'escopo' => 'especifico', // 'todos' ou 'especifico'
+            'escopo' => 'especifico',
             'campo' => '',
             'operador' => '=',
             'valor' => '',
@@ -97,7 +96,6 @@ class RegrasManager extends Component
             'regras.*.valor.required' => 'Informe o valor esperado.',
         ];
 
-        // VALIDAÇÃO DINÂMICA: Exige os campos apenas se a regra não for Global (Todos)
         foreach ($this->regras as $index => $regra) {
             $tipo = $regra['tipo_regra'] ?? 'padrao';
             $escopo = $regra['escopo'] ?? 'especifico';
@@ -107,7 +105,6 @@ class RegrasManager extends Component
                 $rules["regras.{$index}.operador"] = 'required|string';
                 $rules["regras.{$index}.valor"] = 'required|string';
             } else {
-                // Se for Global ('todos'), não exige campo e limpa os valores
                 $rules["regras.{$index}.campo"] = 'nullable';
                 $rules["regras.{$index}.operador"] = 'nullable';
                 $rules["regras.{$index}.valor"] = 'nullable';

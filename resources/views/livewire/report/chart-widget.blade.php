@@ -13,7 +13,6 @@
          renderOrUpdate(config) {
              if (!config || !config.series || config.series.length === 0) return;
 
-             // TRUQUE DE MESTRE: Cria um clone limpo do objeto para a biblioteca não mutar o Livewire
              let rawConfig = JSON.parse(JSON.stringify(config));
 
              if (this.chartInstance) {
@@ -34,7 +33,6 @@
                              dataPointSelection: (event, chartContext, cfg) => {
                                  if (rawConfig.labels && rawConfig.labels[cfg.dataPointIndex]) {
                                      let labelClicado = rawConfig.labels[cfg.dataPointIndex];
-                                     // O Livewire 3 receberá isso como parâmetros nomeados
                                      this.$dispatch('chart-click', { chartId: '{{ $chartId }}', label: labelClicado });
                                  }
                              }

@@ -21,7 +21,7 @@ class FormDetails extends Component
     public Formulario $formulario;
     
     public $tipoVisao = 'resumo'; 
-    public $search = ''; // VARIÁVEL RESTAURADA AQUI!
+    public $search = ''; 
 
     public function mount($id)
     {
@@ -33,7 +33,6 @@ class FormDetails extends Component
         $this->ordenacaoDirecao = 'desc';
     }
 
-    // FUNÇÃO RESTAURADA: Reseta a página ao buscar
     public function updatingSearch()
     {
         $this->resetPage();
@@ -95,7 +94,6 @@ class FormDetails extends Component
                 ];
             }
         } else {
-            // Colunas exclusivas do Modo Resumo
             $headers[] = ['key' => 'etapa_parada', 'label' => 'Progresso', 'sortable' => true];
             $headers[] = [
                 'key' => 'acoes', 

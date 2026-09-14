@@ -22,7 +22,6 @@ class FormSpreadsheet extends Component
 
     public Formulario $formulario;
     
-    // Filtros Adicionados
     public $search = '';
     public $data_inicio = '';
     public $data_fim = '';

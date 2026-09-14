@@ -49,10 +49,7 @@ class Relatorios extends Component
 
         $query = AlunoAvaliacao::with(['student', 'turma', 'periodo'])
             ->whereIn('id', $queryIdsUnicos);
-
-        // =======================================================
-        // ISOLAMENTO DE ACESSO (MULTI-TENANT POR TURMA)
-        // =======================================================
+            
         $user = auth()->user();
         if ($user && $user->hasRole('professor') && !$user->hasRole('dev|admin')) {
             $turmasDoProfessor = DB::table('professor_turma')
@@ -85,7 +82,6 @@ class Relatorios extends Component
         abort_if(!feature('relatorio.exportar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('relatorio.exportar'), 403);
         
-        // A exportação agora herda automaticamente as travas de turma da getQueryBase()
         $registros = $this->getQueryBase()->get();
         $csvFileName = 'relatorio_avaliacoes_' . date('Ymd_His') . '.csv';
 
@@ -201,7 +197,6 @@ class Relatorios extends Component
             ]
         ];
 
-        // Isola as opções do filtro "Turmas" para o dropdown
         $turmasQuery = Turma::orderBy('nome', 'asc');
         $user = auth()->user();
         

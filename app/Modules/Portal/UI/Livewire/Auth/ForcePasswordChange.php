@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
-#[Layout('components.layouts.public')] // Usamos o layout público (limpo) para evitar que ele navegue
+#[Layout('components.layouts.public')] 
 #[Title('Atualização de Segurança - Instituto Percorre')]
 class ForcePasswordChange extends Component
 {
@@ -34,15 +34,14 @@ class ForcePasswordChange extends Component
     }
     public function salvar()
     {
-        // 1. Validação de Senha Forte
         $this->validate([
             'password' => [
                 'required',
                 'confirmed',
-                Password::min(8) // Mínimo de 8 caracteres
-                    ->mixedCase() // Pelo menos uma maiúscula e uma minúscula
-                    ->numbers() // Pelo menos um número
-                    ->symbols() // Pelo menos um caractere especial (!, @, #, $, etc)
+                Password::min(8) 
+                    ->mixedCase()
+                    ->numbers() 
+                    ->symbols() 
             ]
         ], [
             'password.required' => 'A senha é obrigatória.',
@@ -53,7 +52,6 @@ class ForcePasswordChange extends Component
             'password.symbols' => 'A senha deve conter pelo menos um caractere especial (!, @, #, etc).',
         ]);
 
-        // 2. Descobre quem é o usuário logado e qual o seu destino
         $user = null;
         $rotaDestino = '';
 
@@ -68,7 +66,6 @@ class ForcePasswordChange extends Component
             $rotaDestino = 'company.dashboard';
         }
 
-        // 3. Atualiza o banco de dados e remove a trava
         if ($user) {
             $user->update([
                 'password' => Hash::make($this->password),

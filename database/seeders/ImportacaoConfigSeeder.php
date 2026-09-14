@@ -40,8 +40,8 @@ class ImportacaoConfigSeeder extends Seeder
 
         foreach ($configs as $config) {
             ImportacaoConfig::updateOrCreate(
-                ['coluna' => $config['coluna']], // Condição de busca (evita duplicatas)
-                $config // Dados a serem atualizados ou criados
+                ['coluna' => $config['coluna']]
+                $config
             );
         }
     }

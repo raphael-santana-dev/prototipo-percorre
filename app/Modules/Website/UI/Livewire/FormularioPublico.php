@@ -22,13 +22,11 @@ class FormularioPublico extends Component
     public int $totalEtapas = 1;
     public bool $finalizado = false;
 
-    // Propriedades do Gatekeeper de Segurança
     public bool $bloqueado = false;
     public string $mensagemBloqueio = '';
     public string $iconeBloqueio = 'ph-lock-key';
     public bool $exibirBotaoLogin = false;
 
-    // Guardará as configurações globais (Fundo, Cor, Opacidade)
     public array $formSettings = [];
 
     public function mount($slug)
@@ -44,9 +42,6 @@ class FormularioPublico extends Component
             $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
         }
 
-        // ==========================================
-        // GATEKEEPER: REGRAS DE TEMPO E ACESSO
-        // ==========================================
         $agora = now();
         
         if ($this->formulario->data_inicio && $agora->lt($this->formulario->data_inicio)) {
@@ -66,7 +61,6 @@ class FormularioPublico extends Component
                 return;
             }
 
-            // AVALIAÇÃO DE COLABORADORES (WEB)
             if (auth('web')->check()) {
                 $user = auth('web')->user();
                 if ($user->hasRole('dev')) {
@@ -78,14 +72,12 @@ class FormularioPublico extends Component
                     if (!empty($roles) && $user->hasAnyRole($roles)) $liberado = true;
                     if (!empty($users) && in_array((string)$user->id, $users)) $liberado = true;
                     
-                    // Se não tiver regras web específicas e os estudantes também não estiverem habilitados, libera geral pra WEB
                     if (empty($roles) && empty($users) && !$this->formulario->apenas_estudantes) {
                         $liberado = true; 
                     }
                 }
             }
 
-            // AVALIAÇÃO DE ESTUDANTES
             if (auth('student')->check()) {
                 if ($this->formulario->apenas_estudantes) {
                     $student = auth('student')->user();
@@ -97,13 +89,12 @@ class FormularioPublico extends Component
                     $turnos = $this->formulario->turnos_permitidas ? $this->formulario->turnos_permitidas : [];
 
                     if (empty($unidades) && empty($cursos) && empty($turnos)) {
-                        $liberado = true; // Aberto a todos os alunos
+                        $liberado = true;
                     } else {
                         $unidadesAluno = $matriculas->pluck('unidade_id')->map(fn($v) => (string)$v)->toArray();
                         $cursosAluno = $matriculas->pluck('curso_id')->map(fn($v) => (string)$v)->toArray();
                         $turnosAluno = $matriculas->pluck('turno_id')->map(fn($v) => (string)$v)->toArray();
 
-                        // O aluno só passa se bater com TODOS os filtros (And-logic)
                         $passouUnidade = empty($unidades) || !empty(array_intersect($unidades, $unidadesAluno));
                         $passouCurso = empty($cursos) || !empty(array_intersect($cursos, $cursosAluno));
                         $passouTurno = empty($turnos) || !empty(array_intersect($turnos, $turnosAluno));
@@ -121,11 +112,9 @@ class FormularioPublico extends Component
             }
         }
 
-        // Inicializa o ambiente e descobre o total de etapas
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         $this->carregarOpcoesSistemaInicial();
         
-        // Inicializa o E-mail de forma segura e auto-preenche se o usuário já for conhecido
         if ($this->formulario->exigir_email) {
             $emailAutofill = '';
             if (auth('web')->check()) $emailAutofill = auth('web')->user()->email;
@@ -180,7 +169,6 @@ class FormularioPublico extends Component
     {
         $regras = [];
 
-        // Validação obrigatória do e-mail na Etapa 1
         if ($this->formulario->exigir_email && $etapa === 1) {
             $regras['respostas._email_coletado'] = 'required|email';
         }

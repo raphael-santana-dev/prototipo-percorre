@@ -19,23 +19,19 @@ class FormEdit extends Component
 {
     public $formId = null;
     
-    // Dados Básicos
     public $titulo, $descricao, $status = false;
     public $data_inicio = null, $data_fim = null;
     
-    // Controle de Acesso
     public $acesso_livre = true;
     public $apenas_estudantes = false;
     public $exigir_email = false;
     
-    // Arrays de Permissões
     public array $roles_permitidas = [];
     public array $users_permitidos = [];
     public array $unidades_permitidas = [];
     public array $cursos_permitidos = [];
     public array $turnos_permitidas = [];
 
-    // Controles do Explorer (Mac OS Style)
     public $activeUnidadeId = null;
     public $activeCursoId = null;
 
@@ -65,11 +61,10 @@ class FormEdit extends Component
         }
     }
 
-    // --- MÉTODOS DO EXPLORER ---
     public function setActiveUnidade($id)
     {
         $this->activeUnidadeId = $id;
-        $this->activeCursoId = null; // Reseta a terceira coluna ao trocar a primeira
+        $this->activeCursoId = null; 
     }
 
     public function setActiveCurso($id)
@@ -96,7 +91,6 @@ class FormEdit extends Component
             'exigir_email' => $this->acesso_livre ? $this->exigir_email : false,
             'apenas_estudantes' => $this->acesso_livre ? false : $this->apenas_estudantes,
             
-            // Grava os arrays de permissão apenas se o acesso for restrito
             'roles_permitidas' => $this->acesso_livre ? null : $this->roles_permitidas,
             'users_permitidos' => $this->acesso_livre ? null : $this->users_permitidos,
             'unidades_permitidas' => $this->acesso_livre ? null : $this->unidades_permitidas,

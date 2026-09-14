@@ -17,7 +17,6 @@ class Dashboard extends Component
         $inscricao = null;
 
         if (!$student->matriculado) {
-            // Busca a última inscrição vinculada a este aluno
             $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
                 ->where('student_id', $student->id)
                 ->latest()

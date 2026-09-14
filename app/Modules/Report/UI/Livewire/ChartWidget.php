@@ -9,7 +9,6 @@ class ChartWidget extends Component
 {
     public string $chartId;
     
-    // O atributo Reactive faz com que o gráfico se atualize sozinho se o filtro do pai mudar
     #[Reactive] 
     public array $config; 
 

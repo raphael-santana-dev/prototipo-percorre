@@ -15,7 +15,6 @@ class Detalhes extends Component
     
     public array $turmas_selecionadas = [];
 
-    // Coleções para os Selects
     public $estudantes = [];
     public $cursos = [];
     public $unidades = [];
@@ -48,10 +47,8 @@ class Detalhes extends Component
             $this->turno_id = $matricula->turno_id;
             $this->status = $matricula->status;
             
-            // Puxa as turmas que o aluno já está matriculado
             $this->turmas_selecionadas = $matricula->turmas->pluck('id')->toArray();
         } else {
-            // Gera um número automático (RA) para facilitar
             $this->numero_matricula = 'RA' . now()->format('Y') . rand(1000, 9999);
         }
     }
@@ -88,7 +85,6 @@ class Detalhes extends Component
             ]
         );
 
-        // Sincroniza a tabela Pivot (matricula_turma)
         $matricula->turmas()->sync($this->turmas_selecionadas);
 
         session()->flash('sucesso', 'Matrícula salva com sucesso!');

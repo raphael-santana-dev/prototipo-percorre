@@ -16,13 +16,11 @@ class Turno extends Model
         'status'
     ];
 
-    // Opcional: formatação automática para as views futuramente
     protected $casts = [
         'horario_inicio' => 'datetime:H:i',
         'horario_fim' => 'datetime:H:i',
     ];
 
-    // Relacionamento com os Ciclos (Processos Seletivos)
     public function ciclos()
     {
         return $this->belongsToMany(\App\Models\Ciclo::class, 'ciclo_turno', 'turno_id', 'ciclo_id');

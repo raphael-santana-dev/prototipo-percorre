@@ -14,7 +14,6 @@ class ImportacaoConfigManager extends Component
     public $configs;
     public $modalAberto = false;
     
-    // Campos do formulário
     public $configId, $coluna, $model_class, $campo_busca = 'nome', $auto_cadastro = false, $payload_padrao;
 
     public function mount()

@@ -51,7 +51,6 @@ class Listagem extends Component
 
     public function render()
     {
-        // Carrega a turma com seus relacionamentos base e a contagem de alunos
         $query = Turma::with(['curso', 'unidade', 'turno', 'professores'])
             ->withCount('matriculas')
             ->where('nome', 'ilike', '%' . $this->busca . '%');
