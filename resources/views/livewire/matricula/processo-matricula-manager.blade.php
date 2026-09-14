@@ -148,7 +148,7 @@
             <i class="ph-fill ph-warning-circle text-2xl mt-0.5"></i>
             <div>
                 <p class="font-bold">Atenção da Secretaria</p>
-                <p>Estes documentos falharam na validação automática da IA ou o robô ficou em dúvida. Clique na pasta para abrir o documento do aluno e analisar manualmente.</p>
+                <p>Estes documentos falharam na validação automática da IA. Clique na pasta para abrir o documento do aluno e analisar manualmente.</p>
             </div>
         </div>
 

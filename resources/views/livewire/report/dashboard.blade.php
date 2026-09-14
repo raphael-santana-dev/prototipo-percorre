@@ -49,7 +49,7 @@
             <livewire:chart-widget chartId="grafico-status" :config="$graficoInscricoes" wire:key="widget-status-{{ $filtroCiclo }}" />
         </div>
 
-        <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-map-pin text-purpura-500"></i> Distribuição Operacional</h3>
+        <h3 class="font-bold text-gray-600 mb-4 uppercase tracking-widest text-xs"><i class="ph-bold ph-map-pin text-purpura-500"></i> Distribuição por Curso</h3>
         <div class="grid grid-cols-1 gap-6 mb-8">
             <livewire:chart-widget chartId="grafico-cursos" :config="$graficoCursos" wire:key="widget-cursos-{{ $filtroCiclo }}" />
             <livewire:chart-widget chartId="grafico-unidades" :config="$graficoUnidades" wire:key="widget-unidades-{{ $filtroCiclo }}" />

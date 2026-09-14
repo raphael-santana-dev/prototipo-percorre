@@ -9,7 +9,7 @@ class OfertaVaga extends Model
     protected $table = 'ofertas_vagas';
     
     protected $fillable = [
-        'ciclo_id', 'curso_id', 'unidade_id', 'turno_id', 'vagas'
+        'ciclo_id', 'curso_id', 'unidade_id', 'turno_id', 'vagas', 'idade_min', 'idade_max'
     ];
 
     public function ciclo() { return $this->belongsTo(Ciclo::class); }

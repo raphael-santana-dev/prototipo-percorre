@@ -362,7 +362,7 @@
                     </div>
 
                     <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
-                        <button type="button" wire:click="excluirImportacao({{ $importacaoAtualId }})" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar e Apagar Arquivo</button>
+                        <button type="button" wire:click="excluirImportacao({{ $importacaoAtualId }})" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar e apagar Arquivo</button>
                         <button type="button" wire:click="iniciarImportacao" wire:loading.attr="disabled" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition flex items-center gap-2">
                             <span wire:loading.remove wire:target="iniciarImportacao" class="flex items-center gap-2">
                                 <i class="ph-bold ph-rocket-launch"></i> Confirmar e Enviar para a Fila
@@ -654,14 +654,14 @@
                                 </button>
                                 
                                 <button wire:click="cancelarImportacao(true)" wire:loading.attr="disabled" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1">
-                                    <span wire:loading.remove wire:target="cancelarImportacao(true)"><i class="ph-bold ph-trash"></i> Cancelar e Apagar Dados</span>
+                                    <span wire:loading.remove wire:target="cancelarImportacao(true)"><i class="ph-bold ph-trash"></i> Cancelar e apagar Dados</span>
                                     <span wire:loading wire:target="cancelarImportacao(true)"><i class="ph-bold ph-spinner animate-spin"></i> Revertendo...</span>
                                 </button>
                             </div>
                             
                             <p class="text-[10px] text-red-600 font-medium mt-3 text-center leading-tight">
                                 <b>"Apenas Cancelar":</b> Para a leitura da planilha e mantém os dados já processados.<br>
-                                <b>"Cancelar e Apagar":</b> Interrompe o processo e exclui em massa os dados inseridos por este arquivo.
+                                <b>"Cancelar e apagar":</b> Interrompe o processo e exclui em massa os dados inseridos por este arquivo.
                             </p>
                         </div>
                         
