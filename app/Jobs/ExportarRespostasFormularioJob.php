@@ -51,8 +51,26 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             $search = $this->filtros['search'];
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
-                  ->orWhere('respostas', 'like', "%{$search}%");
+                  ->orWhere('respostas', 'ilike', "%{$search}%");
             });
+        }
+        if (!empty($this->filtros['data_inicio'])) {
+            $query->where('created_at', '>=', $this->filtros['data_inicio'] . ' 00:00:00');
+        }
+        if (!empty($this->filtros['data_fim'])) {
+            $query->where('created_at', '<=', $this->filtros['data_fim'] . ' 23:59:59');
+        }
+        if (!empty($this->filtros['filtro_curso'])) {
+            $curso = \App\Models\Curso::find($this->filtros['filtro_curso']);
+            if ($curso) $query->where('respostas', 'ilike', "%{$curso->nome}%");
+        }
+        if (!empty($this->filtros['filtro_unidade'])) {
+            $unidade = \App\Modules\Unidade\Domain\Models\Unidade::find($this->filtros['filtro_unidade']);
+            if ($unidade) $query->where('respostas', 'ilike', "%{$unidade->nome}%");
+        }
+        if (!empty($this->filtros['filtro_turno'])) {
+            $turno = \App\Modules\Turno\Domain\Models\Turno::find($this->filtros['filtro_turno']);
+            if ($turno) $query->where('respostas', 'ilike', "%{$turno->nome}%");
         }
 
         $sortField = $this->filtros['sortField'] ?? 'created_at';
@@ -67,9 +85,7 @@ class ExportarRespostasFormularioJob implements ShouldQueue
         $caminhoAbsoluto = Storage::disk('public')->path($caminhoRelativo);
 
         $writer = SimpleExcelWriter::create($caminhoAbsoluto);
-        if ($tracking->formato === 'csv') {
-            $writer->useDelimiter(';');
-        }
+        if ($tracking->formato === 'csv') $writer->useDelimiter(';');
 
         $linhasProcessadas = 0;
 
@@ -87,11 +103,8 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             }
 
             $writer->addRow($linha);
-
             $linhasProcessadas++;
-            if ($linhasProcessadas % 50 === 0) {
-                $tracking->update(['linhas_processadas' => $linhasProcessadas]);
-            }
+            if ($linhasProcessadas % 50 === 0) $tracking->update(['linhas_processadas' => $linhasProcessadas]);
         }
 
         $tracking->update([

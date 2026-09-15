@@ -15,7 +15,7 @@ class CampoFormulario extends Model
     ];
 
     protected $casts = [
-        'opcoes' => 'array', // Converte o JSON do banco para Array no PHP
+        'opcoes' => 'array',
         'obrigatorio' => 'boolean',
         'configuracoes' => 'array',
     ];

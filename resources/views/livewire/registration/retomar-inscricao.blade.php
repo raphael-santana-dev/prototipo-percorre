@@ -18,7 +18,6 @@
         @else
             <form wire:submit.prevent="validar" class="space-y-5">
                 
-                <!-- CPF -->
                 <div>
                     <label for="cpf" class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Seu CPF</label>
                     <input id="cpf" type="text" wire:model="cpf" 
@@ -28,7 +27,6 @@
                     @error('cpf') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Data de Nascimento -->
                 <div>
                     <label for="data_nascimento" class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Data de Nascimento</label>
                     <input id="data_nascimento" type="date" wire:model="data_nascimento" 

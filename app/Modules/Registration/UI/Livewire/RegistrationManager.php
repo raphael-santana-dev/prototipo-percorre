@@ -445,7 +445,6 @@ class RegistrationManager extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($ids);
         
-        // MÁGICA: Se for alteração rápida (ex: QuickView ou até 5 na tabela), faz na hora!
         if ($qtd <= 5) {
             $inscricoes = Inscricao::whereIn('id', $ids)->get();
             $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
@@ -459,12 +458,10 @@ class RegistrationManager extends Component
             $this->desmarcarTodas();
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
             
-            // Recarrega o modal do quick-view
             if ($qtd === 1) {
                 $this->showQuickView($ids[0]);
             }
         } else {
-            // Se for Lote gigante, manda pra Fila para não travar o navegador
             $tracking = \App\Models\Importacao::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
@@ -483,14 +480,8 @@ class RegistrationManager extends Component
         $this->alterarStatusLoteRapido($this->novoStatusId);
     }
 
-    // ===============================================
-    // NOVO MÉTODO DE EXPORTAÇÃO FILTRADA
-    // ===============================================
     public function solicitarExportacao($formato = 'csv')
     {
-        // abort_if(!feature('importacao.exportar'), 403);
-        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
-        
         $filtrosAtuais = [
             'nome' => $this->filtroNome,
             'status' => $this->filtroStatus,
@@ -531,7 +522,7 @@ class RegistrationManager extends Component
         
         $trackingScore = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         $trackingRank = \App\Models\Importacao::create([
@@ -608,7 +599,7 @@ class RegistrationManager extends Component
             ['key' => 'origem', 'label' => 'Origem', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
-            ['key' => 'pontuacao_total', 'label' => 'Score', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'pontuacao_total', 'label' => 'Pontuação', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'posicao_ranking_geral', 'label' => 'R. Geral', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'posicao_ranking_unidade', 'label' => 'R. Unidade', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'posicao_ranking_curso', 'label' => 'R. Curso', 'sortable' => true, 'class' => 'text-center'],

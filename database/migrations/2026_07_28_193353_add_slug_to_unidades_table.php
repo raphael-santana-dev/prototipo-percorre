@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('unidades', function (Blueprint $table) {
-            // Criamos como nullable primeiro para não quebrar unidades já existentes nos testes
             $table->string('slug')->nullable()->unique()->after('nome');
         });
     }

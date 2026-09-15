@@ -504,7 +504,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $dadosFixos['status_inscricao_id'] = 1; 
         }
 
-        // SALVANDO A ORIGEM COMO IMPORTAÇÃO (Garante visualização correta)
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';

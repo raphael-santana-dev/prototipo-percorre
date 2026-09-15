@@ -28,7 +28,6 @@
 
     <form wire:submit.prevent="salvar" class="space-y-6">
         
-        {{-- CABEÇALHO DO PERÍODO --}}
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200">Datas e Regras Globais</h3>
             
@@ -60,7 +59,6 @@
                     @error('status') <span class="text-red-500 text-xs block mt-1 font-bold">{{ $message }}</span> @enderror
                 </div>
                 
-                {{-- TOGGLE DE TRAVA DE FASES --}}
                 <div class="col-span-1 md:col-span-3 pt-4 border-t border-gray-100 dark:border-gray-700 md:border-none md:pt-0 flex items-center">
                     <label class="flex items-center cursor-pointer">
                         <div class="relative">
@@ -79,7 +77,6 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {{-- CRITÉRIOS --}}
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                 <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200 flex justify-between items-center">
                     Critérios Aplicados
@@ -101,7 +98,6 @@
                 </div>
             </div>
 
-            {{-- FASES --}}
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                 <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200 flex justify-between items-center">
                     Workflow de Fases

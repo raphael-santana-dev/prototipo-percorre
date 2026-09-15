@@ -50,7 +50,6 @@ class TemplateManager extends Component
             EmailTemplate::findOrFail($id)->delete();
             $this->dispatch('sucesso', msg: 'Template removido com sucesso!');
         } catch (\Illuminate\Database\QueryException $e) {
-            // Caso exista uma chave estrangeira segurando (ex: em uso num comunicado)
             $this->dispatch('erro', msg: 'Não é possível excluir este template pois ele já está em uso.');
         }
     }

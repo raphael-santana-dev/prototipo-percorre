@@ -11,10 +11,8 @@ class Detalhes extends Component
     public $turmaId;
     public $nome, $ano, $ciclo_id, $curso_id, $unidade_id, $turno_id, $status = true;
     
-    // Arrays para preencher os Selects
     public $ciclos = [], $cursos = [], $unidades = [], $turnos = [];
     
-    // Coleções para exibir Professores e Alunos na aba de visualização
     public $professores = [];
     public $matriculas = [];
 
@@ -28,7 +26,6 @@ class Detalhes extends Component
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
         }
 
-        // Carrega dependências estruturais do banco de dados direto das tabelas base
         $this->ciclos = DB::table('ciclos')->select('id', 'nome', 'ano', 'semestre')->orderBy('ano', 'desc')->get();
         $this->cursos = DB::table('cursos')->select('id', 'nome')->where('status', 'Ativo')->orderBy('nome')->get();
         $this->unidades = DB::table('unidades')->select('id', 'nome')->where('status', 'Ativa')->orderBy('nome')->get();

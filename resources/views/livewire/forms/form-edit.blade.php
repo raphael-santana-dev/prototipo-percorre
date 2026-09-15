@@ -14,7 +14,6 @@
 
     <form wire:submit.prevent="salvar" class="space-y-8">
         
-        {{-- SEÇÃO 1: DADOS BÁSICOS E PRAZOS --}}
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4 text-gray-800 dark:text-gray-200">
                 <i class="ph-fill ph-text-t text-purpura-500"></i> Informações Básicas
@@ -48,7 +47,6 @@
             </div>
         </div>
 
-        {{-- SEÇÃO 2: REGRAS DE PRIVACIDADE --}}
         <div class="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-xl border border-indigo-100 dark:border-indigo-800">
             <h3 class="text-lg font-extrabold text-indigo-900 dark:text-indigo-400 mb-4 flex items-center gap-2">
                 <i class="ph-fill ph-shield-check text-xl"></i> Regras e Níveis de Acesso
@@ -65,7 +63,6 @@
                 </label>
             </div>
 
-            <!-- ACESSO LIVRE (PÚBLICO) -->
             @if($acesso_livre)
                 <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <label class="flex items-start gap-3 cursor-pointer">
@@ -78,11 +75,9 @@
                 </div>
             @endif
 
-            <!-- ACESSO RESTRITO -->
             @if(!$acesso_livre)
                 <div class="space-y-6">
                     
-                    {{-- BLOCO DE COLABORADORES (ROLES E USERS) --}}
                     <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                         <h4 class="font-bold text-gray-900 dark:text-white mb-3">Permitir Equipe Administrativa (Backoffice)</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -111,7 +106,6 @@
                         </div>
                     </div>
 
-                    {{-- BLOCO DE ESTUDANTES E VÍNCULOS (MAC OS EXPLORER) --}}
                     <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
                             <input type="checkbox" wire:model.live="apenas_estudantes" id="apenas_estudantes" class="w-5 h-5 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
@@ -125,7 +119,6 @@
                             
                             <div class="flex flex-col md:flex-row h-[350px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-inner">
                                 
-                                {{-- COLUNA 1: UNIDADES --}}
                                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                                     <div class="p-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold uppercase text-gray-500 tracking-wider">
                                         1. Unidades
@@ -144,7 +137,6 @@
                                     </div>
                                 </div>
 
-                                {{-- COLUNA 2: CURSOS --}}
                                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
                                     <div class="p-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold uppercase text-gray-500 tracking-wider">
                                         2. Cursos
@@ -169,7 +161,6 @@
                                     </div>
                                 </div>
 
-                                {{-- COLUNA 3: TURNOS --}}
                                 <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
                                     <div class="p-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold uppercase text-gray-500 tracking-wider">
                                         3. Turnos

@@ -78,7 +78,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO EM GRID (CARDS) --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $turno )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -116,7 +115,6 @@
         </x-slot>
     </x-table>
 
-    <!-- Modal Integrado -->
     @if($showModal)
         <x-modal title="{{ $isEditMode ? 'Editar Turno' : 'Novo Turno' }}" max-width="md" close-method="closeModal">                    
             <form wire:submit="save" class="space-y-4">

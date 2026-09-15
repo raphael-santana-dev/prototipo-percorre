@@ -20,7 +20,6 @@ class KanbanBoard extends Component
     public array $selecionados = []; 
     public $statusDestinoLote = '';
 
-    // Filtros
     public $filtroBusca = '';
     public $filtroCurso = '';
     public $filtroUnidade = '';
@@ -31,7 +30,6 @@ class KanbanBoard extends Component
     public array $conflitosAntiSpam = [];
     public array $dadosAcaoPendente = [];
 
-    // Controle de Scroll Infinito
     public $limitesPorColuna = [];
 
     public function mount($id = null)
@@ -138,9 +136,6 @@ class KanbanBoard extends Component
         $this->verificarAntiSpam(collect([$inscricao]), $status, false);
     }
 
-    // ==============================================
-    // METODOS DO MOTOR ANTI-SPAM 
-    // ==============================================
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
     {
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
@@ -225,7 +220,6 @@ class KanbanBoard extends Component
         $ciclo = Ciclo::with('statusPipeline')->find($this->cicloId);
         $colunas = $ciclo ? $ciclo->statusPipeline : collect();
 
-        // MÁGICA DE CORREÇÃO: Usando a Trait "apenasVinculosPermitidos()" para garantir o bloqueio do professor!
         $queryBase = Inscricao::where('ciclo_id', $this->cicloId)->apenasVinculosPermitidos();
 
         if (!empty($this->filtroBusca)) {

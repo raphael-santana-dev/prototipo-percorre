@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Cria a Tabela de Empresas
         Schema::create('empresas', function (Blueprint $table) {
             $table->id();
             $table->string('razao_social');
@@ -19,13 +18,11 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // 2. Substitui 'empresa_codigo' por 'empresa_id' nos Gestores
         Schema::table('company_users', function (Blueprint $table) {
             $table->dropColumn('empresa_codigo');
             $table->foreignId('empresa_id')->nullable()->after('documento')->constrained('empresas')->nullOnDelete();
         });
 
-        // 3. Substitui 'empresa_codigo' por 'empresa_id' nos Estudantes
         Schema::table('students', function (Blueprint $table) {
             $table->dropColumn('empresa_codigo');
             $table->foreignId('empresa_id')->nullable()->after('unidade_id')->constrained('empresas')->nullOnDelete();

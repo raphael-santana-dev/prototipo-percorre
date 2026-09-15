@@ -34,7 +34,6 @@ class DispararAutomacaoJob implements ShouldQueue
         $htmlFormatado = EmailParserService::parseTexto($this->template->corpo, $this->inscricao, $this->dadosExtras);
         $assuntoFormatado = EmailParserService::parseTexto($this->template->assunto, $this->inscricao, $this->dadosExtras);
 
-        // Cria o registro no banco para exibir no histórico do painel
         $comunicado = Comunicado::create([
             'template_id' => $this->template->id,
             'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,

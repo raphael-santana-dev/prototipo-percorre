@@ -1,7 +1,7 @@
 <div class="p-6 max-w-4xl mx-auto font-sans relative">
     
     <x-page-header 
-        title="Protocolo #{{ str_pad($resposta->id, 5, '0', STR_PAD_LEFT) }}" 
+        title="Resposta #{{ str_pad($resposta->id, 5, '0', STR_PAD_LEFT) }}" 
         icon="ph ph-file-text"
         badge="Resposta">
         
@@ -10,33 +10,30 @@
                 <i class="ph-bold ph-arrow-left"></i> Voltar
             </a>
             <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 text-white bg-purpura-600 hover:bg-purpura-700 shadow-sm transition rounded-lg font-bold text-sm">
-                <i class="ph-bold ph-printer text-lg"></i> Imprimir Resposta
+                <i class="ph-bold ph-printer text-lg"></i> Imprimir
             </button>
         </x-slot>
     </x-page-header>
 
     <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        <i class="ph-fill ph-clock"></i> Formulário submetido em {{ $resposta->created_at->format('d \d\e F \d\e Y \à\s H:i') }}
+        <i class="ph-fill ph-clock"></i> Formulário respondido em {{ $resposta->created_at->format('d \d\e F \d\e Y \à\s H:i') }}
     </div>
 
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden print:shadow-none print:border-none">
         
-        <!-- Cabeçalho do Documento -->
         <div class="bg-indigo-50 border-b border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800 p-6 flex items-start gap-4 print:bg-white print:border-b-2 print:border-gray-800">
             <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-sm print:text-black print:bg-gray-100 shrink-0">
                 <i class="ph-fill ph-file-text"></i>
             </div>
             <div>
                 <h3 class="text-lg font-extrabold text-indigo-900 dark:text-indigo-300 print:text-black">{{ $formulario->titulo }}</h3>
-                <p class="text-indigo-700 dark:text-indigo-400 text-sm mt-1 print:text-gray-600">Visualização de documento de resposta do usuário.</p>
+                <p class="text-indigo-700 dark:text-indigo-400 text-sm mt-1 print:text-gray-600">Visualização das respostas do usuário.</p>
             </div>
         </div>
 
-        <!-- Corpo das Respostas -->
         <div class="p-6 md:p-8 space-y-8">
             
             @php 
-                // Garante que a resposta é um array iterável
                 $respostasSalvas = is_string($resposta->respostas) ? json_decode($resposta->respostas, true) : $resposta->respostas;
             @endphp
 
@@ -63,7 +60,6 @@
                                     <p class="text-gray-400 dark:text-gray-500 text-sm italic border-l-2 border-gray-300 dark:border-gray-600 pl-3">Nenhuma resposta fornecida ou campo ocultado por regra condicional.</p>
                                 @else
                                     
-                                    {{-- Renderização Específica para Checkboxes (Array de Strings) --}}
                                     @if($campo->tipo === 'check' && is_array($valor))
                                         <div class="flex flex-wrap gap-2 mt-2">
                                             @foreach($valor as $v)
@@ -73,7 +69,6 @@
                                             @endforeach
                                         </div>
 
-                                    {{-- Renderização Específica para Matriz --}}
                                     @elseif($campo->tipo === 'matriz' && is_array($valor))
                                         @php
                                             $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
@@ -94,7 +89,6 @@
                                             </table>
                                         </div>
 
-                                    {{-- Renderização Específica para Avaliação em Estrelas --}}
                                     @elseif($campo->tipo === 'rating')
                                         @php $maxStars = $cfg['max_stars'] ?? 5; @endphp
                                         <div class="flex gap-1 text-2xl text-yellow-400 mt-1">
@@ -104,7 +98,6 @@
                                             <span class="ml-2 text-sm text-gray-500 font-bold self-center">({{ $valor }}/{{ $maxStars }})</span>
                                         </div>
 
-                                    {{-- Renderização Padrão (Texto, Select, Radio) --}}
                                     @else
                                         <p class="text-gray-900 dark:text-white text-base border-l-2 border-indigo-400 dark:border-indigo-600 pl-3 bg-white dark:bg-transparent py-1 print:border-none print:pl-0 print:font-bold">
                                             {{ $valor }}

@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('resposta_formularios', function (Blueprint $table) {
             $table->id();
             $table->foreignId('formulario_id')->constrained('formularios')->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable(); // Caso o usuário responda logado
-            $table->json('respostas'); // Guardará o array completo de respostas
+            $table->foreignId('user_id')->nullable(); 
+            $table->json('respostas'); 
             $table->integer('etapa_parada')->default(1);
             $table->timestamps();
         });

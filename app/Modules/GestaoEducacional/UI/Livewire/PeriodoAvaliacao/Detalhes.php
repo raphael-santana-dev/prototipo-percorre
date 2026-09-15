@@ -39,7 +39,6 @@ class Detalhes extends Component
                 $this->fases[] = ['fase' => $f->fase, 'responsavel' => $f->responsavel];
             }
 
-            // Verifica se já existem avaliações. Se sim, bloqueia alterar critérios e fases.
             $this->avaliacoesGeradas = AlunoAvaliacao::where('periodo_id', $this->periodoId)->exists();
         } else {
             abort_if(!feature('periodo_avaliacao.criar'), 403);

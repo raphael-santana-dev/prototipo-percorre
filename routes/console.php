@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Schedule;
 use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob;
 
-// O Cron job roda a cada minuto procurando e-mails atrasados ou na hora exata
 Schedule::call(function () {
     $pendentes = Comunicado::where('status', 'pendente')
         ->where('data_agendamento', '<=', now())

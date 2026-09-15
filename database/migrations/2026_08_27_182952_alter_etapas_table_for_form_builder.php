@@ -9,10 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('etapas', function (Blueprint $table) {
-            // Remove a trava global de "Etapa única no sistema inteiro"
             $table->dropUnique('etapas_numero_unique'); 
             
-            // Adiciona o pertencimento
             $table->foreignId('ciclo_id')->nullable()->constrained('ciclos')->cascadeOnDelete()->after('id');
             $table->foreignId('formulario_id')->nullable()->constrained('formularios')->cascadeOnDelete()->after('ciclo_id');
         });

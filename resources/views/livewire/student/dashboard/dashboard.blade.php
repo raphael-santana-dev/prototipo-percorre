@@ -1,6 +1,5 @@
 <div>
     @if($student->matriculado)
-        {{-- TELA 1: ALUNO MATRICULADO --}}
         <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Bem-vindo de volta! Aqui está o seu progresso.</p>
 
@@ -10,7 +9,6 @@
             <p class="mt-1 text-slate-500 dark:text-slate-400">Seu ambiente de aprendizagem será carregado aqui.</p>
         </div>
     @else
-        {{-- TELA 2: ALUNO EM PROCESSO SELETIVO (Acompanhamento) --}}
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Acompanhamento de Inscrição</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Abaixo estão os dados da sua inscrição e o status atual do processo seletivo.</p>
 
@@ -31,7 +29,6 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     
-                    {{-- COLUNA ESQUERDA: CURSO E INTERESSE --}}
                     <div class="lg:col-span-1">
                         <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-graduation-cap text-lg"></i> Interesse Acadêmico</h4>
                         <div class="flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/50 p-5 rounded-xl border border-slate-100 dark:border-gray-700 h-full">
@@ -52,14 +49,12 @@
                         </div>
                     </div>
 
-                    {{-- COLUNA DIREITA: DADOS DO FORMULÁRIO --}}
                     <div class="lg:col-span-2">
                         <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-list-dashes text-lg"></i> Dados Informados</h4>
                         <div class="bg-slate-50 dark:bg-gray-900/50 p-4 rounded-xl border border-slate-100 dark:border-gray-700">
                             @if($inscricao->dados_dinamicos)
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     @foreach($inscricao->dados_dinamicos as $chave => $valor)
-                                        {{-- Remove do visual as chaves do sistema --}}
                                         @continue(str_contains(strtolower($chave), 'form_config'))
                                         
                                         @php 

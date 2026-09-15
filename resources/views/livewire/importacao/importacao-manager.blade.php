@@ -208,7 +208,6 @@
         </x-table>
     </div>
 
-    <!-- MODAL 1: NOVO UPLOAD -->
     @if($modalUploadAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -308,7 +307,6 @@
         </div>
     @endif
 
-    <!-- MODAL 2: AUTO-MAPEAMENTO -->
     @if($modalMapeamentoAberto)
         <div class="fixed inset-0 z-[60] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -364,7 +362,7 @@
                     </div>
 
                     <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
-                        <button type="button" wire:click="excluirImportacao({{ $importacaoAtualId }})" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar e Apagar Arquivo</button>
+                        <button type="button" wire:click="excluirImportacao({{ $importacaoAtualId }})" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar e apagar Arquivo</button>
                         <button type="button" wire:click="iniciarImportacao" wire:loading.attr="disabled" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600 transition flex items-center gap-2">
                             <span wire:loading.remove wire:target="iniciarImportacao" class="flex items-center gap-2">
                                 <i class="ph-bold ph-rocket-launch"></i> Confirmar e Enviar para a Fila
@@ -379,7 +377,6 @@
         </div>
     @endif
 
-    <!-- MODAL 3: DETALHES E LOG DA IMPORTAÇÃO -->
     @if($modalDetalhesAberto && $importacaoDetalhes)
         <div class="fixed inset-0 z-[70] overflow-y-auto" x-data="{ fullscreen: false, tab: 'logs' }">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -502,7 +499,6 @@
         </div>
     @endif
 
-    <!-- MODAL 4: ESCOLHA DE REPROCESSAMENTO -->
     @if($modalReprocessarAberto)
         <div class="fixed inset-0 z-[80] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -516,7 +512,6 @@
                     
                     <p class="text-sm text-gray-600 mb-4 font-medium">O arquivo original e o seu mapeamento de colunas estão salvos. Como você deseja executar o reprocessamento?</p>
                     
-                    <!-- CHECKBOX: Refazer Mapeamento -->
                     <div class="mb-4 p-3 bg-purpura-50/50 border border-purpura-100 rounded-lg">
                         <label class="flex items-start gap-3 cursor-pointer group">
                             <div class="flex items-center h-5 mt-0.5">
@@ -559,7 +554,6 @@
         </div>
     @endif
 
-    <!-- MODAL 5: MONITORAMENTO EM TEMPO REAL -->
     @if($modalMonitoramentoAberto)
         <div class="fixed inset-0 z-[90] overflow-y-auto" wire:poll.1s="monitorarProgresso">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -635,7 +629,6 @@
 
                     <div class="mt-6 border-t border-gray-100 pt-4" x-data="{ showCancelOptions: false }">
                         
-                        <!-- BOTÕES PADRÃO -->
                         <div x-show="!showCancelOptions" class="flex justify-between items-center w-full">
                             <button wire:click="fecharMonitoramento" class="text-xs font-bold text-gray-500 hover:text-gray-800 transition underline decoration-dashed underline-offset-4">
                                 Ocultar e processar em 2º plano
@@ -645,7 +638,6 @@
                             </button>
                         </div>
 
-                        <!-- MENU DE CANCELAMENTO EXPANDIDO -->
                         <div x-show="showCancelOptions" x-cloak class="flex flex-col items-center bg-red-50 p-4 rounded-xl border border-red-100 w-full animate-fade-in-up">
                             <span class="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
                                 <i class="ph-fill ph-warning-circle text-lg"></i> Interromper o processo?
@@ -662,14 +654,14 @@
                                 </button>
                                 
                                 <button wire:click="cancelarImportacao(true)" wire:loading.attr="disabled" class="px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1">
-                                    <span wire:loading.remove wire:target="cancelarImportacao(true)"><i class="ph-bold ph-trash"></i> Cancelar e Apagar Dados</span>
+                                    <span wire:loading.remove wire:target="cancelarImportacao(true)"><i class="ph-bold ph-trash"></i> Cancelar e apagar Dados</span>
                                     <span wire:loading wire:target="cancelarImportacao(true)"><i class="ph-bold ph-spinner animate-spin"></i> Revertendo...</span>
                                 </button>
                             </div>
                             
                             <p class="text-[10px] text-red-600 font-medium mt-3 text-center leading-tight">
                                 <b>"Apenas Cancelar":</b> Para a leitura da planilha e mantém os dados já processados.<br>
-                                <b>"Cancelar e Apagar":</b> Interrompe o processo e exclui em massa os dados inseridos por este arquivo.
+                                <b>"Cancelar e apagar":</b> Interrompe o processo e exclui em massa os dados inseridos por este arquivo.
                             </p>
                         </div>
                         

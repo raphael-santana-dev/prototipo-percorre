@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Tabela de Turmas
         Schema::create('turmas', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
@@ -22,21 +21,19 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // 2. Relacionamento: Professores (Users) vinculados às Turmas
         Schema::create('professor_turma', function (Blueprint $table) {
             $table->id();
             $table->foreignId('turma_id')->constrained('turmas')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // O Professor
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); 
             $table->timestamps();
             
-            $table->unique(['turma_id', 'user_id']); // Evita duplicidade
+            $table->unique(['turma_id', 'user_id']); 
         });
 
-        // 3. Tabela de Matrículas (Vínculo do Estudante com o Curso)
         Schema::create('matriculas', function (Blueprint $table) {
             $table->id();
             $table->string('numero_matricula')->unique();
-            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete(); // Vinculado a nova tabela de estudantes
+            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
             $table->foreignId('curso_id')->constrained('cursos');
             $table->foreignId('unidade_id')->constrained('unidades');
             $table->foreignId('turno_id')->constrained('turnos');
@@ -45,7 +42,6 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // 4. Relacionamento: Matrículas vinculadas às Turmas
         Schema::create('matricula_turma', function (Blueprint $table) {
             $table->id();
             $table->foreignId('matricula_id')->constrained('matriculas')->cascadeOnDelete();

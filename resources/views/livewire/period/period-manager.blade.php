@@ -1,6 +1,5 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
-    {{-- CABEÇALHO UNIFICADO --}}
     <x-page-header 
         title="Ciclos de Inscrições" 
         icon="ph ph-calendar-check"
@@ -151,7 +150,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO EM GRID (CARDS) ATUALIZADA COM AS VAGAS --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $ciclo )
                 @php
@@ -173,7 +171,6 @@
                         <i class="ph-fill ph-users"></i> {{ $ciclo->inscricoes_count ?? 0 }} inscrições registradas
                     </div>
 
-                    {{-- PROGRESSO NO CARD --}}
                     <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 mb-3">
                         <div class="flex justify-between w-full text-[10px] font-bold mb-1">
                             <span class="text-gray-500 dark:text-gray-400">{{ $preenchidas }} Vagas Preench.</span>

@@ -3,7 +3,7 @@
     <x-page-header 
         title="{{ $turmaId ? 'Editar Turma' : 'Nova Turma' }}" 
         icon="ph ph-chalkboard"
-        badge="Dossiê Acadêmico">
+        badge="Detalhes Acadêmico">
         
         <x-slot name="actions">
             <a href="{{ route('turmas.index') }}" wire:navigate class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
@@ -14,7 +14,6 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {{-- COLUNA ESQUERDA: FORMULÁRIO --}}
         <div class="lg:col-span-2">
             <form wire:submit.prevent="salvar" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
                 
@@ -95,11 +94,9 @@
             </form>
         </div>
 
-        {{-- COLUNA DIREITA: INFORMAÇÕES EXTRAS (Só exibe se a turma já existir) --}}
         @if($turmaId)
             <div class="space-y-6">
                 
-                {{-- Professores --}}
                 <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                     <h3 class="text-sm font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-3 text-gray-800 dark:text-gray-200 flex justify-between items-center">
                         Corpo Docente
@@ -122,7 +119,6 @@
                     </div>
                 </div>
 
-                {{-- Matrículas (Alunos) --}}
                 <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                     <h3 class="text-sm font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-3 text-gray-800 dark:text-gray-200 flex justify-between items-center">
                         Alunos Matriculados

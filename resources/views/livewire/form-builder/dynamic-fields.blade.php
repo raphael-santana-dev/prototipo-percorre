@@ -18,7 +18,6 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {{-- COLUNA ESQUERDA: CANVAS / PREVIEW --}}
         <div class="lg:col-span-8 space-y-6">
             
             <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
@@ -41,7 +40,6 @@
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
-            {{-- BARRA DE NAVEGAÇÃO DE PÁGINAS (TYPEFORM STYLE) --}}
             <div class="flex items-center gap-2 mb-2 overflow-x-auto custom-scrollbar pb-2">
                 <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-purpura-600 hover:border-purpura-300">
                     <i class="ph-bold ph-plus"></i> Adicionar Página
@@ -79,8 +77,8 @@
                     <div class="w-full {{ $formWidth }} {{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                         
                         <div class="mb-10 border-b border-gray-200 pb-6">
-                            <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Simulador da Inscrição</h1>
-                            <p class="text-gray-600">Abaixo está a estrutura de como o aluno verá este formulário.</p>
+                            <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Construtor de Formulários</h1>
+                            <p class="text-gray-600">Abaixo está a estrutura de como o usuário verá este formulário.</p>
                         </div>
 
                         @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
@@ -102,7 +100,6 @@
                                             $isActive = $campoId == $c->id; 
                                             $colSpan = "col-span-12 md:col-span-{$c->largura}";
                                             $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                            // Puxa a configuração de layout na preview se for o campo ativo, senão puxa do banco
                                             $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
                                         @endphp
 
@@ -125,7 +122,6 @@
                                                     <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
                                                 </div>
                                                 
-                                                <!-- PREVIEWS VISUAIS ATUALIZADOS -->
                                                 @if($c->tipo === 'text')
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
                                                         @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
@@ -239,7 +235,6 @@
                                                     </div>
                                                 @endif
                                                 
-                                                <!-- Badges de Log -->
                                                 <div class="mt-2.5 flex flex-wrap gap-2 items-center">
                                                     @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media']))
                                                         <span class="text-[10px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
@@ -277,7 +272,6 @@
             </div>
         </div>
 
-        {{-- COLUNA DIREITA: CONFIGURAÇÕES --}}
         <div x-data="{ activeTab: 'form' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
             
             <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
@@ -289,7 +283,6 @@
                 </button>
             </div>
 
-            <!-- ==================== ABA 1: CONFIG DO BLOCO ==================== -->
             <div x-show="activeTab === 'field'" class="flex-1 flex flex-col overflow-hidden">
                 
                 <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
@@ -327,7 +320,6 @@
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <!-- BOTÃO ATUALIZADO COM OS NOVOS TIPOS -->
                                         <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Texto Curto</span>
@@ -356,7 +348,7 @@
                                         </button>
                                         <button type="button" wire:click="setTipo('matriz')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-table text-xl {{ $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Matriz de Rádios</span>
+                                            <span class="text-xs font-bold">Matriz</span>
                                         </button>
                                         <button type="button" wire:click="setTipo('rating')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-star text-xl {{ $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
@@ -449,7 +441,6 @@
                                         <option value="date">Data (Calendário)</option>
                                         <option value="time">Hora (Relógio)</option>
                                         <option value="datetime-local">Data e Hora</option>
-                                        <!-- OPÇÕES NOVAS INSERIDAS AQUI -->
                                         <option value="money">Valor Monetário (R$)</option>
                                         <option value="tel">Telefone / Celular</option>
                                     </select>
@@ -631,7 +622,6 @@
                 </form>
             </div>
 
-            <!-- ==================== ABA 2: CONFIG DO FORMULÁRIO (GERAL) ==================== -->
             <div x-show="activeTab === 'form'" x-cloak class="flex-1 flex flex-col overflow-hidden bg-white">
                 
                 <form wire:submit.prevent="salvarFormSettings" class="flex-1 flex flex-col overflow-hidden">

@@ -1,6 +1,4 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }">
-    
-    {{-- CABEÇALHO UNIFICADO COM BOTÃO SALVAR GERAL --}}
     <x-page-header 
         title="Edição do Ciclo" 
         icon="ph ph-calendar-check"
@@ -14,7 +12,7 @@
                 <a href="{{ route('ciclos.index') }}" wire:navigate class="px-3 py-2 text-xs font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-1.5">
                     <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
                 </a>
-                {{-- BOTÃO SALVAR GERAL (TOPO) --}}
+
                 <!-- <button type="submit" form="formCicloPrincipal" class="px-5 py-2 text-xs font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
                     <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
                 </button> -->
@@ -22,11 +20,11 @@
         </x-slot>
     </x-page-header>
 
-    {{-- BARRA DE NAVEGAÇÃO POR ABAS --}}
+
     <div class="mb-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
         <nav class="flex flex-wrap gap-2 -mb-px" aria-label="Abas">
-            {{-- ABA 1: GERAL --}}
-            <button type="button" 
+
+        <button type="button" 
                     @click="abaAtiva = 'geral'" 
                     :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
@@ -34,7 +32,6 @@
                 <span>Config. Geral</span>
             </button>
 
-            {{-- ABA 2: ESTRUTURA ACADÊMICA --}}
             <button type="button" 
                     @click="abaAtiva = 'estrutura'" 
                     :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -48,7 +45,6 @@
                 @endif
             </button>
 
-            {{-- ABA 3: VAGAS & MATRIZ --}}
             <button type="button" 
                     @click="abaAtiva = 'vagas'" 
                     :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -62,7 +58,6 @@
                 @endif
             </button>
 
-            {{-- ABA 4: FUNIL CRM --}}
             <button type="button" 
                     @click="abaAtiva = 'crm'" 
                     :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -76,7 +71,6 @@
                 @endif
             </button>
 
-            {{-- ABA 5: DOCUMENTOS --}}
             <button type="button" 
                     @click="abaAtiva = 'documentos'" 
                     :class="abaAtiva === 'documentos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
@@ -92,12 +86,8 @@
         </nav>
     </div>
 
-    {{-- FORMULÁRIO PRINCIPAL INTEGRADO --}}
     <form id="formCicloPrincipal" wire:submit.prevent="salvar" class="space-y-6">
-        
-        {{-- ======================================================== --}}
-        {{-- ABA 1: DADOS GERAIS & VIGÊNCIA                            --}}
-        {{-- ======================================================== --}}
+
         <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
             <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
                 <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
@@ -148,9 +138,6 @@
             </div>
         </div>
 
-        {{-- ======================================================== --}}
-        {{-- ABA 2: ESTRUTURA ACADÊMICA (EXPLORER)                     --}}
-        {{-- ======================================================== --}}
         <div x-show="abaAtiva === 'estrutura'" x-cloak class="space-y-4">
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
@@ -162,7 +149,6 @@
             </div>
             
             <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                {{-- COLUNA 1: UNIDADES --}}
                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                         1. Unidades Ofertadas
@@ -181,7 +167,6 @@
                     </div>
                 </div>
 
-                {{-- COLUNA 2: CURSOS DA UNIDADE --}}
                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                         2. Cursos da Unidade
@@ -207,7 +192,6 @@
                     </div>
                 </div>
 
-                {{-- COLUNA 3: TURNOS DO CURSO --}}
                 <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                         3. Turnos Vinculados
@@ -233,9 +217,6 @@
             </div>
         </div>
 
-        {{-- ======================================================== --}}
-        {{-- ABA 3: MATRIZ DE VAGAS E IDADES                           --}}
-        {{-- ======================================================== --}}
         <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
                 <div>
@@ -256,7 +237,6 @@
             <div class="space-y-3">
                 @forelse($ofertasVagas as $index => $oferta)
                     <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
-                        {{-- Unidade --}}
                         <div class="flex-1 w-full">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
                             <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
@@ -269,7 +249,6 @@
                             </select>
                         </div>
                         
-                        {{-- Curso --}}
                         <div class="flex-1 w-full">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
                             <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
@@ -284,7 +263,6 @@
                             </select>
                         </div>
                         
-                        {{-- Turno --}}
                         <div class="flex-1 w-full">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
                             <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
@@ -302,7 +280,6 @@
                             </select>
                         </div>
 
-                        {{-- Quantidades e Idades --}}
                         <div class="w-full xl:w-24">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400 text-center">
@@ -334,9 +311,6 @@
             </div>
         </div>
 
-        {{-- ======================================================== --}}
-        {{-- ABA 4: FUNIL CRM (PIPELINE DE STATUS)                     --}}
-        {{-- ======================================================== --}}
         <div x-show="abaAtiva === 'crm'" x-cloak class="space-y-4">
             <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
@@ -378,7 +352,6 @@
                     </div>
                 </div>
                 
-                {{-- LISTA DE STATUS ORDENÁVEL --}}
                 <div x-ref="statusList" class="flex flex-col gap-2 p-1">
                     @forelse($statusSelecionados as $index => $statusId)
                         @php $statusObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
@@ -405,19 +378,17 @@
             </div>
         </div>
 
-        {{-- ======================================================== --}}
-        {{-- ABA 5: DOCUMENTOS EXIGIDOS PARA MATRÍCULA                 --}}
-        {{-- ======================================================== --}}
         <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-files text-purpura-500"></i> Documentos Exigidos no Portal de Matrícula
+                        <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina quais comprovações serão solicitadas aos candidatos aprovados deste ciclo.
+                        Defina quais documentos serão solicitados aos candidatos aprovados deste ciclo.
                     </p>
                 </div>
+
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                     <button type="button" wire:click="addDocumento" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-plus text-sm"></i> Novo Documento
@@ -428,20 +399,17 @@
             <div class="space-y-3">
                 @forelse($documentosExigidos as $index => $doc)
                     <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-end transition-colors hover:border-purpura-300">
-                        {{-- Nome --}}
                         <div class="flex-1 w-full md:w-1/3">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Documento <span class="text-red-500">*</span></label>
                             <input type="text" wire:model="documentosExigidos.{{ $index }}.nome" placeholder="Ex: RG Frente e Verso" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-bold">
                             @error("documentosExigidos.$index.nome") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                         </div>
                         
-                        {{-- Descrição / Instruções --}}
                         <div class="flex-1 w-full md:w-1/2">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Instruções aos Alunos</label>
                             <input type="text" wire:model="documentosExigidos.{{ $index }}.descricao" placeholder="Ex: Foto nítida e sem reflexos" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
                         </div>
 
-                        {{-- Switch Obrigatório & Remover --}}
                         <div class="w-full md:w-auto flex items-center justify-between gap-4 pb-1.5">
                             <label class="flex items-center cursor-pointer select-none">
                                 <input type="checkbox" wire:model="documentosExigidos.{{ $index }}.is_obrigatorio" class="w-4 h-4 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
@@ -465,7 +433,6 @@
             </div>
         </div>
 
-        {{-- BARRA INFERIOR COM BOTÃO SALVAR GERAL --}}
         <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
             <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
             </span>

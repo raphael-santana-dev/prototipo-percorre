@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('status_inscricoes', function (Blueprint $table) {
-            // Adiciona a coluna cor (HEX longo padrão: #FFFFFF)
             $table->string('cor', 10)->nullable()->after('nome');
         });
     }

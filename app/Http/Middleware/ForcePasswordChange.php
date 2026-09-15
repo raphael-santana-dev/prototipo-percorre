@@ -13,7 +13,6 @@ class ForcePasswordChange
     {
         $user = null;
 
-        // Descobre qual sessão está ativa
         if (Auth::guard('web')->check()) {
             $user = Auth::guard('web')->user();
         } elseif (Auth::guard('student')->check()) {
@@ -22,15 +21,12 @@ class ForcePasswordChange
             $user = Auth::guard('company')->user();
         }
 
-        // Se o usuário está logado e precisa trocar a senha
         if ($user && $user->must_change_password) {
             
-            // Verifica se ele já NÃO ESTÁ nas rotas permitidas (Troca de senha ou Logout)
-            // Isso evita um loop infinito de redirecionamentos!
             if (!$request->routeIs('password.force-change') && 
                 !$request->routeIs('logout') && 
                 !$request->routeIs('portal.logout') &&
-                !$request->routeIs('livewire.update')) { // Permite requisições internas do Livewire
+                !$request->routeIs('livewire.update')) {
                 
                 return redirect()->route('password.force-change');
             }

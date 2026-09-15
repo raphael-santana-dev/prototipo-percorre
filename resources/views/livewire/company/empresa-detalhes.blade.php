@@ -1,9 +1,8 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
     <x-page-header 
-        title="Dossiê da Empresa Parceira" 
+        title="Detalhes da Empresa" 
         icon="ph ph-buildings"
-        badge="Integração ERP"
         :breadcrumbs="$breadcrumbs">
 
         <x-slot name="actions">
@@ -14,7 +13,6 @@
 
     </x-page-header>
 
-    {{-- DADOS CADASTRAIS (SOMENTE LEITURA) --}}
     <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
         <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-gray-700">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
@@ -43,7 +41,6 @@
         </div>
     </div>
 
-    {{-- NAVEGAÇÃO DE ABAS --}}
     <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
         <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
             <li class="mr-2">
@@ -61,10 +58,8 @@
         </ul>
     </div>
 
-    {{-- CONTEÚDO DAS ABAS --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
-        {{-- ABA 1: APRENDIZES --}}
         @if($abaAtual === 'aprendizes')
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
@@ -116,7 +111,6 @@
             </div>
         @endif
 
-        {{-- ABA 2: EQUIPE E AVALIADORES --}}
         @if($abaAtual === 'contatos')
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">

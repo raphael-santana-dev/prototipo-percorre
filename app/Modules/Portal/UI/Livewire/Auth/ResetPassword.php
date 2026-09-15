@@ -42,38 +42,32 @@ class ResetPassword extends Component
             'token' => $this->token
         ];
 
-        // Função (callback) de como a senha deve ser salva em qualquer dos models
         $resetCallback = function ($user, $password) {
-            $user->password = Hash::make($password);
-            // Se tiver a trava de segurança de primeiro acesso, já libera!
-            if (isset($user->must_change_password)) {
-                $user->must_change_password = false;
-            }
-            $user->save();
+        $user->password = Hash::make($password);
+        if (isset($user->must_change_password)) {
+            $user->must_change_password = false;
+        }
+        $user->save();
         };
 
-        // 1. Tenta no admin
         $status = Password::broker('users')->reset($credentials, $resetCallback);
         if ($status == Password::PASSWORD_RESET) {
             session()->flash('sucesso', 'Senha redefinida com sucesso! Você já pode fazer login.');
             return redirect()->route('login');
         }
 
-        // 2. Tenta nos estudantes
         $status = Password::broker('students')->reset($credentials, $resetCallback);
         if ($status == Password::PASSWORD_RESET) {
             session()->flash('sucesso', 'Senha redefinida com sucesso! Você já pode fazer login.');
             return redirect()->route('login');
         }
 
-        // 3. Tenta nas empresas
         $status = Password::broker('company_users')->reset($credentials, $resetCallback);
         if ($status == Password::PASSWORD_RESET) {
             session()->flash('sucesso', 'Senha redefinida com sucesso! Você já pode fazer login.');
             return redirect()->route('login');
         }
 
-        // Se falhar (token inválido ou expirado)
         $this->addError('email', trans($status));
     }
 

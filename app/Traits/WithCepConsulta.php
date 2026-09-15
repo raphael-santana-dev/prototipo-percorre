@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Http;
 
 trait WithCepConsulta
 {
-    // O Livewire aciona esta função automaticamente sempre que o "wire:model='cep'" é alterado
     public function updatedCep($valor)
     {
         $cepLimpo = preg_replace('/[^0-9]/', '', (string) $valor);
@@ -39,7 +38,6 @@ trait WithCepConsulta
 
     private function dispararGatilhos()
     {
-        // Se o componente onde esta trait for usada tiver a função "atualizarDisponibilidade" (como é o caso da Inscrição), aciona ela.
         if (method_exists($this, 'atualizarDisponibilidade')) {
             $this->atualizarDisponibilidade();
         }

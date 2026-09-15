@@ -34,7 +34,6 @@ class FormManager extends Component
     public $apenas_estudantes = false;
     public $exigir_email = false;
     
-    // Arrays de restrição
     public $roles_permitidas = [];
     public $users_permitidos = [];
     public $unidades_permitidas = [];
@@ -50,6 +49,32 @@ class FormManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.listar'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
+    }
+
+    public function solicitarExportacao($id, $formato = 'csv')
+    {
+        $formulario = Formulario::findOrFail($id);
+        $queryCount = \App\Models\RespostaFormulario::where('formulario_id', $id)->count();
+
+        if ($queryCount === 0) {
+            $this->dispatch('erro', msg: 'Este formulário não possui respostas para exportar.');
+            return;
+        }
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'respostas_formulario',
+            'operacao' => 'exportacao',
+            'formato' => strtolower($formato),
+            'arquivo_nome' => 'Respostas - ' . Str::limit($formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
+            'status' => 'na_fila',
+            'total_linhas' => $queryCount,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $id, []))->afterResponse();
+
+        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe no Gerenciador (I/O).');
     }
 
     public function abrirModal($id = null)
@@ -95,7 +120,7 @@ class FormManager extends Component
             'data_inicio' => $this->data_inicio ?: null,
             'data_fim' => $this->data_fim ?: null,
             'acesso_livre' => $this->acesso_livre,
-            'exigir_email' => $this->acesso_livre ? $this->exigir_email : false, // E-mail obriga apenas em forms livres (logados já têm e-mail)
+            'exigir_email' => $this->acesso_livre ? $this->exigir_email : false,
             'apenas_estudantes' => $this->acesso_livre ? false : $this->apenas_estudantes,
             'roles_permitidas' => $this->acesso_livre ? null : $this->roles_permitidas,
             'users_permitidos' => $this->acesso_livre ? null : $this->users_permitidos,

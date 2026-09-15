@@ -1,6 +1,5 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
-    {{-- CABEÇALHO UNIFICADO --}}
     <x-page-header 
         title="Status de Inscrição" 
         icon="ph ph-tag"
@@ -101,7 +100,6 @@
                             @error('descricao') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
-                        <!-- Input Color Formatado (Compacto) -->
                         <div>
                             <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Cor da Tag</label>
                             <div class="flex items-center gap-4 mt-1">

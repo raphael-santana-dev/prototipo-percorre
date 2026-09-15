@@ -12,7 +12,6 @@ class Library extends Component
 {
     public function render()
     {
-        // Uma view inline simples apenas para o nosso teste
         return <<<'HTML'
         <div>
             <h1 class="text-3xl font-bold text-slate-900">Biblioteca Virtual</h1>

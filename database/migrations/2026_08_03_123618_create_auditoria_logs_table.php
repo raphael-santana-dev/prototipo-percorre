@@ -15,21 +15,19 @@ return new class extends Migration
             $table->id();
             $table->string('tabela_alterada');
             $table->unsignedBigInteger('registro_id')->nullable();
-            $table->string('acao'); // criacao, atualizacao, exclusao
+            $table->string('acao'); 
             
-            // Guardamos os dados em formato JSON para suportar qualquer tabela
             $table->json('informacao_anterior')->nullable();
             $table->json('nova_informacao')->nullable();
             
-            // Informações do Utilizador e Sessão
             $table->unsignedBigInteger('usuario_id')->nullable();
             $table->string('usuario_nome')->nullable();
             $table->string('usuario_role')->nullable();
-            $table->string('usuario_login')->nullable(); // Ex: Email ou CPF
+            $table->string('usuario_login')->nullable();
             $table->string('ip')->nullable();
             $table->text('navegador')->nullable();
             
-            $table->timestamps(); // O created_at servirá como "Data da Alteração"
+            $table->timestamps(); 
         });
     }
 

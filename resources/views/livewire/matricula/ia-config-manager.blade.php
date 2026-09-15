@@ -6,7 +6,6 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        <!-- Bloco 1: Configuração da IA -->
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <h3 class="font-bold text-gray-800 dark:text-gray-200 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
                 <i class="ph-fill ph-cpu text-purpura-500"></i> Credenciais e Prompt (LLM)
@@ -51,7 +50,6 @@
             </form>
         </div>
 
-        <!-- Bloco 2: Documentos Exigidos por Ciclo -->
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col h-full">
             <h3 class="font-bold text-gray-800 dark:text-gray-200 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
                 <i class="ph-fill ph-files text-purpura-500"></i> Documentos Exigidos por Ciclo

@@ -10,7 +10,6 @@ class AutomacaoMatriculaSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Cria o Template de E-mail
         $template = EmailTemplate::firstOrCreate(
             ['nome' => 'Convocação para Matrícula (Portal IA)'],
             [
@@ -40,7 +39,6 @@ class AutomacaoMatriculaSeeder extends Seeder
             ]
         );
 
-        // 2. Cria a Regra de Automação (Gatilho) vinculada ao Template
         Automacao::firstOrCreate(
             ['evento_gatilho' => 'inscricao.status.aprovado'],
             [

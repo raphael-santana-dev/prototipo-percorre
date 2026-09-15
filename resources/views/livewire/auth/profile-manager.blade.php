@@ -1,19 +1,14 @@
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
     
-    <!-- Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">Detalhes do Perfil</h1>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-8 items-start">
         
-        <!-- ========================================== -->
-        <!-- COLUNA ESQUERDA: CARD DO USUÁRIO           -->
-        <!-- ========================================== -->
         <div class="w-full lg:w-1/3 space-y-6">
             <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center dark:bg-gray-800 dark:border-gray-700">
                 
-                <!-- Avatar Circular Grande com ícone de edição flutuante -->
                 <div class="relative mb-6">
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=F4E8FF&color=9B26B6&size=200&bold=true" 
                          alt="Avatar" 
@@ -29,7 +24,6 @@
                 </span>
             </div>
             
-            <!-- Cards de Informação Rápida (Formato Pill Vertical) -->
             <div class="space-y-3">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
                     <p class="text-xs text-gray-400 font-medium mb-1">Email</p>
@@ -42,16 +36,8 @@
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- COLUNA DIREITA: FORMULÁRIOS E DADOS        -->
-        <!-- ========================================== -->
-        <!-- ========================================== -->
-        <!-- COLUNA DIREITA: FORMULÁRIOS E DADOS        -->
-        <!-- ========================================== -->
-        <!-- Injetamos o AlpineJS aqui para controlar as abas -->
         <div class="w-full lg:w-2/3 space-y-6" x-data="{ abaAtual: 'dados' }">
             
-            <!-- Tabs de Navegação Dinâmicas -->
             <div class="flex gap-6 border-b border-gray-200 dark:border-gray-700 px-2">
                 <button @click="abaAtual = 'dados'" 
                         :class="abaAtual === 'dados' ? 'border-blue-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
@@ -64,17 +50,12 @@
                     Meus Acessos
                 </button>
             </div>
-
-            <!-- ========================================== -->
-            <!-- CONTEÚDO DA ABA 1: DADOS DA CONTA          -->
-            <!-- ========================================== -->
             <div x-show="abaAtual === 'dados'" 
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 transform translate-y-2"
                  x-transition:enter-end="opacity-100 transform translate-y-0"
                  class="space-y-6">
                  
-                <!-- Bloco 1: Informações Pessoais -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 dark:bg-gray-800 dark:border-gray-700">
                     <div class="mb-6">
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Informações Pessoais</h3>
@@ -102,7 +83,6 @@
                     </form>
                 </div>
 
-                <!-- Bloco 2: Segurança -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 dark:bg-gray-800 dark:border-gray-700">
                     <div class="mb-6 flex items-center justify-between">
                         <div>
@@ -141,9 +121,6 @@
                 </div>
             </div>
 
-            <!-- ========================================== -->
-            <!-- CONTEÚDO DA ABA 2: MEUS ACESSOS            -->
-            <!-- ========================================== -->
             <div x-show="abaAtual === 'permissoes'" style="display: none;"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 transform translate-y-2"
@@ -155,7 +132,6 @@
                     <p class="text-sm text-gray-500 mt-1">Esta aba exibe os privilégios vinculados à sua conta. Para alterações, contate um administrador.</p>
                 </div>
 
-                <!-- Grupos (Roles) -->
                 <div class="mb-8">
                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <i class="ph-bold ph-shield-check text-[#2b90ff]"></i> Grupos de Acesso
@@ -171,7 +147,6 @@
                     </div>
                 </div>
 
-                <!-- Permissões Individuais -->
                 <div>
                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <i class="ph-bold ph-key text-orange-500"></i> Permissões Específicas

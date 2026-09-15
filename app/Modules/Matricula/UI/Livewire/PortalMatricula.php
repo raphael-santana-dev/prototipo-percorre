@@ -23,11 +23,10 @@ class PortalMatricula extends Component
     public $inscricao;
     public $documentosExigidos = [];
     public $uploads = [];
-    public $uploadsLote = []; // Variável para o Drag & Drop de múltiplos arquivos
+    public $uploadsLote = []; 
     public $arquivosEnviados = [];
     public $concluido = false;
 
-    // Desafio de Identidade
     public $autenticado = false;
     public $cpf_acesso = '';
     public $data_nascimento_acesso = '';
@@ -38,18 +37,15 @@ class PortalMatricula extends Component
             ->where('token_matricula', $token)
             ->firstOrFail();
 
-        // CHAVE DE SESSÃO ÚNICA PARA ESTA INSCRIÇÃO
         $sessionKey = "matricula_auth_time_{$this->inscricao->id}";
         $authTime = session()->get($sessionKey);
 
         if (auth('student')->check() && auth('student')->id() === $this->inscricao->student_id) {
             $this->autenticado = true;
         } elseif ($authTime && now()->timestamp < $authTime) {
-            // Se tem sessão válida (menos de 5 min), libera o acesso e RENOVA por mais 5 min
             $this->autenticado = true;
             session()->put($sessionKey, now()->addMinutes(5)->timestamp); 
         } else {
-            // Se expirou, mata a sessão
             session()->forget($sessionKey);
         }
 
@@ -61,7 +57,6 @@ class PortalMatricula extends Component
     {
         $throttleKey = 'matricula-auth:' . $this->token . '|' . request()->ip();
 
-        // Trava de segurança: máximo de 5 tentativas a cada 60 segundos
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $segundos = RateLimiter::availableIn($throttleKey);
             $this->addError('falha_auth', "Muitas tentativas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.");
@@ -76,25 +71,20 @@ class PortalMatricula extends Component
             'data_nascimento_acesso.required' => 'A Data de Nascimento é obrigatória.'
         ]);
 
-        // 1. Normalização do CPF (Remove pontos e traços de ambos os lados)
         $cpfLimpo = preg_replace('/[^0-9]/', '', (string)$this->cpf_acesso);
         $cpfInscricaoLimpo = preg_replace('/[^0-9]/', '', (string)$this->inscricao->cpf);
 
-        // 2. Normalização da Data de Nascimento
         $dataValida = false;
         if (!empty($this->inscricao->data_nascimento)) {
-            // Converte a data do banco para o formato exato do input HTML
             $dataBancoFormatada = \Carbon\Carbon::parse($this->inscricao->data_nascimento)->format('Y-m-d');
             $dataValida = hash_equals($dataBancoFormatada, (string)$this->data_nascimento_acesso);
         }
 
-        // 3. Comparação Segura (Timing Attack Safe)
         $cpfValido = hash_equals($cpfInscricaoLimpo, $cpfLimpo);
 
        if ($cpfValido && $dataValida) {
             \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
             $this->autenticado = true;
-            // CRIA A SESSÃO COM VALIDADE DE 5 MINUTOS NO FUTURO
             session()->put("matricula_auth_time_{$this->inscricao->id}", now()->addMinutes(5)->timestamp);
             $this->dispatch('sucesso', msg: 'Identidade confirmada com sucesso. Cofre liberado!');
         } else {
@@ -138,12 +128,8 @@ class PortalMatricula extends Component
         }
     }
 
-    // ==========================================
-    // UPLOAD INDIVIDUAL (UM ARQUIVO POR VEZ)
-    // ==========================================
     public function updatedUploads($value, $documentoExigidoId)
     {
-        // Limita extensão e tamanho máximo (10MB)
         $this->validate([
             "uploads.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp|max:10240'
         ], [
@@ -159,7 +145,6 @@ class PortalMatricula extends Component
             'documento_exigido_id' => $documentoExigidoId,
         ]);
 
-        // Mitigação DoS: Remove arquivo órfão antigo antes de gravar o novo
         if ($docMatricula->arquivo_caminho && Storage::disk('local')->exists($docMatricula->arquivo_caminho)) {
             Storage::disk('local')->delete($docMatricula->arquivo_caminho);
         }
@@ -191,13 +176,9 @@ class PortalMatricula extends Component
         $docMatricula->save();
         $this->carregarStatusArquivos();
         
-        // Desliga o spinner de carregamento individual no front-end
         $this->dispatch('analise-concluida', docId: $documentoExigidoId);
     }
 
-    // ==========================================
-    // UPLOAD EM LOTE (DRAG & DROP INTELIGENTE)
-    // ==========================================
     public function updatedUploadsLote()
     {
         $this->validate([
@@ -210,7 +191,6 @@ class PortalMatricula extends Component
         foreach ($this->uploadsLote as $file) {
             $caminhoTemp = $file->store("matriculas/{$this->inscricao->id}/temp");
             
-            // A IA descobre a qual DocumentoExigido essa imagem pertence
             $resultadoIa = AiValidationService::classificarDocumentoLote($this->inscricao, $this->documentosExigidos, $caminhoTemp);
 
             if ($resultadoIa['documento_id'] > 0) {
@@ -255,7 +235,6 @@ class PortalMatricula extends Component
         $this->uploadsLote = [];
         $this->carregarStatusArquivos();
         
-        // Desliga a tela de carregamento do Lote no front-end
         $this->dispatch('lote-concluido', msg: "Processamento concluído: {$sucessos} documento(s) válido(s) e alocado(s). {$falhas} ignorado(s) ou inválido(s).");
     }
 
@@ -271,7 +250,6 @@ class PortalMatricula extends Component
             }
         }
 
-        // Avança a etapa no funil da secretaria
         $this->inscricao->update(['etapa_atual' => 2]);
         $this->concluido = true;
     }

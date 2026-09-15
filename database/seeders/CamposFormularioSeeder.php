@@ -9,7 +9,6 @@ class CamposFormularioSeeder extends Seeder
 {
     public function run(): void
     {
-        // Busca o ciclo criado no seeder anterior para amarrar os relacionamentos dinamicamente
         $cicloId = DB::table('ciclos')->where('ano', 2026)->where('semestre', 2)->value('id');
 
         if (!$cicloId) {
@@ -469,7 +468,6 @@ class CamposFormularioSeeder extends Seeder
         ];
 
         foreach ($campos as $campo) {
-            // Associa o campo dinamicamente com o ciclo (substituindo ID hardcoded)
             $campo['ciclo_id'] = $cicloId; 
             
             DB::table('campo_formularios')->insertOrIgnore(array_merge($campo, [

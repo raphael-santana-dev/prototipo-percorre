@@ -14,7 +14,6 @@ class ImportProgress extends Component
             <div></div>
             HTML;
         }
-        // Busca apenas as importações do usuário logado que não terminaram
         $ativas = Importacao::where('user_id', auth()->id())
             ->whereIn('status', ['mapeamento', 'na_fila', 'processando'])
             ->orderBy('id', 'desc')

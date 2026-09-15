@@ -29,8 +29,6 @@ class AutomacaoManager extends Component
         
         if ($template) {
             
-            // Tenta buscar as nomenclaturas mais comuns de banco de dados. 
-            // Caso a sua coluna tenha um nome muito específico, basta alterar aqui!
             $corpoEmail = $template->corpo ?? $template->conteudo ?? $template->mensagem ?? $template->html ?? null;
             
             if (empty($corpoEmail)) {
@@ -64,7 +62,6 @@ class AutomacaoManager extends Component
         ];
     }
 
-    // Função de Alternância de Status (Toggle)
     public function toggleStatus($id)
     {
         abort_if(!feature('automacao.editar'), 403);

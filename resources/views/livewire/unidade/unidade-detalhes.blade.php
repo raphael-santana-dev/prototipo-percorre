@@ -23,7 +23,6 @@
             @endif
         </x-slot>
 
-        <!-- Slot Inferior (Grid de Metadados) -->
         <div>
             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">E-mail Corporativo</span>
             <span class="block text-sm font-bold text-gray-900">{{ $unidade->email ?: 'Não informado' }}</span>
@@ -43,7 +42,6 @@
     </x-details-card>
 
     <div class="grid grid-cols-1 mt-6">
-        <!-- Cursos Vinculados -->
         <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-6 h-full">
             <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
                 <h3 class="font-bold text-gray-900 flex items-center gap-2">

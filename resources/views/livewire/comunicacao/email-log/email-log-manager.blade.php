@@ -102,7 +102,6 @@
         </x-table>
     </div>
 
-    <!-- MODAL: PREVIEW DO E-MAIL -->
     @if($modalPreviewAberto && $logSelecionado)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -125,7 +124,6 @@
                         </div>
                     </div>
 
-                    <!-- PREVIEW REAL DO HTML RENDERIZADO -->
                     <div class="p-6 max-h-[60vh] overflow-y-auto bg-white prose max-w-none">
                         {!! $logSelecionado->corpo !!}
                     </div>
@@ -138,7 +136,6 @@
         </div>
     @endif
 
-    <!-- MODAL: ERRO -->
     @if($modalErroAberto && $logSelecionado)
         <div class="fixed inset-0 z-[60] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">

@@ -59,13 +59,11 @@ class ComunicadoManager extends Component
         
         $comunicado = Comunicado::findOrFail($id);
         
-        // Impede excluir se estiver no meio do envio
         if ($comunicado->status === 'enviando') {
             $this->dispatch('erro', msg: 'Não é possível excluir um comunicado que está sendo enviado.');
             return;
         }
 
-        // Remove os anexos físicos se existirem
         if (is_array($comunicado->anexos)) {
             foreach ($comunicado->anexos as $anexo) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($anexo);
@@ -80,7 +78,6 @@ class ComunicadoManager extends Component
     {
         $query = Comunicado::with('template');
         
-        // Filtros (O whereDate extrai o "dia" da data de agendamento ignorando a hora)
         $query->when($this->filtro_status, fn($q) => $q->where('status', $this->filtro_status))
               ->when($this->filtro_template, fn($q) => $q->where('template_id', $this->filtro_template))
               ->when($this->filtro_data_inicio, fn($q) => $q->whereDate('data_agendamento', '>=', $this->filtro_data_inicio))
@@ -92,7 +89,6 @@ class ComunicadoManager extends Component
             $query->orderBy('id', 'desc');
         }
 
-        // Pega os templates para popular o filtro
         $templatesDisponiveis = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')->get();
 
         return view('livewire.comunicacao.comunicado.comunicado-manager', [

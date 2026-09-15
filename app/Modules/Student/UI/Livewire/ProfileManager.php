@@ -8,23 +8,19 @@ use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
-// Usamos o layout principal (se você tiver um layout específico para aluno, altere aqui)
 #[Layout('components.layouts.student-app')]
 #[Title('Meu Perfil - Portal do Estudante')]
 class ProfileManager extends Component
 {
-    // Dados Pessoais
     public string $name = '';
     public string $email = '';
 
-    // Segurança
     public string $current_password = '';
     public string $new_password = '';
     public string $new_password_confirmation = '';
 
     public function mount()
     {
-        // Garante que estamos pegando a sessão do guard 'student'
         $student = auth('student')->user();
         
         $this->name = $student->name;
@@ -38,7 +34,6 @@ class ProfileManager extends Component
 
         $this->validate([
             'name' => ['required', 'string', 'min:3', 'max:255'],
-            // Valida o e-mail único na tabela students
             'email' => ['required', 'email', Rule::unique('students', 'email')->ignore($student->id)],
         ]);
 

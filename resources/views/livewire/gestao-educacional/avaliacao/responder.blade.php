@@ -11,7 +11,6 @@
         </x-slot>
     </x-page-header>
 
-    {{-- BANNER DE AVALIAÇÃO CONCLUÍDA E BLOQUEADA --}}
     @if($avaliacaoFinalizada)
         <div class="mb-6 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 p-5 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
             <div class="flex items-start gap-4">
@@ -29,7 +28,6 @@
                 </div>
             </div>
 
-            {{-- BOTÃO DE SOLICITAÇÃO PROFESSOR -> ADMIN --}}
             @if(auth()->guard('web')->check() && auth()->user()->hasRole('professor') && !auth()->user()->hasRole('dev'))
                 <button type="button" wire:click="abrirModalTotalUnlock" class="shrink-0 px-4 py-2.5 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-300 rounded-lg text-xs font-bold transition shadow-sm uppercase tracking-wider flex items-center gap-2">
                     <i class="ph-bold ph-lock-open text-base"></i> Solicitar Reabertura
@@ -79,7 +77,6 @@
                                             {{ $avFase->status == '2' ? 'CONCLUÍDA' : 'PENDENTE' }}
                                         </span>
 
-                                        {{-- BOTÕES DE DESBLOQUEIO E SOLICITAÇÃO --}}
                                         @if($avFase->status == '2')
                                             @if(auth()->guard('student')->check() && ($usuarioResponsavelFase[$avFase->fase] ?? false))
                                                 @if($solicitacoesPendentes[$avFase->fase] ?? false)
@@ -96,7 +93,6 @@
                                             @endif
                                         @endif
 
-                                        {{-- NOVO BOTÃO DE SALVAR FASE INDIVIDUAL --}}
                                         @if($permissoesFase[$avFase->fase] ?? false)
                                             <button type="button" wire:click="salvarFase({{ $avFase->fase }})" class="mt-3 flex items-center justify-center gap-1.5 w-full bg-purpura-100 text-purpura-700 hover:bg-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-400 dark:hover:bg-purpura-900/60 px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wider transition shadow-sm border border-purpura-200 dark:border-purpura-800">
                                                 <i class="ph-bold ph-floppy-disk text-sm"></i> Salvar Fase
@@ -167,7 +163,6 @@
         </div>
     </form>
 
-    {{-- MODAL 1: ALUNO SOLICITANDO ALTERAÇÃO AO PROFESSOR --}}
     @if($modalSolicitacao)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -205,7 +200,6 @@
         </div>
     @endif
 
-    {{-- MODAL 2: PROFESSOR DESBLOQUEANDO A PRÓPRIA FASE (SELF UNLOCK) --}}
     @if($modalSelfUnlock)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -234,7 +228,6 @@
         </div>
     @endif
 
-    {{-- MODAL 3: PROFESSOR SOLICITANDO DESBLOQUEIO TOTAL AO ADMIN --}}
     @if($modalTotalUnlock)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 border border-gray-200 dark:border-gray-700">

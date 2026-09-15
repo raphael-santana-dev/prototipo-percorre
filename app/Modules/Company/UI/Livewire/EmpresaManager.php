@@ -32,7 +32,6 @@ class EmpresaManager extends Component
         
         $this->permiteGrid = false;
         
-        // Usa a propriedade que já existe na trait, e setamos como 'lista' (padrão do seu x-table)
         $this->modoExibicao = 'lista'; 
     }
 
@@ -62,7 +61,6 @@ class EmpresaManager extends Component
     {
         $query = Empresa::query();
 
-        // Lógica de busca isolada e segura
         if (!empty($this->filtro_busca)) {
             $busca = $this->filtro_busca;
             $query->where(function($q) use ($busca) {
@@ -72,13 +70,11 @@ class EmpresaManager extends Component
             });
         }
 
-        // Ordenação segura
         $campo = $this->ordenacaoCampo ?: 'nome_fantasia';
         $direcao = $this->ordenacaoDirecao ?: 'asc';
         
         $query->orderBy($campo, $direcao);
 
-        // Busca paginada
         $empresas = $query->withCount(['aprendizes', 'companyUsers'])->paginate($this->porPagina ?? 10);
 
         return view('livewire.company.empresa-manager', [

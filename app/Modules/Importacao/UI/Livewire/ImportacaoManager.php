@@ -78,7 +78,7 @@ class ImportacaoManager extends Component
         'natureza_deficiencia' => 'Natureza da Deficiência',
         'receber_informacoes' => 'Termo: Receber Informações (0/1)',
         'autorizacao_uso_infos' => 'Termo: Autorização de Uso de Dados (0/1)',
-        'pontuacao_total' => 'Score / Pontuação Total',
+        'pontuacao_total' => 'Pontuação Total',
         'posicao_ranking' => 'Posição no Ranking',
         'etapa_atual' => 'Progresso (Etapa Atual)',
         'regiao' => 'Região (Ex.: Norte, Sul, Leste, Oeste)',

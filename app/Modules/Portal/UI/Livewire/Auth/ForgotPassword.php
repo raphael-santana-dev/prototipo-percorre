@@ -26,28 +26,24 @@ class ForgotPassword extends Component
 
         $email = $this->email;
 
-        // 1. Tenta encontrar no mundo Administrativo (users)
         $response = Password::broker('users')->sendResetLink(['email' => $email]);
         if ($response == Password::RESET_LINK_SENT) {
             $this->status = trans($response);
             return;
         }
 
-        // 2. Tenta encontrar no mundo dos Estudantes (students)
         $response = Password::broker('students')->sendResetLink(['email' => $email]);
         if ($response == Password::RESET_LINK_SENT) {
             $this->status = trans($response);
             return;
         }
 
-        // 3. Tenta encontrar no mundo Corporativo (company_users)
         $response = Password::broker('company_users')->sendResetLink(['email' => $email]);
         if ($response == Password::RESET_LINK_SENT) {
             $this->status = trans($response);
             return;
         }
 
-        // Por segurança, se não achar em nenhum (ou erro genérico), exibe mensagem padrão
         $this->errorMessage = 'Não encontramos nenhum cadastro com este e-mail em nossos sistemas.';
     }
 

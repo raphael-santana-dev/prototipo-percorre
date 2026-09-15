@@ -30,7 +30,6 @@ class AprendizesManager extends Component
     {
         $student = Student::findOrFail($id);
         
-        // Proteção IDOR: Garante que a empresa só edita alunos dela mesma
         $usuario = Auth::guard('company')->user();
         abort_if($student->empresa_id !== $usuario->empresa_id, 403);
 
@@ -55,23 +54,20 @@ class AprendizesManager extends Component
     {
         $usuario = Auth::guard('company')->user();
 
-        // Traz apenas alunos da empresa atual
         $query = Student::with('gestor')
             ->where('empresa_id', $usuario->empresa_id)
-            ->where('is_aprendiz', true) // <- TRAVA DE SEGURANÇA ADICIONADA AQUI
+            ->where('is_aprendiz', true) 
             ->where(function($q) {
                 $q->where('name', 'ilike', '%' . $this->busca . '%')
                   ->orWhere('cpf', 'like', '%' . preg_replace('/\D/', '', $this->busca) . '%');
             });
 
-        // Se for um Gestor comum, ele só enxerga os aprendizes atrelados a ele
         if ($usuario->tipo_acesso === 'gestor_avaliador') {
             $query->where('gestor_id', $usuario->id);
         }
 
         $aprendizes = $query->orderBy('name')->paginate(10);
 
-        // Lista de gestores ativos para o modal (Só o Contato Principal precisa dessa lista)
         $gestores = [];
         if ($usuario->tipo_acesso === 'contato_principal') {
             $gestores = CompanyUser::where('empresa_id', $usuario->empresa_id)

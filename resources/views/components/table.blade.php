@@ -9,7 +9,6 @@
 
 <div>
     @if (count($registros) > 10 || $permiteGrid)
-        <!-- REMOVIDO o bg-white, shadow e bordas. Deixamos apenas flexbox e margem inferior -->
         <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
             
             <div>
@@ -28,7 +27,6 @@
             </div>
 
             @if($permiteGrid)
-                <!-- A "pílula" cinza que engloba os botões -->
                 <div class="inline-flex items-center p-1 bg-gray-100 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                     
                     <button wire:click="alternarModoExibicao('grid')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'grid' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
@@ -47,16 +45,13 @@
     @if($modoExibicao === 'lista')
         <div class="overflow-hidden transition-colors duration-300 bg-white border border-gray-100 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
             
-            {{-- ADICIONADA A CLASSE custom-scrollbar --}}
             <div class="overflow-x-auto custom-scrollbar">
                 
-                {{-- A MÁGICA DO MOBILE ESTÁ AQUI: min-w-full --}}
                 <table class="min-w-full w-full text-sm text-left text-gray-500 dark:text-gray-400">
                     <thead class="text-xs text-gray-500 uppercase border-b border-gray-100 bg-gray-50/50 dark:text-gray-400 dark:bg-gray-900/50 dark:border-gray-700">
                         <tr>
                             @foreach($headers as $header)
                                 @if($header['sortable'] ?? false)
-                                    {{-- ADICIONADO whitespace-nowrap --}}
                                     <th wire:click="ordenarPor('{{ $header['key'] }}')" class="px-4 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 group select-none transition whitespace-nowrap {{ $header['class'] ?? '' }}">
                                         <div class="flex items-center gap-1">
                                             <span>{{ $header['label'] }}</span>
@@ -68,7 +63,6 @@
                                         </div>
                                     </th>
                                 @else
-                                    {{-- ADICIONADO whitespace-nowrap --}}
                                     <th class="px-4 py-2.5 whitespace-nowrap {{ $header['class'] ?? '' }}">
                                         {{ $header['label'] }}
                                     </th>
@@ -87,7 +81,6 @@
             </div>
         </div>
     @else
-        {{-- ÁREA DO GRID --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {{ $gridSlot ?? '' }}
         </div>
@@ -97,7 +90,6 @@
         </div>
     @endif
 
-    {{-- ESTILOS DA SCROLLBAR (Embutidos com segurança no Blade pai) --}}
     <style>
         .custom-scrollbar::-webkit-scrollbar { height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

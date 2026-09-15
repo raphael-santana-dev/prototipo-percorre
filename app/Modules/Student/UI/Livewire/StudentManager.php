@@ -234,7 +234,6 @@ class StudentManager extends Component
         $user = auth()->user();
         $query = Student::query()->with(['unidade', 'empresa']);
 
-        // MÁGICA DE ISOLAMENTO: O professor só vê alunos que tenham ao menos UMA inscrição compatível com as permissões dele
         if (!$user->temVisaoGlobal('estudantes')) {
             $query->whereHas('inscricoes', function($q) {
                 $q->apenasVinculosPermitidos();

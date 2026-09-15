@@ -20,7 +20,6 @@
 
     <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         
-        {{-- TELA DE BLOQUEIO (GATEKEEPER) --}}
         @if($bloqueado)
             <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-yellow-500 transition-all duration-300 relative overflow-hidden">
                 <div class="absolute inset-0 bg-yellow-50/30 dark:bg-yellow-900/10 pointer-events-none"></div>
@@ -44,7 +43,6 @@
                 </div>
             </div>
 
-        {{-- TELA DE SUCESSO --}}
         @elseif($finalizado)
             <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-green-500 transition-all duration-300">
                 <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6 shadow-sm border border-green-200 dark:bg-green-900/30 dark:border-green-800">
@@ -58,7 +56,6 @@
                 </button>
             </div>
 
-        {{-- TELA DO FORMULÁRIO --}}
         @else
             <div class="{{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                 
@@ -83,7 +80,6 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
                     
-                    {{-- CAMPO DE E-MAIL FIXO (Injetado apenas se exigido na Etapa 1) --}}
                     @if($formulario->exigir_email && $etapaAtual === 1)
                         <div class="col-span-12 relative rounded-lg transition-all duration-300">
                             <div class="relative z-10">
@@ -105,7 +101,7 @@
                             <i class="ph ph-arrow-left text-lg"></i> Voltar
                         </button>
                     @else
-                        <div></div> {{-- Spacer --}}
+                        <div></div>
                     @endif
 
                     <button type="button" wire:click="avancarEtapa" class="bg-purpura-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-purpura-700 hover:shadow-lg transition duration-200 flex items-center gap-2">

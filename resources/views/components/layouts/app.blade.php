@@ -73,12 +73,10 @@
                 <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div class="flex items-center h-12 gap-1 lg:gap-2">
                         
-                        <!-- Dashboard (Geralmente aberto a todos logados) -->
                         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
                             <i class="text-lg ph ph-squares-four"></i> Dashboard
                         </a>
 
-                        <!-- Processos Seletivos -->
                         @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
@@ -91,7 +89,6 @@
                         </div>
                         @endcanany
 
-                        <!-- Secretaria -->
                         @canany(['estudante.listar', 'status.listar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
@@ -105,14 +102,13 @@
                         </div>
                         @endcanany
 
-                        <!-- Instituição -->
                         @canany(['curso.listar', 'turno.listar', 'unidade.listar', 'formulario.listar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
                                 <i class="text-lg ph ph-buildings"></i> Instituição <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
                             </button>
                             <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
-                                @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Portfólio de Cursos</a> @endcan
+                                @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Cursos</a> @endcan
                                 @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Grade de Turnos</a> @endcan
                                 @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Unidades</a> @endcan
                                 @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Formulários</a> @endcan
@@ -120,7 +116,6 @@
                         </div>
                         @endcanany
 
-                        <!-- Comunicação -->
                         @canany(['template.listar', 'comunicado.listar', 'automacao.listar', 'email_log.listar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
@@ -135,7 +130,6 @@
                         </div>
                         @endcanany
 
-                        <!-- Educacional (Aninhado) -->
                         @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
@@ -280,7 +274,7 @@
                             <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
                         </button>
                         <div x-show="open" class="pl-8 space-y-1" x-cloak>
-                            @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Portfólio de Cursos</a> @endcan
+                            @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Cursos</a> @endcan
                             @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Grade de Turnos</a> @endcan
                             @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Unidades</a> @endcan
                             @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Formulários</a> @endcan

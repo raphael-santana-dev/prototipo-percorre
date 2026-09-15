@@ -15,12 +15,10 @@ return new class extends Migration
             $table->foreignId('unidade_id')->constrained('unidades')->cascadeOnDelete();
             $table->foreignId('turno_id')->constrained('turnos')->cascadeOnDelete();
             
-            // Quantidade limite de vagas para essa combinação específica
             $table->integer('vagas')->default(0);
             
             $table->timestamps();
             
-            // Garante que não teremos linhas duplicadas para a mesma oferta no mesmo ciclo
             $table->unique(['ciclo_id', 'curso_id', 'unidade_id', 'turno_id'], 'oferta_unica_vaga_idx');
         });
     }

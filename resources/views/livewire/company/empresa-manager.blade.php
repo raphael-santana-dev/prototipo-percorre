@@ -86,7 +86,6 @@
             </tr>
         @endforelse
 
-        {{-- SLOT DE SEGURANÇA: Se o componente forçar grid, desenha vazio e não quebra a tela --}}
         <x-slot name="gridSlot"></x-slot>
 
     </x-table>

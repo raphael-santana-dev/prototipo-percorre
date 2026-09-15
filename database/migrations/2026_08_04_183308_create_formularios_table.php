@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('formularios', function (Blueprint $table) {
             $table->id();
             $table->string('titulo');
-            $table->string('slug')->unique(); // Para a URL pública
+            $table->string('slug')->unique(); 
             $table->text('descricao')->nullable();
             $table->boolean('status')->default(true);
             $table->timestamps();

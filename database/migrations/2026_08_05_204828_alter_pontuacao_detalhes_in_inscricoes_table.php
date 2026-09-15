@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('inscricoes', function (Blueprint $table) {
-            // Alteramos para 'text', o Postgres converte automaticamente e resolve o limite de caracteres!
             $table->text('pontuacao_detalhes')->nullable()->change();
         });
     }

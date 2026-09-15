@@ -27,9 +27,6 @@ class ResponseDetails extends Component
 
     public function render()
     {
-        // Movemos a consulta e o agrupamento para dentro do render(). 
-        // Assim, o Livewire usa os dados apenas para desenhar a tela, 
-        // sem tentar serializar a "Collection de Collections" e gerar erro.
         $campos = CampoFormulario::where('formulario_id', $this->formulario->id)
             ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
             ->orderBy('etapa')

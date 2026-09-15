@@ -15,7 +15,6 @@ class AuditoriaManager extends Component
 
     public array $breadcrumbs = [];
 
-    // Filtros
     public $filtro_keyword = '';
     public $filtro_acao = '';
     public $filtro_tabela = '';
@@ -30,7 +29,6 @@ class AuditoriaManager extends Component
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
-    // Reseta a paginação sempre que um filtro for alterado
     public function updating($nomePropriedade)
     {
         if (in_array($nomePropriedade, ['filtro_keyword', 'filtro_acao', 'filtro_tabela', 'filtro_data_inicio', 'filtro_data_fim'])) {
@@ -165,7 +163,6 @@ class AuditoriaManager extends Component
     {
         $query = AuditoriaLog::query();
 
-        // 1. Filtro de Palavra-chave
         if (!empty($this->filtro_keyword)) {
             $query->where(function($q) {
                 $q->where('usuario_nome', 'like', '%' . $this->filtro_keyword . '%')
@@ -174,29 +171,23 @@ class AuditoriaManager extends Component
             });
         }
 
-        // 2. Filtro de Ação
         if (!empty($this->filtro_acao)) {
             $query->where('acao', $this->filtro_acao);
         }
 
-        // 3. Filtro de Tabela
         if (!empty($this->filtro_tabela)) {
             $query->where('tabela_alterada', $this->filtro_tabela);
         }
 
-        // 4. Filtro de Data Inicial (De)
         if (!empty($this->filtro_data_inicio)) {
             $query->where('created_at', '>=', str_replace('T', ' ', $this->filtro_data_inicio));
         }
 
-        // 5. Filtro de Data Final (Até)
         if (!empty($this->filtro_data_fim)) {
             $dataFim = str_replace('T', ' ', $this->filtro_data_fim);
-            // Se o usuário informar apenas a data (sem hora), estendemos para o final do dia
             if (strlen($dataFim) === 10) {
                 $dataFim .= ' 23:59:59';
             } elseif (strlen($dataFim) === 16) { 
-                // Se informar hora sem os segundos, englobamos o final daquele minuto
                 $dataFim .= ':59';
             }
             $query->where('created_at', '<=', $dataFim);
@@ -208,7 +199,6 @@ class AuditoriaManager extends Component
             $query->orderBy('id', 'desc');
         }
 
-        // Coleta as ações e tabelas existentes para preencher os selects do filtro dinamicamente
         $acoesDisponiveis = AuditoriaLog::select('acao')->distinct()->orderBy('acao')->pluck('acao');
         $tabelasDisponiveis = AuditoriaLog::select('tabela_alterada')->distinct()->orderBy('tabela_alterada')->pluck('tabela_alterada');
 

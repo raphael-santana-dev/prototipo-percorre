@@ -18,7 +18,7 @@ class ProcessarComunicadoJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 3600; // Tempo alto pois podem haver milhares de e-mails
+    public $timeout = 3600;
     protected $comunicado;
 
     public function __construct(Comunicado $comunicado)
@@ -30,7 +30,6 @@ class ProcessarComunicadoJob implements ShouldQueue
     {
         $this->comunicado->update(['status' => 'enviando']);
         
-        // Pega todos os logs pendentes deste comunicado
         $logs = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::where('comunicado_id', $this->comunicado->id)
             ->where('status', 'pendente')
             ->get();
@@ -41,7 +40,6 @@ class ProcessarComunicadoJob implements ShouldQueue
             try {
                 $mensagem = Mail::to($log->destinatario);
 
-                // Aplica CC e BCC apenas no primeiro e-mail para evitar que as cópias recebam emails repetidos
                 if ($isFirst) {
                     if (!empty($this->comunicado->cc)) $mensagem->cc($this->comunicado->cc);
                     if (!empty($this->comunicado->bcc)) $mensagem->bcc($this->comunicado->bcc);

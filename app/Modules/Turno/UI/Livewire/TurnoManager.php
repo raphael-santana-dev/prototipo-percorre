@@ -99,7 +99,6 @@ class TurnoManager extends Component
         
         $this->turnoId = $turno->id;
         $this->nome = $turno->nome;
-        // Formata os campos de tempo para o input html H:i
         $this->horario_inicio = \Carbon\Carbon::parse($turno->horario_inicio)->format('H:i');
         $this->horario_fim = \Carbon\Carbon::parse($turno->horario_fim)->format('H:i');
         

@@ -18,19 +18,16 @@ class Empresa extends Model
         'is_active',
     ];
 
-    // Todos os usuários corporativos desta empresa (Contatos e Gestores)
     public function companyUsers()
     {
         return $this->hasMany(CompanyUser::class, 'empresa_id');
     }
 
-    // Apenas os Gestores Avaliadores
     public function gestores()
     {
         return $this->hasMany(CompanyUser::class, 'empresa_id')->where('tipo_acesso', 'gestor_avaliador');
     }
 
-    // Todos os alunos aprendizes desta empresa
     public function aprendizes()
     {
         return $this->hasMany(\App\Modules\Student\Domain\Models\Student::class, 'empresa_id');

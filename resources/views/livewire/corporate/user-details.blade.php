@@ -6,14 +6,12 @@
     </div>
 
     <div class="relative overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-gray-2 dark:bg-gray-800 dark:border-gray-700">
-        <!-- Padrão Visual do Sistema (Background Sutil) -->
         <div class="h-32 bg-gray-100 sm:h-40 dark:bg-gray-900 relative">
             <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, #9B26B6 1px, transparent 0); background-size: 24px 24px;"></div>
         </div>
         
         <div class="px-6 pb-6 sm:px-8">
             <div class="relative flex flex-col sm:flex-row sm:items-end gap-6 -mt-12 sm:-mt-16">
-                <!-- Avatar -->
                 <div class="relative p-1 bg-white rounded-full dark:bg-gray-800 w-fit">
                     <img class="object-cover w-24 h-24 border-4 border-gray-100 rounded-full sm:w-32 sm:h-32 dark:border-gray-700" 
                          src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=E5E7EB&color=111827&size=256&bold=true" 
@@ -39,7 +37,6 @@
         </div>
     </div>
 
-    <!-- Mapa de Acesso -->
     <div class="p-6 bg-white border border-gray-200 rounded-2xl shadow-gray-1 dark:bg-gray-800 dark:border-gray-700">
         <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 pb-2 dark:border-gray-700">
             <i class="ph ph-shield-check text-purpura-500"></i> Nível de Acesso (ACL)

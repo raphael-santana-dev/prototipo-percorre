@@ -12,16 +12,15 @@ use App\Modules\Company\Domain\Models\Empresa;
 class EmpresaDetalhes extends Component
 {
     public Empresa $empresa;
-    public string $abaAtual = 'aprendizes'; // Aba que inicia aberta
+    public string $abaAtual = 'aprendizes'; 
     public array $breadcrumbs = [];
 
     public function mount($id)
     {
-        // Carrega a empresa e todos os seus relacionamentos necessários
         $this->empresa = Empresa::with([
-            'companyUsers', // Traz contatos e gestores
-            'aprendizes.unidade', // Traz os alunos e qual a unidade deles
-            'aprendizes.gestor' // Traz quem é o gestor daquele aluno
+            'companyUsers',
+            'aprendizes.unidade', 
+            'aprendizes.gestor'
         ])->findOrFail($id);
 
         $this->breadcrumbs = [

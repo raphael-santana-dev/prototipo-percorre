@@ -18,7 +18,6 @@ class UserExtraPermissionManager extends Component
     public array $selectedPermissions = [];
     public array $expirations = [];
 
-    // Array para guardar os IDs das permissões que vêm da Role
     public array $rolePermissions = [];
 
     public function mount(int $userId)
@@ -28,7 +27,6 @@ class UserExtraPermissionManager extends Component
 
         $user = User::findOrFail($userId);
         
-        // Bloqueia se um ADMIN tentar editar as permissões extras de um DEV
         if ($user->hasRole('dev') && !auth()->user()->hasRole('dev')) {
             abort(403, 'Você não tem privilégios para alterar as permissões de um usuário DEV.');
         }
@@ -38,13 +36,11 @@ class UserExtraPermissionManager extends Component
 
         $this->rolePermissions = $user->getPermissionsViaRoles()->pluck('id')->toArray();
 
-        // Carrega as permissões diretas do usuário lendo também a coluna pivô
         $directPermissions = $user->permissions()->withPivot('expires_at')->get();
 
         foreach ($directPermissions as $perm) {
             $this->selectedPermissions[] = $perm->id;
             if ($perm->pivot->expires_at) {
-                // Formata a data para o input date do HTML
                 $this->expirations[$perm->id] = date('Y-m-d', strtotime($perm->pivot->expires_at));
             }
         }
@@ -63,7 +59,6 @@ class UserExtraPermissionManager extends Component
         foreach ($this->selectedPermissions as $permissionId) {
             if (!$permissionId) continue;
             
-            // Proteção extra de backend: ignorar se a permissão enviada já for da Role
             if (in_array($permissionId, $this->rolePermissions)) {
                 continue;
             }

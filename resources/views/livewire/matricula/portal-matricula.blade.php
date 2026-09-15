@@ -33,7 +33,7 @@
                             <input type="date" wire:model="data_nascimento_acesso" class="w-full px-4 py-2.5 text-sm border-gray-300 rounded-lg shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
                         </div>
                         <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2 mt-2">
-                            <i class="ph-bold ph-shield-check text-lg"></i> Acessar Meu Dossiê
+                            <i class="ph-bold ph-shield-check text-lg"></i> Acessar meu Perfil
                         </button>
                     </form>
                 </div>
@@ -179,7 +179,7 @@
                                 <button wire:click="finalizarMatricula" 
                                         class="w-full py-4 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 {{ $podeFinalizar ? 'bg-gray-900 hover:bg-black text-white cursor-pointer shadow-md hover:-translate-y-0.5' : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' }}"
                                         @if(!$podeFinalizar) disabled @endif>
-                                    <i class="ph-bold ph-paper-plane-right text-lg"></i> Enviar Dossiê Completo
+                                    <i class="ph-bold ph-paper-plane-right text-lg"></i> Enviar
                                 </button>
                             </div>
                         </div>

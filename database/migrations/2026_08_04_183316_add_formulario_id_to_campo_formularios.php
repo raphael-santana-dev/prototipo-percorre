@@ -12,9 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('campo_formularios', function (Blueprint $table) {
-            // Torna o ciclo_id opcional
             $table->foreignId('ciclo_id')->nullable()->change(); 
-            // Adiciona a nova chave estrangeira
             $table->foreignId('formulario_id')->nullable()->after('ciclo_id')->constrained('formularios')->cascadeOnDelete();
         });
     }

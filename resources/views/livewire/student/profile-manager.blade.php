@@ -5,7 +5,6 @@
         </h1>
     </div>
 
-    <!-- Bloco 1: Informações Pessoais -->
     <div class="overflow-hidden bg-white border border-gray-200 shadow-sm rounded-2xl dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">Dados Cadastrais</h3>
@@ -16,7 +15,6 @@
 
             <form wire:submit="updateProfile" class="flex flex-col gap-6 sm:flex-row">
                 <div class="flex flex-col items-center justify-start sm:w-1/4">
-                    <!-- Avatar usando o nome do aluno -->
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(auth('student')->user()->name) }}&background=FFF7E6&color=F97316&size=128&bold=true" 
                          alt="Avatar" 
                          class="w-32 h-32 border-4 border-white rounded-full shadow-md dark:border-gray-700">
@@ -54,7 +52,6 @@
         </div>
     </div>
 
-    <!-- Bloco 2: Segurança -->
     <div class="overflow-hidden bg-white border border-gray-200 shadow-sm rounded-2xl dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             <h3 class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">

@@ -9,7 +9,6 @@
 
 <div x-data="{ open: false }" class="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3" @click.outside="open = false">
     
-    <!-- Menu Secundário (Ações) -->
     <div x-show="open"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 translate-y-4 scale-95"
@@ -30,12 +29,10 @@
             @endphp
 
             <div class="flex items-center gap-3 group">
-                <!-- Tooltip / Label -->
                 <span class="bg-gray-800 text-white text-[11px] uppercase font-bold px-3 py-1.5 rounded-lg shadow-sm pointer-events-none {{ $labelVisibility }}">
                     {{ $action['label'] }}
                 </span>
 
-                <!-- Botão de Ação -->
                 @if(isset($action['href']))
                     <a href="{{ $action['href'] }}" 
                        class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
@@ -54,7 +51,6 @@
         @endforeach
     </div>
 
-    <!-- Botão Principal (Gatilho) -->
     <button type="button" 
             @click="open = !open" 
             class="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform focus:outline-none {{ $mainColor }} {{ $iconColor }}" 

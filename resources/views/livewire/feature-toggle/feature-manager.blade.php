@@ -11,7 +11,6 @@
         </button>
     </div>
 
-    {{-- BARRA DE FILTROS --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
         <div class="md:col-span-2">
             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
@@ -55,7 +54,6 @@
         @forelse ($registros as $feature)
             <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 
-                {{-- Padding reduzido para px-4 py-2.5 --}}
                 <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     #{{ $feature->id }}
                 </td>
@@ -100,7 +98,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO DE GRID (CARDS) --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $feature )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -128,7 +125,6 @@
         </x-slot>
     </x-table>
 
-    <!-- Modal Multi-Insert / Edit -->
     @if($modalAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">

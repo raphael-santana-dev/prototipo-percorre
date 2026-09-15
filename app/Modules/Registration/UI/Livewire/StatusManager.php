@@ -26,7 +26,7 @@ class StatusManager extends Component
     public bool $showModal = false;
     public bool $isEditMode = false;
     public ?int $statusId = null;
-    public bool $isInUse = false; // <-- Nova propriedade
+    public bool $isInUse = false; 
 
     public string $nome = '';
     public string $descricao = '';
@@ -68,7 +68,6 @@ class StatusManager extends Component
         $this->cor = $status->cor ?? '#9CA3AF';
         $this->isEditMode = true;
         
-        // Verifica se há alguma inscrição usando este status
         $this->isInUse = Inscricao::where('status_inscricao_id', $id)->exists();
         
         $this->showModal = true;
@@ -80,7 +79,6 @@ class StatusManager extends Component
             abort_if(!feature('status.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
             
-            // Trava de segurança no Back-end: Se estiver em uso, ignora alteração no nome
             if ($this->isInUse) {
                 $statusAntigo = StatusInscricao::findOrFail($this->statusId);
                 $this->nome = $statusAntigo->nome; 

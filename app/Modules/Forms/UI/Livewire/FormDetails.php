@@ -21,7 +21,7 @@ class FormDetails extends Component
     public Formulario $formulario;
     
     public $tipoVisao = 'resumo'; 
-    public $search = ''; // VARIÁVEL RESTAURADA AQUI!
+    public $search = ''; 
 
     public function mount($id)
     {
@@ -33,10 +33,40 @@ class FormDetails extends Component
         $this->ordenacaoDirecao = 'desc';
     }
 
-    // FUNÇÃO RESTAURADA: Reseta a página ao buscar
     public function updatingSearch()
     {
         $this->resetPage();
+    }
+
+    public function solicitarExportacao($formato = 'csv')
+    {
+        $queryCount = RespostaFormulario::where('formulario_id', $this->formulario->id)->count();
+
+        if ($queryCount === 0) {
+            $this->dispatch('erro', msg: 'Não há registros para exportar com base nesta busca.');
+            return;
+        }
+
+        $tracking = \App\Models\Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'respostas_formulario',
+            'operacao' => 'exportacao',
+            'formato' => strtolower($formato),
+            'arquivo_nome' => 'Respostas - ' . Str::limit($this->formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
+            'status' => 'na_fila',
+            'total_linhas' => $queryCount,
+            'linhas_processadas' => 0,
+        ]);
+
+        $filtrosAtuais = [
+            'search' => $this->search,
+            'sortField' => str_starts_with($this->ordenacaoCampo, 'respostas->') ? $this->ordenacaoCampo : 'created_at',
+            'sortDirection' => $this->ordenacaoDirecao ?? 'desc',
+        ];
+
+        dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $this->formulario->id, $filtrosAtuais))->afterResponse();
+
+        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
     }
 
     public function updatedTipoVisao()
@@ -64,7 +94,6 @@ class FormDetails extends Component
                 ];
             }
         } else {
-            // Colunas exclusivas do Modo Resumo
             $headers[] = ['key' => 'etapa_parada', 'label' => 'Progresso', 'sortable' => true];
             $headers[] = [
                 'key' => 'acoes', 

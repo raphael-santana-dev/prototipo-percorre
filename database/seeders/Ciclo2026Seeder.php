@@ -10,7 +10,6 @@ class Ciclo2026Seeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Cria o Ciclo Base
         $nomeCiclo = '2º Semestre 2026';
         $cicloId = DB::table('ciclos')->insertGetId([
             'nome' => $nomeCiclo,
@@ -37,7 +36,6 @@ class Ciclo2026Seeder extends Seeder
             'updated_at' => now(),
         ]);
 
-        // 2. Vincula o Pipeline de Status (Kanban)
         $statusDisponiveis = DB::table('status_inscricoes')->orderBy('id')->get();
         foreach ($statusDisponiveis as $index => $status) {
             DB::table('ciclo_status_inscricao')->insertOrIgnore([
@@ -49,7 +47,6 @@ class Ciclo2026Seeder extends Seeder
             ]);
         }
 
-        // 3. Cadastra os Turnos (Separando Manhã e Tarde)
         $turnos = [
             ['nome' => 'Manhã', 'inicio' => '08:00:00', 'fim' => '12:00:00'],
             ['nome' => 'Tarde', 'inicio' => '13:00:00', 'fim' => '17:00:00'],
@@ -69,7 +66,6 @@ class Ciclo2026Seeder extends Seeder
             ]);
         }
 
-        // 4. Inserção das Ofertas (Vagas Manhã/Tarde divididas + Nomes de Unidades Refatorados UF-Cidade)
         $this->inserirOferta($cicloId, 'gestao_empresarial_erp', 'mg_barreiro', 'MG-Barreiro', 'Manhã', 50, 15, 17);
         $this->inserirOferta($cicloId, 'gestao_empresarial_erp', 'mg_barreiro', 'MG-Barreiro', 'Tarde', 50, 15, 17);
         
@@ -125,7 +121,6 @@ class Ciclo2026Seeder extends Seeder
         
         $unidadeId = DB::table('unidades')->where('slug', $unidadeSlug)->value('id');
         
-        // Se a unidade não existir no banco, cria na hora
         if (!$unidadeId) {
             $unidadeId = DB::table('unidades')->insertGetId([
                 'nome' => $unidadeNome,
@@ -137,7 +132,6 @@ class Ciclo2026Seeder extends Seeder
         }
 
         if ($cursoId && $unidadeId && $turnoId) {
-            // Relacionamento de Ofertas de Vagas com limite de idades e vagas
             DB::table('ofertas_vagas')->insertOrIgnore([
                 'ciclo_id' => $cicloId,
                 'curso_id' => $cursoId,
@@ -150,7 +144,6 @@ class Ciclo2026Seeder extends Seeder
                 'updated_at' => now(),
             ]);
 
-            // Preenchimento de todas as tabelas pivô do planejamento
             DB::table('ciclo_unidade')->insertOrIgnore(['ciclo_id' => $cicloId, 'unidade_id' => $unidadeId]);
             DB::table('ciclo_turno')->insertOrIgnore(['ciclo_id' => $cicloId, 'turno_id' => $turnoId]);
             DB::table('ciclo_curso')->insertOrIgnore(['ciclo_id' => $cicloId, 'curso_id' => $cursoId]);

@@ -15,7 +15,6 @@
             </x-slot>
         @endif
 
-        <!-- Filtros do Histórico -->
         <x-slot name="filters">
             <div class="flex gap-2 items-center flex-wrap">
                 <input wire:model.live.debounce.300ms="filtro_busca" type="text" placeholder="Buscar e-mail do destinatário..." class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 w-64 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
@@ -37,7 +36,6 @@
         </x-slot>
     </x-page-header>
 
-    <!-- Tabela de Histórico -->
     <div class="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center dark:bg-gray-900/50 dark:border-gray-700">
             <h3 class="font-bold text-gray-800 flex items-center gap-2 dark:text-white">

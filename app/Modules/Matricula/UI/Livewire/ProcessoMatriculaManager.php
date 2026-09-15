@@ -21,21 +21,17 @@ class ProcessoMatriculaManager extends Component
 {
     use WithPagination, ComPadraoListagem;
 
-    // Controle de Abas
     public $abaAtiva = 'dossies';
 
-    // Filtros Globais (Aplicam-se em ambas as abas)
     public $filtroBusca = '';
     public $filtroCurso = '';
     public $filtroUnidade = '';
     public $filtroTurno = '';
     public $filtroEtapa = '';
 
-    // Ordenação Aba 2 (Fila da IA)
     public $ordenacaoCampoRevisao = '';
     public $ordenacaoDirecaoRevisao = 'asc';
     
-    // Modal e Dossiê
     public $modalDossieAberto = false;
     public $inscricaoSelecionada = null;
     public $documentosExigidos = [];
@@ -62,9 +58,6 @@ class ProcessoMatriculaManager extends Component
         $this->resetPage('revisaoPage');
     }
 
-    // ==========================================
-    // CONTROLE DE ORDENAÇÃO (X-TABLE) INTELIGENTE
-    // ==========================================
     public function sortBy($campo) { $this->aplicarOrdenacao($campo); }
     public function ordenar($campo) { $this->aplicarOrdenacao($campo); }
     public function sort($campo) { $this->aplicarOrdenacao($campo); }
@@ -97,7 +90,7 @@ class ProcessoMatriculaManager extends Component
             ['key' => 'candidato', 'label' => 'Candidato / Curso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Progresso dos Documentos', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'etapa', 'label' => 'Etapa Atual', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'acoes', 'label' => 'Dossiê', 'sortable' => false, 'class' => 'text-right w-24'],
+            ['key' => 'acoes', 'label' => 'Detalhes', 'sortable' => false, 'class' => 'text-right w-24'],
         ];
     }
 
@@ -181,7 +174,6 @@ class ProcessoMatriculaManager extends Component
 
     public function render()
     {
-        // 1. QUERY DOSSIÊS (Aba 1)
         $queryDossies = Inscricao::with(['curso', 'ciclo', 'unidade'])
             ->whereNotNull('token_matricula')
             ->apenasVinculosPermitidos();
@@ -209,7 +201,6 @@ class ProcessoMatriculaManager extends Component
             $queryDossies->orderBy('updated_at', 'desc');
         }
 
-        // 2. QUERY REVISÃO DA IA (Aba 2)
         $queryRevisao = DocumentoMatricula::with(['inscricao.curso', 'inscricao.unidade', 'documentoExigido'])
             ->whereIn('status_analise', ['analise_manual', 'invalido_ia']);
         

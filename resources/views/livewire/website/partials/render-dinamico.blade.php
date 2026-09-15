@@ -244,7 +244,6 @@
                             placeholder="0,00">
                     </div>
                 @else
-                    {{-- INPUTS PADRÃO E TELEFONE --}}
                     <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ? $campo->subtipo : 'text' }}" 
                         wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
                         

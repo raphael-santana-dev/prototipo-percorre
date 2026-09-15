@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('etapas', function (Blueprint $table) {
             $table->id();
-            $table->integer('numero')->unique(); // O número da etapa (Ex: 1, 2, 3...)
-            $table->string('nome'); // O título da etapa (Ex: 'Dados Básicos', 'Perfil Social')
-            $table->string('descricao')->nullable(); // Um campo opcional para anotações internas
+            $table->integer('numero')->unique();  
+            $table->string('nome'); 
+            $table->string('descricao')->nullable(); 
             $table->timestamps();
         });
     }

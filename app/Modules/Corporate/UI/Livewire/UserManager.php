@@ -33,12 +33,10 @@ class UserManager extends Component
     public bool $isEditMode = false;
     public bool $showModal = false;
 
-    // Arrays para armazenar os vínculos multi-tenancy
     public array $unidadesSelecionadas = [];
     public array $cursosSelecionados = [];
     public array $turnosSelecionados = [];
 
-    // Coleções para os formulários
     public $cursosFiltrados = [];
     public $turnosFiltrados = [];
 

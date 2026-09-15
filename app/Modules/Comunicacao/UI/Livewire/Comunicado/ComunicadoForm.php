@@ -16,14 +16,12 @@ class ComunicadoForm extends Component
 
     public $template_id = '';
     
-    // Novo Modo de Destinatários
-    public $modo_selecao = 'manual'; // 'manual' ou 'dinamico'
-    public $filtro_publico = ''; // 'todos', 'grupo', 'unidade', 'curso'
+    public $modo_selecao = 'manual'; 
+    public $filtro_publico = ''; 
     public $filtro_role = '';
     public $filtro_unidade = '';
     public $filtro_curso = '';
 
-    // Arrays de E-mails
     public $destinatarios = [];
     public $cc = [];
     public $bcc = [];
@@ -43,12 +41,10 @@ class ComunicadoForm extends Component
         abort_if(!feature('comunicado.criar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
         
-        // 1. Limpeza dos e-mails manuais
         $this->destinatarios = array_filter(array_map('trim', $this->destinatarios));
         $this->cc = array_filter(array_map('trim', $this->cc));
         $this->bcc = array_filter(array_map('trim', $this->bcc));
 
-        // 2. Lógica do Modo Dinâmico
         if ($this->modo_selecao === 'dinamico' && !empty($this->filtro_publico)) {
             $emailsBuscados = [];
             if ($this->filtro_publico === 'todos') {
@@ -63,7 +59,6 @@ class ComunicadoForm extends Component
             $this->destinatarios = array_unique(array_merge($this->destinatarios, $emailsBuscados));
         }
 
-        // 3. Validações
         $regras = [
             'template_id' => 'required',
             'destinatarios' => 'required|array|min:1',
@@ -81,7 +76,6 @@ class ComunicadoForm extends Component
             'data_agendamento.after_or_equal' => 'A data de agendamento não pode estar no passado.',
         ]);
 
-        // 4. Salva Anexos
         $caminhosAnexos = [];
         if (!empty($this->anexos_upload)) {
             foreach ($this->anexos_upload as $anexo) {
@@ -90,11 +84,15 @@ class ComunicadoForm extends Component
         }
 
         $dataEnvio = $this->tipo_envio === 'agendado' ? \Carbon\Carbon::parse($this->data_agendamento) : now();
+        $inscricaoId = null;
 
-        // 5. Criação do Registro Principal
+        if (isset($this->inscricao) && !empty($this->inscricao)) {
+            $inscricaoId = $this->inscricao->id;
+        }
+
         $comunicado = Comunicado::create([
             'template_id' => $this->template_id,
-            'inscricao_id' => $this->inscricao ? $this->inscricao->id : null,
+            'inscricao_id' => $inscricaoId,
             'destinatarios' => $this->destinatarios,
             'cc' => $this->cc,
             'bcc' => $this->bcc,
@@ -103,26 +101,23 @@ class ComunicadoForm extends Component
             'status' => 'pendente', 
         ]);
 
-        // 6. GERAÇÃO DOS LOGS INDIVIDUAIS (PARA PREVIEW E ENVIO)
         $template = EmailTemplate::find($this->template_id);
         foreach ($this->destinatarios as $email) {
             $user = \App\Models\User::where('email', $email)->first();
             $inscricao = \App\Models\Inscricao::where('email', $email)->latest()->first();
-            $contexto = ['user' => $user, 'inscricao' => $inscricao];
 
             \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::create([
                 'comunicado_id' => $comunicado->id,
                 'origem' => 'comunicado',
                 'destinatario' => $email,
-                'assunto' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->assunto, $contexto),
-                'corpo' => \App\Modules\Comunicacao\Services\EmailParserService::parse($template->corpo, $contexto),
+                'assunto' => \App\Modules\Comunicacao\Services\EmailParserService::parseTexto($template->assunto, $inscricao, ['user' => $user]),
+                'corpo' => \App\Modules\Comunicacao\Services\EmailParserService::parseTexto($template->corpo, $inscricao, ['user' => $user]),
                 'anexos' => $caminhosAnexos,
                 'data_agendamento' => $dataEnvio,
                 'status' => 'pendente'
             ]);
         }
 
-        // 7. Se for imediato, já manda pro Worker
         if ($this->tipo_envio === 'imediato') {
             \App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob::dispatch($comunicado);
         }
@@ -133,7 +128,6 @@ class ComunicadoForm extends Component
 
     public function render()
     {
-        // Busca os dados para alimentar os dropdowns usando DB query direta por segurança de caminhos
         $rolesDisponiveis = DB::table('roles')->orderBy('name')->get();
         $unidadesDisponiveis = DB::table('unidades')->orderBy('nome')->get();
         $cursosDisponiveis = DB::table('cursos')->orderBy('nome')->get();

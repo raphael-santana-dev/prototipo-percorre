@@ -14,19 +14,16 @@ use Illuminate\Support\Facades\Crypt;
 #[Title('Motor de IA e Matrículas')]
 class IaConfigManager extends Component
 {
-    // Configurações da IA
     public $provedor = 'gemini';
     public $api_key = '';
     public $prompt_documentos = 'Aja como um auditor rigoroso de RH. O usuário enviará a imagem de um documento e os dados que ele preencheu na inscrição. Verifique se a imagem corresponde ao tipo de documento solicitado (Ex: RG, CPF, Histórico). Depois, faça OCR e verifique se o Nome e o CPF da imagem batem perfeitamente com os dados do candidato. Responda ESTRITAMENTE em formato JSON: {"valido": true/false, "motivo_rejeicao": "Caso seja falso, explique brevemente o motivo."}';
     public $is_ativa = false;
 
-    // Configurações de Documentos Exigidos
     public $cicloSelecionado = '';
     public $nomeDocumento = '';
     public $descricaoDocumento = '';
     public $isObrigatorio = true;
 
-    // Constante para mascarar a chave no front-end
     private const MASKED_KEY = '********_CHAVE_SALVA_********';
 
     public function mount()
@@ -39,7 +36,6 @@ class IaConfigManager extends Component
             $this->prompt_documentos = $config->prompt_documentos;
             $this->is_ativa = $config->is_ativa;
             
-            // Mascara a chave: se existir no banco, o Livewire exibirá apenas asteriscos no front-end
             $this->api_key = empty($config->api_key) ? '' : self::MASKED_KEY;
         }
     }
@@ -58,23 +54,18 @@ class IaConfigManager extends Component
             'is_ativa' => $this->is_ativa
         ];
 
-        // Só atualiza a chave no banco se o usuário digitou uma nova (diferente da máscara)
         if ($this->api_key !== self::MASKED_KEY && !empty($this->api_key)) {
-            // Criptografa a chave antes de salvar no banco de dados
             $dadosParaSalvar['api_key'] = Crypt::encryptString($this->api_key);
         }
 
         ConfiguracaoIa::updateOrCreate(['id' => 1], $dadosParaSalvar);
 
-        // Se o usuário digitou uma chave nova, voltamos a exibir a máscara na tela após salvar
         if ($this->api_key !== self::MASKED_KEY) {
             $this->api_key = self::MASKED_KEY;
         }
 
         $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com segurança!');
     }
-
-    // ... [Restante dos métodos adicionarDocumento, excluirDocumento e render permanecem iguais]
 
     public function adicionarDocumento()
     {

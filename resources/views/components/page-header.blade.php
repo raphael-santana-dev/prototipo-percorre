@@ -8,7 +8,6 @@
 
 <div class="relative mb-6">
     
-    <!-- 1. Alertas Globais Unificados -->
     @if (session()->has('sucesso') || session()->has('success'))
         <div class="flex items-center gap-2 p-4 mb-4 font-bold rounded-lg shadow-sm text-pistache-100 bg-pistache-500">
             <i class="text-lg ph ph-check-circle"></i> {{ session('sucesso') ?? session('success') }}
@@ -21,12 +20,10 @@
         </div>
     @endif
 
-    <!-- 2. Breadcrumbs -->
     @if($breadcrumbs)
         <x-breadcrumb :items="$breadcrumbs" />
     @endif
 
-    <!-- 3. Título, Badge e Ações -->
     <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-3">
             <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -48,12 +45,10 @@
         @endif
     </div>
 
-    <!-- 4. Cards de Métricas -->
     @if($metricas)
         <x-summary-cards :metricas="$metricas" />
     @endif
 
-    <!-- 5. Barra de Filtros (Slot com CSS customizável) -->
     @if(isset($filters))
         <div {{ $filters->attributes->merge(['class' => 'py-4 mb-4 border-b border-gray-200 dark:border-gray-700']) }}>
             {{ $filters }}

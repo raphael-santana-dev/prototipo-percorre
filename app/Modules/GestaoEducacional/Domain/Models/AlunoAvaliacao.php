@@ -4,7 +4,7 @@ namespace App\Modules\GestaoEducacional\Domain\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\Student\Domain\Models\Student;
-use App\Models\Turma; // Ajuste o namespace da Turma conforme o seu projeto
+use App\Models\Turma; 
 use App\Traits\RegistraAuditoria;
 
 class AlunoAvaliacao extends Model

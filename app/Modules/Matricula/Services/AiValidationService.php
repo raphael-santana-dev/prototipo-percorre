@@ -10,26 +10,17 @@ use Illuminate\Contracts\Encryption\DecryptException;
 
 class AiValidationService
 {
-    // ==========================================
-    // DECODIFICADOR SEGURO (MANTÉM RETROCOMPATIBILIDADE)
-    // ==========================================
     private static function getApiKey($config)
     {
         if (!$config || empty($config->api_key)) return null;
         
         try {
-            // Tenta descriptografar a chave nova
             return Crypt::decryptString($config->api_key);
         } catch (DecryptException $e) {
-            // Se falhar, é porque a chave no banco ainda está em texto plano (antiga). 
-            // Retorna o texto original para não quebrar o sistema.
             return $config->api_key;
         }
     }
 
-    // ==========================================
-    // 1. VALIDAÇÃO INDIVIDUAL
-    // ==========================================
     public static function validarDocumento($inscricao, $documentoExigido, $arquivoPath)
     {
         $config = ConfiguracaoIa::first();
@@ -43,9 +34,6 @@ class AiValidationService
         return self::processarEnvioIa($config->provedor, $apiKey, $promptFinal, $arquivoPath, 'individual');
     }
 
-    // ==========================================
-    // 2. CLASSIFICADOR DE LOTE
-    // ==========================================
     public static function classificarDocumentoLote($inscricao, $documentosExigidos, $arquivoPath)
     {
         $config = ConfiguracaoIa::first();
@@ -64,9 +52,6 @@ class AiValidationService
         return self::processarEnvioIa($config->provedor, $apiKey, $promptFinal, $arquivoPath, 'lote');
     }
 
-    // ==========================================
-    // ROTEADOR UNIVERSAL
-    // ==========================================
     private static function processarEnvioIa($provedor, $apiKey, $promptFinal, $arquivoPath, $modo)
     {
         $caminhoAbsoluto = storage_path('app/private/' . $arquivoPath);
@@ -95,9 +80,6 @@ class AiValidationService
         }
     }
 
-    // ==========================================
-    // ADAPTADORES DE API
-    // ==========================================
     private static function chamarGemini($apiKey, $prompt, $mimeType, $base64, $modo)
     {
         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}";
@@ -159,7 +141,6 @@ class AiValidationService
         ];
 
         $response = Http::withToken($apiKey)->timeout(45)->post($url, $payload);
-
         if ($response->successful()) {
             $resultado = json_decode($response->json('choices.0.message.content'), true);
             if (is_array($resultado)) {

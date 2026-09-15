@@ -28,26 +28,22 @@ class PeriodDetails extends Component
     
     public $abaAtiva = 'visao-geral'; 
 
-    // Filtros Inscrições (Aba 2)
     public $filtroNome = '';
     public $filtroStatus = '';
     public $filtroUnidade = '';
     public $filtroTurno = '';
     public $filtroCurso = '';
 
-    // Filtros das Vagas (Aba 1)
     public $filtroUnidadeVagas = '';
     public $filtroCursoVagas = '';
     public $filtroTurnoVagas = '';
 
-    // Ações em Lote
     public array $selecionadas = [];
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
 
     public array $breadcrumbs = [];
     
-    // Armazena as Regras de Pontuação decodificadas para a Aba 3
     public array $regrasDecodificadas = [];
 
     public function mount($id, ?string $slug = null)
@@ -57,7 +53,6 @@ class PeriodDetails extends Component
 
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
         
-        // Decodifica o JSON de regras na inicialização para mandar para a tela
         $this->regrasDecodificadas = is_string($this->ciclo->regras_pontuacao) 
             ? json_decode($this->ciclo->regras_pontuacao, true) 
             : ($this->ciclo->regras_pontuacao ?? []);
@@ -113,10 +108,6 @@ class PeriodDetails extends Component
 
         return $query; 
     }
-
-    // ==========================================
-    // MÉTODOS DE STATUS E LOTE
-    // ==========================================
     private function aplicarMudancaDeStatus($inscricoes, $statusId)
     {
         $statusNovo = StatusInscricao::find($statusId);
@@ -237,7 +228,7 @@ class PeriodDetails extends Component
         
         $trackingScore = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Scores', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         $trackingRank = \App\Models\Importacao::create([
@@ -275,7 +266,7 @@ class PeriodDetails extends Component
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
-            ['key' => 'pontuacao_total', 'label' => 'Score / Ranking', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'pontuacao_total', 'label' => 'Pontuação / Ranking', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];

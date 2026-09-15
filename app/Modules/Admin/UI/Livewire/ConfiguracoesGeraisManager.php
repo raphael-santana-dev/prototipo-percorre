@@ -13,7 +13,6 @@ class ConfiguracoesGeraisManager extends Component
 {
     public $abaLateral = 'gestao_educacional';
 
-    // Opções de Gestão Educacional
     public $ocultar_fases_restritas = false;
     public $permitir_aluno_responder_ambos = false;
 

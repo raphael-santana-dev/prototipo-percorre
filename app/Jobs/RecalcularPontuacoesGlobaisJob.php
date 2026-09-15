@@ -14,7 +14,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 3600; // Limite de 1 hora
+    public $timeout = 3600;
     protected $trackingId;
 
     public function __construct($trackingId)
@@ -29,7 +29,6 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
         $ciclos = Ciclo::where('status', true)->whereNotNull('regras_pontuacao')->get();
         
-        // Conta quantas inscrições válidas existem para calibrar a barra de progresso (100%)
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
             if (!empty(is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao)) {
@@ -86,7 +85,6 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                             return false;
                         };
 
-                        // Passagem 1: Base
                         foreach ($regras as $regra) {
                             if (($regra['tipo_regra'] ?? 'padrao') === 'padrao' && $avaliarCondicao($regra)) {
                                 $pontos = (float) ($regra['pontos'] ?? 0);
@@ -98,7 +96,6 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                             }
                         }
 
-                        // Passagem 2: Bônus
                         foreach ($regras as $regra) {
                             $tipo = $regra['tipo_regra'] ?? 'padrao';
                             if ($tipo !== 'padrao' && $avaliarCondicao($regra)) {
@@ -111,7 +108,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                                 } elseif ($tipo === 'multiplicador_percentual') {
                                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Base ({$scoreBase} pts).";
+                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Pontuação ({$scoreBase} pts).";
                                 }
 
                                 if ($pontosGanhos > 0) {
@@ -127,13 +124,12 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
                         $inscricao->update([
                             'pontuacao_total' => $totalFinal,
-                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Background Job). Score Base: {$scoreBase}. Bônus: {$scoreBonus}. Total: {$totalFinal} pts."]) : null
+                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Background Job). Pontuação Base: {$scoreBase}. Bônus: {$scoreBonus}. Total: {$totalFinal} pts."]) : null
                         ]);
                         
                         $atualizados++;
                     }
 
-                    // A cada 100 alunos calculados, avisa a tela de integrações:
                     if ($tracking) $tracking->update(['linhas_processadas' => $atualizados]);
                 });
             }

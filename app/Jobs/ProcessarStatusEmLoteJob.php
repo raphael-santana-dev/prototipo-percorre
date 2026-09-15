@@ -41,11 +41,9 @@ class ProcessarStatusEmLoteJob implements ShouldQueue
         $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
 
         foreach ($inscricoes as $inscricao) {
-            // 1. Apenas atualiza o banco
             $inscricao->status_inscricao_id = $statusNovo->id;
             $inscricao->save();
 
-            // 2. Delega TODA a inteligência (E-mail e Criação de Aluno) para o Motor Central
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $inscricao);
 
             $linhasProcessadas++;

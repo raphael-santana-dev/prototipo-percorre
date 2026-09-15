@@ -19,7 +19,6 @@
             <div class="flex gap-2">
                 <input wire:model.live.debounce.300ms="filtro_busca" type="text" placeholder="Buscar nome ou e-mail..." class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 w-56">
                 
-                {{-- CORREÇÃO: Filtro volta a existir APENAS para os Administradores! --}}
                 @if(auth()->user()->temVisaoGlobal('estudantes'))
                     <select wire:model.live="filtro_unidade" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
                         <option value="">Todas as Unidades</option>
@@ -142,7 +141,6 @@
             </tr>
         @endforelse
 
-        {{-- VISÃO DE GRID (CARDS) --}}
         <x-slot name="gridSlot">
             @foreach ( $registros as $student )
                 <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -205,7 +203,6 @@
 
     </x-table>
 
-    <!-- Modal Padrão -->
     @if($showModal)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
