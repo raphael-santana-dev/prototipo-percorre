@@ -59,10 +59,14 @@
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 bg-slate-50 dark:text-gray-100 dark:bg-gray-950 antialiased">
+
+{{-- Se for Embed, deixa o fundo do body transparente para herdar do site que incorporou e evitar conflitos --}}
+<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 {{ request()->query('embed') ? 'bg-transparent' : 'bg-slate-50 dark:bg-gray-950' }} dark:text-gray-100 antialiased relative">
     
+    @if(!request()->query('embed'))
     <div x-data="{ drawerOpen: false }">
         
+        <!-- NAVBAR PÚBLICA -->
         <nav class="transition-colors duration-300 bg-[#310B47] border-b border-white/10 dark:bg-gray-900 dark:border-gray-800 relative z-30">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -110,6 +114,7 @@
             </div>
         </nav>
 
+        <!-- NAVIGATION DRAWER (MOBILE) -->
         <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
 
         <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-900 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
@@ -143,11 +148,24 @@
             </div>
         </div>
     </div>
+    @endif
 
-    <main class="flex-1 flex flex-col">
+    <!-- Conteúdo da Página -->
+    <main class="flex-1 flex flex-col relative">
         {{ $slot }}
+
+        <!-- NOVO: BOTÃO FLUTUANTE DE TEMA (APENAS MODO EMBED) -->
+        @if(request()->query('embed'))
+            <button @click="toggleTema()" type="button" title="Alternar Tema" class="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 bg-white border border-gray-200 rounded-full shadow-lg text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition-all duration-300">
+                <i class="text-2xl ph-fill ph-moon" x-show="tema === 'light'"></i>
+                <i class="text-2xl ph-fill ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
+            </button>
+        @endif
+
     </main>
 
+    <!-- RODAPÉ INSTITUCIONAL (Oculto no Embed) -->
+    @if(!request()->query('embed'))
     <footer class="bg-[#1f072e] text-gray-300 pt-16 pb-12 transition-colors duration-300 mt-auto relative z-10 dark:bg-gray-950 dark:border-t dark:border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">
@@ -198,6 +216,7 @@
             </div>
         </div>
     </footer>
+    @endif
 
     <livewire:components.quick-view-drawer />
     @livewireScripts
