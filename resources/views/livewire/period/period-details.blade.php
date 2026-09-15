@@ -71,6 +71,18 @@
                 <i class="ph-bold ph-list-numbers text-base"></i>
                 <span>Regras de Seleção</span>
             </button>
+            
+            <!-- NOVA ABA: Campos Dinâmicos -->
+            <button type="button" 
+                    @click="abaAtiva = 'campos'" 
+                    :class="abaAtiva === 'campos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'"
+                    class="py-3 px-3 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-list-dashes text-base"></i>
+                <span>Campos Dinâmicos</span>
+                <span class="px-2 py-0.5 text-[10px] rounded-full font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {{ collect($camposDinamicos ?? [])->count() }}
+                </span>
+            </button>
         </nav>
     </div>
 
@@ -414,6 +426,78 @@
                     <i class="ph ph-warning-circle text-3xl text-gray-300 mb-2"></i>
                     <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma regra de pontuação configurada.</p>
                     <p class="text-xs text-gray-500 mt-0.5">As inscrições deste ciclo não receberão pontuações automáticas.</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- NOVA ABA: CAMPOS DINÂMICOS -->
+    <div x-show="abaAtiva === 'campos'" x-cloak class="space-y-6" wire:key="aba-campos">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="ph-bold ph-list-dashes text-purpura-600"></i> Estrutura do Formulário de Inscrição
+                    </h3>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Estes são os campos e perguntas customizadas que os candidatos preencherão durante a inscrição deste ciclo.
+                    </p>
+                </div>
+                
+                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Campos
+                    </a>
+                @endif
+            </div>
+
+            @if(isset($camposDinamicos) && $camposDinamicos->count() > 0)
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+                            <tr>
+                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Etapa</th>
+                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Ordem</th>
+                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pergunta / Rótulo</th>
+                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo (Componente)</th>
+                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Obrigatório</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($camposDinamicos as $campo)
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                        Pág. {{ $campo->etapa }}
+                                    </td>
+                                    <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                        #{{ $campo->ordem }}
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $campo->label }}</span>
+                                        <span class="text-[10px] text-gray-400 font-mono">{{ $campo->name }}</span>
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
+                                            {{ strtoupper($campo->tipo) }} {{ $campo->subtipo ? '(' . $campo->subtipo . ')' : '' }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        @if($campo->obrigatorio)
+                                            <i class="ph-fill ph-check-circle text-green-500 text-lg" title="Campo Obrigatório"></i>
+                                        @else
+                                            <i class="ph-fill ph-minus-circle text-gray-300 dark:text-gray-600 text-lg" title="Campo Opcional"></i>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="p-10 text-center">
+                    <i class="ph ph-list-dashes text-3xl text-gray-300 mb-2"></i>
+                    <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum campo customizado foi configurado.</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Utilize o construtor de formulários para adicionar perguntas a este ciclo.</p>
                 </div>
             @endif
         </div>

@@ -6,16 +6,14 @@
         
         <x-slot name="actions">
             <div class="flex items-center gap-2">
+                <!-- BOTÃO DE VISUALIZAR OS DETALHES (INSERIDO AQUI) -->
                 <a href="{{ route('ciclos.show', $cicloId) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-purpura-700 bg-purpura-50 border-purpura-200 hover:bg-purpura-100 transition shadow-sm dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400 flex items-center gap-1.5">
                     <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
                 </a>
+                
                 <a href="{{ route('ciclos.index') }}" wire:navigate class="px-3 py-2 text-xs font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-1.5">
                     <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
                 </a>
-
-                <!-- <button type="submit" form="formCicloPrincipal" class="px-5 py-2 text-xs font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
-                    <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
-                </button> -->
             </div>
         </x-slot>
     </x-page-header>

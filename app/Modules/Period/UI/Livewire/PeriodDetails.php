@@ -10,6 +10,7 @@ use App\Models\Ciclo;
 use App\Models\Curso;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
+use App\Models\CampoFormulario; // Importação adicionada
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
@@ -108,6 +109,7 @@ class PeriodDetails extends Component
 
         return $query; 
     }
+    
     private function aplicarMudancaDeStatus($inscricoes, $statusId)
     {
         $statusNovo = StatusInscricao::find($statusId);
@@ -291,6 +293,13 @@ class PeriodDetails extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
+        // Busca os campos dinâmicos customizados do ciclo
+        $camposDinamicos = CampoFormulario::where('ciclo_id', $this->ciclo->id)
+            ->whereNotIn('tipo', ['config'])
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
         $queryVagas = \App\Models\OfertaVaga::with(['unidade', 'curso', 'turno'])
             ->where('ciclo_id', $this->ciclo->id)
             ->select('ofertas_vagas.*')
@@ -326,6 +335,7 @@ class PeriodDetails extends Component
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'ofertasVagas' => $ofertasVagas, 
+            'camposDinamicos' => $camposDinamicos,
             'statusInscricoesDb' => StatusInscricao::orderBy('nome')->get(),
             'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
             'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),
