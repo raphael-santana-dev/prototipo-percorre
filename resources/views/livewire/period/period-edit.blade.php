@@ -26,7 +26,7 @@
     </x-page-header>
 
 
-    <div class="mb-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
+    <div class="relative z-10 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm border border-b-0 border-gray-200 dark:border-gray-700">
         <nav class="flex flex-wrap gap-2 -mb-px" aria-label="Abas">
 
         <button type="button" 
@@ -91,9 +91,9 @@
         </nav>
     </div>
 
-    <form id="formCicloPrincipal" wire:submit.prevent="salvar" class="space-y-6">
+    <form id="formCicloPrincipal" wire:submit.prevent="salvar">
 
-        <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+        <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
             <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
                 <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                     <i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais
@@ -143,8 +143,8 @@
             </div>
         </div>
 
-        <div x-show="abaAtiva === 'estrutura'" x-cloak class="space-y-4">
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div x-show="abaAtiva === 'estrutura'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                         <i class="ph-fill ph-tree-structure text-purpura-500"></i> Unidade/Curso/Turno
@@ -153,7 +153,7 @@
                 </div>
             </div>
             
-            <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border-t-0 border-gray-200 dark:border-gray-700">
                 <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                         1. Unidades Ofertadas
@@ -222,8 +222,8 @@
             </div>
         </div>
 
-        <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
+        <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <i class="ph-fill ph-users-three text-purpura-500"></i> Vagas
@@ -239,7 +239,7 @@
                 @endif
             </div>
 
-            <div class="space-y-3">
+            <div class="space-y-3 p-6">
                 @forelse($ofertasVagas as $index => $oferta)
                     <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
                         <div class="flex-1 w-full">
@@ -316,10 +316,10 @@
             </div>
         </div>
 
-        <div x-show="abaAtiva === 'crm'" x-cloak class="space-y-4">
+        <div x-show="abaAtiva === 'crm'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
             <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+            <div class="w-full"
                  x-data="{
                      initSortable() {
                          new Sortable(this.$refs.statusList, {
@@ -334,7 +334,7 @@
                      }
                  }" x-init="initSortable()">
                  
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-4 gap-4">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/20 gap-4">
                     <div>
                         <h3 class="text-base font-bold text-gray-900 dark:text-white m-0 flex items-center gap-2">
                             <i class="ph-fill ph-funnel text-purpura-500"></i> Etapas do Ciclo
@@ -357,7 +357,7 @@
                     </div>
                 </div>
                 
-                <div x-ref="statusList" class="flex flex-col gap-2 p-1">
+                <div x-ref="statusList" class="flex flex-col gap-2 p-6">
                     @forelse($statusSelecionados as $index => $statusId)
                         @php $statusObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
                         @if($statusObj)
@@ -383,8 +383,8 @@
             </div>
         </div>
 
-        <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 gap-3">
+        <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
@@ -401,7 +401,7 @@
                 @endif
             </div>
 
-            <div class="space-y-3">
+            <div class="space-y-3 p-6">
                 @forelse($documentosExigidos as $index => $doc)
                     <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-end transition-colors hover:border-purpura-300">
                         <div class="flex-1 w-full md:w-1/3">

@@ -52,7 +52,24 @@
         </x-slot>
     </x-page-header>
 
-    <div class="mb-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm">
+    <!-- ESTILO PARA UNIFICAR A TABELA INTERNAMENTE -->
+    <style>
+        .unified-container .bg-white.border.border-gray-100.shadow-sm.rounded-xl {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        .dark .unified-container .dark\:bg-gray-800.dark\:border-gray-700 {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        .unified-container .custom-scrollbar table thead tr th { border-top: 1px solid #f3f4f6; }
+        .dark .unified-container .custom-scrollbar table thead tr th { border-top-color: #374151; }
+    </style>
+
+    <!-- MENU DE ABAS (Com borda inferior removida para conectar ao conteúdo) -->
+    <div class="relative z-10 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm border border-b-0 border-gray-200 dark:border-gray-700">
         <nav class="flex flex-wrap gap-4 -mb-px">
             <button type="button" 
                     @click="abaAtiva = 'visao-geral'" 
@@ -94,13 +111,18 @@
         </nav>
     </div>
 
-    <div x-show="abaAtiva === 'visao-geral'" x-cloak class="space-y-6" wire:key="aba-visao-geral">
+    <!-- CONTEÚDOS DAS ABAS (Com margem negativa para colar no menu) -->
+
+    <!-- ABA: VISÃO GERAL -->
+    <div x-show="abaAtiva === 'visao-geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col" wire:key="aba-visao-geral">
         
         @if(isset($metricas))
-            <x-summary-cards :metricas="$metricas" />
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20">
+                <x-summary-cards :metricas="$metricas" />
+            </div>
         @endif
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
             <h3 class="font-extrabold text-gray-900 dark:text-white mb-4 text-xs uppercase tracking-wider flex items-center gap-2">
                 <i class="ph-bold ph-tree-structure text-purpura-600"></i> Estrutura Acadêmica Vinculada
             </h3>
@@ -146,8 +168,8 @@
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <div class="flex flex-col">
+            <div class="p-4 flex justify-between items-center border-b border-gray-100 dark:border-gray-700">
                 <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
                     <i class="ph-bold ph-chart-bar text-purpura-600"></i> Distribuição e Ocupação de Vagas
                 </h3>
@@ -233,331 +255,295 @@
         </div>
     </div>
 
-    <!-- ==========================================
-         ABA: INSCRIÇÕES (Com Layout Otimizado)
-    =========================================== -->
-    <div x-show="abaAtiva === 'inscricoes'" x-cloak class="space-y-4" wire:key="aba-inscricoes">
+    <!-- ABA: INSCRIÇÕES (Totalmente contínua) -->
+    <div x-show="abaAtiva === 'inscricoes'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col unified-container overflow-hidden" wire:key="aba-inscricoes">
         
-        <!-- CARD 1: Cabeçalho e Operações -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                        <i class="ph-bold ph-users text-purpura-600"></i> Operações de Inscrição
-                    </h3>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Gerencie, pontue e classifique as inscrições deste ciclo.</p>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                        <button wire:click="recalcularPontuacoes" 
-                                wire:confirm="Processar pontuação dos alunos Deste Ciclo?"
-                                class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-800">
-                            <i class="ph-bold ph-calculator text-sm"></i> Recalcular Pontuação
-                        </button>
-                        <button wire:click="gerarRanking" 
-                                wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
-                                class="flex items-center px-3 py-1.5 gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-800">
-                            <i class="ph-bold ph-medal text-sm"></i> Gerar Ranking
-                        </button>
-                    @endif
-                </div>
+        <div class="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 dark:border-gray-700">
+            <div>
+                <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-users text-purpura-600"></i> Operações de Inscrição
+                </h3>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Gerencie, pontue e classifique as inscrições deste ciclo.</p>
             </div>
-
-            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                <div class="bg-gray-50/50 dark:bg-gray-900/30 p-4 flex flex-col lg:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2 w-full lg:w-auto">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Selecionar rápido:</span>
-                        <button wire:click="selecionarQuantidade(10)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">10</button>
-                        <button wire:click="selecionarQuantidade(50)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">50</button>
-                    </div>
-
-                    @if(count($selecionadas) > 0)
-                        <div class="bg-indigo-50 border border-indigo-200 py-2 px-3 rounded-lg flex flex-col sm:flex-row items-center gap-3 shadow-sm dark:bg-indigo-900/30 dark:border-indigo-800 w-full lg:w-auto">
-                            <div class="flex items-center">
-                                <span class="font-bold text-indigo-900 text-xs dark:text-indigo-300">{{ count($selecionadas) }} selecionadas</span>
-                                <button wire:click="desmarcarTodas" class="ml-3 text-[10px] uppercase font-bold tracking-wider text-indigo-600 hover:underline dark:text-indigo-400">Limpar</button>
-                            </div>
-                            <div class="hidden sm:block w-px h-5 bg-indigo-200 dark:bg-indigo-800"></div>
-                            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                                <span class="text-[10px] font-bold text-indigo-800 uppercase mr-1 dark:text-indigo-400 hidden xl:block">Mover para:</span>
-                                @foreach($statusInscricoesDb as $status)
-                                    <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-[10px] font-bold shadow-sm transition dark:bg-gray-800 dark:border-indigo-700 dark:text-indigo-300">
-                                        {{ $status->nome }}
-                                    </button>
-                                @endforeach
-                                <button wire:click="abrirModalLote" class="bg-purpura-600 hover:bg-purpura-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm transition ml-1">
-                                    Outros
-                                </button>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            @endif
+            
+            <div class="flex items-center gap-2">
+                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    <button wire:click="recalcularPontuacoes" 
+                            wire:confirm="Processar pontuação dos alunos Deste Ciclo?"
+                            class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-800">
+                        <i class="ph-bold ph-calculator text-sm"></i> Recalcular Pontuação
+                    </button>
+                    <button wire:click="gerarRanking" 
+                            wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
+                            class="flex items-center px-3 py-1.5 gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-800">
+                        <i class="ph-bold ph-medal text-sm"></i> Gerar Ranking
+                    </button>
+                @endif
+            </div>
         </div>
 
-        <!-- CARD 2: Filtros Integrados à Tabela -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <!-- Barra de Filtros -->
-            <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Buscar por Nome ou CPF..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <select wire:model.live="filtroStatus" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="">Todos os Status</option>
-                        @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
-                    </select>
-                    <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="">Todas as Unidades</option>
-                        @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
-                    </select>
-                    <select wire:model.live="filtroCurso" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="">Todos os Cursos</option>
-                        @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                    </select>
-                    <button wire:click="limparFiltros" class="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 text-xs py-2">
-                        <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
-                    </button>
+        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+            <div class="bg-gray-50/50 dark:bg-gray-900/30 p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col lg:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2 w-full lg:w-auto">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Selecionar rápido:</span>
+                    <button wire:click="selecionarQuantidade(10)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">10</button>
+                    <button wire:click="selecionarQuantidade(50)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">50</button>
                 </div>
+
+                @if(count($selecionadas) > 0)
+                    <div class="bg-indigo-50 border border-indigo-200 py-2 px-3 rounded-lg flex flex-col sm:flex-row items-center gap-3 shadow-sm dark:bg-indigo-900/30 dark:border-indigo-800 w-full lg:w-auto">
+                        <div class="flex items-center">
+                            <span class="font-bold text-indigo-900 text-xs dark:text-indigo-300">{{ count($selecionadas) }} selecionadas</span>
+                            <button wire:click="desmarcarTodas" class="ml-3 text-[10px] uppercase font-bold tracking-wider text-indigo-600 hover:underline dark:text-indigo-400">Limpar</button>
+                        </div>
+                        <div class="hidden sm:block w-px h-5 bg-indigo-200 dark:bg-indigo-800"></div>
+                        <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                            <span class="text-[10px] font-bold text-indigo-800 uppercase mr-1 dark:text-indigo-400 hidden xl:block">Mover para:</span>
+                            @foreach($statusInscricoesDb as $status)
+                                <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-[10px] font-bold shadow-sm transition dark:bg-gray-800 dark:border-indigo-700 dark:text-indigo-300">
+                                    {{ $status->nome }}
+                                </button>
+                            @endforeach
+                            <button wire:click="abrirModalLote" class="bg-purpura-600 hover:bg-purpura-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm transition ml-1">
+                                Outros
+                            </button>
+                        </div>
+                    </div>
+                @endif
             </div>
+        @endif
 
-            <!-- Tabela Grudada -->
-            <div class="table-glue bg-white dark:bg-gray-900 relative z-0">
-                <style>
-                    /* Ajusta o padding interno do x-table para se fundir perfeitamente abaixo do filtro */
-                    .table-glue > div > div.mb-4 {
-                        padding: 1rem 1.5rem 0 1.5rem;
-                        margin-bottom: 0.75rem !important;
-                    }
-                    .table-glue > div > div.bg-white.border.rounded-xl {
-                        border: none !important;
-                        border-radius: 0 !important;
-                        box-shadow: none !important;
-                    }
-                    .dark .table-glue > div > div.dark\:bg-gray-800.dark\:border-gray-700 {
-                        border: none !important;
-                        background: transparent !important;
-                    }
-                    .table-glue .custom-scrollbar table thead tr th {
-                        border-top: 1px solid #f3f4f6;
-                    }
-                    .dark .table-glue .custom-scrollbar table thead tr th {
-                        border-top-color: #374151;
-                    }
-                </style>
+        <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Buscar por Nome ou CPF..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select wire:model.live="filtroStatus" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todos os Status</option>
+                    @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
+                </select>
+                <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todas as Unidades</option>
+                    @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                </select>
+                <select wire:model.live="filtroCurso" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Todos os Cursos</option>
+                    @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                </select>
+                <button wire:click="limparFiltros" class="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 text-xs py-2">
+                    <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
+                </button>
+            </div>
+        </div>
 
-                <x-table
-                    wire:key="tabela-inscricoes-ciclo"
-                    :headers="$this->headers"
-                    :registros="$registros"
-                    :ordenacaoCampo="$ordenacaoCampo"
-                    :ordenacaoDirecao="$ordenacaoDirecao"
-                    :permiteGrid="$permiteGrid"
-                    :modoExibicao="$modoExibicao">
+        <div class="relative z-0">
+            <x-table
+                wire:key="tabela-inscricoes-ciclo"
+                :headers="$this->headers"
+                :registros="$registros"
+                :ordenacaoCampo="$ordenacaoCampo"
+                :ordenacaoDirecao="$ordenacaoDirecao"
+                :permiteGrid="$permiteGrid"
+                :modoExibicao="$modoExibicao">
 
-                    @forelse($registros as $inscricao)
-                        <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
-                            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                                <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600"></td>
+                @forelse($registros as $inscricao)
+                    <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
+                        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                            <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600"></td>
+                        @endif
+                        <td class="px-4 py-2 font-medium text-gray-500 text-xs">#{{ $inscricao->id }}</td>
+                        <td class="px-4 py-2"><div class="font-bold text-sm text-gray-900 dark:text-white">{{ $inscricao->nome }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->cpf }}</div></td>
+                        <td class="px-4 py-2"><div class="font-semibold text-sm text-gray-700 dark:text-gray-300">{{ $inscricao->curso->nome ?? '-' }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div></td>
+                        <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">Passo {{ $inscricao->etapa_atual }}</td>
+                        
+                        <td class="px-4 py-2 text-center align-top">
+                            <span class="px-2 py-0.5 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-700' }} rounded-full inline-block">
+                                {{ $inscricao->pontuacao_total ?? 0 }} pts
+                            </span>
+                            @if($inscricao->posicao_ranking_geral)
+                                <div class="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold">
+                                    <span class="bg-gray-100 dark:bg-gray-700 dark:border-gray-600 px-1.5 py-0.5 rounded border"><span class="text-gray-400">G:</span> {{ $inscricao->posicao_ranking_geral }}º</span>
+                                    @if($inscricao->posicao_ranking)<span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded border"><span class="opacity-50">T:</span> {{ $inscricao->posicao_ranking }}º</span>@endif
+                                </div>
                             @endif
-                            <td class="px-4 py-2 font-medium text-gray-500 text-xs">#{{ $inscricao->id }}</td>
-                            <td class="px-4 py-2"><div class="font-bold text-sm text-gray-900 dark:text-white">{{ $inscricao->nome }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->cpf }}</div></td>
-                            <td class="px-4 py-2"><div class="font-semibold text-sm text-gray-700 dark:text-gray-300">{{ $inscricao->curso->nome ?? '-' }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div></td>
-                            <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">Passo {{ $inscricao->etapa_atual }}</td>
-                            
-                            <td class="px-4 py-2 text-center align-top">
-                                <span class="px-2 py-0.5 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-700' }} rounded-full inline-block">
-                                    {{ $inscricao->pontuacao_total ?? 0 }} pts
-                                </span>
-                                @if($inscricao->posicao_ranking_geral)
-                                    <div class="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold">
-                                        <span class="bg-gray-100 dark:bg-gray-700 dark:border-gray-600 px-1.5 py-0.5 rounded border"><span class="text-gray-400">G:</span> {{ $inscricao->posicao_ranking_geral }}º</span>
-                                        @if($inscricao->posicao_ranking)<span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded border"><span class="opacity-50">T:</span> {{ $inscricao->posicao_ranking }}º</span>@endif
-                                    </div>
-                                @endif
-                            </td>
-                            
-                            <td class="px-4 py-2">
-                                @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                                <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded border whitespace-nowrap" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                                    {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                                </span>
-                            </td>
-                            
-                            <td class="px-4 py-2 text-right">
-                                <div class="flex items-center justify-end gap-1">
-                                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 rounded transition" title="Visualização Rápida">
-                                        <i class="text-base ph ph-info"></i>
-                                    </button>
-                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded transition" title="Ver Detalhes">
-                                        <i class="text-base ph ph-eye"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="8" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Nenhuma inscrição registrada neste ciclo.</td></tr>
-                    @endforelse
-
-                    <x-slot name="gridSlot">
-                        @foreach($registros as $inscricao)
-                            <div class="flex flex-col p-4 bg-white border border-gray-100 dark:bg-gray-800 dark:border-gray-700 shadow-sm rounded-xl hover:shadow-md transition">
-                                <div class="flex justify-between mb-3">
-                                    @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                                    <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">{{ $inscricao->statusInscricao->nome ?? 'Pendente' }}</span>
-                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600">
-                                </div>
-                                <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $inscricao->nome }}</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mb-3">{{ $inscricao->cpf }}</p>
-                                <div class="mt-auto border-t border-gray-50 dark:border-gray-700 pt-3 flex justify-between items-center">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{{ $inscricao->curso->nome ?? '-' }}</span>
-                                    <span class="text-xs font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->pontuacao_total ?? 0 }} pts</span>
-                                </div>
+                        </td>
+                        
+                        <td class="px-4 py-2">
+                            @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                            <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded border whitespace-nowrap" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
+                                {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                            </span>
+                        </td>
+                        
+                        <td class="px-4 py-2 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 rounded transition" title="Visualização Rápida">
+                                    <i class="text-base ph ph-info"></i>
+                                </button>
+                                <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded transition" title="Ver Detalhes">
+                                    <i class="text-base ph ph-eye"></i>
+                                </a>
                             </div>
-                        @endforeach
-                    </x-slot>
-                </x-table>
-            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="8" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Nenhuma inscrição registrada neste ciclo.</td></tr>
+                @endforelse
+
+                <x-slot name="gridSlot">
+                    @foreach($registros as $inscricao)
+                        <div class="flex flex-col p-4 bg-white border border-gray-100 dark:bg-gray-800 dark:border-gray-700 shadow-sm rounded-xl hover:shadow-md transition">
+                            <div class="flex justify-between mb-3">
+                                @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                                <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">{{ $inscricao->statusInscricao->nome ?? 'Pendente' }}</span>
+                                <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+                            </div>
+                            <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $inscricao->nome }}</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate mb-3">{{ $inscricao->cpf }}</p>
+                            <div class="mt-auto border-t border-gray-50 dark:border-gray-700 pt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{{ $inscricao->curso->nome ?? '-' }}</span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->pontuacao_total ?? 0 }} pts</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </x-slot>
+            </x-table>
         </div>
     </div>
 
-    <div x-show="abaAtiva === 'regras'" x-cloak class="space-y-6" wire:key="aba-regras">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                        <i class="ph-bold ph-list-numbers text-purpura-600"></i> Regras de Pontuação do Ciclo
-                    </h3>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Regras configuradas para este processo seletivo. Visualização somente leitura.
-                    </p>
-                </div>
-                
-                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                    <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="px-3.5 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-400 dark:border-yellow-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Regras
-                    </a>
-                @endif
+    <!-- ABA: REGRAS -->
+    <div x-show="abaAtiva === 'regras'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden" wire:key="aba-regras">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+                <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-list-numbers text-purpura-600"></i> Regras de Pontuação do Ciclo
+                </h3>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                    Regras configuradas para este processo seletivo. Visualização somente leitura.
+                </p>
             </div>
-
-            @if(count($regrasDecodificadas) > 0)
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12 text-center">#</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Campo Avaliado</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-24">Operador</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor Comparado</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-24">Pontos</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach($regrasDecodificadas as $index => $regra)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <td class="p-3 text-center text-[11px] font-bold text-gray-400">{{ $index + 1 }}</td>
-                                    <td class="p-3">
-                                        <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $regra['campo'] ?? 'N/A' }}</span>
-                                    </td>
-                                    <td class="p-3 text-center">
-                                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
-                                            {{ $regra['operador'] ?? '=' }}
-                                        </span>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-400 truncate" title="{{ $regra['valor'] ?? '' }}">
-                                            {{ $regra['valor'] ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td class="p-3 text-center">
-                                        <span class="inline-flex items-center px-2 py-0.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-[11px] font-black rounded border border-green-200 dark:border-green-800">
-                                            +{{ $regra['pontos'] ?? 0 }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="p-10 text-center">
-                    <i class="ph ph-warning-circle text-3xl text-gray-300 mb-2"></i>
-                    <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma regra de pontuação configurada.</p>
-                    <p class="text-xs text-gray-500 mt-0.5">As inscrições deste ciclo não receberão pontuações automáticas.</p>
-                </div>
+            
+            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="px-3.5 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-400 dark:border-yellow-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Regras
+                </a>
             @endif
         </div>
+
+        @if(count($regrasDecodificadas) > 0)
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12 text-center">#</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Campo Avaliado</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-24">Operador</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor Comparado</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-24">Pontos</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($regrasDecodificadas as $index => $regra)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <td class="p-3 text-center text-[11px] font-bold text-gray-400">{{ $index + 1 }}</td>
+                                <td class="p-3">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $regra['campo'] ?? 'N/A' }}</span>
+                                </td>
+                                <td class="p-3 text-center">
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
+                                        {{ $regra['operador'] ?? '=' }}
+                                    </span>
+                                </td>
+                                <td class="p-3">
+                                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400 truncate" title="{{ $regra['valor'] ?? '' }}">
+                                        {{ $regra['valor'] ?? 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="p-3 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-[11px] font-black rounded border border-green-200 dark:border-green-800">
+                                        +{{ $regra['pontos'] ?? 0 }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="p-10 text-center">
+                <i class="ph ph-warning-circle text-3xl text-gray-300 mb-2"></i>
+                <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma regra de pontuação configurada.</p>
+                <p class="text-xs text-gray-500 mt-0.5">As inscrições deste ciclo não receberão pontuações automáticas.</p>
+            </div>
+        @endif
     </div>
 
     <!-- ABA: CAMPOS DINÂMICOS -->
-    <div x-show="abaAtiva === 'campos'" x-cloak class="space-y-6" wire:key="aba-campos">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                        <i class="ph-bold ph-list-dashes text-purpura-600"></i> Estrutura do Formulário de Inscrição
-                    </h3>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Estes são os campos e perguntas customizadas que os candidatos preencherão durante a inscrição deste ciclo.
-                    </p>
-                </div>
-                
-                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                    <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Campos
-                    </a>
-                @endif
+    <div x-show="abaAtiva === 'campos'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden" wire:key="aba-campos">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+                <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-list-dashes text-purpura-600"></i> Estrutura do Formulário de Inscrição
+                </h3>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                    Estes são os campos e perguntas customizadas que os candidatos preencherão durante a inscrição deste ciclo.
+                </p>
             </div>
-
-            @if(isset($camposDinamicos) && $camposDinamicos->count() > 0)
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Etapa</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Ordem</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pergunta / Rótulo</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo (Componente)</th>
-                                <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Obrigatório</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach($camposDinamicos as $campo)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                                        Pág. {{ $campo->etapa }}
-                                    </td>
-                                    <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                                        #{{ $campo->ordem }}
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $campo->label }}</span>
-                                        <span class="text-[10px] text-gray-400 font-mono">{{ $campo->name }}</span>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
-                                            {{ strtoupper($campo->tipo) }} {{ $campo->subtipo ? '(' . $campo->subtipo . ')' : '' }}
-                                        </span>
-                                    </td>
-                                    <td class="p-3 text-center">
-                                        @if($campo->obrigatorio)
-                                            <i class="ph-fill ph-check-circle text-green-500 text-lg" title="Campo Obrigatório"></i>
-                                        @else
-                                            <i class="ph-fill ph-minus-circle text-gray-300 dark:text-gray-600 text-lg" title="Campo Opcional"></i>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="p-10 text-center">
-                    <i class="ph ph-list-dashes text-3xl text-gray-300 mb-2"></i>
-                    <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum campo customizado foi configurado.</p>
-                    <p class="text-xs text-gray-500 mt-0.5">Utilize o construtor de formulários para adicionar perguntas a este ciclo.</p>
-                </div>
+            
+            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Campos
+                </a>
             @endif
         </div>
+
+        @if(isset($camposDinamicos) && $camposDinamicos->count() > 0)
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Etapa</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Ordem</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pergunta / Rótulo</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo (Componente)</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Obrigatório</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($camposDinamicos as $campo)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                    Pág. {{ $campo->etapa }}
+                                </td>
+                                <td class="p-3 text-center text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                                    #{{ $campo->ordem }}
+                                </td>
+                                <td class="p-3">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $campo->label }}</span>
+                                    <span class="text-[10px] text-gray-400 font-mono">{{ $campo->name }}</span>
+                                </td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
+                                        {{ strtoupper($campo->tipo) }} {{ $campo->subtipo ? '(' . $campo->subtipo . ')' : '' }}
+                                    </span>
+                                </td>
+                                <td class="p-3 text-center">
+                                    @if($campo->obrigatorio)
+                                        <i class="ph-fill ph-check-circle text-green-500 text-lg" title="Campo Obrigatório"></i>
+                                    @else
+                                        <i class="ph-fill ph-minus-circle text-gray-300 dark:text-gray-600 text-lg" title="Campo Opcional"></i>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="p-10 text-center">
+                <i class="ph ph-list-dashes text-3xl text-gray-300 mb-2"></i>
+                <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum campo customizado foi configurado.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Utilize o construtor de formulários para adicionar perguntas a este ciclo.</p>
+            </div>
+        @endif
     </div>
 
     @if($modalLoteAberto)
