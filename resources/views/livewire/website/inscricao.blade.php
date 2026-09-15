@@ -20,11 +20,13 @@
     @endif
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-    <div class="flex md:hidden relative z-10 w-full bg-[#2b0940] h-20 items-center justify-center shadow-md shrink-0">
-        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="max-h-11 object-contain" alt="Instituto Percorre">
-    </div>
+    @if(!request()->query('embed'))
+        <div class="flex md:hidden relative z-10 w-full bg-[#2b0940] h-20 items-center justify-center shadow-md shrink-0">
+            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="max-h-11 object-contain" alt="Instituto Percorre">
+        </div>
+    @endif
 
-    <div class="relative z-10 w-full py-12 px-4 sm:px-6 flex-1 flex flex-col justify-center">
+    <div class="relative z-10 w-full {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         <div class="w-full mx-auto {{ $formWidth }} form-container">
             @if($inscricoesAbertas)
                 @if($etapaAtual <= $totalEtapas)

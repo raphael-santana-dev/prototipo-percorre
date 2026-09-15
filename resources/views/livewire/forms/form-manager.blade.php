@@ -72,6 +72,32 @@
                         <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                             <i class="text-lg ph ph-arrow-square-in"></i>
                         </a>
+
+                        <!-- NOVO: Botão Embed (Tabela) -->
+                        <button x-data="{ copiado: false }" 
+                                @click="
+                                    let code = `<iframe src='{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                                    navigator.clipboard.writeText(code); 
+                                    copiado = true; 
+                                    setTimeout(() => copiado = false, 2000);
+                                " 
+                                class="p-1.5 transition-colors rounded-lg relative" 
+                                :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
+                                title="Copiar Código de Incorporação (Iframe)">
+                            <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
+                        </button>
+
+                        <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
+                            <i class="text-lg ph ph-table"></i>
+                        </a>
+
+                        <button wire:click="solicitarExportacao({{ $form->id }}, 'xlsx')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-600 hover:bg-green-50 dark:hover:bg-gray-600" title="Exportar Respostas (Excel)">
+                            <i class="text-lg ph ph-file-xls"></i>
+                        </button>
+                        <button wire:click="solicitarExportacao({{ $form->id }}, 'csv')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-600" title="Exportar Respostas (CSV)">
+                            <i class="text-lg ph ph-file-csv"></i>
+                        </button>
+
                         @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
                             <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
                                 <i class="text-lg ph ph-list-dashes"></i>
@@ -124,6 +150,24 @@
                             </a>
                             <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
                                 <i class="text-lg ph ph-arrow-square-in"></i>
+                            </a>
+
+                            <!-- NOVO: Botão Embed (Cards) -->
+                            <button x-data="{ copiado: false }" 
+                                    @click="
+                                        let code = `<iframe src='{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                                        navigator.clipboard.writeText(code); 
+                                        copiado = true; 
+                                        setTimeout(() => copiado = false, 2000);
+                                    " 
+                                    class="p-1.5 transition-colors rounded-lg relative" 
+                                    :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
+                                    title="Copiar Código de Incorporação (Iframe)">
+                                <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
+                            </button>
+
+                            <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
+                                <i class="text-lg ph ph-table"></i>
                             </a>
                             @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
                                 <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">

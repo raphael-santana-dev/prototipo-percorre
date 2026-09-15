@@ -59,8 +59,11 @@
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 bg-slate-50 dark:text-gray-100 dark:bg-gray-950 antialiased">
+
+{{-- Se for Embed, deixa o fundo do body transparente para herdar do site que incorporou e evitar conflitos --}}
+<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 {{ request()->query('embed') ? 'bg-transparent' : 'bg-slate-50 dark:bg-gray-950' }} dark:text-gray-100 antialiased">
     
+    @if(!request()->query('embed'))
     <div x-data="{ drawerOpen: false }">
         
         <!-- NAVBAR PÚBLICA -->
@@ -145,13 +148,15 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Conteúdo da Página -->
     <main class="flex-1 flex flex-col">
         {{ $slot }}
     </main>
 
-    <!-- RODAPÉ INSTITUCIONAL -->
+    <!-- RODAPÉ INSTITUCIONAL (Oculto no Embed) -->
+    @if(!request()->query('embed'))
     <footer class="bg-[#1f072e] text-gray-300 pt-16 pb-12 transition-colors duration-300 mt-auto relative z-10 dark:bg-gray-950 dark:border-t dark:border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">
@@ -202,6 +207,7 @@
             </div>
         </div>
     </footer>
+    @endif
 
     <livewire:components.quick-view-drawer />
     @livewireScripts

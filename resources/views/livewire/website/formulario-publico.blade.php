@@ -18,7 +18,7 @@
     @endif
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-    <div class="relative z-10 w-full {{ $formWidth }} mx-auto py-12 px-4 sm:px-6 flex-1 flex flex-col justify-center">
+    <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         
         {{-- TELA DE BLOQUEIO (GATEKEEPER) --}}
         @if($bloqueado)
