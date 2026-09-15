@@ -5,13 +5,20 @@
         badge="Administrativo">
         
         <x-slot name="actions">
-            <div class="flex items-center gap-2">
-                <!-- BOTÃO DE VISUALIZAR OS DETALHES (INSERIDO AQUI) -->
+            <div class="flex items-center gap-2 flex-wrap justify-end">
                 <a href="{{ route('ciclos.show', $cicloId) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-purpura-700 bg-purpura-50 border-purpura-200 hover:bg-purpura-100 transition shadow-sm dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400 flex items-center gap-1.5">
                     <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
                 </a>
+
+                <a href="{{ route('ciclos.regras', $cicloId) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 transition shadow-sm dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 flex items-center gap-1.5">
+                    <i class="ph-bold ph-star text-sm"></i> Editar Regras
+                </a>
+
+                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 transition shadow-sm dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                    <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
+                </a>
                 
-                <a href="{{ route('ciclos.index') }}" wire:navigate class="px-3 py-2 text-xs font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-1.5">
+                <a href="{{ route('ciclos.index') }}" wire:navigate class="px-3 py-2 text-xs font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-1.5 ml-2">
                     <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
                 </a>
             </div>

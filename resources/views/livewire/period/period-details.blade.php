@@ -15,6 +15,15 @@
             </a>
             
             @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                
+                <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-yellow-700 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700 rounded-lg shadow-sm hover:bg-yellow-100 transition">
+                    <i class="ph-bold ph-star text-sm"></i> Regras
+                </a>
+
+                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 rounded-lg shadow-sm hover:bg-indigo-100 transition">
+                    <i class="ph-bold ph-list-dashes text-sm"></i> Campos
+                </a>
+                
                 <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white dark:bg-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:bg-gray-50 transition">
                     <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Ciclo
                 </a>
@@ -72,7 +81,6 @@
                 <span>Regras de Seleção</span>
             </button>
             
-            <!-- NOVA ABA: Campos Dinâmicos -->
             <button type="button" 
                     @click="abaAtiva = 'campos'" 
                     :class="abaAtiva === 'campos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'"
@@ -147,19 +155,19 @@
             
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/20">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <select wire:model.live="filtroUnidadeVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                    <select wire:model.live="filtroUnidadeVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="">Todas as Unidades</option>
                         @foreach($ciclo->unidades as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
                     </select>
-                    <select wire:model.live="filtroCursoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                    <select wire:model.live="filtroCursoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="">Todos os Cursos</option>
                         @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
                     </select>
-                    <select wire:model.live="filtroTurnoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                    <select wire:model.live="filtroTurnoVagas" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="">Todos os Turnos</option>
                         @foreach($ciclo->turnos as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
                     </select>
-                    <button wire:click="limparFiltrosVagas" class="w-full flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 text-xs py-2">
+                    <button wire:click="limparFiltrosVagas" class="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs py-2">
                         <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
                     </button>
                 </div>
@@ -184,7 +192,7 @@
                                 $percentual = $total > 0 ? round(($preenchidas / $total) * 100, 1) : 0;
                                 $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
                             @endphp
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <tr class="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                                 <td class="p-4 text-sm font-bold text-gray-700 dark:text-gray-300">
                                     {{ $oferta->unidade->nome ?? '-' }}
                                 </td>
@@ -225,161 +233,210 @@
         </div>
     </div>
 
+    <!-- ==========================================
+         ABA: INSCRIÇÕES (Com Layout Otimizado)
+    =========================================== -->
     <div x-show="abaAtiva === 'inscricoes'" x-cloak class="space-y-4" wire:key="aba-inscricoes">
         
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Operações de Pontuação
-                </span>
+        <!-- CARD 1: Cabeçalho e Operações -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="ph-bold ph-users text-purpura-600"></i> Operações de Inscrição
+                    </h3>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Gerencie, pontue e classifique as inscrições deste ciclo.</p>
+                </div>
                 
                 <div class="flex items-center gap-2">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <button wire:click="recalcularPontuacoes" 
                                 wire:confirm="Processar pontuação dos alunos Deste Ciclo?"
-                                class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition">
+                                class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-800">
                             <i class="ph-bold ph-calculator text-sm"></i> Recalcular Pontuação
                         </button>
                         <button wire:click="gerarRanking" 
                                 wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
-                                class="flex items-center px-3 py-1.5 gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold rounded-lg text-xs shadow-sm transition">
+                                class="flex items-center px-3 py-1.5 gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-800">
                             <i class="ph-bold ph-medal text-sm"></i> Gerar Ranking
                         </button>
                     @endif
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Buscar por Nome ou CPF..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
-                <select wire:model.live="filtroStatus" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Todos os Status</option>
-                    @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
-                </select>
-                <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Todas as Unidades</option>
-                    @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
-                </select>
-                <select wire:model.live="filtroCurso" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
-                    <option value="">Todos os Cursos</option>
-                    @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                </select>
-                <button wire:click="limparFiltros" class="w-full flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 text-xs py-2">
-                    <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
-                </button>
-            </div>
-        </div>
-
-        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-            <div class="flex justify-between items-center px-1">
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase">Selecionar rápido:</span>
-                    <button wire:click="selecionarQuantidade(10)" class="text-[11px] px-2.5 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-50">10</button>
-                    <button wire:click="selecionarQuantidade(50)" class="text-[11px] px-2.5 py-1 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-50">50</button>
-                </div>
-            </div>
-
-            @if(count($selecionadas) > 0)
-                <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
-                    <div class="flex items-center">
-                        <span class="font-bold text-indigo-900 text-xs">{{ count($selecionadas) }} selecionadas</span>
-                        <button wire:click="desmarcarTodas" class="ml-3 text-xs text-indigo-600 hover:underline font-bold">Limpar</button>
+            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                <div class="bg-gray-50/50 dark:bg-gray-900/30 p-4 flex flex-col lg:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-2 w-full lg:w-auto">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Selecionar rápido:</span>
+                        <button wire:click="selecionarQuantidade(10)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">10</button>
+                        <button wire:click="selecionarQuantidade(50)" class="text-[11px] px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition">50</button>
                     </div>
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[10px] font-bold text-indigo-800 uppercase mr-1">Mover para:</span>
-                        @foreach($statusInscricoesDb as $status)
-                            <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-2.5 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-md text-[11px] font-bold shadow-sm transition">
-                                {{ $status->nome }}
-                            </button>
-                        @endforeach
-                        <button wire:click="abrirModalLote" class="bg-purpura-600 hover:bg-purpura-700 text-white px-2.5 py-1 rounded-md text-[11px] font-bold shadow-sm transition">
-                            Modal
-                        </button>
-                    </div>
+
+                    @if(count($selecionadas) > 0)
+                        <div class="bg-indigo-50 border border-indigo-200 py-2 px-3 rounded-lg flex flex-col sm:flex-row items-center gap-3 shadow-sm dark:bg-indigo-900/30 dark:border-indigo-800 w-full lg:w-auto">
+                            <div class="flex items-center">
+                                <span class="font-bold text-indigo-900 text-xs dark:text-indigo-300">{{ count($selecionadas) }} selecionadas</span>
+                                <button wire:click="desmarcarTodas" class="ml-3 text-[10px] uppercase font-bold tracking-wider text-indigo-600 hover:underline dark:text-indigo-400">Limpar</button>
+                            </div>
+                            <div class="hidden sm:block w-px h-5 bg-indigo-200 dark:bg-indigo-800"></div>
+                            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                                <span class="text-[10px] font-bold text-indigo-800 uppercase mr-1 dark:text-indigo-400 hidden xl:block">Mover para:</span>
+                                @foreach($statusInscricoesDb as $status)
+                                    <button wire:click="alterarStatusLoteRapido({{ $status->id }})" class="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-[10px] font-bold shadow-sm transition dark:bg-gray-800 dark:border-indigo-700 dark:text-indigo-300">
+                                        {{ $status->nome }}
+                                    </button>
+                                @endforeach
+                                <button wire:click="abrirModalLote" class="bg-purpura-600 hover:bg-purpura-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm transition ml-1">
+                                    Outros
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
-        @endif
+        </div>
 
-        <x-table
-            wire:key="tabela-inscricoes-ciclo"
-            :headers="$this->headers"
-            :registros="$registros"
-            :ordenacaoCampo="$ordenacaoCampo"
-            :ordenacaoDirecao="$ordenacaoDirecao"
-            :permiteGrid="$permiteGrid"
-            :modoExibicao="$modoExibicao">
+        <!-- CARD 2: Filtros Integrados à Tabela -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <!-- Barra de Filtros -->
+            <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Buscar por Nome ou CPF..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <select wire:model.live="filtroStatus" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">Todos os Status</option>
+                        @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
+                    </select>
+                    <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">Todas as Unidades</option>
+                        @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                    </select>
+                    <select wire:model.live="filtroCurso" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">Todos os Cursos</option>
+                        @foreach($ciclo->cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                    </select>
+                    <button wire:click="limparFiltros" class="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 text-xs py-2">
+                        <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
 
-            @forelse($registros as $inscricao)
-                <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
-                    @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                        <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded"></td>
-                    @endif
-                    <td class="px-4 py-2 font-medium text-gray-500 text-xs">#{{ $inscricao->id }}</td>
-                    <td class="px-4 py-2"><div class="font-bold text-sm text-gray-900 dark:text-white">{{ $inscricao->nome }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->cpf }}</div></td>
-                    <td class="px-4 py-2"><div class="font-semibold text-sm text-gray-700 dark:text-gray-300">{{ $inscricao->curso->nome ?? '-' }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div></td>
-                    <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">Passo {{ $inscricao->etapa_atual }}</td>
-                    
-                    <td class="px-4 py-2 text-center align-top">
-                        <span class="px-2 py-0.5 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50' }} rounded-full inline-block">
-                            {{ $inscricao->pontuacao_total ?? 0 }} pts
-                        </span>
-                        @if($inscricao->posicao_ranking_geral)
-                            <div class="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold">
-                                <span class="bg-gray-100 px-1.5 py-0.5 rounded border"><span class="text-gray-400">G:</span> {{ $inscricao->posicao_ranking_geral }}º</span>
-                                @if($inscricao->posicao_ranking)<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border"><span class="opacity-50">T:</span> {{ $inscricao->posicao_ranking }}º</span>@endif
+            <!-- Tabela Grudada -->
+            <div class="table-glue bg-white dark:bg-gray-900 relative z-0">
+                <style>
+                    /* Ajusta o padding interno do x-table para se fundir perfeitamente abaixo do filtro */
+                    .table-glue > div > div.mb-4 {
+                        padding: 1rem 1.5rem 0 1.5rem;
+                        margin-bottom: 0.75rem !important;
+                    }
+                    .table-glue > div > div.bg-white.border.rounded-xl {
+                        border: none !important;
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .dark .table-glue > div > div.dark\:bg-gray-800.dark\:border-gray-700 {
+                        border: none !important;
+                        background: transparent !important;
+                    }
+                    .table-glue .custom-scrollbar table thead tr th {
+                        border-top: 1px solid #f3f4f6;
+                    }
+                    .dark .table-glue .custom-scrollbar table thead tr th {
+                        border-top-color: #374151;
+                    }
+                </style>
+
+                <x-table
+                    wire:key="tabela-inscricoes-ciclo"
+                    :headers="$this->headers"
+                    :registros="$registros"
+                    :ordenacaoCampo="$ordenacaoCampo"
+                    :ordenacaoDirecao="$ordenacaoDirecao"
+                    :permiteGrid="$permiteGrid"
+                    :modoExibicao="$modoExibicao">
+
+                    @forelse($registros as $inscricao)
+                        <tr class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
+                            @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                                <td class="px-4 py-2 text-center"><input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600"></td>
+                            @endif
+                            <td class="px-4 py-2 font-medium text-gray-500 text-xs">#{{ $inscricao->id }}</td>
+                            <td class="px-4 py-2"><div class="font-bold text-sm text-gray-900 dark:text-white">{{ $inscricao->nome }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->cpf }}</div></td>
+                            <td class="px-4 py-2"><div class="font-semibold text-sm text-gray-700 dark:text-gray-300">{{ $inscricao->curso->nome ?? '-' }}</div><div class="text-[11px] text-gray-400">{{ $inscricao->unidade->nome ?? '-' }}</div></td>
+                            <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">Passo {{ $inscricao->etapa_atual }}</td>
+                            
+                            <td class="px-4 py-2 text-center align-top">
+                                <span class="px-2 py-0.5 text-xs font-bold {{ $inscricao->pontuacao_total > 0 ? 'text-green-700 bg-green-50 border border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-700' }} rounded-full inline-block">
+                                    {{ $inscricao->pontuacao_total ?? 0 }} pts
+                                </span>
+                                @if($inscricao->posicao_ranking_geral)
+                                    <div class="mt-1 flex items-center justify-center gap-1 text-[9px] font-bold">
+                                        <span class="bg-gray-100 dark:bg-gray-700 dark:border-gray-600 px-1.5 py-0.5 rounded border"><span class="text-gray-400">G:</span> {{ $inscricao->posicao_ranking_geral }}º</span>
+                                        @if($inscricao->posicao_ranking)<span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded border"><span class="opacity-50">T:</span> {{ $inscricao->posicao_ranking }}º</span>@endif
+                                    </div>
+                                @endif
+                            </td>
+                            
+                            <td class="px-4 py-2">
+                                @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                                <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded border whitespace-nowrap" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
+                                    {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                                </span>
+                            </td>
+                            
+                            <td class="px-4 py-2 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 rounded transition" title="Visualização Rápida">
+                                        <i class="text-base ph ph-info"></i>
+                                    </button>
+                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded transition" title="Ver Detalhes">
+                                        <i class="text-base ph ph-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="8" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">Nenhuma inscrição registrada neste ciclo.</td></tr>
+                    @endforelse
+
+                    <x-slot name="gridSlot">
+                        @foreach($registros as $inscricao)
+                            <div class="flex flex-col p-4 bg-white border border-gray-100 dark:bg-gray-800 dark:border-gray-700 shadow-sm rounded-xl hover:shadow-md transition">
+                                <div class="flex justify-between mb-3">
+                                    @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                                    <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">{{ $inscricao->statusInscricao->nome ?? 'Pendente' }}</span>
+                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+                                </div>
+                                <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $inscricao->nome }}</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mb-3">{{ $inscricao->cpf }}</p>
+                                <div class="mt-auto border-t border-gray-50 dark:border-gray-700 pt-3 flex justify-between items-center">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">{{ $inscricao->curso->nome ?? '-' }}</span>
+                                    <span class="text-xs font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->pontuacao_total ?? 0 }} pts</span>
+                                </div>
                             </div>
-                        @endif
-                    </td>
-                    
-                    <td class="px-4 py-2">
-                        @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                        <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded border" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                            {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                        </span>
-                    </td>
-                    
-                    <td class="px-4 py-2 text-right">
-                        <div class="flex items-center justify-end gap-1">
-                            <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 rounded transition" title="Visualização Rápida">
-                                <i class="text-base ph ph-info"></i>
-                            </button>
-                            <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-ponkan-500 rounded transition" title="Ver Detalhes">
-                                <i class="text-base ph ph-eye"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="8" class="px-4 py-12 text-center text-gray-400">Nenhuma inscrição registrada neste ciclo.</td></tr>
-            @endforelse
-
-            <x-slot name="gridSlot">
-                @foreach($registros as $inscricao)
-                    <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl hover:shadow-md">
-                        <div class="flex justify-between mb-3">
-                            <span class="px-2.5 py-1 text-[10px] uppercase font-bold rounded border flex items-center gap-1">{{ $inscricao->statusInscricao->nome ?? 'Pendente' }}</span>
-                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 rounded">
-                        </div>
-                        <h4 class="text-sm font-bold text-gray-900 truncate">{{ $inscricao->nome }}</h4>
-                        <p class="text-xs text-gray-500 truncate mb-3">{{ $inscricao->cpf }}</p>
-                        <div class="mt-auto border-t border-gray-50 pt-2 flex justify-between items-center">
-                            <span class="text-xs text-gray-500 truncate max-w-[120px]">{{ $inscricao->curso->nome ?? '-' }}</span>
-                            <span class="text-xs font-bold text-gray-600">{{ $inscricao->pontuacao_total ?? 0 }} pts</span>
-                        </div>
-                    </div>
-                @endforeach
-            </x-slot>
-        </x-table>
+                        @endforeach
+                    </x-slot>
+                </x-table>
+            </div>
+        </div>
     </div>
 
     <div x-show="abaAtiva === 'regras'" x-cloak class="space-y-6" wire:key="aba-regras">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                    <i class="ph-bold ph-list-numbers text-purpura-600"></i> Regras de Pontuação do Ciclo
-                </h3>
-                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                    Regras configuradas para este processo seletivo. Visualização somente leitura.
-                </p>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h3 class="font-extrabold text-gray-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="ph-bold ph-list-numbers text-purpura-600"></i> Regras de Pontuação do Ciclo
+                    </h3>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Regras configuradas para este processo seletivo. Visualização somente leitura.
+                    </p>
+                </div>
+                
+                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="px-3.5 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-400 dark:border-yellow-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-pencil-simple text-sm"></i> Editar Regras
+                    </a>
+                @endif
             </div>
 
             @if(count($regrasDecodificadas) > 0)
@@ -431,7 +488,7 @@
         </div>
     </div>
 
-    <!-- NOVA ABA: CAMPOS DINÂMICOS -->
+    <!-- ABA: CAMPOS DINÂMICOS -->
     <div x-show="abaAtiva === 'campos'" x-cloak class="space-y-6" wire:key="aba-campos">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
