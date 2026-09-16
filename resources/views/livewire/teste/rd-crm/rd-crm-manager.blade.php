@@ -7,20 +7,29 @@
         :breadcrumbs="$breadcrumbs">
 
         <x-slot name="actions">
-            <button wire:click="atualizarFunis" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-purpura-700 bg-purpura-50 border border-purpura-200 rounded-lg shadow-sm hover:bg-purpura-100 transition flex items-center gap-2 dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400">
-                <i class="ph-bold ph-arrows-clockwise text-base" wire:loading.class="animate-spin" wire:target="atualizarFunis"></i> Baixar Funis
-            </button>
-            <button wire:click="forcarEnvioPendentes" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition flex items-center gap-2">
-                <i class="ph-bold ph-paper-plane-tilt text-base" wire:loading.class="animate-pulse animate-bounce" wire:target="forcarEnvioPendentes"></i> Forçar Envio de Deals
-            </button>
+            <!-- BOTÕES ENVOLVIDOS EM UMA DIV FLEXÍVEL PARA NÃO QUEBRAR O LAYOUT -->
+            <div class="flex flex-wrap items-center justify-end gap-2 w-full">
+                
+                <button wire:click="criarCadastroTeste" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-1.5 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700" title="Gera um Contato/Deal fictício para testes">
+                    <i class="ph-bold ph-user-plus text-base" wire:loading.class="animate-spin" wire:target="criarCadastroTeste"></i> Gerar Teste
+                </button>
+
+                <button wire:click="atualizarFunis" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-purpura-700 bg-purpura-50 border border-purpura-200 rounded-lg shadow-sm hover:bg-purpura-100 transition flex items-center gap-1.5 dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400">
+                    <i class="ph-bold ph-arrows-clockwise text-base" wire:loading.class="animate-spin" wire:target="atualizarFunis"></i> Baixar Funis
+                </button>
+
+                <button wire:click="forcarEnvioPendentes" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-paper-plane-tilt text-base" wire:loading.class="animate-pulse animate-bounce" wire:target="forcarEnvioPendentes"></i> Forçar Envio
+                </button>
+            
+            </div>
         </x-slot>
     </x-page-header>
 
-    @if(isset($metricas))
-        <div class="mb-6">
-            <x-summary-cards :metricas="$metricas" />
-        </div>
-    @endif
+    <!-- CARDS DE MÉTRICAS (IF REMOVIDO PARA EVITAR BUGS DE CARACTERE INVISÍVEL) -->
+    <div class="mb-6">
+        <x-summary-cards :metricas="$metricas" />
+    </div>
 
     <!-- NAVEGAÇÃO DE ABAS -->
     <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl px-4 pt-2 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -91,7 +100,7 @@
                                 <span class="text-[10px] text-gray-500">{{ $deal->contact->email ?? '-' }}</span>
                             </td>
                             <td class="p-4 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $deal->nome }}</td>
-                            <td class="p-4 text-[10px] font-mono text-gray-500">{{ $deal->deal_stage_id ?: 'Padrão' }}</td>
+                            <td class="p-4 text-[10px] font-mono text-gray-500">{{ $deal->deal_stage_id ?: 'Automático / Padrão' }}</td>
                             <td class="p-4 text-center">
                                 @if($deal->sincronizado)
                                     <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400">
@@ -107,7 +116,8 @@
                     @empty
                         <tr>
                             <td colspan="5" class="p-10 text-center text-gray-400 italic text-sm">
-                                Nenhuma negociação registrada localmente ainda.
+                                Nenhuma negociação registrada localmente ainda.<br>
+                                Clique em "Gerar Teste" para criar um registro pendente.
                             </td>
                         </tr>
                     @endforelse
