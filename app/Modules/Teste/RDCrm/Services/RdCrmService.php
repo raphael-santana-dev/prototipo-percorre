@@ -74,25 +74,62 @@ class RdCrmService
     {
         $dealStages = [];
         
+        // 1. Formata as etapas do Livewire para o padrão do RD
         foreach ($etapasNomes as $index => $etapa) {
             $dealStages[] = [
                 "name" => $etapa['nome'],
-                "nickname" => \Illuminate\Support\Str::slug($etapa['nome'], '_'), 
-                "order" => $index + 1
+                // Usa o ajudante do Laravel para gerar o slug (Ex: "Em Negociação" vira "em_negociacao")
+                "nickname" => \Illuminate\Support\Str::slug($etapa['nome'], '_')
             ];
         }
 
+        // 2. O Segredo: Empacotar tudo dentro de "deal_pipeline"
         $payload = [
-            "name" => $nomeFunil,
-            "deal_stages" => $dealStages
+            "deal_pipeline" => [
+                "name" => $nomeFunil,
+                "deal_stages" => $dealStages
+            ]
         ];
 
-
         try {
+            // 3. Envia o POST de criação
             $response = Http::timeout(30)->post(self::getBaseUrl('deal_pipelines'), $payload);
-            dd($response->body());
+
             if ($response->successful()) {
-                return ['sucesso' => true, 'mensagem' => 'Funil criado com sucesso no RD Station!'];
+                $dados = $response->json();
+                $pipelineId = $dados['id'] ?? $dados['_id'];
+
+                $etapasPadroes = $dados['deal_stages'] ?? [];
+
+                foreach ($etapasNomes as $index => $etapaCustom) {
+                    $slug = \Illuminate\Support\Str::slug($etapaCustom['nome'], '_');
+
+                    $payloadEtapa = [
+                        "deal_stage" => [
+                            "name" => $etapaCustom['nome'],
+                            "nickname" => $slug,
+                        ]
+                    ];
+
+                    if (isset($etapasPadroes[$index])) {
+                        $stageId = $etapasPadroes[$index]['id'] ?? $etapasPadroes[$index]['_id'];
+                        Http::timeout(30)->put(self::getBaseUrl("deal_stages/{$stageId}"), $payloadEtapa);
+                    } else {
+                        $payloadEtapa["deal_stage"]["deal_pipeline_id"] = $pipelineId;
+                        Http::timeout(30)->post(self::getBaseUrl('deal_stages'), $payloadEtapa);
+                    }
+                }
+
+                // 3. CENÁRIO C: O usuário pediu menos de 5 etapas. Precisamos deletar a sobra do padrão (DELETE).
+                $qtdCustomizadas = count($etapasNomes);
+                if (count($etapasPadroes) > $qtdCustomizadas) {
+                    for ($i = $qtdCustomizadas; $i < count($etapasPadroes); $i++) {
+                        $stageId = $etapasPadroes[$i]['id'] ?? $etapasPadroes[$i]['_id'];
+                        Http::timeout(30)->delete(self::getBaseUrl("deal_stages/{$stageId}"));
+                    }
+                }
+
+                return ['sucesso' => true, 'mensagem' => 'Funil criado e etapas sincronizadas perfeitamente!'];
             }
 
             Log::error("Erro RD CRM POST Funil", ['body' => $response->body()]);
