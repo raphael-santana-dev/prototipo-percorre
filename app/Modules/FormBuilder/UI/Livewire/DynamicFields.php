@@ -53,6 +53,7 @@ class DynamicFields extends Component
     public string $contextoTipo; 
     public int $contextoId;
     public string $contextoNome = '';
+    public string $badgeContexto = '';
 
     public $etapasDisponiveis = [];
 
@@ -64,9 +65,31 @@ class DynamicFields extends Component
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
             $this->contextoNome = $model->nome;
+            $this->badgeContexto = 'Inscrição Oficial';
         } else {
-            $model = \App\Models\Formulario::findOrFail($id);
-            $this->contextoNome = $model->titulo;
+            // Carrega o formulário com todas as novas relações que criamos
+            $model = \App\Models\Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])->findOrFail($id);
+            
+            // Inteligência para montar o título dinâmico baseado no tipo do formulário
+            if ($model->tipo === 'aprendizagem') {
+                $cicloNome = $model->faseAprendizagem->ciclo->nome ?? 'Ciclo Indefinido';
+                $faseNome = $model->faseAprendizagem->nome ?? 'Fase Indefinida';
+                $this->contextoNome = "{$cicloNome} ({$faseNome})";
+                $this->badgeContexto = 'Avaliação de Aprendizagem';
+                
+            } elseif ($model->tipo === 'pre_inscricao') {
+                $detalhes = [];
+                if ($model->unidade) $detalhes[] = $model->unidade->nome;
+                if ($model->curso) $detalhes[] = $model->curso->nome;
+                
+                $sufixo = count($detalhes) > 0 ? ' - ' . implode(' | ', $detalhes) : ' (Captação Geral)';
+                $this->contextoNome = $model->titulo . $sufixo;
+                $this->badgeContexto = 'Pré-Inscrição (Lead)';
+                
+            } else {
+                $this->contextoNome = $model->titulo;
+                $this->badgeContexto = 'Formulário Avulso';
+            }
         }
 
         $this->slug = $model->slug ?? '';
