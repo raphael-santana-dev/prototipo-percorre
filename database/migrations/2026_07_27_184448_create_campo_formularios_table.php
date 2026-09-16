@@ -31,7 +31,6 @@ return new class extends Migration
             $table->string('regex_mascara')->nullable()->after('tamanho_max');
             $table->string('depende_operador')->default('=')->after('depende_de');
             $table->timestamps();
-            
             $table->unique(['ciclo_id', 'name']);
         });
     }

@@ -123,6 +123,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/configuracoes', \App\Modules\Admin\UI\Livewire\ConfiguracoesGeraisManager::class)->name('configuracoes.index');
     Route::get('/solicitacoes', \App\Modules\Admin\UI\Livewire\SolicitacoesManager::class)->name('solicitacoes.index');
 
+    Route::get('/financeiro/orcamentos', \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class)->name('financeiro.orcamentos');
 });
 
 Route::middleware('auth:web,student')->group(function () {

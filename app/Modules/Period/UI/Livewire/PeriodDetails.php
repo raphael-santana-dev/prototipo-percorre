@@ -10,7 +10,7 @@ use App\Models\Ciclo;
 use App\Models\Curso;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
-use App\Models\CampoFormulario; // Importação adicionada
+use App\Models\CampoFormulario;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
@@ -293,7 +293,6 @@ class PeriodDetails extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        // Busca os campos dinâmicos customizados do ciclo
         $camposDinamicos = CampoFormulario::where('ciclo_id', $this->ciclo->id)
             ->whereNotIn('tipo', ['config'])
             ->orderBy('etapa')
