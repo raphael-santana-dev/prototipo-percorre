@@ -91,6 +91,8 @@ class AprendizesManager extends Component
             }
         }
 
+        
+
         return view('livewire.company.aprendizes-manager', [
             'aprendizes' => $aprendizes,
             'avaliacoesPorAluno' => $avaliacoesPorAluno, // Passando a variável para a view

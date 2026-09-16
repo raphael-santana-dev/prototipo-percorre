@@ -12,7 +12,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     @foreach($formulariosPendentes as $av)
                         @foreach($av->faseAtual->formularios as $form)
-                            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800/50 flex flex-col justify-between">
+                            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800/50 flex flex-col justify-between hover:shadow-md transition">
                                 <div>
                                     <span class="inline-block px-2.5 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-md mb-3">
                                         {{ $av->ciclo->nome }}
@@ -21,7 +21,7 @@
                                     <p class="text-sm text-slate-500 mt-1"><i class="ph-fill ph-clock"></i> Prazo: {{ $av->data_prazo ? \Carbon\Carbon::parse($av->data_prazo)->format('d/m/Y') : 'Não definido' }}</p>
                                 </div>
                                 <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                                    <a href="/formulario-aprendizagem/{{ $form->slug }}/{{ $student->id }}" class="px-5 py-2.5 bg-ponkan-500 hover:bg-ponkan-600 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
+                                    <a href="{{ route('formulario-aprendizagem.responder', ['slug' => $form->slug, 'aluno_id' => $student->id]) }}" class="px-5 py-2.5 bg-ponkan-500 hover:bg-ponkan-600 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
                                         Responder Agora <i class="ph-bold ph-arrow-right"></i>
                                     </a>
                                 </div>
@@ -37,6 +37,7 @@
                 <p class="mt-1 text-slate-500 dark:text-slate-400">Você não possui formulários de aprendizagem pendentes para responder no momento.</p>
             </div>
         @endif
+
     @else
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Acompanhamento de Inscrição</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Abaixo estão os dados da sua inscrição e o status atual do processo seletivo.</p>

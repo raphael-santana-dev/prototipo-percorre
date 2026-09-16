@@ -24,7 +24,7 @@ class Dashboard extends Component
                 ->latest()
                 ->first();
         } else {
-            // LÓGICA NOVA: Buscar avaliações de aprendizagem pendentes
+            // Lógica de Workflow: Busca avaliações de aprendizagem pendentes
             $avaliacoes = AlunoCicloAprendizagem::with(['faseAtual.formularios', 'ciclo'])
                 ->where('student_id', $student->id)
                 ->where('status', '2') // 2 = Pendente
@@ -32,7 +32,7 @@ class Dashboard extends Component
 
             foreach ($avaliacoes as $av) {
                 $respondedores = $av->faseAtual->respondedores_permitidos ?? [];
-                // Se a fase atual diz que o "student" pode responder, enviamos para a tela
+                // Se a fase atual exigir que o "student" responda, enviamos para a tela
                 if (in_array('student', $respondedores)) {
                     $formulariosPendentes[] = $av;
                 }
