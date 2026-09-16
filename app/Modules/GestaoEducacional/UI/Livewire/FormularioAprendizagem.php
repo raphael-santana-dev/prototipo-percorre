@@ -9,7 +9,6 @@ use App\Models\Formulario;
 use App\Modules\Student\Domain\Models\Student;
 use App\Models\AlunoCicloAprendizagem;
 
-#[Layout('components.layouts.app')]
 #[Title('Avaliação de Aprendizagem')]
 class FormularioAprendizagem extends Component
 {
@@ -42,19 +41,17 @@ class FormularioAprendizagem extends Component
             if (auth('student')->id() !== $this->aluno->id) abort(403, 'Acesso negado.');
             $tipoUsuarioLogado = 'student';
             
-        } elseif (auth('web')->check()) {
-            $user = auth('web')->user();
+        } elseif (auth('company')->check()) {
+            $user = auth('company')->user();
             
-            // Verifica se é um CompanyUser e se a empresa bate com a do aluno
-            if ($user->tipo_acesso === 'company' || isset($user->empresa_id)) {
-                if ($user->empresa_id !== $this->aluno->empresa_id) {
-                    abort(403, 'Este aprendiz não pertence à sua organização.');
-                }
-                $tipoUsuarioLogado = 'company';
-            } else {
-                // Se for professor ou admin
-                $tipoUsuarioLogado = 'teacher'; 
+            // Valida se a empresa do gestor bate com a empresa do aluno
+            if ($user->empresa_id !== $this->aluno->empresa_id) {
+                abort(403, 'Este aprendiz não pertence à sua organização.');
             }
+            $tipoUsuarioLogado = 'company';
+            
+        } elseif (auth('web')->check()) {
+            $tipoUsuarioLogado = 'teacher'; 
         } else {
             abort(403, 'Você precisa estar logado.');
         }
@@ -88,21 +85,17 @@ class FormularioAprendizagem extends Component
         $this->camposDinamicos = $this->formulario->campos;
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         
-        // Puxa as respostas atreladas a este formulário e a este aluno específico
         $respostaSalva = \App\Models\RespostaFormulario::where('formulario_id', $this->formulario->id)
-            ->where('user_id', $this->aluno->id) // Usamos o ID do aluno como âncora do documento
+            ->where('user_id', $this->aluno->id)
             ->first();
 
         if ($respostaSalva && is_array($respostaSalva->respostas)) {
             $this->respostas = $respostaSalva->respostas;
         } else {
-            // Inicializa vazio se for a primeira vez
             foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
                 $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz']) ? [] : '';
             }
         }
-
-
     }
 
     public function salvarEAvancar()
@@ -112,7 +105,6 @@ class FormularioAprendizagem extends Component
             return;
         }
 
-        // 1. Salva/Atualiza o Documento (JSON) mantendo o ID do aluno como âncora
         \App\Models\RespostaFormulario::updateOrCreate(
             [
                 'formulario_id' => $this->formulario->id, 
@@ -124,13 +116,11 @@ class FormularioAprendizagem extends Component
             ]
         );
 
-        // 2. Marca a fase atual como respondida na trilha do aluno
         $this->cicloAluno->update([
             'data_resposta' => now(),
-            'status' => '3' // 3 = Respondida
+            'status' => '3' 
         ]);
 
-        // 3. Lógica de Workflow: Descobre se tem uma próxima fase
         $faseAtualOrdem = $this->cicloAluno->faseAtual->ordem;
         
         $proximaFase = \App\Models\CicloAprendizagemFase::where('ciclo_aprendizagem_id', $this->cicloAluno->ciclo_aprendizagem_id)
@@ -138,30 +128,39 @@ class FormularioAprendizagem extends Component
             ->orderBy('ordem', 'asc')
             ->first();
 
-        // 4. Atualiza o status do aluno (Avança ou Conclui)
         if ($proximaFase) {
-            // Avança o ponteiro e "zera" os status para o próximo avaliador
             $this->cicloAluno->update([
                 'fase_atual_id' => $proximaFase->id,
-                'status' => '2', // 2 = Enviada/Pendente para o próximo ator
+                'status' => '2', 
                 'data_resposta' => null, 
                 'data_envio' => now(),
                 'data_prazo' => now()->addDays($this->cicloAluno->ciclo->prazo_dias ?? 10)
             ]);
             $msg = "Formulário salvo! O aluno avançou para a fase: {$proximaFase->nome}.";
         } else {
-            // Sem mais fases, o ciclo está finalizado
             $msg = "Formulário salvo! Todas as fases de avaliação foram concluídas.";
         }
 
-        // 5. Congela a tela imediatamente para Readonly
         $this->podeResponder = false; 
         $this->mensagemBloqueio = 'Formulário respondido e registrado com sucesso.';
         $this->dispatch('sucesso', msg: $msg);
     }
 
+    public function updatingLayout()
+    {
+        return '';
+    }
+
     public function render()
     {
-        return view('livewire.gestao-educacional.formulario-aprendizagem');
+        $layout = 'components.layouts.app'; // Padrão
+        
+        if (auth('student')->check()) {
+            $layout = 'components.layouts.student-app';
+        } elseif (auth('company')->check()) {
+            $layout = 'components.layouts.company';
+        }
+
+        return view('livewire.gestao-educacional.formulario-aprendizagem')->layout($layout);
     }
 }
