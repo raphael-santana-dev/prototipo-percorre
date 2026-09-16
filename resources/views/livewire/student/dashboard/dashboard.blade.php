@@ -3,11 +3,40 @@
         <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meu Painel</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Bem-vindo de volta! Aqui está o seu progresso.</p>
 
-        <div class="mt-8 p-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-slate-200 dark:border-gray-700 text-center">
-            <div class="text-5xl mb-4">📚</div>
-            <h3 class="text-lg font-medium text-slate-900 dark:text-white">Em breve</h3>
-            <p class="mt-1 text-slate-500 dark:text-slate-400">Seu ambiente de aprendizagem será carregado aqui.</p>
-        </div>
+        @if(count($formulariosPendentes) > 0)
+            <div class="mt-8 mb-6">
+                <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-warning-circle text-orange-500"></i> Avaliações Pendentes
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach($formulariosPendentes as $av)
+                        @foreach($av->faseAtual->formularios as $form)
+                            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800/50 flex flex-col justify-between">
+                                <div>
+                                    <span class="inline-block px-2.5 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-md mb-3">
+                                        {{ $av->ciclo->nome }}
+                                    </span>
+                                    <h4 class="text-lg font-bold text-slate-900 dark:text-white">{{ $form->titulo }}</h4>
+                                    <p class="text-sm text-slate-500 mt-1"><i class="ph-fill ph-clock"></i> Prazo: {{ $av->data_prazo ? \Carbon\Carbon::parse($av->data_prazo)->format('d/m/Y') : 'Não definido' }}</p>
+                                </div>
+                                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                                    <a href="/formulario-aprendizagem/{{ $form->slug }}/{{ $student->id }}" class="px-5 py-2.5 bg-ponkan-500 hover:bg-ponkan-600 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
+                                        Responder Agora <i class="ph-bold ph-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endforeach
+                </div>
+            </div>
+        @else
+            <div class="mt-8 p-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-slate-200 dark:border-gray-700 text-center">
+                <div class="text-5xl mb-4 text-green-500"><i class="ph-fill ph-check-circle"></i></div>
+                <h3 class="text-lg font-medium text-slate-900 dark:text-white">Tudo em dia!</h3>
+                <p class="mt-1 text-slate-500 dark:text-slate-400">Você não possui formulários de aprendizagem pendentes para responder no momento.</p>
+            </div>
+        @endif
     @else
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Acompanhamento de Inscrição</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400">Abaixo estão os dados da sua inscrição e o status atual do processo seletivo.</p>

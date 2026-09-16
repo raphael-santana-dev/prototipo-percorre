@@ -43,6 +43,9 @@ Route::get('/matricula/{token}', \App\Modules\Matricula\UI\Livewire\PortalMatric
 Route::middleware('auth:web,student,company')->group(function () {
     Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
         ->name('password.force-change');
+
+    Route::get('/formulario-aprendizagem/{slug}/{aluno_id}', \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class)
+        ->name('formulario-aprendizagem.responder');
 });
 
 Route::middleware('auth')->group(function () {
