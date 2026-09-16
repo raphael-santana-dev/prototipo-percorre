@@ -63,14 +63,30 @@
                         </span>
                     </div>
                 </td>
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    @if($form->tipo === 'inscricao')
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">Inscrição</span>
+                    @elseif($form->tipo === 'aprendizagem')
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 uppercase">Aprendizagem</span>
+                    @else
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-50 text-gray-700 border border-gray-200 uppercase">Geral</span>
+                    @endif
+                </td>
+                
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
                         <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
                             <i class="text-lg ph ph-eye"></i>
                         </a>
-                        <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
-                            <i class="text-lg ph ph-arrow-square-in"></i>
-                        </a>
+                        @if($form->tipo === 'aprendizagem')
+                            <a href="{{ route('aprendizagem.index') }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Gerenciar no Ciclo de Aprendizagem">
+                                <i class="text-lg ph ph-tree-structure"></i>
+                            </a>
+                        @else
+                            <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Ver Link Público">
+                                <i class="text-lg ph ph-arrow-square-in"></i>
+                            </a>
+                        @endif
 
                         <!-- NOVO: Botão Embed (Tabela) -->
                         <button x-data="{ copiado: false }" 

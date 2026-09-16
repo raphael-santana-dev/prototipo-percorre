@@ -86,6 +86,12 @@ class Hub extends Component
 
         $hash = substr(md5(uniqid()), 0, 6);
 
+        $jaExiste = \App\Models\Formulario::where('ciclo_aprendizagem_fase_id', $this->aprendizagem['fase_id'])->exists();
+        if ($jaExiste && $formIdAtual != $formularioExistenteId) {
+            $this->dispatch('erro', msg: 'Esta fase do ciclo já possui um formulário vinculado. Apenas um formulário é permitido por fase.');
+            return;
+        }
+
         $form = Formulario::create([
             'titulo' => 'Formulário de Aprendizagem',
             'slug' => 'aprendizagem-' . $hash,

@@ -152,13 +152,14 @@ class FormManager extends Component
             ['key' => 'titulo', 'label' => 'Formulário', 'sortable' => true],
             ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
 
     public function render()
     {
-        $query = Formulario::query()->where('tipo', 'geral');
+        $query = Formulario::query();
 
         if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         else $query->orderBy('id', 'desc');
