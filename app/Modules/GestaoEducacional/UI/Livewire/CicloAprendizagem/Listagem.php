@@ -19,7 +19,7 @@ class Listagem extends Component
     public $busca = '';
     
     // Campos do Form
-    public $nome, $data_inicio, $data_fim;
+    public $nome, $data_inicio, $data_fim, $ano, $ciclo_mes, $prazo_dias, $data_fechamento;
     public $fases = []; 
     // Opções de quem pode responder
     public $opcoesRespondedores = [
@@ -77,6 +77,10 @@ class Listagem extends Component
             'nome' => $this->nome,
             'data_inicio' => $this->data_inicio,
             'data_fim' => $this->data_fim,
+            'ano' => date('Y', strtotime($this->data_inicio)),
+            'ciclo_mes' => date('m', strtotime($this->data_inicio)),
+            'prazo_dias' => 10, // Valor padrão, pode ser ajustado
+            'data_fechamento' => now()->addDays(10), // Valor padrão, pode ser ajustado
         ]);
 
         foreach ($this->fases as $index => $fase) {

@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Modules\GestaoEducacional\UI\Livewire;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use App\Models\CicloAprendizagem;
+use App\Models\CicloAprendizagemFase;
+use App\Models\AlunoCicloAprendizagem;
+use App\Modules\Student\Domain\Models\Student;
+use App\Modules\Company\Domain\Models\Empresa;
+use App\Modules\Company\Domain\Models\CompanyUser;
+use Faker\Factory as Faker;
+
+class GeradorMockAprendizagem extends Component
+{
+    public $ambienteGerado = false;
+    public $quantidadeInjecao = 1;
+    public $dadosGerados = [];
+
+    public function mount()
+    {
+        abort_if(!feature('ferramenta.mock'), 403, 'Gerador desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ferramenta.mock'), 403, 'Acesso restrito.');
+    }
+
+    public function gerarAmbienteCompleto()
+    {
+        $this->validate(['quantidadeInjecao' => 'required|integer|min:1|max:50']);
+
+        $faker = Faker::create('pt_BR');
+        DB::beginTransaction();
+
+        try {
+            // 1. Garante que exista um Ciclo de Aprendizagem (Ex: Maio 2026)
+            $ciclo = CicloAprendizagem::firstOrCreate(
+                ['ano' => date('Y'), 'ciclo_mes' => '05'],
+                [
+                    'nome' => 'Avaliação Semestral Aprendizes - ' . date('Y') . '/05',
+                    'data_inicio' => now()->startOfMonth(),
+                    'data_fim' => now()->endOfMonth(),
+                    'prazo_dias' => 10,
+                    'data_fechamento' => now()->addDays(15),
+                    'status' => true
+                ]
+            );
+
+            // 2. Garante que existam as fases de workflow
+            $faseAprendiz = CicloAprendizagemFase::firstOrCreate(
+                ['ciclo_aprendizagem_id' => $ciclo->id, 'ordem' => 1],
+                ['nome' => 'Fase 1 - Autoavaliação do Aprendiz', 'respondedores_permitidos' => ['student']]
+            );
+
+            $faseEmpresa = CicloAprendizagemFase::firstOrCreate(
+                ['ciclo_aprendizagem_id' => $ciclo->id, 'ordem' => 2],
+                ['nome' => 'Fase 2 - Avaliação do Gestor', 'respondedores_permitidos' => ['company']]
+            );
+
+            $this->dadosGerados = [];
+
+            for ($i = 0; $i < $this->quantidadeInjecao; $i++) {
+                
+                // 3. Cria a Empresa Fictícia
+                $empresa = Empresa::create([
+                    'razao_social' => $faker->company . ' LTDA',
+                    'nome_fantasia' => $faker->company,
+                    'cnpj' => $faker->unique()->numerify('##############'),
+                    'is_active' => true
+                ]);
+
+                // 4. Cria o Gestor (CompanyUser)
+                $gestorEmail = 'gestor.' . $faker->unique()->numerify('####') . '@empresa.com';
+                $gestor = CompanyUser::create([
+                    'name' => 'Gestor ' . $faker->firstName,
+                    'email' => $gestorEmail,
+                    'documento' => $faker->unique()->numerify('###########'),
+                    'empresa_id' => $empresa->id,
+                    'tipo_acesso' => 'gestor_avaliador',
+                    'is_active' => true,
+                    'password' => Hash::make('senha123')
+                ]);
+
+                // 5. Cria o Aprendiz (Student) vinculado à Empresa e Gestor
+                $alunoEmail = 'aprendiz.' . $faker->unique()->numerify('####') . '@sistema.com';
+                $aluno = Student::create([
+                    'name' => $faker->name,
+                    'email' => $alunoEmail,
+                    'cpf' => $faker->unique()->numerify('###########'),
+                    'is_active' => true,
+                    'password' => Hash::make('senha123'),
+                    'slug' => Str::slug($faker->name . '-' . Str::random(4)),
+                    'empresa_id' => $empresa->id,
+                    'gestor_id' => $gestor->id,
+                    'is_aprendiz' => true, // 2 = Aprendiz
+                    'aprendizagem_ios' => 1, // 1 = Sim
+                    'data_inicio_contrato' => now()->subMonths(3)->format('Y-m-d'),
+                    'data_fim_contrato' => now()->addMonths(9)->format('Y-m-d')
+                ]);
+
+                // 6. Injeta a Avaliação na Trilha do Workflow
+                $faseAtual = rand(1, 2) == 1 ? $faseAprendiz->id : $faseEmpresa->id;
+                
+                AlunoCicloAprendizagem::create([
+                    'ciclo_aprendizagem_id' => $ciclo->id,
+                    'student_id' => $aluno->id,
+                    'fase_atual_id' => $faseAtual,
+                    'status' => '2', // Enviada/Pendente
+                    'data_geracao' => now()->subDays(2),
+                    'data_envio' => now()->subDays(1),
+                    'data_prazo' => now()->addDays(8),
+                ]);
+
+                $this->dadosGerados[] = [
+                    'aluno_nome' => $aluno->name,
+                    'empresa_nome' => $empresa->nome_fantasia,
+                    'gestor_email' => $gestor->email,
+                    'fase' => $faseAtual == $faseAprendiz->id ? '1 - Aguardando Aprendiz' : '2 - Aguardando Gestor'
+                ];
+            }
+
+            DB::commit();
+            $this->ambienteGerado = true;
+            $this->dispatch('sucesso', msg: "{$this->quantidadeInjecao} fluxos de aprendizagem injetados!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('erro', msg: 'Erro ao gerar ambiente: ' . $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.gestao-educacional.gerador-mock-aprendizagem')
+            ->layout('components.layouts.app', ['title' => 'Simulador de Avaliação de Aprendizagem']);
+    }
+}

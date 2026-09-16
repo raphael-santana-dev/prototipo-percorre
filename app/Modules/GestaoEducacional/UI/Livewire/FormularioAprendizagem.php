@@ -112,7 +112,7 @@ class FormularioAprendizagem extends Component
             return;
         }
 
-        // 1. Salva/Atualiza o "Documento" (JSON) mantendo o ID do aluno como âncora
+        // 1. Salva/Atualiza o Documento (JSON) mantendo o ID do aluno como âncora
         \App\Models\RespostaFormulario::updateOrCreate(
             [
                 'formulario_id' => $this->formulario->id, 
@@ -124,7 +124,13 @@ class FormularioAprendizagem extends Component
             ]
         );
 
-        // 2. Lógica de Workflow: Descobre qual é a próxima fase
+        // 2. Marca a fase atual como respondida na trilha do aluno
+        $this->cicloAluno->update([
+            'data_resposta' => now(),
+            'status' => '3' // 3 = Respondida
+        ]);
+
+        // 3. Lógica de Workflow: Descobre se tem uma próxima fase
         $faseAtualOrdem = $this->cicloAluno->faseAtual->ordem;
         
         $proximaFase = \App\Models\CicloAprendizagemFase::where('ciclo_aprendizagem_id', $this->cicloAluno->ciclo_aprendizagem_id)
@@ -132,21 +138,25 @@ class FormularioAprendizagem extends Component
             ->orderBy('ordem', 'asc')
             ->first();
 
-        // 3. Atualiza o status do aluno
+        // 4. Atualiza o status do aluno (Avança ou Conclui)
         if ($proximaFase) {
+            // Avança o ponteiro e "zera" os status para o próximo avaliador
             $this->cicloAluno->update([
                 'fase_atual_id' => $proximaFase->id,
-                'status' => 'em_andamento'
+                'status' => '2', // 2 = Enviada/Pendente para o próximo ator
+                'data_resposta' => null, 
+                'data_envio' => now(),
+                'data_prazo' => now()->addDays($this->cicloAluno->ciclo->prazo_dias ?? 10)
             ]);
             $msg = "Formulário salvo! O aluno avançou para a fase: {$proximaFase->nome}.";
         } else {
-            $this->cicloAluno->update(['status' => 'concluido']);
-            $msg = "Formulário salvo! O ciclo de aprendizagem deste aluno foi concluído.";
+            // Sem mais fases, o ciclo está finalizado
+            $msg = "Formulário salvo! Todas as fases de avaliação foram concluídas.";
         }
 
-        // Atualiza a permissão na tela em tempo real para congelar os campos (Readonly)
+        // 5. Congela a tela imediatamente para Readonly
         $this->podeResponder = false; 
-        $this->mensagemBloqueio = 'Formulário já respondido por você e enviado para a próxima fase.';
+        $this->mensagemBloqueio = 'Formulário respondido e registrado com sucesso.';
         $this->dispatch('sucesso', msg: $msg);
     }
 

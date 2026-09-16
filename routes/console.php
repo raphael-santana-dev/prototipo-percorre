@@ -17,10 +17,13 @@ Schedule::call(function () {
     }
 })->everyMinute();
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
-
 Schedule::call(function () {
     RdCrmService::enviarNegociacoesPendentes();
 })->everyMinute();
+
+// NOVO: Motor Diário de Fechamento de Ciclos de Aprendizagem
+Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
+
+Artisan::command('inspire', function () {
+    $this->comment(Inspiring::quote());
+})->purpose('Display an inspiring quote');

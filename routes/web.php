@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
 
     Route::get('/avaliacoes/gerador', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('avaliacoes.gerador');
+    Route::get('/avaliacoes/gerador-aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMockAprendizagem::class)->name('avaliacoes.gerador-aprendizagem');
     Route::get('/avaliacoes/relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class)->name('avaliacoes.relatorios');
     Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
     Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');

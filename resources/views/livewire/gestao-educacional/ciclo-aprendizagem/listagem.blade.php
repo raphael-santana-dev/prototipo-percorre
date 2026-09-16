@@ -92,19 +92,35 @@
                 </div>
                 
                 <div class="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="md:col-span-2 lg:col-span-4">
                             <label class="block text-xs font-bold text-gray-700 mb-1">Nome do Ciclo <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="nome" placeholder="Ex: Avaliação Semestral 2026.2" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                            <input type="text" wire:model="nome" placeholder="Ex: Avaliação Semestral 2026.2" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 text-sm">
                             @error('nome') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                         </div>
+                        
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Data Início</label>
-                            <input type="date" wire:model="data_inicio" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Ano Avaliação</label>
+                            <input type="text" wire:model="ano" placeholder="Ex: 2026" maxlength="4" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 text-sm">
                         </div>
+                        
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Data Fim</label>
-                            <input type="date" wire:model="data_fim" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Ciclo Mês</label>
+                            <select wire:model="ciclo_mes" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 text-sm">
+                                <option value="">-- Selecione --</option>
+                                <option value="05">Maio (05)</option>
+                                <option value="11">Novembro (11)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Prazo de Resposta (Dias)</label>
+                            <input type="number" wire:model="prazo_dias" placeholder="Ex: 10" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Data Fechamento</label>
+                            <input type="date" wire:model="data_fechamento" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 text-sm">
                         </div>
                     </div>
 
