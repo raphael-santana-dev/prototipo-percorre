@@ -159,13 +159,59 @@ class FormManager extends Component
 
     public function render()
     {
-        $query = Formulario::query();
+        // 1. Busca os formulários gerais e de aprendizagem
+        $queryFormularios = Formulario::query()
+            ->select('id', 'titulo', 'descricao', 'status', 'slug', 'tipo', 'created_at');
 
-        if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
-        else $query->orderBy('id', 'desc');
+        // Se houver busca, filtra
+        if ($this->pesquisa) {
+            $queryFormularios->where('titulo', 'ilike', '%' . $this->pesquisa . '%');
+        }
+
+        $formularios = $queryFormularios->get()->map(function($f) {
+            $f->origem = 'formulario';
+            return $f;
+        });
+
+        // 2. Busca os Ciclos de Inscrição para unificar na mesma listagem
+        $queryCiclos = \App\Models\Ciclo::query()
+            ->select('id', 'nome as titulo', 'slug', 'status', 'created_at')
+            ->selectRaw("'Ciclo de Inscrição Oficial' as descricao")
+            ->selectRaw("'inscricao' as tipo");
+
+        if ($this->pesquisa) {
+            $queryCiclos->where('nome', 'ilike', '%' . $this->pesquisa . '%');
+        }
+
+        $ciclos = $queryCiclos->get()->map(function($c) {
+            $c->origem = 'ciclo';
+            return $c;
+        });
+
+        // 3. Junta as duas coleções em uma única lista paginada manualmente
+        $todosRegistros = $formularios->concat($ciclos);
+
+        if ($this->ordenacaoCampo) {
+            $todosRegistros = $this->ordenacaoDirecao === 'asc' 
+                ? $todosRegistros->sortBy($this->ordenacaoCampo) 
+                : $todosRegistros->sortByDesc($this->ordenacaoCampo);
+        } else {
+            $todosRegistros = $todosRegistros->sortByDesc('id');
+        }
+
+        // Paginação manual para collection do Laravel
+        $page = request()->input('page', 1);
+        $perPage = $this->porPagina ?? 15;
+        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
+            $todosRegistros->forPage($page, $perPage),
+            $todosRegistros->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         return view('livewire.forms.form-manager', [
-            'registros' => $query->paginate($this->porPagina),
+            'registros' => $paginatedResults,
             'rolesDb' => Role::where('name', '!=', 'dev')->orderBy('name')->get(),
             'usersDb' => User::orderBy('name')->get(),
             'unidadesDb' => Unidade::orderBy('nome')->get(),

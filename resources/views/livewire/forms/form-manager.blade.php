@@ -3,7 +3,7 @@
     <x-page-header 
         title="Gerenciamento de Formulários" 
         icon="ph ph-list-dashes"
-        badge="Formulários Gerais"
+        badge="Central de Formulários"
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
@@ -17,7 +17,14 @@
     </x-page-header>
 
     <x-table
-        :headers="$this->headers"
+        :headers="[
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'titulo', 'label' => 'Formulário / Ciclo', 'sortable' => true],
+            ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => false],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right']
+        ]"
         :registros="$registros"
         :ordenacaoCampo="$ordenacaoCampo"
         :ordenacaoDirecao="$ordenacaoDirecao"
@@ -31,18 +38,20 @@
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="font-bold text-gray-900 dark:text-white">{{ $form->titulo }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ Str::limit($form->descricao, 50) }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ Str::limit($form->descricao ?? '', 50) }}</div>
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex flex-col gap-1">
-                        @if($form->acesso_livre)
+                        @if(isset($form->origem) && $form->origem === 'ciclo')
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase w-max"><i class="ph-bold ph-calendar-check"></i> Ciclo Oficial</span>
+                        @elseif($form->acesso_livre ?? true)
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 uppercase w-max"><i class="ph-bold ph-globe"></i> Público</span>
                         @else
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase w-max"><i class="ph-bold ph-lock-key"></i> Restrito</span>
                         @endif
                         
-                        @if($form->data_inicio || $form->data_fim)
+                        @if(isset($form->data_inicio) && ($form->data_inicio || $form->data_fim))
                             <span class="text-[10px] text-gray-500 font-bold flex items-center gap-1">
                                 <i class="ph-bold ph-calendar"></i>
                                 {{ $form->data_inicio ? $form->data_inicio->format('d/m/y') : 'Sempre' }} até {{ $form->data_fim ? $form->data_fim->format('d/m/y') : 'Sempre' }}
@@ -53,19 +62,28 @@
 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                        @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                        @if(isset($form->origem) && $form->origem === 'ciclo')
+                            <span class="w-2 h-2 rounded-full {{ $form->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                            <span class="text-[10px] font-bold {{ $form->status ? 'text-green-600' : 'text-gray-400' }}">
+                                {{ $form->status ? 'ATIVO' : 'INATIVO' }}
+                            </span>
+                        @elseif(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
                             <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
+                            <span class="text-[10px] font-bold {{ $form->status ? 'text-green-600' : 'text-gray-400' }}">
+                                {{ $form->status ? 'ATIVO' : 'INATIVO' }}
+                            </span>
                         @else
                             <span class="w-2 h-2 rounded-full {{ $form->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                            <span class="text-[10px] font-bold {{ $form->status ? 'text-green-600' : 'text-gray-400' }}">
+                                {{ $form->status ? 'ATIVO' : 'INATIVO' }}
+                            </span>
                         @endif
-                        <span class="text-[10px] font-bold {{ $form->status ? 'text-green-600' : 'text-gray-400' }}">
-                            {{ $form->status ? 'ATIVO' : 'INATIVO' }}
-                        </span>
                     </div>
                 </td>
+
                 <td class="px-4 py-2.5 whitespace-nowrap">
-                    @if($form->tipo === 'inscricao')
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">Inscrição</span>
+                    @if(isset($form->origem) && $form->origem === 'ciclo')
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase">Inscrição Oficial</span>
                     @elseif($form->tipo === 'aprendizagem')
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 uppercase">Aprendizagem</span>
                     @else
@@ -75,69 +93,60 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
-                            <i class="text-lg ph ph-eye"></i>
-                        </a>
-                        @if($form->tipo === 'aprendizagem')
-                            <a href="{{ route('aprendizagem.index') }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Gerenciar no Ciclo de Aprendizagem">
-                                <i class="text-lg ph ph-tree-structure"></i>
+                        @if(isset($form->origem) && $form->origem === 'ciclo')
+                            <!-- Ações para Ciclos de Inscrição -->
+                            <a href="{{ route('ciclos.show', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Ver Detalhes do Ciclo">
+                                <i class="text-lg ph ph-eye"></i>
                             </a>
-                        @else
-                            <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Ver Link Público">
-                                <i class="text-lg ph ph-arrow-square-in"></i>
-                            </a>
-                        @endif
-
-                        <!-- NOVO: Botão Embed (Tabela) -->
-                        <button x-data="{ copiado: false }" 
-                                @click="
-                                    let code = `<iframe src='{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
-                                    navigator.clipboard.writeText(code); 
-                                    copiado = true; 
-                                    setTimeout(() => copiado = false, 2000);
-                                " 
-                                class="p-1.5 transition-colors rounded-lg relative" 
-                                :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
-                                title="Copiar Código de Incorporação (Iframe)">
-                            <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
-                        </button>
-
-                        <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
-                            <i class="text-lg ph ph-table"></i>
-                        </a>
-
-                        <button wire:click="solicitarExportacao({{ $form->id }}, 'xlsx')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-600 hover:bg-green-50 dark:hover:bg-gray-600" title="Exportar Respostas (Excel)">
-                            <i class="text-lg ph ph-file-xls"></i>
-                        </button>
-                        <button wire:click="solicitarExportacao({{ $form->id }}, 'csv')" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-600" title="Exportar Respostas (CSV)">
-                            <i class="text-lg ph ph-file-csv"></i>
-                        </button>
-
-                        @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
-                            <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                            <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Construtor de Campos da Inscrição">
                                 <i class="text-lg ph ph-list-dashes"></i>
                             </a>
-                            <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                        @endif
+                        @else
+                            <!-- Ações para Formulários Gerais e de Aprendizagem -->
+                            <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
+                                <i class="text-lg ph ph-eye"></i>
+                            </a>
 
-                        <a href="{{ route('formularios.edit', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Configurações do Form">
-                            <i class="text-lg ph ph-gear"></i>
-                        </a>
-                        
-                        @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
-                            <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Atenção: Ao excluir o formulário, todas as respostas vinculadas a ele também serão deletadas. Deseja continuar?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
+                            @if($form->tipo === 'aprendizagem')
+                                <a href="{{ route('aprendizagem.index') }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50" title="Gerenciar no Ciclo de Aprendizagem">
+                                    <i class="text-lg ph ph-tree-structure"></i>
+                                </a>
+                            @else
+                                <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Ver Link Público">
+                                    <i class="text-lg ph ph-arrow-square-in"></i>
+                                </a>
+                            @endif
+
+                            <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
+                                <i class="text-lg ph ph-table"></i>
+                            </a>
+
+                            @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
+                                <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
+                                    <i class="text-lg ph ph-list-dashes"></i>
+                                </a>
+                                <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            @endif
+
+                            <a href="{{ route('formularios.edit', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Configurações do Form">
+                                <i class="text-lg ph ph-gear"></i>
+                            </a>
+                            
+                            @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
+                                <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Atenção: Ao excluir o formulário, todas as respostas vinculadas a ele também serão deletadas. Deseja continuar?') || event.stopImmediatePropagation()">
+                                    <i class="text-lg ph ph-trash"></i>
+                                </button>
+                            @endif
                         @endif
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                    <p class="font-semibold">Nenhum formulário geral encontrado.</p>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                    <p class="font-semibold">Nenhum formulário ou ciclo encontrado.</p>
                 </td>
             </tr>
         @endforelse
@@ -154,48 +163,21 @@
                     </div>
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div>
-                            <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
+                            @if(!(isset($form->origem) && $form->origem === 'ciclo'))
+                                <x-toggle :status="$form->status" action="toggleStatus({{ $form->id }})" />
+                            @endif
                             <div class="text-[10px] mt-1 font-bold {{ $form->status ? 'text-green-600' : 'text-gray-500' }}">
                                 {{ $form->status ? 'ATIVO' : 'INATIVO' }}
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Link">
-                                <i class="text-lg ph ph-eye"></i>
-                            </a>
-                            <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Formulário Público">
-                                <i class="text-lg ph ph-arrow-square-in"></i>
-                            </a>
-
-                            <!-- NOVO: Botão Embed (Cards) -->
-                            <button x-data="{ copiado: false }" 
-                                    @click="
-                                        let code = `<iframe src='{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
-                                        navigator.clipboard.writeText(code); 
-                                        copiado = true; 
-                                        setTimeout(() => copiado = false, 2000);
-                                    " 
-                                    class="p-1.5 transition-colors rounded-lg relative" 
-                                    :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
-                                    title="Copiar Código de Incorporação (Iframe)">
-                                <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
-                            </button>
-
-                            <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-600" title="Visualizar Respostas em Planilha">
-                                <i class="text-lg ph ph-table"></i>
-                            </a>
-                            @if(feature('formulario.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.editar')))
-                                <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor de Campos">
-                                    <i class="text-lg ph ph-list-dashes"></i>
-                                </a>
-                                <button wire:click="abrirModal({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Informações">
-                                    <i class="text-lg ph ph-pencil-simple"></i>
-                                </button>
-                            @endif
-                            @if(feature('formulario.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.excluir')))
-                                <button wire:click="excluir({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Formulário" onclick="confirm('Excluir este formulário permanentemente?') || event.stopImmediatePropagation()">
-                                    <i class="text-lg ph ph-trash"></i>
-                                </button>
+                            @if(isset($form->origem) && $form->origem === 'ciclo')
+                                <a href="{{ route('ciclos.show', $form->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500" title="Ver Detalhes"><i class="text-lg ph ph-eye"></i></a>
+                                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $form->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500" title="Construtor"><i class="text-lg ph ph-list-dashes"></i></a>
+                            @else
+                                <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500" title="Acessar Link"><i class="text-lg ph ph-eye"></i></a>
+                                <a href="{{ route('formularios.publico', ['id' => $form->id, 'slug' => $form->slug]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500" title="Ver Link Público"><i class="text-lg ph ph-arrow-square-in"></i></a>
+                                <a href="{{ route('formularios.planilha', $form->id) }}" wire:navigate class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500" title="Planilha"><i class="text-lg ph ph-table"></i></a>
                             @endif
                         </div>
                     </div>
