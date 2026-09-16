@@ -31,9 +31,16 @@ class FormularioPublico extends Component
 
     public function mount($slug)
     {
-        $this->formulario = Formulario::with(['campos' => function($query) {
+        $query = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-        }])->where('slug', $slug)->where('status', true)->firstOrFail();
+        }])->where('slug', $slug);
+
+        // Se NÃO for preview, exige que o formulário esteja ativo
+        if (!request()->query('preview')) {
+            $query->where('status', true);
+        }
+        
+        $this->formulario = $query->firstOrFail();
         
         $this->camposDinamicos = $this->formulario->campos;
         
@@ -269,6 +276,14 @@ class FormularioPublico extends Component
 
     public function avancarEtapa()
     {
+
+        if (request()->query('preview')) {
+            if ($this->etapaAtual < $this->totalEtapas) {
+                $this->etapaAtual++;
+            }
+            return;
+        }
+        
         $regras = $this->regrasPorEtapa($this->etapaAtual);
 
         if (!empty($regras)) {

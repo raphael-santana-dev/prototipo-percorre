@@ -122,7 +122,9 @@ class DynamicFields extends Component
         $numerosExistentes = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('tipo', '!=', 'config')->distinct()->pluck('etapa')->toArray();
 
-        $numerosExistentes = empty($numerosExistentes) ? [1] : $numerosExistentes;
+        if (!in_array(1, $numerosExistentes)) {
+            $numerosExistentes[] = 1;
+        }
 
         foreach ($numerosExistentes as $num) {
             if (!$this->etapasDisponiveis->contains('numero', $num)) {
@@ -442,6 +444,11 @@ class DynamicFields extends Component
     {
         $etapa = \App\Models\Etapa::find($id);
         if (!$etapa) return;
+
+        if ($etapa->numero == 1) {
+            $this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
+            return;
+        }
         
         $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('etapa', $etapa->numero)

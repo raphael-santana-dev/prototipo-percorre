@@ -15,6 +15,7 @@
                     <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider">Ciclo</th>
                     <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider text-center">Fases (Workflow)</th>
                     <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider text-center">Período</th>
+                    <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase tracking-wider text-right">Ações</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -29,10 +30,52 @@
                         <td class="px-4 py-3 text-center text-xs text-gray-500">
                             {{ $ciclo->data_inicio ? $ciclo->data_inicio->format('d/m/Y') : '-' }} a {{ $ciclo->data_fim ? $ciclo->data_fim->format('d/m/Y') : '-' }}
                         </td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                
+                                @php
+                                    // Busca todos os formulários vinculados às fases deste ciclo
+                                    $formsPreview = \App\Models\Formulario::whereHas('faseAprendizagem', function($q) use ($ciclo) {
+                                        $q->where('ciclo_aprendizagem_id', $ciclo->id);
+                                    })->get();
+                                @endphp
+
+                                <!-- Pré-visualização do(s) Formulário(s) -->
+                                @if($formsPreview->count() === 1)
+                                    <a href="{{ route('formularios.publico', ['id' => $formsPreview->first()->id, 'slug' => $formsPreview->first()->slug, 'preview' => 'true']) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Pré-visualizar Formulário">
+                                        <i class="text-lg ph ph-eye"></i>
+                                    </a>
+                                @elseif($formsPreview->count() > 1)
+                                    <div x-data="{ open: false }" class="relative inline-block text-left">
+                                        <button @click="open = !open" @click.outside="open = false" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 flex items-center gap-0.5" title="Pré-visualizar Formulários">
+                                            <i class="text-lg ph ph-eye"></i>
+                                            <i class="ph-bold ph-caret-down text-[10px]"></i>
+                                        </button>
+                                        
+                                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                                            <div class="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                                                <span class="text-[10px] font-bold text-gray-500 uppercase">Selecione a Fase</span>
+                                            </div>
+                                            @foreach($formsPreview as $fPreview)
+                                                <a href="{{ route('formularios.publico', ['id' => $fPreview->id, 'slug' => $fPreview->slug, 'preview' => 'true']) }}" target="_blank" class="block px-4 py-2 text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-700 border-b border-gray-100 last:border-0 transition truncate">
+                                                    {{ $fPreview->titulo }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- Botão de Acompanhamento -->
+                                <a href="{{ route('acompanhamento.index', $ciclo->id) }}" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold rounded-lg transition shadow-sm">
+                                    <i class="ph-bold ph-presentation-chart text-sm"></i>
+                                    Acompanhar
+                                </a>
+                            </div>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="px-4 py-8 text-center text-gray-500">Nenhum ciclo cadastrado.</td>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">Nenhum ciclo cadastrado.</td>
                     </tr>
                 @endforelse
             </tbody>

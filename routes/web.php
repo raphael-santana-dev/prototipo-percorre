@@ -17,6 +17,7 @@ use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
 use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
 use App\Modules\Website\UI\Livewire\PreInscricao;
+use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
@@ -117,7 +118,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
     // Avaliação de aprendizagem
     Route::get('/aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class)->name('aprendizagem.index');
-    Route::get('/acompanhamento', \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento::class)->name('acompanhamento.index');
+    Route::get('/aprendizagem/{id}/acompanhamento', Acompanhamento::class)->name('acompanhamento.index');
     Route::get('/pre-inscricao/{slug}', PreInscricao::class);
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
