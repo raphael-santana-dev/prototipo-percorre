@@ -84,7 +84,7 @@ class RdCrmManager extends Component
             'campos_customizados' => [
                 [
                     "custom_field_id" => "6a43d5b0c1f909001d1deecf", // ID de teste do seu JSON
-                    "value" => "Sim (Gerado por Teste Automático)"
+                    "value" => "Sim"
                 ]
             ]
         ]);

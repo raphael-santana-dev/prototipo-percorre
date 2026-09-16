@@ -82,39 +82,42 @@ class RdCrmService
         foreach ($dealsPendentes as $deal) {
             $contato = $deal->contact;
 
-            // Formata o Aniversário se existir
-            $birthdayArray = null;
-            if ($contato->data_nascimento) {
+            // 1. Monta os dados do Contato rigorosamente limpos
+            $dadosContato = ["name" => $contato->nome];
+            
+            if (!empty($contato->email)) {
+                $dadosContato["emails"] = [["email" => $contato->email]];
+            }
+            if (!empty($contato->telefone)) {
+                $dadosContato["phones"] = [["phone" => preg_replace('/\D/', '', $contato->telefone), "type" => "cellphone"]];
+            }
+            if (!empty($contato->data_nascimento)) {
                 $dataStr = \Carbon\Carbon::parse($contato->data_nascimento);
-                $birthdayArray = [
-                    "day" => $dataStr->day,
-                    "month" => $dataStr->month,
-                    "year" => $dataStr->year
+                $dadosContato['birthday'] = [
+                    "day" => $dataStr->day, "month" => $dataStr->month, "year" => $dataStr->year
                 ];
             }
 
-            // Monta o Payload JSON rigorosamente no formato do RD CRM
-            $payload = [
-                "deal" => [
-                    "name" => $deal->nome,
-                    "rating" => $deal->rating,
-                    "deal_stage_id" => $deal->deal_stage_id,
-                    "deal_custom_fields" => $deal->campos_customizados ?? []
-                ],
-                "contacts" => [
-                    [
-                        "name" => $contato->nome,
-                        "emails" => $contato->email ? [["email" => $contato->email]] : [],
-                        "phones" => $contato->telefone ? [["phone" => preg_replace('/\D/', '', $contato->telefone), "type" => "cellphone"]] : [],
-                    ]
-                ]
+            // 2. Monta os dados da Negociação (Deal) limpando os nulos
+            $dadosDeal = [
+                "name" => $deal->nome,
+                "rating" => $deal->rating,
             ];
 
-            if ($birthdayArray) {
-                $payload['contacts'][0]['birthday'] = $birthdayArray;
+            if (!empty($deal->deal_stage_id)) {
+                $dadosDeal["deal_stage_id"] = $deal->deal_stage_id;
+            }
+            if (!empty($deal->campos_customizados)) {
+                $dadosDeal["deal_custom_fields"] = $deal->campos_customizados;
             }
 
-            if ($deal->campaign_id) {
+            // 3. Empacota tudo para envio
+            $payload = [
+                "deal" => $dadosDeal,
+                "contacts" => [$dadosContato]
+            ];
+
+            if (!empty($deal->campaign_id)) {
                 $payload['campaign'] = ["_id" => $deal->campaign_id];
             }
 
@@ -123,7 +126,6 @@ class RdCrmService
                 $response = Http::timeout(30)->post(self::getBaseUrl('deals'), $payload);
 
                 if ($response->successful()) {
-                    // Se a API retornar sucesso, a gente marca como enviado e guarda o ID gerado pelo RD
                     $retornoRd = $response->json();
                     
                     $deal->update([
@@ -133,9 +135,10 @@ class RdCrmService
 
                     $enviados++;
                 } else {
+                    // SE O RD REJEITAR, GRAVA O MOTIVO EXATO!
                     Log::error("Erro RD CRM POST Deal ID {$deal->id}", [
                         'status' => $response->status(),
-                        'body' => $response->body()
+                        'resposta_do_rd' => $response->body()
                     ]);
                 }
 
