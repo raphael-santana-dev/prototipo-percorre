@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob;
+use App\Modules\Teste\RDCrm\Services\RdCrmService;
 
 Schedule::call(function () {
     $pendentes = Comunicado::where('status', 'pendente')
@@ -19,3 +20,7 @@ Schedule::call(function () {
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::call(function () {
+    RdCrmService::enviarNegociacoesPendentes();
+})->everyMinute();
