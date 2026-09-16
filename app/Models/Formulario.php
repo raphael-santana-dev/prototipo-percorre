@@ -13,7 +13,11 @@ class Formulario extends Model
         'titulo', 'slug', 'descricao', 'status', 'tipo',
         'data_inicio', 'data_fim', 'acesso_livre', 
         'apenas_estudantes', 'roles_permitidas', 'users_permitidos',
-        'unidades_permitidas', 'cursos_permitidos', 'turnos_permitidas', 'exigir_email'
+        'unidades_permitidas', 'cursos_permitidos', 'turnos_permitidas', 'exigir_email',
+        'ciclo_id', 
+        'unidade_id', 
+        'curso_id', 
+        'ciclo_aprendizagem_fase_id'
     ];
 
     protected $casts = [
@@ -29,6 +33,28 @@ class Formulario extends Model
         'data_inicio' => 'datetime',
         'data_fim' => 'datetime',
     ];
+
+    // Relacionamento com Fase de Aprendizagem
+    public function faseAprendizagem()
+    {
+        return $this->belongsTo(CicloAprendizagemFase::class, 'ciclo_aprendizagem_fase_id');
+    }
+
+    // Relacionamentos para Pré-Inscrições
+    public function cicloSeletivo()
+    {
+        return $this->belongsTo(Ciclo::class, 'ciclo_id');
+    }
+
+    public function unidade()
+    {
+        return $this->belongsTo(\App\Modules\Unidade\Domain\Models\Unidade::class, 'unidade_id');
+    }
+
+    public function curso()
+    {
+        return $this->belongsTo(Curso::class, 'curso_id');
+    }
 
     public function campos()
     {

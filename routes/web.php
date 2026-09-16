@@ -114,6 +114,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
     Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
+    // Avaliação de aprendizagem
+    Route::get('/aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class)->name('aprendizagem.index');
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
