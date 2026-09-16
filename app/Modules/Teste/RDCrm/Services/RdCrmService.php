@@ -70,9 +70,40 @@ class RdCrmService
         }
     }
 
-    /**
-     * MÉTODOS POST: Varre a tabela local e envia os contatos não sincronizados para o RD
-     */
+    public static function cadastrarFunilVendas($nomeFunil, $etapasNomes)
+    {
+        $dealStages = [];
+        
+        foreach ($etapasNomes as $index => $etapa) {
+            $dealStages[] = [
+                "name" => $etapa['nome'],
+                "nickname" => \Illuminate\Support\Str::slug($etapa['nome'], '_'), 
+                "order" => $index + 1
+            ];
+        }
+
+        $payload = [
+            "name" => $nomeFunil,
+            "deal_stages" => $dealStages
+        ];
+
+
+        try {
+            $response = Http::timeout(30)->post(self::getBaseUrl('deal_pipelines'), $payload);
+            dd($response->body());
+            if ($response->successful()) {
+                return ['sucesso' => true, 'mensagem' => 'Funil criado com sucesso no RD Station!'];
+            }
+
+            Log::error("Erro RD CRM POST Funil", ['body' => $response->body()]);
+            return ['sucesso' => false, 'mensagem' => 'O RD Station rejeitou a criação do funil.'];
+
+        } catch (\Exception $e) {
+            Log::error("Exceção RD CRM POST Funil", ['erro' => $e->getMessage()]);
+            return ['sucesso' => false, 'mensagem' => 'Erro de conexão com o RD CRM.'];
+        }
+    }
+    
     public static function enviarNegociacoesPendentes()
     {
         // Pega todos os Deals (com o Contato correspondente) que ainda não foram pro RD

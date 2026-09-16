@@ -21,6 +21,10 @@
                 <button wire:click="forcarEnvioPendentes" wire:loading.attr="disabled" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition flex items-center gap-1.5">
                     <i class="ph-bold ph-paper-plane-tilt text-base" wire:loading.class="animate-pulse animate-bounce" wire:target="forcarEnvioPendentes"></i> Forçar Envio
                 </button>
+
+                <button wire:click="abrirModalInput" class="px-4 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-1.5 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <i class="ph-bold ph-textbox text-base"></i> Abrir Modal
+                </button>
             
             </div>
         </x-slot>
@@ -128,5 +132,92 @@
             {{ $deals->links('components.paginacao-customizada') }}
         </div>
     </div>
+
+    @if($modalInputAberto)
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4" 
+             x-data 
+             @keydown.escape.window="$wire.fecharModalInput()">
+            
+            <div class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 max-h-[90vh] overflow-hidden" 
+                 @click.outside="$wire.fecharModalInput()">
+                
+                <!-- Cabeçalho -->
+                <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                    <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="ph-fill ph-funnel text-purpura-500"></i> Criar Novo Funil (RD CRM)
+                    </h2>
+                    <button wire:click="fecharModalInput" class="text-gray-400 hover:text-red-500 transition focus:outline-none">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Corpo (Formulário com Rolagem) -->
+                <div class="p-6 overflow-y-auto custom-scrollbar">
+                    
+                    <!-- Nome do Funil -->
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                            Nome do Funil de Vendas
+                        </label>
+                        <input type="text" 
+                               wire:model="nomeNovoFunil" 
+                               placeholder="Ex: Processo Seletivo 2027..." 
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white" 
+                               autofocus>
+                        @error('nomeNovoFunil') <span class="text-red-500 text-xs mt-1 block font-medium">{{ $message }}</span> @enderror
+                    </div>
+
+                    <!-- Etapas Dinâmicas -->
+                    <div>
+                        <div class="flex justify-between items-end mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                Etapas do Funil
+                            </label>
+                            <button wire:click="adicionarEtapa" type="button" class="text-[10px] uppercase font-bold text-purpura-600 hover:text-purpura-800 dark:text-purpura-400 dark:hover:text-purpura-300 flex items-center gap-1 bg-purpura-50 dark:bg-purpura-900/30 px-2 py-1 rounded transition">
+                                <i class="ph-bold ph-plus"></i> Adicionar Etapa
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            @foreach($etapasNovoFunil as $index => $etapa)
+                                <div class="flex items-start gap-2 group" wire:key="etapa-{{ $index }}">
+                                    <!-- Indicador de Ordem -->
+                                    <div class="mt-2 text-xs font-bold text-gray-400 w-6 text-center">
+                                        {{ $index + 1 }}º
+                                    </div>
+                                    
+                                    <div class="flex-1 relative">
+                                        <input type="text" 
+                                               wire:model="etapasNovoFunil.{{ $index }}.nome" 
+                                               placeholder="Nome da etapa (Ex: Em Negociação)" 
+                                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                                        @error("etapasNovoFunil.{$index}.nome") <span class="text-red-500 text-[10px] mt-0.5 block font-medium absolute">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <!-- Botão Remover Etapa -->
+                                    <button wire:click="removerEtapa({{ $index }})" tabindex="-1" type="button" class="mt-1 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition {{ count($etapasNovoFunil) === 1 ? 'opacity-50 cursor-not-allowed' : '' }}" {{ count($etapasNovoFunil) === 1 ? 'disabled' : '' }} title="Remover Etapa">
+                                        <i class="ph-bold ph-trash text-base"></i>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Rodapé -->
+                <div class="p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3">
+                    <button wire:click="fecharModalInput" class="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 transition">
+                        Cancelar
+                    </button>
+                    <button wire:click="processarInput" class="px-4 py-2 text-sm font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition flex items-center gap-2">
+                        <span wire:loading.remove wire:target="processarInput">Criar Funil</span>
+                        <span wire:loading wire:target="processarInput">Enviando ao RD...</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    @endif
 
 </div>

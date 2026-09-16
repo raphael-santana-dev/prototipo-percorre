@@ -20,6 +20,10 @@ class RdCrmManager extends Component
     public $abaAtiva = 'funis';
     public array $breadcrumbs = [];
 
+    public bool $modalInputAberto = false;
+    public string $nomeNovoFunil = '';
+    public array $etapasNovoFunil = [];
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('rdcrm.acessar'), 403, 'Acesso restrito.');
@@ -94,6 +98,59 @@ class RdCrmManager extends Component
         $this->resetPage();
 
         $this->dispatch('sucesso', msg: 'Contato e Negociação criados! O registro está "Pendente" aguardando o envio.');
+    }
+
+    public function abrirModalInput()
+    {
+        $this->resetValidation();
+        $this->nomeNovoFunil = '';
+        // Inicia o modal já com uma etapa vazia por padrão
+        $this->etapasNovoFunil = [['nome' => '']]; 
+        $this->modalInputAberto = true;
+    }
+
+    public function fecharModalInput()
+    {
+        $this->modalInputAberto = false;
+    }
+
+    // Adiciona uma nova linha de input dinamicamente
+    public function adicionarEtapa()
+    {
+        $this->etapasNovoFunil[] = ['nome' => ''];
+    }
+
+    // Remove uma linha específica e reorganiza a numeração do array
+    public function removerEtapa($index)
+    {
+        unset($this->etapasNovoFunil[$index]);
+        $this->etapasNovoFunil = array_values($this->etapasNovoFunil);
+    }
+
+    public function processarInput()
+    {
+        // 1. Valida se o funil tem nome e se todas as etapas foram preenchidas
+        $this->validate([
+            'nomeNovoFunil' => 'required|string|min:3',
+            'etapasNovoFunil' => 'required|array|min:1',
+            'etapasNovoFunil.*.nome' => 'required|string|min:2',
+        ], [
+            'nomeNovoFunil.required' => 'Dê um nome ao seu novo Funil.',
+            'etapasNovoFunil.*.nome.required' => 'O nome da etapa não pode ficar vazio.'
+        ]);
+
+        // 2. Chama a Service para enviar ao RD Station
+        $resultado = RdCrmService::cadastrarFunilVendas($this->nomeNovoFunil, $this->etapasNovoFunil);
+
+        if ($resultado['sucesso']) {
+            $this->dispatch('sucesso', msg: $resultado['mensagem']);
+            $this->fecharModalInput();
+            
+            // 3. Atualiza os funis locais instantaneamente para o usuário ver o novo funil na tela!
+            $this->atualizarFunis(); 
+        } else {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+        }
     }
 
     public function render()
