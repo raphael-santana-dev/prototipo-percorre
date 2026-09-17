@@ -648,7 +648,6 @@ class RegistrationManager extends Component
     {
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
-        // OTIMIZAÇÃO DE N+1: Consulta única para os 4 cards de métricas.
         $statusCounts = (clone $queryBase)
             ->join('status_inscricoes', 'inscricoes.status_inscricao_id', '=', 'status_inscricoes.id')
             ->selectRaw('status_inscricoes.nome as status_nome, count(inscricoes.id) as total')
@@ -680,19 +679,21 @@ class RegistrationManager extends Component
 
         $inscricoes = $queryBase->paginate($this->porPagina);
 
-        $etapasDb = collect();
+        $etapasDb = [];
         if (!empty($this->filtroCiclo)) {
-            $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->get();
+            // OTIMIZAÇÃO: Pluck array associativo
+            $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->pluck('nome', 'numero')->toArray();
         }
 
-        // CACHE: Armazena as listas de filtros para evitar buscas no banco a cada tecla pressionada na pesquisa
-        $dropdowns = Cache::remember('filtros_registration', 3600, function() {
+        // OTIMIZAÇÃO EXTREMA: pluck('nome', 'id') transforma coleções Eloquent pesadas em arrays levíssimos, 
+        // eliminando overhead de hidratação do Livewire
+        $dropdowns = Cache::remember('filtros_registration_arr', 3600, function() {
             return [
-                'status' => \App\Models\StatusInscricao::orderBy('nome')->get(),
-                'ciclos' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
-                'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
-                'turnos' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),
-                'cursos' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->get(),
+                'status' => \App\Models\StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'ciclos' => \App\Models\Ciclo::orderBy('id', 'desc')->pluck('nome', 'id')->toArray(),
+                'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->pluck('nome', 'id')->toArray(),
+                'turnos' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'cursos' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->pluck('nome', 'id')->toArray(),
             ];
         });
 
