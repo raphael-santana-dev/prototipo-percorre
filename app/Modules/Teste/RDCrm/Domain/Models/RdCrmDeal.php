@@ -1,9 +1,11 @@
 <?php
 namespace App\Modules\Teste\RDCrm\Domain\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class RdCrmDeal extends Model
-{
+{ 
+    use RegistraAuditoria;
     protected $table = 'rd_crm_deals';
     protected $guarded = ['id'];
     

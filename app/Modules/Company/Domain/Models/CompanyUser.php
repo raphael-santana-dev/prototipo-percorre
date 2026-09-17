@@ -8,10 +8,12 @@ use Illuminate\Notifications\Notifiable;
 
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Auth\Passwords\CanResetPassword;
+use App\Traits\RegistraAuditoria;
 
 class CompanyUser extends Authenticatable implements CanResetPasswordContract
 {
     use HasFactory, Notifiable, CanResetPassword;
+    use RegistraAuditoria;
 
     protected $table = 'company_users';
 
