@@ -12,7 +12,7 @@ use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
 use Illuminate\Support\Facades\Cache;
-use App\Modules\ACL\Domain\Models\Permission; // NOVO: Importação do model de permissões
+use App\Modules\ACL\Domain\Models\Permission;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Features - Administrativo')]
@@ -21,6 +21,7 @@ class FeatureManager extends Component
     use WithPagination, ComPadraoListagem, WithToggleStatus;
 
     public $modalAberto = false;
+    public $modalConfirmacaoAberto = false;
     public $featureId = null;
 
     public $modelClass = Feature::class;
@@ -31,7 +32,8 @@ class FeatureManager extends Component
     public $filtro_status = '';
 
     public array $items = [];
-    public bool $replicar_para_permissoes = false; // NOVO: Campo do Checkbox
+    public bool $replicar_para_permissoes = false;
+    public array $pendenciasReplicacao = [];
 
     public function mount()
     {
@@ -56,7 +58,7 @@ class FeatureManager extends Component
     public function abrirModal($id = null)
     {
         $this->resetValidation();
-        $this->reset(['featureId', 'items', 'replicar_para_permissoes']);
+        $this->reset(['featureId', 'items', 'replicar_para_permissoes', 'modalConfirmacaoAberto', 'pendenciasReplicacao']);
 
         if ($id) {
             $feature = Feature::findOrFail($id);
@@ -89,9 +91,10 @@ class FeatureManager extends Component
     public function fecharModal()
     {
         $this->modalAberto = false;
+        $this->modalConfirmacaoAberto = false;
     }
 
-    public function salvar(FeatureService $featureService)
+    public function salvar()
     {
         $this->validate([
             'items.*.module' => 'required|string|min:2',
@@ -103,11 +106,62 @@ class FeatureManager extends Component
             'items.*.description.required' => 'Descrição é obrigatória.',
         ]);
 
+        $this->pendenciasReplicacao = [];
+
+        if ($this->replicar_para_permissoes) {
+            foreach ($this->items as $item) {
+                $fullName = strtolower(trim($item['module'])) . '.' . strtolower(trim($item['action']));
+                $correspondenciaEncontrada = false;
+
+                // Se for edição, verifica se o nome ANTIGO existe na tabela espelho
+                if ($this->featureId) {
+                    $featureAntiga = Feature::find($this->featureId);
+                    if ($featureAntiga) {
+                        $nomeAntigo = $featureAntiga->getOriginal('name');
+                        if (Permission::where('name', $nomeAntigo)->exists()) {
+                            $correspondenciaEncontrada = true;
+                        }
+                    }
+                }
+
+                // Só lança para a pendência se não achou nem o antigo e nem o novo
+                if (!$correspondenciaEncontrada && !Permission::where('name', $fullName)->exists()) {
+                    $this->pendenciasReplicacao[] = $fullName;
+                }
+            }
+        }
+
+        if (!empty($this->pendenciasReplicacao)) {
+            $this->modalConfirmacaoAberto = true;
+            return;
+        }
+
+        $this->efetivarSalvar(true);
+    }
+
+    public function confirmarCriacaoAusentes()
+    {
+        $this->modalConfirmacaoAberto = false;
+        $this->efetivarSalvar(true);
+    }
+
+    public function ignorarCriacaoAusentes()
+    {
+        $this->modalConfirmacaoAberto = false;
+        $this->efetivarSalvar(false);
+    }
+
+    private function efetivarSalvar(bool $criarAusentes = true)
+    {
+        $featureService = app(FeatureService::class);
+
         foreach ($this->items as $index => $item) {
             $moduleFinal = strtolower(trim($item['module']));
             $actionFinal = strtolower(trim($item['action']));
             $fullName = $moduleFinal . '.' . $actionFinal;
+            $nomeAntigo = null;
 
+            // ATUALIZA OU CRIA A FEATURE
             if ($this->featureId) {
                 if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta feature já está cadastrada.');
@@ -130,25 +184,44 @@ class FeatureManager extends Component
                     $this->addError("items.{$index}.action", "A feature {$fullName} já existe.");
                     continue; 
                 }
-                
                 $featureService->create($moduleFinal, $fullName, $item['description']);
             }
 
-            // NOVO: Replicação inteligente para o ACL (Permissões)
+            // ATUALIZA OU CRIA O ESPELHO NO ACL (PERMISSÃO)
             if ($this->replicar_para_permissoes) {
-                Permission::updateOrCreate(
-                    ['name' => $fullName, 'guard_name' => 'web'],
-                    ['module' => $moduleFinal, 'description' => $item['description']]
-                );
+                $permissionTarget = null;
+                
+                // Tenta achar a permissão pelo nome antigo (caso seja uma edição)
+                if ($nomeAntigo) {
+                    $permissionTarget = Permission::where('name', $nomeAntigo)->first();
+                }
+                
+                // Se não achou pelo antigo, tenta achar pelo nome novo
+                if (!$permissionTarget) {
+                    $permissionTarget = Permission::where('name', $fullName)->first();
+                }
+                
+                if ($permissionTarget) {
+                    $permissionTarget->update([
+                        'name' => $fullName,
+                        'module' => $moduleFinal,
+                        'description' => $item['description']
+                    ]);
+                } elseif ($criarAusentes) {
+                    Permission::create([
+                        'name' => $fullName,
+                        'guard_name' => 'web',
+                        'module' => $moduleFinal,
+                        'description' => $item['description']
+                    ]);
+                }
             }
         }
 
         $this->fecharModal();
-        $this->dispatch('sucesso', msg: $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
+        $this->dispatch('sucesso', msg: $this->featureId ? 'Feature e Permissão atualizadas!' : 'Cadastros realizados com sucesso!');
     }
 
-    // ... (restante do código intocado, incluindo os métodos excluir, toggleStatus, getHeadersProperty e render)
-    
     public function excluir($id)
     {
         $feature = Feature::findOrFail($id);
@@ -163,9 +236,7 @@ class FeatureManager extends Component
     {
         $feature = Feature::findOrFail($id);
         $service = app(FeatureService::class);
-        
         $service->toggle($feature->name, !$feature->is_active);
-        
         $this->dispatch('sucesso', msg: 'Status da feature alterado!');
     }
 
@@ -199,12 +270,9 @@ class FeatureManager extends Component
             $query->orderBy('module', 'asc')->orderBy('name', 'asc');
         }
 
-        $features = $query->paginate($this->porPagina);
-        $modulosDisponiveis = Feature::select('module')->distinct()->orderBy('module')->pluck('module');
-
         return view('livewire.feature-toggle.feature-manager', [
-            'registros' => $features,
-            'modulosDisponiveis' => $modulosDisponiveis
+            'registros' => $query->paginate($this->porPagina),
+            'modulosDisponiveis' => Feature::select('module')->distinct()->orderBy('module')->pluck('module')
         ]);
     }
 }
