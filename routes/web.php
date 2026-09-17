@@ -136,7 +136,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/teste/rd-crm', \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class)->name('teste.rdcrm');
 
     Route::get('/financeiro/orcamentos', \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class)->name('financeiro.orcamentos');
-}); 
+});
 
 Route::middleware('auth:web,student')->group(function () {
     Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');
