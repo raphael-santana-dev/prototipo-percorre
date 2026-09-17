@@ -168,6 +168,16 @@
                             </div>
                         @endif
 
+                        <div class="flex items-center pt-2 mt-4 bg-purpura-50 dark:bg-gray-900/50 p-3 rounded-lg border border-purpura-100 dark:border-gray-700">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" wire:model="replicar_para_features" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-gray-800 dark:text-gray-200">Replicar em Features Toggles</span>
+                                    <span class="text-[10px] text-gray-500 font-medium">Cria ou atualiza uma flag de ativação para a tela associada a esta ação.</span>
+                                </div>
+                            </label>
+                        </div>
+
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" wire:click="fecharModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
                                 Cancelar

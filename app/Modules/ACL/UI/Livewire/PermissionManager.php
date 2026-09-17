@@ -6,28 +6,30 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\ACL\Domain\Models\Permission;
+use App\Modules\FeatureToggle\Domain\Models\Feature; // NOVO
+use App\Modules\FeatureToggle\Application\Services\FeatureService; // NOVO
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
+use Illuminate\Support\Facades\Cache; // NOVO
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Permissões - Administrativo')]
 class PermissionManager extends Component
 {
-    use WithPagination;
-    use ComPadraoListagem;
+    use WithPagination, ComPadraoListagem;
 
     public $modalAberto = false;
     public $permissionId = null;
 
     public $modelClass = Permission::class;
     public array $breadcrumbs = [];
-
      
     public $filtro_module = '';
     public $filtro_keyword = '';
 
     public array $items = [];
+    public bool $replicar_para_features = false; // NOVO: Campo do Checkbox
 
     public function mount()
     {
@@ -61,7 +63,7 @@ class PermissionManager extends Component
         }
 
         $this->resetValidation();
-        $this->reset(['permissionId', 'items']);
+        $this->reset(['permissionId', 'items', 'replicar_para_features']);
 
         if ($id) {
             $permission = Permission::findOrFail($id);
@@ -96,7 +98,8 @@ class PermissionManager extends Component
         $this->modalAberto = false;
     }
 
-    public function salvar()
+    // NOVO: Injeção de dependência do FeatureService no método de salvar
+    public function salvar(FeatureService $featureService)
     {
         if ($this->permissionId) {
             abort_if(!feature('acl.permissao.editar'), 403);
@@ -145,12 +148,29 @@ class PermissionManager extends Component
                     'guard_name' => 'web'
                 ]);
             }
+
+            // NOVO: Replicação inteligente para o Módulo de Feature Toggles
+            if ($this->replicar_para_features) {
+                $featureExistente = Feature::where('name', $fullName)->first();
+                
+                if ($featureExistente) {
+                    $featureExistente->update([
+                        'module' => $moduleFinal,
+                        'description' => $item['description']
+                    ]);
+                    Cache::forget("feature_status_{$fullName}");
+                } else {
+                    $featureService->create($moduleFinal, $fullName, $item['description']);
+                }
+            }
         }
 
         $this->fecharModal();
         $this->dispatch('sucesso', msg: $this->permissionId ? 'Permissão atualizada!' : 'Permissões cadastradas com sucesso!');
     }
 
+    // ... (restante do código intocado: métodos excluir, getHeadersProperty e render)
+    
     public function excluir($id)
     {
         abort_if(!feature('acl.permissao.excluir'), 403);

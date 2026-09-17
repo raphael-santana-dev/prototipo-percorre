@@ -12,14 +12,13 @@ use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use App\Traits\WithToggleStatus;
 use Illuminate\Support\Facades\Cache;
+use App\Modules\ACL\Domain\Models\Permission; // NOVO: Importação do model de permissões
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Features - Administrativo')]
 class FeatureManager extends Component
 {
-    use WithPagination;
-    use ComPadraoListagem;
-    use WithToggleStatus;
+    use WithPagination, ComPadraoListagem, WithToggleStatus;
 
     public $modalAberto = false;
     public $featureId = null;
@@ -32,6 +31,7 @@ class FeatureManager extends Component
     public $filtro_status = '';
 
     public array $items = [];
+    public bool $replicar_para_permissoes = false; // NOVO: Campo do Checkbox
 
     public function mount()
     {
@@ -56,7 +56,7 @@ class FeatureManager extends Component
     public function abrirModal($id = null)
     {
         $this->resetValidation();
-        $this->reset(['featureId', 'items']);
+        $this->reset(['featureId', 'items', 'replicar_para_permissoes']);
 
         if ($id) {
             $feature = Feature::findOrFail($id);
@@ -133,12 +133,22 @@ class FeatureManager extends Component
                 
                 $featureService->create($moduleFinal, $fullName, $item['description']);
             }
+
+            // NOVO: Replicação inteligente para o ACL (Permissões)
+            if ($this->replicar_para_permissoes) {
+                Permission::updateOrCreate(
+                    ['name' => $fullName, 'guard_name' => 'web'],
+                    ['module' => $moduleFinal, 'description' => $item['description']]
+                );
+            }
         }
 
         $this->fecharModal();
         $this->dispatch('sucesso', msg: $this->featureId ? 'Feature atualizada!' : 'Features cadastradas com sucesso!');
     }
 
+    // ... (restante do código intocado, incluindo os métodos excluir, toggleStatus, getHeadersProperty e render)
+    
     public function excluir($id)
     {
         $feature = Feature::findOrFail($id);
