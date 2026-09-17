@@ -13,6 +13,7 @@ use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Str;
 use App\Helpers\BreadcrumbHelper;
+use Illuminate\Support\Facades\Cache;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
@@ -482,6 +483,11 @@ class RegistrationManager extends Component
 
     public function solicitarExportacao($formato = 'csv')
     {
+        // CORREÇÃO: Impede que o objeto $event do Livewire assuma o valor da string
+        if (!is_string($formato)) {
+            $formato = 'csv';
+        }
+
         $filtrosAtuais = [
             'nome' => $this->filtroNome,
             'status' => $this->filtroStatus,
@@ -642,11 +648,24 @@ class RegistrationManager extends Component
     {
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
+        // OTIMIZAÇÃO DE N+1: Consulta única para os 4 cards de métricas.
+        $statusCounts = (clone $queryBase)
+            ->join('status_inscricoes', 'inscricoes.status_inscricao_id', '=', 'status_inscricoes.id')
+            ->selectRaw('status_inscricoes.nome as status_nome, count(inscricoes.id) as total')
+            ->groupBy('status_inscricoes.nome')
+            ->pluck('total', 'status_nome')
+            ->toArray();
+
+        $totalGeral = (clone $queryBase)->count();
+        $totalAprovados = $statusCounts['Aprovado'] ?? 0;
+        $totalReprovados = $statusCounts['Reprovado'] ?? 0;
+        $totalPendentes = $totalGeral - ($totalAprovados + $totalReprovados);
+
         $metricas = [
-            ['label' => 'Total', 'value' => (clone $queryBase)->count(), 'color_text' => 'text-blue-600 dark:text-blue-400', 'color_bg' => 'bg-blue-100 dark:bg-blue-900/30'],
-            ['label' => 'Aprovados', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Aprovado'))->count(), 'color_text' => 'text-green-600 dark:text-green-400', 'color_bg' => 'bg-green-100 dark:bg-green-900/30'],
-            ['label' => 'Reprovados', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->where('nome', 'Reprovado'))->count(), 'color_text' => 'text-red-600 dark:text-red-400', 'color_bg' => 'bg-red-100 dark:bg-red-900/30'],
-            ['label' => 'Pendentes', 'value' => (clone $queryBase)->whereHas('statusInscricao', fn ($q) => $q->whereNotIn('nome', ['Aprovado', 'Reprovado']))->count(), 'color_text' => 'text-yellow-600 dark:text-yellow-400', 'color_bg' => 'bg-yellow-100 dark:bg-yellow-900/30'],
+            ['label' => 'Total', 'value' => $totalGeral, 'color_text' => 'text-blue-600 dark:text-blue-400', 'color_bg' => 'bg-blue-100 dark:bg-blue-900/30'],
+            ['label' => 'Aprovados', 'value' => $totalAprovados, 'color_text' => 'text-green-600 dark:text-green-400', 'color_bg' => 'bg-green-100 dark:bg-green-900/30'],
+            ['label' => 'Reprovados', 'value' => $totalReprovados, 'color_text' => 'text-red-600 dark:text-red-400', 'color_bg' => 'bg-red-100 dark:bg-red-900/30'],
+            ['label' => 'Pendentes', 'value' => $totalPendentes, 'color_text' => 'text-yellow-600 dark:text-yellow-400', 'color_bg' => 'bg-yellow-100 dark:bg-yellow-900/30'],
         ];
 
         if ($this->ordenacaoCampo) {
@@ -666,15 +685,26 @@ class RegistrationManager extends Component
             $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->get();
         }
 
+        // CACHE: Armazena as listas de filtros para evitar buscas no banco a cada tecla pressionada na pesquisa
+        $dropdowns = Cache::remember('filtros_registration', 3600, function() {
+            return [
+                'status' => \App\Models\StatusInscricao::orderBy('nome')->get(),
+                'ciclos' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
+                'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
+                'turnos' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),
+                'cursos' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->get(),
+            ];
+        });
+
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'etapasDb' => $etapasDb,
-            'statusInscricoesDb' => \App\Models\StatusInscricao::orderBy('nome')->get(),
-            'ciclosDb' => \App\Models\Ciclo::orderBy('id', 'desc')->get(),
-            'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get(),
-            'turnosDb' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->get(),
-            'cursosDb' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->get(),
+            'statusInscricoesDb' => $dropdowns['status'],
+            'ciclosDb' => $dropdowns['ciclos'],
+            'unidadesDb' => $dropdowns['unidades'],
+            'turnosDb' => $dropdowns['turnos'],
+            'cursosDb' => $dropdowns['cursos'],
         ]);
     }
 }

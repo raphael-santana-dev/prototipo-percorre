@@ -82,36 +82,43 @@ class Relatorios extends Component
         abort_if(!feature('relatorio.exportar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('relatorio.exportar'), 403);
         
-        $registros = $this->getQueryBase()->get();
+        $query = $this->getQueryBase();
         $csvFileName = 'relatorio_avaliacoes_' . date('Ymd_His') . '.csv';
 
-        $studentIds = $registros->pluck('student_id')->unique();
-        $todosItens = AlunoAvaliacaoItem::join('aluno_avaliacoes', 'aluno_avaliacoes.id', '=', 'aluno_avaliacao_itens.aluno_avaliacao_id')
-            ->whereIn('aluno_avaliacoes.student_id', $studentIds)
-            ->select('aluno_avaliacao_itens.nivel_nps', 'aluno_avaliacoes.fase', 'aluno_avaliacoes.student_id', 'aluno_avaliacoes.periodo_id')
-            ->get();
-
-        $callback = function() use($registros, $todosItens) {
+        $callback = function() use($query) {
             $file = fopen('php://output', 'w');
             fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             
             fputcsv($file, ['ID_ALUNO', 'NOME_ALUNO', 'TURMA', 'ANO_PERIODO', 'CICLO', 'MEDIA_PARCIAL', 'MEDIA_FINAL'], ';');
 
-            foreach ($registros as $reg) {
-                $itensAluno = $todosItens->where('student_id', $reg->student_id)->where('periodo_id', $reg->periodo_id);
-                $np = $itensAluno->whereIn('fase', ['1', '2'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
-                $nf = $itensAluno->whereIn('fase', ['3'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
+            // DELEGAÇÃO DE MEMÓRIA: Usa Chunk de 500 registros para evitar Out Of Memory (OOM) no servidor.
+            $query->chunk(500, function ($registros) use ($file) {
+                $studentIds = $registros->pluck('student_id')->unique();
+                $periodoIds = $registros->pluck('periodo_id')->unique();
                 
-                fputcsv($file, [
-                    $reg->student_id,
-                    $reg->student->name ?? 'N/A',
-                    $reg->turma->nome ?? 'N/A',
-                    $reg->periodo->ano ?? 'N/A',
-                    $reg->periodo->ciclo ?? 'N/A',
-                    $np->count() > 0 ? round($np->avg(), 1) : '',
-                    $nf->count() > 0 ? round($nf->avg(), 1) : ''
-                ], ';');
-            }
+                $todosItens = \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacaoItem::join('aluno_avaliacoes', 'aluno_avaliacoes.id', '=', 'aluno_avaliacao_itens.aluno_avaliacao_id')
+                    ->whereIn('aluno_avaliacoes.student_id', $studentIds)
+                    ->whereIn('aluno_avaliacoes.periodo_id', $periodoIds)
+                    ->select('aluno_avaliacao_itens.nivel_nps', 'aluno_avaliacoes.fase', 'aluno_avaliacoes.student_id', 'aluno_avaliacoes.periodo_id')
+                    ->get();
+
+                foreach ($registros as $reg) {
+                    $itensAluno = $todosItens->where('student_id', $reg->student_id)->where('periodo_id', $reg->periodo_id);
+                    $np = $itensAluno->whereIn('fase', ['1', '2'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
+                    $nf = $itensAluno->whereIn('fase', ['3'])->pluck('nivel_nps')->filter(fn($v) => is_numeric($v));
+                    
+                    fputcsv($file, [
+                        $reg->student_id,
+                        $reg->student->name ?? 'N/A',
+                        $reg->turma->nome ?? 'N/A',
+                        $reg->periodo->ano ?? 'N/A',
+                        $reg->periodo->ciclo ?? 'N/A',
+                        $np->count() > 0 ? round($np->avg(), 1) : '',
+                        $nf->count() > 0 ? round($nf->avg(), 1) : ''
+                    ], ';');
+                }
+            });
+
             fclose($file);
         };
 

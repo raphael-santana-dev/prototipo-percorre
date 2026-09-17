@@ -62,136 +62,127 @@ class Dashboard extends Component
     {
         if (!$this->filtroCiclo) return;
 
-        $camposFormulario = CampoFormulario::where('ciclo_id', $this->filtroCiclo)
-            ->whereIn('tipo', ['select', 'radio'])
-            ->get();
+        // OTIMIZAÇÃO: Cache de 30 minutos (1800 segundos). Isso impede que a página derreta 
+        // o banco de dados se 50 administradores derem F5 ao mesmo tempo.
+        $cacheKey = 'dashboard_gerencial_ciclo_' . $this->filtroCiclo;
 
-        $inscricoes = Inscricao::select('id', 'status_inscricao_id', 'curso_id', 'unidade_id', 'data_nascimento', 'possui_deficiencia', 'dados_dinamicos', 'created_at')
-            ->with(['statusInscricao:id,nome', 'curso:id,nome', 'unidade:id,nome'])
-            ->where('ciclo_id', $this->filtroCiclo)
-            ->get();
-
-        $totalVagas = OfertaVaga::where('ciclo_id', $this->filtroCiclo)->sum('vagas');
-        $inscricoesPorDia = [];
-        $statusContagem = []; $cursoContagem = []; $unidadeContagem = [];
-        $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
-        $pcdContagem = ['Sim' => 0, 'Não' => 0];
-        $vagasPreenchidas = 0;
-        
-        $contadoresDinamicos = [];
-        foreach ($camposFormulario as $campo) {
-            $contadoresDinamicos[$campo->name] = [
-                'label' => $campo->label,
-                'opcoes' => []
-            ];
-        }
-
-        foreach ($inscricoes as $insc) {
-            if ($insc->created_at) {
-                $dataStr = $insc->created_at->format('Y-m-d');
-                $inscricoesPorDia[$dataStr] = ($inscricoesPorDia[$dataStr] ?? 0) + 1;
-            }
-
-            $status = $insc->statusInscricao->nome ?? 'Pendente';
-            $statusContagem[$status] = ($statusContagem[$status] ?? 0) + 1;
-            if (in_array($status, ['Aprovado', 'Selecionado'])) $vagasPreenchidas++;
-
-            $curso = $insc->curso->nome ?? 'Sem Curso';
-            $cursoContagem[$curso] = ($cursoContagem[$curso] ?? 0) + 1;
+        $dadosProcessados = \Illuminate\Support\Facades\Cache::remember($cacheKey, 1800, function () {
             
-            $unidade = $insc->unidade->nome ?? 'Sem Unidade';
-            $unidadeContagem[$unidade] = ($unidadeContagem[$unidade] ?? 0) + 1;
+            // 1. DELEGAÇÃO PARA O BANCO (GROUP BY NATIVO) em vez de iterar foreach no PHP
+            $statusContagem = Inscricao::where('ciclo_id', $this->filtroCiclo)
+                ->join('status_inscricoes', 'inscricoes.status_inscricao_id', '=', 'status_inscricoes.id')
+                ->groupBy('status_inscricoes.nome')
+                ->pluck(DB::raw('count(inscricoes.id) as total'), 'status_inscricoes.nome')->toArray();
 
-            if ($insc->data_nascimento) {
-                $idade = Carbon::parse($insc->data_nascimento)->age;
-                if ($idade < 18) $idadesContagem['Menor de 18']++;
-                elseif ($idade <= 24) $idadesContagem['18 a 24']++;
-                elseif ($idade <= 34) $idadesContagem['25 a 34']++;
-                elseif ($idade <= 45) $idadesContagem['35 a 45']++;
-                else $idadesContagem['Acima de 45']++;
-            }
+            $cursoContagem = Inscricao::where('ciclo_id', $this->filtroCiclo)->whereNotNull('curso_id')
+                ->join('cursos', 'inscricoes.curso_id', '=', 'cursos.id')
+                ->groupBy('cursos.nome')
+                ->pluck(DB::raw('count(inscricoes.id) as total'), 'cursos.nome')->toArray();
 
-            $isPcd = in_array(strtolower(trim($insc->possui_deficiencia)), ['sim', 's', '1', 'true']) ? 'Sim' : 'Não';
-            $pcdContagem[$isPcd]++;
+            $unidadeContagem = Inscricao::where('ciclo_id', $this->filtroCiclo)->whereNotNull('unidade_id')
+                ->join('unidades', 'inscricoes.unidade_id', '=', 'unidades.id')
+                ->groupBy('unidades.nome')
+                ->pluck(DB::raw('count(inscricoes.id) as total'), 'unidades.nome')->toArray();
 
-            $dinamicos = is_string($insc->dados_dinamicos) ? json_decode($insc->dados_dinamicos, true) : ($insc->dados_dinamicos ?? []);
-            
-            foreach ($camposFormulario as $campo) {
-                $valorResposta = trim((string) ($dinamicos[$campo->name] ?? ''));
-                if (empty($valorResposta)) {
-                    $valorResposta = 'Não Informado';
-                }
+            $inscricoesPorDia = Inscricao::where('ciclo_id', $this->filtroCiclo)
+                ->selectRaw('DATE(created_at) as data_criacao, count(id) as total')
+                ->groupBy('data_criacao')
+                ->pluck('total', 'data_criacao')
+                ->toArray();
+
+            $pcdContagemDb = Inscricao::where('ciclo_id', $this->filtroCiclo)
+                ->groupBy('possui_deficiencia')
+                ->pluck(DB::raw('count(id) as total'), 'possui_deficiencia')->toArray();
+
+            // 2. Extração limpa para campos dinâmicos e idades (apenas os dados necessários)
+            $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'data_nascimento')
+                ->where('ciclo_id', $this->filtroCiclo)->get();
                 
-                $contadoresDinamicos[$campo->name]['opcoes'][$valorResposta] = 
-                    ($contadoresDinamicos[$campo->name]['opcoes'][$valorResposta] ?? 0) + 1;
+            $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
+            $pcdContagem = ['Sim' => 0, 'Não' => 0];
+            $vagasPreenchidas = 0;
+
+            foreach (['Aprovado', 'Selecionado'] as $s) {
+                if (isset($statusContagem[$s])) $vagasPreenchidas += $statusContagem[$s];
             }
-        }
 
-        arsort($cursoContagem);
-        ksort($inscricoesPorDia);
+            foreach ($pcdContagemDb as $k => $v) {
+                $isPcd = in_array(strtolower(trim($k)), ['sim', 's', '1', 'true']) ? 'Sim' : 'Não';
+                $pcdContagem[$isPcd] += $v;
+            }
 
-        $labelsDias = [];
-        $dadosDias = [];
-        foreach ($inscricoesPorDia as $data => $qtd) {
-            $labelsDias[] = Carbon::parse($data)->format('d/m/Y');
-            $dadosDias[] = $qtd;
-        }
+            $camposFormulario = CampoFormulario::where('ciclo_id', $this->filtroCiclo)
+                ->whereIn('tipo', ['select', 'radio'])->get();
 
-        $this->graficoInscricoesDia = [
-            'title' => 'Inscrições diárias', 'type' => 'area', 'height' => 350,
-            'labels' => $labelsDias,
-            'series' => [['name' => 'Novas Inscrições', 'data' => $dadosDias]]
-        ];
-        $this->graficoVagas = [
-            'title' => 'Vagas disponíveis', 'type' => 'donut', 'height' => 350,
-            'labels' => ['Vagas Preenchidas', 'Vagas Abertas'],
-            'series' => [$vagasPreenchidas, max(0, $totalVagas - $vagasPreenchidas)]
-        ];
-        $this->graficoInscricoes = [
-            'title' => 'Status', 'type' => 'bar', 'height' => 350,
-            'labels' => array_keys($statusContagem),
-            'series' => [['name' => 'Inscritos', 'data' => array_values($statusContagem)]]
-        ];
-        $this->graficoCursos = [
-            'title' => 'Cursos', 'type' => 'area', 'height' => 350,
-            'labels' => array_keys($cursoContagem),
-            'series' => [['name' => 'Inscritos', 'data' => array_values($cursoContagem)]]
-        ];
-        $this->graficoUnidades = [
-            'title' => 'Unidades', 'type' => 'donut', 'height' => 350,
-            'labels' => array_keys($unidadeContagem),
-            'series' => array_values($unidadeContagem)
-        ];
-        $this->graficoIdades = [
-            'title' => 'Faixa Etária', 'type' => 'pie', 'height' => 350,
-            'labels' => array_keys($idadesContagem),
-            'series' => array_values($idadesContagem)
-        ];
-        $this->graficoPCD = [
-            'title' => 'Pessoas com Deficiência (PCD)', 'type' => 'donut', 'height' => 350,
-            'labels' => array_keys($pcdContagem),
-            'series' => array_values($pcdContagem)
-        ];
+            $contadoresDinamicos = [];
+            foreach ($camposFormulario as $campo) {
+                $contadoresDinamicos[$campo->name] = ['label' => $campo->label, 'opcoes' => []];
+            }
 
-        $this->graficosDinamicos = [];
-        foreach ($contadoresDinamicos as $name => $dados) {
-            arsort($dados['opcoes']); 
-            
-            $tipoGrafico = count($dados['opcoes']) > 5 ? 'bar' : 'donut';
+            foreach ($inscricoesDinamicas as $insc) {
+                if ($insc->data_nascimento) {
+                    $idade = Carbon::parse($insc->data_nascimento)->age;
+                    if ($idade < 18) $idadesContagem['Menor de 18']++;
+                    elseif ($idade <= 24) $idadesContagem['18 a 24']++;
+                    elseif ($idade <= 34) $idadesContagem['25 a 34']++;
+                    elseif ($idade <= 45) $idadesContagem['35 a 45']++;
+                    else $idadesContagem['Acima de 45']++;
+                }
 
-            $this->graficosDinamicos[] = [
-                'id' => 'grafico-dinamico-' . $name,
-                'config' => [
-                    'title' => Str::limit($dados['label'], 45),
-                    'type' => $tipoGrafico,
-                    'height' => 350,
-                    'labels' => array_keys($dados['opcoes']),
-                    'series' => $tipoGrafico === 'bar' 
-                        ? [['name' => 'Qtd', 'data' => array_values($dados['opcoes'])]] 
-                        : array_values($dados['opcoes'])
-                ]
+                $dinamicos = is_string($insc->dados_dinamicos) ? json_decode($insc->dados_dinamicos, true) : ($insc->dados_dinamicos ?? []);
+                foreach ($camposFormulario as $campo) {
+                    $valorResposta = trim((string) ($dinamicos[$campo->name] ?? ''));
+                    $valorResposta = empty($valorResposta) ? 'Não Informado' : $valorResposta;
+                    $contadoresDinamicos[$campo->name]['opcoes'][$valorResposta] = ($contadoresDinamicos[$campo->name]['opcoes'][$valorResposta] ?? 0) + 1;
+                }
+            }
+
+            arsort($cursoContagem);
+            ksort($inscricoesPorDia);
+
+            $labelsDias = [];
+            $dadosDias = [];
+            foreach ($inscricoesPorDia as $data => $qtd) {
+                $labelsDias[] = Carbon::parse($data)->format('d/m/Y');
+                $dadosDias[] = $qtd;
+            }
+
+            $graficosDinamicos = [];
+            foreach ($contadoresDinamicos as $name => $dados) {
+                arsort($dados['opcoes']); 
+                $tipoGrafico = count($dados['opcoes']) > 5 ? 'bar' : 'donut';
+                $graficosDinamicos[] = [
+                    'id' => 'grafico-dinamico-' . $name,
+                    'config' => [
+                        'title' => Str::limit($dados['label'], 45), 'type' => $tipoGrafico, 'height' => 350,
+                        'labels' => array_keys($dados['opcoes']),
+                        'series' => $tipoGrafico === 'bar' ? [['name' => 'Qtd', 'data' => array_values($dados['opcoes'])]] : array_values($dados['opcoes'])
+                    ]
+                ];
+            }
+
+            return [
+                'totalVagas' => OfertaVaga::where('ciclo_id', $this->filtroCiclo)->sum('vagas'),
+                'vagasPreenchidas' => $vagasPreenchidas,
+                'labelsDias' => $labelsDias, 'dadosDias' => $dadosDias,
+                'statusContagem' => $statusContagem,
+                'cursoContagem' => $cursoContagem,
+                'unidadeContagem' => $unidadeContagem,
+                'idadesContagem' => $idadesContagem,
+                'pcdContagem' => $pcdContagem,
+                'graficosDinamicos' => $graficosDinamicos
             ];
-        }
+        });
+
+        // 3. Alocação dos dados do cache para as variáveis públicas do Livewire
+        $this->graficoInscricoesDia = ['title' => 'Inscrições diárias', 'type' => 'area', 'height' => 350, 'labels' => $dadosProcessados['labelsDias'], 'series' => [['name' => 'Novas Inscrições', 'data' => $dadosProcessados['dadosDias']]]];
+        $this->graficoVagas = ['title' => 'Vagas disponíveis', 'type' => 'donut', 'height' => 350, 'labels' => ['Vagas Preenchidas', 'Vagas Abertas'], 'series' => [$dadosProcessados['vagasPreenchidas'], max(0, $dadosProcessados['totalVagas'] - $dadosProcessados['vagasPreenchidas'])]];
+        $this->graficoInscricoes = ['title' => 'Status', 'type' => 'bar', 'height' => 350, 'labels' => array_keys($dadosProcessados['statusContagem']), 'series' => [['name' => 'Inscritos', 'data' => array_values($dadosProcessados['statusContagem'])]]];
+        $this->graficoCursos = ['title' => 'Cursos', 'type' => 'area', 'height' => 350, 'labels' => array_keys($dadosProcessados['cursoContagem']), 'series' => [['name' => 'Inscritos', 'data' => array_values($dadosProcessados['cursoContagem'])]]];
+        $this->graficoUnidades = ['title' => 'Unidades', 'type' => 'donut', 'height' => 350, 'labels' => array_keys($dadosProcessados['unidadeContagem']), 'series' => array_values($dadosProcessados['unidadeContagem'])];
+        $this->graficoIdades = ['title' => 'Faixa Etária', 'type' => 'pie', 'height' => 350, 'labels' => array_keys($dadosProcessados['idadesContagem']), 'series' => array_values($dadosProcessados['idadesContagem'])];
+        $this->graficoPCD = ['title' => 'Pessoas com Deficiência (PCD)', 'type' => 'donut', 'height' => 350, 'labels' => array_keys($dadosProcessados['pcdContagem']), 'series' => array_values($dadosProcessados['pcdContagem'])];
+        $this->graficosDinamicos = $dadosProcessados['graficosDinamicos'];
 
         $this->carregando = false;
     }

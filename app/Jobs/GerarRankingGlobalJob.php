@@ -7,8 +7,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use App\Models\Ciclo;
-use App\Models\Inscricao;
 use App\Models\Importacao;
 
 class GerarRankingGlobalJob implements ShouldQueue
@@ -37,59 +37,42 @@ class GerarRankingGlobalJob implements ShouldQueue
 
         if ($tracking) $tracking->update(['total_linhas' => $totalInscricoes]);
 
-        $processados = 0;
-
         try {
             foreach ($ciclos as $ciclo) {
-                Inscricao::where('ciclo_id', $ciclo->id)->update([
+                // 1. Zera os rankings atuais do ciclo de forma rápida
+                DB::table('inscricoes')->where('ciclo_id', $ciclo->id)->update([
                     'posicao_ranking' => null, 
                     'posicao_ranking_geral' => null,
                     'posicao_ranking_unidade' => null,
                     'posicao_ranking_curso' => null,
                 ]);
 
-                $inscricoes = $ciclo->inscricoes()
-                    ->orderBy('pontuacao_total', 'desc')
-                    ->orderBy('created_at', 'asc')
-                    ->get();
+                // 2. Delega 100% do cálculo e atualização para o PostgreSQL (Window Functions)
+                // Isso elimina o risco de OOM (Out of Memory) no PHP e roda em milissegundos.
+                $query = "
+                    WITH RankedData AS (
+                        SELECT id,
+                            RANK() OVER (ORDER BY pontuacao_total DESC, created_at ASC) as rank_geral,
+                            RANK() OVER (PARTITION BY unidade_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_unidade,
+                            RANK() OVER (PARTITION BY unidade_id, curso_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_curso,
+                            RANK() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_turma
+                        FROM inscricoes
+                        WHERE ciclo_id = :ciclo_id
+                          AND deleted_at IS NULL
+                    )
+                    UPDATE inscricoes i
+                    SET posicao_ranking_geral = r.rank_geral,
+                        posicao_ranking_unidade = r.rank_unidade,
+                        posicao_ranking_curso = r.rank_curso,
+                        posicao_ranking = r.rank_turma
+                    FROM RankedData r
+                    WHERE i.id = r.id;
+                ";
 
-                foreach ($inscricoes as $index => $inscricao) {
-                    $inscricao->posicao_ranking_geral = $index + 1;
-                }
-
-                $agrupadoUnidade = $inscricoes->whereNotNull('unidade_id')->groupBy('unidade_id');
-                foreach ($agrupadoUnidade as $grupo) {
-                    $pos = 1;
-                    foreach ($grupo as $inscricao) { $inscricao->posicao_ranking_unidade = $pos++; }
-                }
-
-                $agrupadoCurso = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->groupBy(function($item) {
-                    return $item->unidade_id . '-' . $item->curso_id;
-                });
-                foreach ($agrupadoCurso as $grupo) {
-                    $pos = 1;
-                    foreach ($grupo as $inscricao) { $inscricao->posicao_ranking_curso = $pos++; }
-                }
-
-                $agrupadoTurma = $inscricoes->whereNotNull('unidade_id')->whereNotNull('curso_id')->whereNotNull('turno_id')->groupBy(function($item) {
-                    return $item->unidade_id . '-' . $item->curso_id . '-' . $item->turno_id;
-                });
-                foreach ($agrupadoTurma as $grupo) {
-                    $pos = 1;
-                    foreach ($grupo as $inscricao) { $inscricao->posicao_ranking = $pos++; }
-                }
-
-                foreach ($inscricoes as $inscricao) {
-                    $inscricao->saveQuietly(); 
-                    $processados++;
-                    
-                    if ($processados % 100 === 0 && $tracking) {
-                        $tracking->update(['linhas_processadas' => $processados]);
-                    }
-                }
+                DB::statement($query, ['ciclo_id' => $ciclo->id]);
             }
 
-            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $processados]);
+            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $totalInscricoes]);
 
         } catch (\Throwable $e) {
             if ($tracking) {
