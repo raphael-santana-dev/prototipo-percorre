@@ -264,8 +264,7 @@ class DynamicFields extends Component
         $this->slug = \Illuminate\Support\Str::slug($this->slug);
 
         $this->validate([
-            'bg_image_upload' => 'nullable|image|max:10240',
-            'slug' => [
+            'bg_image_upload' => 'nullable|mimes:jpg,jpeg,png,webp|max:10240',            'slug' => [
                 'required',
                 'regex:/^[a-z0-9\-]+$/',
                 \Illuminate\Validation\Rule::unique($tabelaFoco, 'slug')->ignore($this->contextoId)
@@ -300,7 +299,6 @@ class DynamicFields extends Component
                 'label' => 'Configurações Globais',
                 'tipo' => 'config', 
                 'largura' => 12,
-                // A correção exata para o banco de dados armazenar a customização visual:
                 'configuracoes' => is_array($this->formSettings) ? json_encode($this->formSettings) : $this->formSettings
             ]
         );
