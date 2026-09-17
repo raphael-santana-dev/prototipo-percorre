@@ -6,6 +6,11 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Ciclo;
+use App\Models\Curso;
+use App\Models\StatusInscricao;
+use App\Models\OfertaVaga;
+use App\Modules\Matricula\Domain\Models\DocumentoExigido;
+use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
@@ -19,8 +24,32 @@ class PeriodManager extends Component
     use WithPagination, ComPadraoListagem, WithToggleStatus;
 
     public $modalAberto = false;
+    public int $passoAtual = 1;
+    public ?int $cicloIdEmEdicao = null;
+
+    // Passo 1: Dados Básicos
     public $nome, $ano, $semestre, $data_inicio, $data_fim, $status = false;
-    
+
+    // Passo 2: Estrutura Acadêmica
+    public array $unidadesSelecionadas = []; 
+    public array $cursosSelecionados = []; 
+    public array $turnosSelecionados = []; 
+    public $activeUnidadeId = null;
+    public $activeCursoId = null;
+
+    // Passo 3: Distribuição de Vagas
+    public array $ofertasVagas = [];
+
+    // Passo 4: Etapas do Ciclo (Pipeline)
+    public array $statusSelecionados = [];
+    public $novoStatusSelecionado = ''; 
+
+    // Passo 5: Documentos Exigidos
+    public array $documentosExigidos = []; 
+
+    // Passo 6: Conclusão / Sucesso
+    public ?int $cicloCriadoId = null;
+
     public $modelClass = Ciclo::class;
     public array $breadcrumbs = [];
 
@@ -29,25 +58,13 @@ class PeriodManager extends Component
     public $filtro_status = '';
 
     public bool $unicoAtivo = true;
-    
+
     public function mount()
     {
-        abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403, 'Acesso restrito.');
+        abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
-    }
-
-    protected function rules()
-    {
-        return [
-            'nome' => 'nullable|string|max:255',
-            'ano' => 'required|integer|min:2020',
-            'semestre' => 'required|integer|in:1,2',
-            'data_inicio' => 'required|date',
-            'data_fim' => 'required|date|after:data_inicio',
-            'status' => 'boolean',
-        ];
     }
 
     public function updating($nomePropriedade)
@@ -65,23 +82,73 @@ class PeriodManager extends Component
 
     public function abrirModal()
     {
-        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403, 'Sem permissão');
+        abort_if(!feature('ciclo.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
 
         $this->resetValidation();
-        $this->reset(['nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status']);
+        $this->reset([
+            'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status',
+            'unidadesSelecionadas', 'cursosSelecionados', 'turnosSelecionados',
+            'ofertasVagas', 'statusSelecionados', 'documentosExigidos',
+            'activeUnidadeId', 'activeCursoId', 'cicloCriadoId', 'cicloIdEmEdicao'
+        ]);
         
         $this->ano = date('Y');
         $this->semestre = date('n') <= 6 ? 1 : 2;
+        $this->passoAtual = 1;
+
+        // Carrega status padrão iniciais se houver
+        $statusIniciais = StatusInscricao::orderBy('id')->take(3)->pluck('id')->map(fn($v) => (string)$v)->toArray();
+        $this->statusSelecionados = $statusIniciais;
+
         $this->modalAberto = true;
     }
 
-    public function salvar()
+    // Navegação do Stepper Wizard
+    public function proximoPasso()
     {
-        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403, 'Sem permissão');
-        $this->validate();
+        if ($this->passoAtual === 1) {
+            $this->validate([
+                'ano' => 'required|integer|min:2020',
+                'semestre' => 'required|integer|in:1,2',
+                'data_inicio' => 'required|date',
+                'data_fim' => 'required|date|after:data_inicio',
+            ]);
+            $this->salvarPasso1Parcial();
+        } elseif ($this->passoAtual === 2) {
+            $this->salvarPasso2Parcial();
+        } elseif ($this->passoAtual === 3) {
+            $this->salvarPasso3Parcial();
+        } elseif ($this->passoAtual === 4) {
+            $this->salvarPasso4Parcial();
+        } elseif ($this->passoAtual === 5) {
+            $this->salvarPasso5Final();
+            return; // O passo 5 persiste tudo e vai para o sucesso (Passo 6)
+        }
 
+        if ($this->passoAtual < 6) {
+            $this->passoAtual++;
+        }
+    }
+
+    public function passoAnterior()
+    {
+        if ($this->passoAtual > 1) {
+            $this->passoAtual--;
+        }
+    }
+
+    public function irParaPasso(int $passo)
+    {
+        // Só permite navegar via menu lateral se o ciclo já tiver sido criado no banco
+        if ($passo < $this->passoAtual || $this->cicloIdEmEdicao) {
+            $this->passoAtual = $passo;
+        }
+    }
+
+    // Persistência Incremental por Passo
+    private function salvarPasso1Parcial()
+    {
         if ($this->status) {
             Ciclo::query()->update(['status' => false]);
         }
@@ -91,55 +158,121 @@ class PeriodManager extends Component
             $nomeFinal = "{$this->ano} - {$this->semestre}º Semestre";
         }
 
-        $cicloSalvo = Ciclo::create([
-            'nome' => $nomeFinal,
-            'ano' => $this->ano,
-            'semestre' => $this->semestre,
-            'data_inicio' => $this->data_inicio,
-            'data_fim' => $this->data_fim,
-            'status' => $this->status,
-            'slug' => Str::slug($nomeFinal) . '-' . time()
-        ]);
-
-        $this->modalAberto = false;
-        session()->flash('sucesso', 'Ciclo criado! Agora configure os Cursos e Vagas.');
-        
-        return redirect()->route('ciclos.edit', $cicloSalvo->id);
+        if ($this->cicloIdEmEdicao) {
+            $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
+            $ciclo->update([
+                'nome' => $nomeFinal, 'ano' => $this->ano, 'semestre' => $this->semestre,
+                'data_inicio' => $this->data_inicio, 'data_fim' => $this->data_fim, 'status' => $this->status
+            ]);
+        } else {
+            $ciclo = Ciclo::create([
+                'nome' => $nomeFinal, 'ano' => $this->ano, 'semestre' => $this->semestre,
+                'data_inicio' => $this->data_inicio, 'data_fim' => $this->data_fim, 'status' => $this->status,
+                'slug' => Str::slug($nomeFinal) . '-' . time()
+            ]);
+            $this->cicloIdEmEdicao = $ciclo->id;
+            $this->cicloCriadoId = $ciclo->id;
+        }
     }
+
+    private function salvarPasso2Parcial()
+    {
+        if (!$this->cicloIdEmEdicao) return;
+        $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
+        $ciclo->unidades()->sync($this->unidadesSelecionadas);
+        $ciclo->cursos()->sync($this->cursosSelecionados);
+        $ciclo->turnos()->sync($this->turnosSelecionados);
+    }
+
+    private function salvarPasso3Parcial()
+    {
+        if (!$this->cicloIdEmEdicao) return;
+        OfertaVaga::where('ciclo_id', $this->cicloIdEmEdicao)->delete();
+        foreach ($this->ofertasVagas as $oferta) {
+            if (!empty($oferta['curso_id']) && !empty($oferta['unidade_id']) && !empty($oferta['turno_id'])) {
+                OfertaVaga::create([
+                    'ciclo_id' => $this->cicloIdEmEdicao, 'unidade_id' => $oferta['unidade_id'],
+                    'curso_id' => $oferta['curso_id'], 'turno_id' => $oferta['turno_id'],
+                    'vagas' => (int) ($oferta['vagas'] ?? 0),
+                    'idade_min' => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null,
+                    'idade_max' => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null,
+                ]);
+            }
+        }
+    }
+
+    private function salvarPasso4Parcial()
+    {
+        if (!$this->cicloIdEmEdicao) return;
+        $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
+        $syncStatus = [];
+        foreach ($this->statusSelecionados as $index => $statusId) {
+            $syncStatus[$statusId] = ['ordem' => $index + 1];
+        }
+        $ciclo->statusPipeline()->sync($syncStatus);
+    }
+
+    private function salvarPasso5Final()
+    {
+        if (!$this->cicloIdEmEdicao) return;
+        foreach ($this->documentosExigidos as $docData) {
+            if (!empty(trim($docData['nome']))) {
+                DocumentoExigido::updateOrCreate(
+                    ['id' => $docData['id'] ?? null, 'ciclo_id' => $this->cicloIdEmEdicao],
+                    ['nome' => trim($docData['nome']), 'descricao' => $docData['descricao'] ?? '', 'is_obrigatorio' => $docData['is_obrigatorio'] ?? false]
+                );
+            }
+        }
+        $this->cicloCriadoId = $this->cicloIdEmEdicao;
+        $this->dispatch('sucesso', msg: 'Ciclo configurado com sucesso!');
+    }
+
+    // Auxiliares do Passo 2 (Cascata Explorer)
+    public function setActiveUnidade($id) { $this->activeUnidadeId = $id; $this->activeCursoId = null; }
+    public function setActiveCurso($id) { $this->activeCursoId = $id; }
+
+    // Auxiliares do Passo 3 (Vagas)
+    public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null]; }
+    public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
+
+    // Auxiliares do Passo 4 (Pipeline)
+    public function adicionarStatusPipeline()
+    {
+        if (!empty($this->novoStatusSelecionado) && !in_array($this->novoStatusSelecionado, $this->statusSelecionados)) {
+            $this->statusSelecionados[] = $this->novoStatusSelecionado;
+        }
+        $this->novoStatusSelecionado = '';
+    }
+    public function removerStatusPipeline($id) { $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); }
+    public function atualizarOrdemStatus($ordemIds) { $this->statusSelecionados = $ordemIds; }
+
+    // Auxiliares do Passo 5 (Documentos)
+    public function addDocumento() { $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true]; }
+    public function removeDocumento($index) { unset($this->documentosExigidos[$index]); $this->documentosExigidos = array_values($this->documentosExigidos); }
 
     public function delete(int $id)
     {
-        abort_if(!feature('ciclo.excluir'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!feature('ciclo.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
-        $ciclo = Ciclo::findOrFail($id);
-        $ciclo->delete();
+        Ciclo::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Ciclo excluído com sucesso!');
     }
 
     public function duplicar(int $id)
     {
-        abort_if(!feature('ciclo.criar'), 403, 'O módulo de ciclos de inscrição está temporariamente desativado no sistema.');
+        abort_if(!feature('ciclo.criar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
         
         $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline', 'unidades', 'turnos'])->findOrFail($id);
-
         $novoCiclo = $cicloOriginal->replicate();
         $novoCiclo->nome = $cicloOriginal->nome . ' (Cópia)'; 
         $novoCiclo->slug = Str::slug($novoCiclo->nome) . '-' . time(); 
         $novoCiclo->status = false;
         $novoCiclo->save();
 
-        if ($cicloOriginal->cursos) {
-            $novoCiclo->cursos()->sync($cicloOriginal->cursos->pluck('id')->toArray());
-        }
-
-        if ($cicloOriginal->unidades) {
-            $novoCiclo->unidades()->sync($cicloOriginal->unidades->pluck('id')->toArray());
-        }
-
-        if ($cicloOriginal->turnos) {
-            $novoCiclo->turnos()->sync($cicloOriginal->turnos->pluck('id')->toArray());
-        }
+        $novoCiclo->cursos()->sync($cicloOriginal->cursos->pluck('id')->toArray());
+        $novoCiclo->unidades()->sync($cicloOriginal->unidades->pluck('id')->toArray());
+        $novoCiclo->turnos()->sync($cicloOriginal->turnos->pluck('id')->toArray());
 
         if ($cicloOriginal->statusPipeline) {
             $syncStatus = [];
@@ -149,36 +282,14 @@ class PeriodManager extends Component
             $novoCiclo->statusPipeline()->sync($syncStatus);
         }
 
-        $camposOriginais = \App\Models\CampoFormulario::where('ciclo_id', $id)->get();
-        foreach ($camposOriginais as $campo) {
-            $novoCampo = $campo->replicate();
-            $novoCampo->ciclo_id = $novoCiclo->id;
-            $novoCampo->save();
+        foreach (\App\Models\CampoFormulario::where('ciclo_id', $id)->get() as $campo) {
+            $nc = $campo->replicate(); $nc->ciclo_id = $novoCiclo->id; $nc->save();
         }
-
-        $ofertasOriginais = \App\Models\OfertaVaga::where('ciclo_id', $id)->get();
-        foreach($ofertasOriginais as $oferta) {
-            $novaOferta = $oferta->replicate();
-            $novaOferta->ciclo_id = $novoCiclo->id;
-            $novaOferta->save();
+        foreach (\App\Models\OfertaVaga::where('ciclo_id', $id)->get() as $oferta) {
+            $no = $oferta->replicate(); $no->ciclo_id = $novoCiclo->id; $no->save();
         }
-
-        if (class_exists(\App\Models\Regra::class)) {
-            $regrasOriginais = \App\Models\Regra::where('ciclo_id', $id)->get();
-            foreach($regrasOriginais as $regra) {
-                $novaRegra = $regra->replicate();
-                $novaRegra->ciclo_id = $novoCiclo->id;
-                $novaRegra->save();
-            }
-        }
-
-        if (class_exists(\App\Modules\Matricula\Domain\Models\DocumentoExigido::class)) {
-            $docsOriginais = \App\Modules\Matricula\Domain\Models\DocumentoExigido::where('ciclo_id', $id)->get();
-            foreach($docsOriginais as $doc) {
-                $novoDoc = $doc->replicate();
-                $novoDoc->ciclo_id = $novoCiclo->id;
-                $novoDoc->save();
-            }
+        foreach (DocumentoExigido::where('ciclo_id', $id)->get() as $doc) {
+            $nd = $doc->replicate(); $nd->ciclo_id = $novoCiclo->id; $nd->save();
         }
 
         $this->dispatch('sucesso', msg: 'Ciclo duplicado com sucesso!');
@@ -186,57 +297,22 @@ class PeriodManager extends Component
 
     public function showQuickView(int $id)
     {
-        $ciclo = Ciclo::withCount('inscricoes')
-            ->with(['cursos', 'unidades'])
-            ->findOrFail($id);
-
-        $vagasOfertadas = \App\Models\OfertaVaga::where('ciclo_id', $id)->sum('vagas');
+        $ciclo = Ciclo::withCount('inscricoes')->with(['cursos', 'unidades'])->findOrFail($id);
+        $vagasOfertadas = OfertaVaga::where('ciclo_id', $id)->sum('vagas');
         $vagasPreenchidas = \App\Models\Inscricao::where('ciclo_id', $id)
-            ->whereHas('statusInscricao', function ($q) {
-                $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
-            })->count();
+            ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'Selecionado']))->count();
 
         $percentual = $vagasOfertadas > 0 ? round(($vagasPreenchidas / $vagasOfertadas) * 100, 1) : 0;
         $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
-
-        $statusLabel = $ciclo->status 
-            ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] uppercase font-bold rounded border border-green-200 shadow-sm"><i class="ph-fill ph-check-circle"></i> ATIVO</span>' 
-            : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] uppercase font-bold rounded border border-gray-200 shadow-sm"><i class="ph-fill ph-minus-circle"></i> INATIVO</span>';
-
-        $cursosTags = $ciclo->cursos->take(8)->pluck('nome')->map(fn($c) => "<span class='px-2 py-1 bg-orange-50 border border-orange-200 rounded-md text-[10px] font-bold text-orange-700'>$c</span>")->implode(' ');
-        if ($ciclo->cursos->count() > 8) {
-            $cursosTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->cursos->count() - 8) . " cursos</span>";
-        }
-
-        $unidadesTags = $ciclo->unidades->take(8)->pluck('nome')->map(fn($u) => "<span class='px-2 py-1 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-md text-[10px]'><i class=\"ph-fill ph-map-pin\"></i> $u</span>")->implode(' ');
-        if ($ciclo->unidades->count() > 8) {
-            $unidadesTags .= " <span class='text-[10px] font-bold text-gray-400'>+ " . ($ciclo->unidades->count() - 8) . " unidades</span>";
-        }
-
-        $barraOcupacao = '
-            <div class="w-full mt-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <div class="flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-wider">
-                    <span class="text-gray-500">'.$vagasPreenchidas.' Preenchidas</span>
-                    <span class="text-gray-800">'.$vagasOfertadas.' Total Ofertado</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden shadow-inner">
-                    <div class="'.$corBarra.' h-2 rounded-full transition-all duration-500" style="width: '.min($percentual, 100).'%"></div>
-                </div>
-                <span class="text-[10px] font-bold text-gray-400 mt-1 block">'.$percentual.'% da capacidade ocupada.</span>
-            </div>
-        ';
 
         $this->dispatch('load-quick-view', [
             'title' => $ciclo->nome,
             'subtitle' => "Semestre {$ciclo->ano}.{$ciclo->semestre} • De " . $ciclo->data_inicio->format('d/m/Y') . " até " . $ciclo->data_fim->format('d/m/Y'),
             'icon' => 'ph-calendar-check',
             'data' => [
-                'Status do Ciclo' => $statusLabel,
-                'Inscrições Realizadas' => '<span class="font-black text-2xl text-purpura-600 bg-purpura-50 px-3 py-1 rounded-lg border border-purpura-100 shadow-sm inline-flex items-center gap-2"><i class="ph-fill ph-users"></i> '.$ciclo->inscricoes_count.'</span>',
-                'Ocupação' => $barraOcupacao,
-                'Cursos Ofertados' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($cursosTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhum</span>') . '</div>',
-                'Unidades Vinculadas' => '<div class="flex flex-wrap gap-1.5 mt-1">' . ($unidadesTags ?: '<span class="text-xs font-bold text-gray-400 italic">Nenhuma</span>') . '</div>',
-                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:text-purpura-800 hover:underline text-sm flex items-center gap-1 mt-2"><i class="ph-bold ph-arrow-square-out"></i> Acessar Detalhes do Ciclo</a>'
+                'Status do Ciclo' => $ciclo->status ? '<span class="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded border border-green-200">ATIVO</span>' : '<span class="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded border">INATIVO</span>',
+                'Inscrições Realizadas' => '<span class="font-black text-xl text-purpura-600">'.$ciclo->inscricoes_count.'</span>',
+                'Ações Extras' => '<a href="'.route('ciclos.show', $ciclo->id).'" class="font-bold text-purpura-600 hover:underline text-sm">Acessar Detalhes</a>'
             ]
         ]);
     }
@@ -260,14 +336,10 @@ class PeriodManager extends Component
         $query = Ciclo::query()->withCount('inscricoes');
         
         $query->addSelect([
-            'total_vagas' => \App\Models\OfertaVaga::selectRaw('COALESCE(SUM(vagas), 0)')
-                ->whereColumn('ciclo_id', 'ciclos.id'),
-                
+            'total_vagas' => OfertaVaga::selectRaw('COALESCE(SUM(vagas), 0)')->whereColumn('ciclo_id', 'ciclos.id'),
             'vagas_preenchidas' => \App\Models\Inscricao::selectRaw('COUNT(*)')
                 ->whereColumn('ciclo_id', 'ciclos.id')
-                ->whereHas('statusInscricao', function ($q) {
-                    $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
-                })
+                ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'Selecionado']))
         ]);
         
         $query->when($this->filtro_ano, fn($q) => $q->where('ano', $this->filtro_ano))
@@ -283,6 +355,9 @@ class PeriodManager extends Component
         return view('livewire.period.period-manager', [
             'registros' => $query->paginate($this->porPagina),
             'anosDisponiveis' => Ciclo::select('ano')->distinct()->orderBy('ano', 'desc')->pluck('ano'),
+            'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'cursosDb' => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
+            'statusDisponiveis' => StatusInscricao::orderBy('nome')->get(),
         ]);
     }
 }
