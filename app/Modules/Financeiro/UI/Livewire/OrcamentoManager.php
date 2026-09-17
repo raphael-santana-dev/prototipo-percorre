@@ -65,6 +65,8 @@ class OrcamentoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.detalhes'), 403, 'Acesso restrito.');
+
         $this->orcamentoSelecionado = Orcamento::findOrFail($id);
         $this->modalAberto = true;
     }
