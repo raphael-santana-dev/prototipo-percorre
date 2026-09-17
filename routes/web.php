@@ -24,7 +24,8 @@ Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->nam
 Route::get('/retomar-inscricao/{token}', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class)
     ->name('inscricao.retomar');
 Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
-    ->name('formularios.publico');
+    ->name('formularios.publico')
+    ->middleware('throttle:30,1');
 
 Route::middleware('guest:student,company,web')->group(function () {
     Route::get('/redefinir-senha/{token}', \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class)->name('password.reset');
@@ -32,7 +33,7 @@ Route::middleware('guest:student,company,web')->group(function () {
 
 Route::get('/login', \App\Modules\Auth\UI\Livewire\Login::class)
     ->name('login')
-    ->middleware('guest:web,student,company');
+    ->middleware(['guest:web,student,company', 'throttle:5,1']); // Ex: Máx 5 tentativas por minuto
 
 Route::prefix('portal')->name('portal.')->middleware('guest:student,company')->group(function () {
     Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
