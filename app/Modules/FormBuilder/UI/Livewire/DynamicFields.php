@@ -261,7 +261,7 @@ class DynamicFields extends Component
     {
         $tabelaFoco = $this->contextoTipo === 'ciclo' ? 'ciclos' : 'formularios';
 
-        $this->slug = Str::slug($this->slug);
+        $this->slug = \Illuminate\Support\Str::slug($this->slug);
 
         $this->validate([
             'bg_image_upload' => 'nullable|image|max:10240',
@@ -282,12 +282,12 @@ class DynamicFields extends Component
         }
 
         if ($this->contextoTipo === 'ciclo') {
-            Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+            \App\Models\Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         } else {
-            Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+            \App\Models\Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         }
 
-        CampoFormulario::updateOrCreate(
+        \App\Models\CampoFormulario::updateOrCreate(
             [
                 $this->getContextColumn() => $this->contextoId, 
                 'name' => '_form_config'
@@ -300,7 +300,8 @@ class DynamicFields extends Component
                 'label' => 'Configurações Globais',
                 'tipo' => 'config', 
                 'largura' => 12,
-                'configuracoes' => $this->formSettings
+                // A correção exata para o banco de dados armazenar a customização visual:
+                'configuracoes' => is_array($this->formSettings) ? json_encode($this->formSettings) : $this->formSettings
             ]
         );
 

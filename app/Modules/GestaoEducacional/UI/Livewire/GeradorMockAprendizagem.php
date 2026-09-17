@@ -112,6 +112,22 @@ class GeradorMockAprendizagem extends Component
                     'data_prazo' => now()->addDays(8),
                 ]);
 
+                $formSlug = $faseAprendiz->formularios->first()->slug ?? '';
+                $cpfFormatado = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $aluno->cpf);
+                
+                $dadosExtras = [
+                    'ciclo_mes_ano' => $ciclo->ciclo_mes . '/' . $ciclo->ano,
+                    'turma_codigo_nome' => 'Turma Mock - 001',
+                    'aluno_ra' => 'MOCK-' . rand(1000, 9999),
+                    'aluno_nome' => $aluno->name,
+                    'aluno_cpf' => $cpfFormatado,
+                    'link_avaliacao' => route('formulario-aprendizagem.responder', ['slug' => $formSlug, 'aluno_id' => $aluno->id])
+                ];
+
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('aprendizagem.nova_avaliacao_equipe', 'aprendizagem_aluno@ios.org.br', $dadosExtras);
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('aprendizagem.nova_avaliacao_aluno', $aluno->email, $dadosExtras);
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('aprendizagem.nova_avaliacao_empresa', $gestor->email, $dadosExtras);
+
                 $this->dadosGerados[] = [
                     'aluno_nome' => $aluno->name,
                     'empresa_nome' => $empresa->nome_fantasia,

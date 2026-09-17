@@ -24,6 +24,8 @@ class FormularioAprendizagem extends Component
     public bool $podeResponder = false;
     public string $mensagemBloqueio = '';
 
+    public array $formSettings = [];
+
     public function mount($slug, $aluno_id)
     {
         // 1. Carrega o Formulário e o Aluno

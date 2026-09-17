@@ -178,10 +178,10 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('financeiro-orcamento.manager',  \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class);
         Livewire::component('teste-rd.crm',  \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class);
 
-
         Livewire::component('aprendizagem.preinscricao',  \App\Modules\Website\UI\Livewire\PreInscricao::class);
         Livewire::component('aprendizagem.listagem',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class);
         Livewire::component('aprendizagem.acompanhamento',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento::class);
+        Livewire::component('aprendizagem.formulario',  \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class);
         
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;
