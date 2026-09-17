@@ -21,5 +21,19 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+       $exceptions->render(function (\Throwable $e, $request) {
+            // Verifica se a aplicação está no ambiente de produção
+            if (app()->environment('production')) {
+                
+                // Tratamento seguro para requisições do Livewire ou APIs
+                if ($request->wantsJson() || $request->header('X-Livewire')) {
+                    return response()->json([
+                        'message' => 'Ocorreu um erro interno no servidor. Nossa equipe já foi notificada.'
+                    ], 500);
+                }
+
+                // Tratamento para navegação web normal (retorna uma view genérica)
+                return response()->view('errors.500', [], 500);
+            }
+        });
     })->create();
