@@ -6,28 +6,32 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Modules\ACL\Domain\Models\Permission;
+use App\Modules\FeatureToggle\Domain\Models\Feature;
+use App\Modules\FeatureToggle\Application\Services\FeatureService;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
+use Illuminate\Support\Facades\Cache;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Permissões - Administrativo')]
 class PermissionManager extends Component
 {
-    use WithPagination;
-    use ComPadraoListagem;
+    use WithPagination, ComPadraoListagem;
 
     public $modalAberto = false;
+    public $modalConfirmacaoAberto = false;
     public $permissionId = null;
 
     public $modelClass = Permission::class;
     public array $breadcrumbs = [];
-
      
     public $filtro_module = '';
     public $filtro_keyword = '';
 
     public array $items = [];
+    public bool $replicar_para_features = false;
+    public array $pendenciasReplicacao = [];
 
     public function mount()
     {
@@ -61,7 +65,7 @@ class PermissionManager extends Component
         }
 
         $this->resetValidation();
-        $this->reset(['permissionId', 'items']);
+        $this->reset(['permissionId', 'items', 'replicar_para_features', 'modalConfirmacaoAberto', 'pendenciasReplicacao']);
 
         if ($id) {
             $permission = Permission::findOrFail($id);
@@ -94,6 +98,7 @@ class PermissionManager extends Component
     public function fecharModal()
     {
         $this->modalAberto = false;
+        $this->modalConfirmacaoAberto = false;
     }
 
     public function salvar()
@@ -116,18 +121,72 @@ class PermissionManager extends Component
             'items.*.description.required' => 'A descrição é obrigatória.',
         ]);
 
+        $this->pendenciasReplicacao = [];
+
+        if ($this->replicar_para_features) {
+            foreach ($this->items as $item) {
+                $fullName = strtolower(trim($item['module'])) . '.' . strtolower(trim($item['action']));
+                $correspondenciaEncontrada = false;
+
+                // Se for edição, verifica se o nome ANTIGO existe na tabela espelho
+                if ($this->permissionId) {
+                    $permissionAntiga = Permission::find($this->permissionId);
+                    if ($permissionAntiga) {
+                        $nomeAntigo = $permissionAntiga->getOriginal('name');
+                        if (Feature::where('name', $nomeAntigo)->exists()) {
+                            $correspondenciaEncontrada = true;
+                        }
+                    }
+                }
+
+                // Só lança para a pendência se não achou nem o antigo e nem o novo
+                if (!$correspondenciaEncontrada && !Feature::where('name', $fullName)->exists()) {
+                    $this->pendenciasReplicacao[] = $fullName;
+                }
+            }
+        }
+
+        if (!empty($this->pendenciasReplicacao)) {
+            $this->modalConfirmacaoAberto = true;
+            return;
+        }
+
+        $this->efetivarSalvar(true);
+    }
+
+    public function confirmarCriacaoAusentes()
+    {
+        $this->modalConfirmacaoAberto = false;
+        $this->efetivarSalvar(true);
+    }
+
+    public function ignorarCriacaoAusentes()
+    {
+        $this->modalConfirmacaoAberto = false;
+        $this->efetivarSalvar(false);
+    }
+
+    private function efetivarSalvar(bool $criarAusentes = true)
+    {
+        $featureService = app(FeatureService::class);
+
         foreach ($this->items as $index => $item) {
             $moduleFinal = strtolower(trim($item['module']));
             $actionFinal = strtolower(trim($item['action']));
             $fullName = $moduleFinal . '.' . $actionFinal;
+            $nomeAntigo = null;
 
+            // ATUALIZA OU CRIA A PERMISSÃO
             if ($this->permissionId) {
                 if (Permission::where('name', $fullName)->where('id', '!=', $this->permissionId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta permissão já existe.');
                     return;
                 }
                 
-                Permission::where('id', $this->permissionId)->update([
+                $permission = Permission::findOrFail($this->permissionId);
+                $nomeAntigo = $permission->getOriginal('name');
+
+                $permission->update([
                     'module' => $moduleFinal,
                     'name' => $fullName,
                     'description' => $item['description']
@@ -145,10 +204,40 @@ class PermissionManager extends Component
                     'guard_name' => 'web'
                 ]);
             }
+
+            // ATUALIZA OU CRIA O ESPELHO NOS FEATURE TOGGLES
+            if ($this->replicar_para_features) {
+                $featureTarget = null;
+                
+                // Tenta achar a Feature pelo nome antigo (caso seja uma edição)
+                if ($nomeAntigo) {
+                    $featureTarget = Feature::where('name', $nomeAntigo)->first();
+                }
+                
+                // Se não achou pelo antigo, tenta achar pelo nome novo
+                if (!$featureTarget) {
+                    $featureTarget = Feature::where('name', $fullName)->first();
+                }
+                
+                if ($featureTarget) {
+                    $nomeFeatureVelha = $featureTarget->name;
+
+                    $featureTarget->update([
+                        'name' => $fullName,
+                        'module' => $moduleFinal,
+                        'description' => $item['description']
+                    ]);
+
+                    Cache::forget("feature_status_{$nomeFeatureVelha}");
+                    Cache::forget("feature_status_{$fullName}");
+                } elseif ($criarAusentes) {
+                    $featureService->create($moduleFinal, $fullName, $item['description']);
+                }
+            }
         }
 
         $this->fecharModal();
-        $this->dispatch('sucesso', msg: $this->permissionId ? 'Permissão atualizada!' : 'Permissões cadastradas com sucesso!');
+        $this->dispatch('sucesso', msg: $this->permissionId ? 'Permissão e Feature atualizadas!' : 'Cadastros realizados com sucesso!');
     }
 
     public function excluir($id)
@@ -188,12 +277,9 @@ class PermissionManager extends Component
             $query->orderBy('module', 'asc')->orderBy('name', 'asc');
         }
 
-        $permissions = $query->paginate($this->porPagina);
-        $modulosDisponiveis = Permission::select('module')->distinct()->orderBy('module')->pluck('module');
-
         return view('livewire.acl.permission-manager', [
-            'registros' => $permissions,
-            'modulosDisponiveis' => $modulosDisponiveis
+            'registros' => $query->paginate($this->porPagina),
+            'modulosDisponiveis' => Permission::select('module')->distinct()->orderBy('module')->pluck('module')
         ]);
     }
 }

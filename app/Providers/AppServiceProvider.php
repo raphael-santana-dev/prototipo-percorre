@@ -137,6 +137,7 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('auditoria.auditoria-details', \App\Modules\Auditoria\UI\Livewire\AuditoriaDetails::class);
         Livewire::component('gestao-educacional.gerador-mock', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class);
+        Livewire::component('gestao-educacional.gerador-mock-aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMockAprendizagem::class);
         Livewire::component('gestao-educacional.avalicao.listagem', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class);
         Livewire::component('gestao-educacional.avalicao.responder', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Responder::class);
         
@@ -176,6 +177,11 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('processo-matricula.processo',  \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class);
         Livewire::component('financeiro-orcamento.manager',  \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class);
         Livewire::component('teste-rd.crm',  \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class);
+
+        Livewire::component('aprendizagem.preinscricao',  \App\Modules\Website\UI\Livewire\PreInscricao::class);
+        Livewire::component('aprendizagem.listagem',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class);
+        Livewire::component('aprendizagem.acompanhamento',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento::class);
+        Livewire::component('aprendizagem.formulario',  \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class);
         
         Event::listen(Authenticated::class, function (Authenticated $event) {
             $user = $event->user;

@@ -76,6 +76,17 @@
                         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
                             <i class="text-lg ph ph-squares-four"></i> Dashboard
                         </a>
+                        
+                        @canany(['financeiro.orcamentos.atualizar.api', 'financeiro.orcamentos.detalhes', 'financeiro.orcamentos.listagem'])
+                        <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
+                                <i class="text-lg ph ph-calendar-check"></i> Financeiro <i class="ph ph-caret-down text-xs transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                            </button>
+                            <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a> @endcan
+                            </div>
+                        </div>
+                        @endcanany
 
                         @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">

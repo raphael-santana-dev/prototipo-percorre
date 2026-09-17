@@ -9,7 +9,6 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            <!-- NOVO: Botão de Copiar Embed (Inscrição) -->
             <div x-data="{ copiado: false }" class="relative inline-block text-left mr-2">
                 <button @click="
                     let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;

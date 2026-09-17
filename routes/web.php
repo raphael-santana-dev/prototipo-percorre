@@ -16,6 +16,8 @@ use App\Modules\Turno\UI\Livewire\TurnoManager;
 use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
 use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
+use App\Modules\Website\UI\Livewire\PreInscricao;
+use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
@@ -41,6 +43,9 @@ Route::get('/matricula/{token}', \App\Modules\Matricula\UI\Livewire\PortalMatric
 Route::middleware('auth:web,student,company')->group(function () {
     Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
         ->name('password.force-change');
+
+    Route::get('/formulario-aprendizagem/{slug}/{aluno_id}', \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class)
+        ->name('formulario-aprendizagem.responder');
 });
 
 Route::middleware('auth')->group(function () {
@@ -104,6 +109,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitor-emails', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class)->name('monitor.emails');
 
     Route::get('/avaliacoes/gerador', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMock::class)->name('avaliacoes.gerador');
+    Route::get('/avaliacoes/gerador-aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\GeradorMockAprendizagem::class)->name('avaliacoes.gerador-aprendizagem');
     Route::get('/avaliacoes/relatorios', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Relatorios::class)->name('avaliacoes.relatorios');
     Route::get('/avaliacoes/periodos', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Listagem::class)->name('avaliacoes.periodos.index');
     Route::get('/avaliacoes/periodos/novo', \App\Modules\GestaoEducacional\UI\Livewire\PeriodoAvaliacao\Detalhes::class)->name('avaliacoes.periodos.create');
@@ -114,6 +120,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/turmas', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Listagem::class)->name('turmas.index');
     Route::get('/turmas/nova', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.create');
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
+    // Avaliação de aprendizagem
+    Route::get('/aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class)->name('aprendizagem.index');
+    Route::get('/aprendizagem/{id}/acompanhamento', Acompanhamento::class)->name('acompanhamento.index');
+    Route::get('/pre-inscricao/{slug}', PreInscricao::class);
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
@@ -126,7 +136,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/teste/rd-crm', \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class)->name('teste.rdcrm');
 
     Route::get('/financeiro/orcamentos', \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class)->name('financeiro.orcamentos');
-}); 
+});
 
 Route::middleware('auth:web,student')->group(function () {
     Route::get('/dev/avaliacoes', \App\Modules\GestaoEducacional\UI\Livewire\Avaliacao\Listagem::class)->name('avaliacoes.index');

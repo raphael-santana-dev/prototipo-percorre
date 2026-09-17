@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Inscricao;
+use App\Models\AlunoCicloAprendizagem;
 
 #[Layout('components.layouts.student-app')]
 #[Title('Meu Painel - Portal do Aluno')]
@@ -15,17 +16,33 @@ class Dashboard extends Component
     {
         $student = auth('student')->user();
         $inscricao = null;
+        $formulariosPendentes = [];
 
         if (!$student->matriculado) {
             $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
                 ->where('student_id', $student->id)
                 ->latest()
                 ->first();
+        } else {
+            // Lógica de Workflow: Busca avaliações de aprendizagem pendentes
+            $avaliacoes = AlunoCicloAprendizagem::with(['faseAtual.formularios', 'ciclo'])
+                ->where('student_id', $student->id)
+                ->where('status', '2') // 2 = Pendente
+                ->get();
+
+            foreach ($avaliacoes as $av) {
+                $respondedores = $av->faseAtual->respondedores_permitidos ?? [];
+                // Se a fase atual exigir que o "student" responda, enviamos para a tela
+                if (in_array('student', $respondedores)) {
+                    $formulariosPendentes[] = $av;
+                }
+            }
         }
 
         return view('livewire.student.dashboard.dashboard', [
             'student' => $student,
-            'inscricao' => $inscricao
+            'inscricao' => $inscricao,
+            'formulariosPendentes' => $formulariosPendentes
         ]);
     }
 }

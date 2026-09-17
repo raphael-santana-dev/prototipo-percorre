@@ -1,33 +1,30 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     
-    <!-- CABEÇALHO DA PÁGINA -->
     <x-page-header 
         title="Orçamentos do Protheus"
         icon="ph ph-wallet"
         badge="Módulo Financeiro"
         :breadcrumbs="$breadcrumbs">
 
+        @if(feature('financeiro.orcamentos.atualizar.api') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.atualizar.api')))
         <x-slot name="actions">
-            <!-- Botão de Sincronização com feedback visual de "Carregando" -->
             <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-5 py-2.5 text-xs font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition flex items-center gap-2">
                 <i class="ph-bold ph-arrows-clockwise text-base" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
                 <span wire:loading.remove wire:target="sincronizarProtheus">Atualizar via API</span>
                 <span wire:loading wire:target="sincronizarProtheus">Sincronizando...</span>
             </button>
         </x-slot>
+        @endif
     </x-page-header>
 
-    <!-- CARDS DE MÉTRICAS -->
     @if(isset($metricas))
         <div class="mb-6">
             <x-summary-cards :metricas="$metricas" />
         </div>
     @endif
 
-    <!-- CONTEÚDO PRINCIPAL (Filtros colados com a Tabela) -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
-        <!-- BARRA DE FILTROS -->
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar por Ano (Ex: 2026)" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
@@ -40,10 +37,8 @@
             </div>
         </div>
 
-        <!-- TABELA DE DADOS -->
         <div class="relative z-0 bg-white dark:bg-gray-900">
             
-            <!-- CSS Mágico para retirar a borda dupla do componente de tabela genérico -->
             <style>
                 .tabela-orcamento .bg-white.border.rounded-xl { border: none !important; border-radius: 0 !important; box-shadow: none !important; }
                 .dark .tabela-orcamento .dark\:bg-gray-800.dark\:border-gray-700 { border: none !important; background: transparent !important; }
@@ -75,9 +70,11 @@
                                 R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:text-purpura-400 rounded-lg shadow-sm transition" title="Ver Distribuição Mensal">
-                                    <i class="text-base ph-bold ph-arrows-out-simple"></i>
-                                </button>
+                                @if(feature('financeiro.orcamentos.detalhes') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.detalhes')))
+                                    <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:text-purpura-400 rounded-lg shadow-sm transition" title="Ver Distribuição Mensal">
+                                        <i class="text-base ph-bold ph-arrows-out-simple"></i>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -94,17 +91,12 @@
         </div>
     </div>
 
-    <!-- ==============================================
-         MODAL EM TELA CHEIA (DETALHES DO ORÇAMENTO)
-    =============================================== -->
     @if($modalAberto && $orcamentoSelecionado)
         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 md:p-6 overflow-hidden">
             
-            <!-- Janela do Modal (Quase tela inteira) -->
             <div class="bg-white dark:bg-gray-900 w-full h-full max-w-7xl max-h-full rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 overflow-hidden" 
                  x-data @keydown.escape.window="$wire.fecharModal()">
                 
-                <!-- Cabeçalho do Modal -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                     <div>
                         <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
@@ -118,11 +110,8 @@
                         <i class="ph-bold ph-x text-lg"></i>
                     </button>
                 </div>
-
-                <!-- Corpo do Modal (Com rolagem interna) -->
                 <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                     
-                    <!-- Cards Superiores: Resumo da Linha -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                             <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Filial</span>
@@ -148,7 +137,6 @@
 
                     <h3 class="font-extrabold text-xs text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-4 border-b border-gray-100 dark:border-gray-800 pb-2">Distribuição Financeira Mensal</h3>
                     
-                    <!-- Grid dos 12 Meses -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         @php
                             $meses = [

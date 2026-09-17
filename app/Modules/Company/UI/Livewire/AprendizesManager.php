@@ -68,6 +68,7 @@ class AprendizesManager extends Component
 
         $aprendizes = $query->orderBy('name')->paginate(10);
 
+        $aprendizesIds = $aprendizes->pluck('id')->toArray();
         $gestores = [];
         if ($usuario->tipo_acesso === 'contato_principal') {
             $gestores = CompanyUser::where('empresa_id', $usuario->empresa_id)
@@ -76,11 +77,28 @@ class AprendizesManager extends Component
                 ->orderBy('name')
                 ->get();
         }
+        
+        $avaliacoes = \App\Models\AlunoCicloAprendizagem::with(['faseAtual.formularios', 'ciclo'])
+            ->whereIn('student_id', $aprendizesIds)
+            ->where('status', '2') // Apenas o que está Pendente
+            ->get();
+            
+        $avaliacoesPorAluno = [];
+        foreach($avaliacoes as $av) {
+            $respondedores = $av->faseAtual->respondedores_permitidos ?? [];
+            if (in_array('company', $respondedores)) {
+                $avaliacoesPorAluno[$av->student_id][] = $av;
+            }
+        }
+
+        
 
         return view('livewire.company.aprendizes-manager', [
             'aprendizes' => $aprendizes,
+            'avaliacoesPorAluno' => $avaliacoesPorAluno, // Passando a variável para a view
             'gestores' => $gestores,
             'usuario' => $usuario
         ]);
+
     }
 }

@@ -27,7 +27,7 @@ class OrcamentoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.acessar'), 403, 'Acesso restrito.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
@@ -65,6 +65,8 @@ class OrcamentoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.detalhes'), 403, 'Acesso restrito.');
+
         $this->orcamentoSelecionado = Orcamento::findOrFail($id);
         $this->modalAberto = true;
     }
