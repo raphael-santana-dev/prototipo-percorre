@@ -82,13 +82,17 @@ class FormularioAprendizagem extends Component
         }
 
         // 5. PREPARAÇÃO DO FORM BUILDER (Recuperando dados salvos)
+        // 5. PREPARAÇÃO DO FORM BUILDER (Recuperando dados salvos)
         $this->camposDinamicos = $this->formulario->campos;
+        
+        $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
+        if ($cfg && $cfg->configuracoes) {
+            $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+        }
+
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         
-        $respostaSalva = \App\Models\RespostaFormulario::where('formulario_id', $this->formulario->id)
-            ->where('user_id', $this->aluno->id)
-            ->first();
-
+        $respostaSalva = \App\Models\RespostaFormulario::where('formulario_id', $this->formulario->id)->where('user_id', $this->aluno->id)->first();
         if ($respostaSalva && is_array($respostaSalva->respostas)) {
             $this->respostas = $respostaSalva->respostas;
         } else {
@@ -97,43 +101,51 @@ class FormularioAprendizagem extends Component
             }
         }
     }
+    protected function regrasPorEtapa($etapa)
+    {
+        $regras = [];
+        foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
+            $ruleStr = [];
+            if ($campo->obrigatorio) $ruleStr[] = 'required';
+            else $ruleStr[] = 'nullable';
+            
+            if ($campo->subtipo === 'email') $ruleStr[] = 'email';
+            if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
+            if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
+            if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
+
+            if (!empty($ruleStr)) $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
+        }
+        return $regras;
+    }
 
     public function salvarEAvancar()
     {
-        if (!$this->podeResponder) {
-            $this->dispatch('erro', msg: 'Você possui apenas permissão de leitura nesta fase.');
+        if (!$this->podeResponder) return;
+
+        $regras = $this->regrasPorEtapa($this->etapaAtual);
+        if (!empty($regras)) {
+            $this->validate($regras, ['respostas.*.required' => 'Campo obrigatório.']);
+        }
+
+        if ($this->etapaAtual < $this->totalEtapas) {
+            $this->etapaAtual++;
             return;
         }
 
         \App\Models\RespostaFormulario::updateOrCreate(
-            [
-                'formulario_id' => $this->formulario->id, 
-                'user_id' => $this->aluno->id
-            ],
-            [
-                'respostas' => $this->respostas,
-                'etapa_parada' => $this->etapaAtual
-            ]
+            ['formulario_id' => $this->formulario->id, 'user_id' => $this->aluno->id],
+            ['respostas' => $this->respostas, 'etapa_parada' => $this->etapaAtual]
         );
 
-        $this->cicloAluno->update([
-            'data_resposta' => now(),
-            'status' => '3' 
-        ]);
-
-        $faseAtualOrdem = $this->cicloAluno->faseAtual->ordem;
-        
+        $this->cicloAluno->update(['data_resposta' => now(), 'status' => '3']);
         $proximaFase = \App\Models\CicloAprendizagemFase::where('ciclo_aprendizagem_id', $this->cicloAluno->ciclo_aprendizagem_id)
-            ->where('ordem', '>', $faseAtualOrdem)
-            ->orderBy('ordem', 'asc')
-            ->first();
+            ->where('ordem', '>', $this->cicloAluno->faseAtual->ordem)->orderBy('ordem', 'asc')->first();
 
         if ($proximaFase) {
             $this->cicloAluno->update([
-                'fase_atual_id' => $proximaFase->id,
-                'status' => '2', 
-                'data_resposta' => null, 
-                'data_envio' => now(),
+                'fase_atual_id' => $proximaFase->id, 'status' => '2', 
+                'data_resposta' => null, 'data_envio' => now(),
                 'data_prazo' => now()->addDays($this->cicloAluno->ciclo->prazo_dias ?? 10)
             ]);
             $msg = "Formulário salvo! O aluno avançou para a fase: {$proximaFase->nome}.";

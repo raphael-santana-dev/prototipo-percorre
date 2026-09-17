@@ -152,66 +152,25 @@ class FormManager extends Component
             ['key' => 'titulo', 'label' => 'Formulário', 'sortable' => true],
             ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
-            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => false],
+            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => true], // Tipo reativado aqui
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
 
     public function render()
     {
-        // 1. Busca os formulários gerais e de aprendizagem
-        $queryFormularios = Formulario::query()
-            ->select('id', 'titulo', 'descricao', 'status', 'slug', 'tipo', 'created_at');
+        // 1. Limpa a Query e busca APENAS da tabela Formulários (Gerais, Aprendizagem e Pré-inscrição)
+        $query = Formulario::query();
 
-        // Se houver busca, filtra
-        if ($this->pesquisa) {
-            $queryFormularios->where('titulo', 'ilike', '%' . $this->pesquisa . '%');
-        }
-
-        $formularios = $queryFormularios->get()->map(function($f) {
-            $f->origem = 'formulario';
-            return $f;
-        });
-
-        // 2. Busca os Ciclos de Inscrição para unificar na mesma listagem
-        $queryCiclos = \App\Models\Ciclo::query()
-            ->select('id', 'nome as titulo', 'slug', 'status', 'created_at')
-            ->selectRaw("'Ciclo de Inscrição Oficial' as descricao")
-            ->selectRaw("'inscricao' as tipo");
-
-        if ($this->pesquisa) {
-            $queryCiclos->where('nome', 'ilike', '%' . $this->pesquisa . '%');
-        }
-
-        $ciclos = $queryCiclos->get()->map(function($c) {
-            $c->origem = 'ciclo';
-            return $c;
-        });
-
-        // 3. Junta as duas coleções em uma única lista paginada manualmente
-        $todosRegistros = $formularios->concat($ciclos);
-
+        // 2. Mantém a sua ordenação padrão funcionando
         if ($this->ordenacaoCampo) {
-            $todosRegistros = $this->ordenacaoDirecao === 'asc' 
-                ? $todosRegistros->sortBy($this->ordenacaoCampo) 
-                : $todosRegistros->sortByDesc($this->ordenacaoCampo);
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
-            $todosRegistros = $todosRegistros->sortByDesc('id');
+            $query->orderBy('id', 'desc');
         }
-
-        // Paginação manual para collection do Laravel
-        $page = request()->input('page', 1);
-        $perPage = $this->porPagina ?? 15;
-        $paginatedResults = new \Illuminate\Pagination\LengthAwarePaginator(
-            $todosRegistros->forPage($page, $perPage),
-            $todosRegistros->count(),
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
 
         return view('livewire.forms.form-manager', [
-            'registros' => $paginatedResults,
+            'registros' => $query->paginate($this->porPagina ?? 15),
             'rolesDb' => Role::where('name', '!=', 'dev')->orderBy('name')->get(),
             'usersDb' => User::orderBy('name')->get(),
             'unidadesDb' => Unidade::orderBy('nome')->get(),
