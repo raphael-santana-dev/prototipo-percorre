@@ -101,6 +101,12 @@ class EmailParserService
             'curso_aprovado'   => ($inscricao && $inscricao->curso) ? $inscricao->curso->nome : 'Sem Curso Vinculado'
         ];
 
+        if (is_array($dadosExtras)) {
+            foreach ($dadosExtras as $chave => $valor) {
+                $tags[strtolower($chave)] = $valor;
+            }
+        }
+
         return preg_replace_callback('/(?:\{\{|\[)\s*([a-zA-Z0-9_]+)\s*(?:\}\}|\])/u', function($matches) use ($tags) {
             $key = strtolower(trim($matches[1]));
             return $tags[$key] ?? $matches[0];

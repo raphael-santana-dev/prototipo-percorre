@@ -29,12 +29,20 @@ trait FiltraPorVinculo
             }
         }
 
-        if (Schema::hasColumn($tabela, 'curso_id') && count($cursosIds) > 0) {
-            $query->whereIn("$tabela.curso_id", $cursosIds);
+        if (Schema::hasColumn($tabela, 'curso_id')) {
+            if (count($cursosIds) > 0) {
+                $query->whereIn("$tabela.curso_id", $cursosIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
-        if (Schema::hasColumn($tabela, 'turno_id') && count($turnosIds) > 0) {
-            $query->whereIn("$tabela.turno_id", $turnosIds);
+        if (Schema::hasColumn($tabela, 'turno_id')) {
+            if (count($turnosIds) > 0) {
+                $query->whereIn("$tabela.turno_id", $turnosIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         return $query;

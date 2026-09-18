@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob;
+use App\Modules\Teste\RDCrm\Services\RdCrmService;
 
 Schedule::call(function () {
     $pendentes = Comunicado::where('status', 'pendente')
@@ -15,6 +16,13 @@ Schedule::call(function () {
         ProcessarComunicadoJob::dispatch($comunicado);
     }
 })->everyMinute();
+
+Schedule::call(function () {
+    RdCrmService::enviarNegociacoesPendentes();
+})->everyMinute();
+
+// NOVO: Motor Diário de Fechamento de Ciclos de Aprendizagem
+Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

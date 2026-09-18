@@ -152,6 +152,19 @@ class ImportacaoManager extends Component
     {
         $callback = function() use ($dados) {
             $file = fopen('php://output', 'w');
+
+            foreach ($dados as $linha) {
+                $linhaSanitizada = array_map(function ($valor) {
+                    $valorStr = (string) $valor;
+                    if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
+                        return "'" . $valorStr;
+                    }
+                    return $valorStr;
+                }, $linha);
+
+                fputcsv($file, $linhaSanitizada, ';');
+            }
+
             fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             foreach ($dados as $linha) {
                 fputcsv($file, $linha, ';');
@@ -672,6 +685,19 @@ class ImportacaoManager extends Component
         
         $callback = function() use ($linhasExportar) {
             $file = fopen('php://output', 'w');
+            
+            foreach ($dados as $linha) {
+                $linhaSanitizada = array_map(function ($valor) {
+                    $valorStr = (string) $valor;
+                    if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
+                        return "'" . $valorStr; // Adiciona aspas simples para forçar leitura como texto
+                    }
+                    return $valorStr;
+                }, $linha);
+
+                fputcsv($file, $linhaSanitizada, ';');
+            }
+
             fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
             foreach ($linhasExportar as $linha) {
                 fputcsv($file, $linha, ';');

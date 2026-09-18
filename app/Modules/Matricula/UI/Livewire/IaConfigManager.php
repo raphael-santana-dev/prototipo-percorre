@@ -18,12 +18,10 @@ class IaConfigManager extends Component
 {
     public $abaAtiva = 'config'; 
 
-    // CONFIGURAÇÃO PRINCIPAL
     public $ai_model_id = '';
     public $prompt_documentos = 'Aja como um auditor rigoroso de RH. O usuário enviará a imagem de um documento e os dados que ele preencheu na inscrição. Verifique se a imagem corresponde ao tipo de documento solicitado (Ex: RG, CPF, Histórico). Depois, faça OCR e verifique se o Nome e o CPF da imagem batem perfeitamente com os dados do candidato. Responda ESTRITAMENTE em formato JSON: {"valido": true/false, "motivo_rejeicao": "Caso seja falso, explique brevemente o motivo."}';
     public $is_ativa = false;
 
-    // PROVEDORES CRUD
     public $modalProviderAberto = false;
     public $provider_id = null;
     public $provider_nome = '';
@@ -31,7 +29,6 @@ class IaConfigManager extends Component
     public $provider_api_url = '';
     public $provider_api_key = '';
 
-    // MODELOS CRUD
     public $modalModelAberto = false;
     public $model_id = null;
     public $model_ai_provider_id = '';
@@ -185,9 +182,6 @@ class IaConfigManager extends Component
         $this->dispatch('sucesso', msg: 'Provedor removido.');
     }
 
-    // ==========================================
-    // CRUD: MODELOS
-    // ==========================================
     public function abrirModalModel($id = null)
     {
         $this->reset(['model_id', 'model_ai_provider_id', 'model_nome', 'model_codigo']);
@@ -231,9 +225,6 @@ class IaConfigManager extends Component
         $this->dispatch('sucesso', msg: 'Modelo removido.');
     }
 
-    // ==========================================
-    // CRUD: DOCUMENTOS
-    // ==========================================
     public function adicionarDocumento()
     {
         $this->validate([

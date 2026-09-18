@@ -53,6 +53,7 @@ class DynamicFields extends Component
     public string $contextoTipo; 
     public int $contextoId;
     public string $contextoNome = '';
+    public string $badgeContexto = '';
 
     public $etapasDisponiveis = [];
 
@@ -64,9 +65,31 @@ class DynamicFields extends Component
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
             $this->contextoNome = $model->nome;
+            $this->badgeContexto = 'Inscrição Oficial';
         } else {
-            $model = \App\Models\Formulario::findOrFail($id);
-            $this->contextoNome = $model->titulo;
+            // Carrega o formulário com todas as novas relações que criamos
+            $model = \App\Models\Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])->findOrFail($id);
+            
+            // Inteligência para montar o título dinâmico baseado no tipo do formulário
+            if ($model->tipo === 'aprendizagem') {
+                $cicloNome = $model->faseAprendizagem->ciclo->nome ?? 'Ciclo Indefinido';
+                $faseNome = $model->faseAprendizagem->nome ?? 'Fase Indefinida';
+                $this->contextoNome = "{$cicloNome} ({$faseNome})";
+                $this->badgeContexto = 'Avaliação de Aprendizagem';
+                
+            } elseif ($model->tipo === 'pre_inscricao') {
+                $detalhes = [];
+                if ($model->unidade) $detalhes[] = $model->unidade->nome;
+                if ($model->curso) $detalhes[] = $model->curso->nome;
+                
+                $sufixo = count($detalhes) > 0 ? ' - ' . implode(' | ', $detalhes) : ' (Captação Geral)';
+                $this->contextoNome = $model->titulo . $sufixo;
+                $this->badgeContexto = 'Pré-Inscrição (Lead)';
+                
+            } else {
+                $this->contextoNome = $model->titulo;
+                $this->badgeContexto = 'Formulário Avulso';
+            }
         }
 
         $this->slug = $model->slug ?? '';
@@ -99,7 +122,9 @@ class DynamicFields extends Component
         $numerosExistentes = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('tipo', '!=', 'config')->distinct()->pluck('etapa')->toArray();
 
-        $numerosExistentes = empty($numerosExistentes) ? [1] : $numerosExistentes;
+        if (!in_array(1, $numerosExistentes)) {
+            $numerosExistentes[] = 1;
+        }
 
         foreach ($numerosExistentes as $num) {
             if (!$this->etapasDisponiveis->contains('numero', $num)) {
@@ -236,11 +261,10 @@ class DynamicFields extends Component
     {
         $tabelaFoco = $this->contextoTipo === 'ciclo' ? 'ciclos' : 'formularios';
 
-        $this->slug = Str::slug($this->slug);
+        $this->slug = \Illuminate\Support\Str::slug($this->slug);
 
         $this->validate([
-            'bg_image_upload' => 'nullable|image|max:10240',
-            'slug' => [
+            'bg_image_upload' => 'nullable|mimes:jpg,jpeg,png,webp|max:10240',            'slug' => [
                 'required',
                 'regex:/^[a-z0-9\-]+$/',
                 \Illuminate\Validation\Rule::unique($tabelaFoco, 'slug')->ignore($this->contextoId)
@@ -257,12 +281,12 @@ class DynamicFields extends Component
         }
 
         if ($this->contextoTipo === 'ciclo') {
-            Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+            \App\Models\Ciclo::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         } else {
-            Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
+            \App\Models\Formulario::where('id', $this->contextoId)->update(['slug' => $this->slug]);
         }
 
-        CampoFormulario::updateOrCreate(
+        \App\Models\CampoFormulario::updateOrCreate(
             [
                 $this->getContextColumn() => $this->contextoId, 
                 'name' => '_form_config'
@@ -275,7 +299,7 @@ class DynamicFields extends Component
                 'label' => 'Configurações Globais',
                 'tipo' => 'config', 
                 'largura' => 12,
-                'configuracoes' => $this->formSettings
+                'configuracoes' => is_array($this->formSettings) ? json_encode($this->formSettings) : $this->formSettings
             ]
         );
 
@@ -419,6 +443,11 @@ class DynamicFields extends Component
     {
         $etapa = \App\Models\Etapa::find($id);
         if (!$etapa) return;
+
+        if ($etapa->numero == 1) {
+            $this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
+            return;
+        }
         
         $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('etapa', $etapa->numero)

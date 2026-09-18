@@ -78,7 +78,7 @@
                     </div>
                 @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8 {{ request()->query('preview') ? 'pointer-events-none opacity-80' : '' }}">
                     
                     @if($formulario->exigir_email && $etapaAtual === 1)
                         <div class="col-span-12 relative rounded-lg transition-all duration-300">
@@ -104,10 +104,16 @@
                         <div></div>
                     @endif
 
-                    <button type="button" wire:click="avancarEtapa" class="bg-purpura-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-purpura-700 hover:shadow-lg transition duration-200 flex items-center gap-2">
-                        {{ $etapaAtual === $totalEtapas ? 'Enviar Respostas' : 'Próxima Etapa' }}
-                        @if($etapaAtual !== $totalEtapas) <i class="ph ph-arrow-right text-lg"></i> @else <i class="ph-bold ph-paper-plane-tilt text-lg"></i> @endif
-                    </button>
+                    @if(request()->query('preview') && $etapaAtual === $totalEtapas)
+                        <div class="bg-blue-50 text-blue-700 px-6 py-3 rounded-lg font-bold flex items-center gap-2 border border-blue-200 shadow-sm">
+                            <i class="ph-fill ph-eye"></i> Visualização Concluída
+                        </div>
+                    @else
+                        <button type="button" wire:click="avancarEtapa" class="bg-purpura-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-purpura-700 hover:shadow-lg transition duration-200 flex items-center gap-2">
+                            {{ $etapaAtual === $totalEtapas ? 'Enviar Respostas' : 'Próxima Etapa' }}
+                            @if($etapaAtual !== $totalEtapas) <i class="ph ph-arrow-right text-lg"></i> @else <i class="ph-bold ph-paper-plane-tilt text-lg"></i> @endif
+                        </button>
+                    @endif
                 </div>
 
             </div>

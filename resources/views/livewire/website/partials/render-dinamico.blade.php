@@ -88,8 +88,8 @@
             @endif
             
             @if($campo->tipo === 'select')
-                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas.'.$campo->name) border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror">
-                    <option value="">Selecione...</option>
+                <select wire:model.live="respostas.{{ $campo->name }}" 
+                        @if(isset($podeResponder) && !$podeResponder) disabled class="w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed opacity-70" @else class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 bg-white" @endif>                    <option value="">Selecione...</option>
                     @foreach($listaOpcoes as $opcao)
                         <option value="{{ trim($opcao) }}">{{ trim($opcao) }}</option>
                     @endforeach

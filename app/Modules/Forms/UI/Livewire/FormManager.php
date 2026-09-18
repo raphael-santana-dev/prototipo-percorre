@@ -152,19 +152,25 @@ class FormManager extends Component
             ['key' => 'titulo', 'label' => 'Formulário', 'sortable' => true],
             ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => true], // Tipo reativado aqui
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
 
     public function render()
     {
-        $query = Formulario::query()->where('tipo', 'geral');
+        // 1. Limpa a Query e busca APENAS da tabela Formulários (Gerais, Aprendizagem e Pré-inscrição)
+        $query = Formulario::query();
 
-        if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
-        else $query->orderBy('id', 'desc');
+        // 2. Mantém a sua ordenação padrão funcionando
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
 
         return view('livewire.forms.form-manager', [
-            'registros' => $query->paginate($this->porPagina),
+            'registros' => $query->paginate($this->porPagina ?? 15),
             'rolesDb' => Role::where('name', '!=', 'dev')->orderBy('name')->get(),
             'usersDb' => User::orderBy('name')->get(),
             'unidadesDb' => Unidade::orderBy('nome')->get(),

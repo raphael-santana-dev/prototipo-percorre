@@ -62,9 +62,32 @@
                                         <i class="ph-bold ph-link"></i> Vincular Gestor
                                     </button>
                                 @else
-                                    <button class="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded shadow-sm transition">
-                                        Responder Avaliação
-                                    </button>
+                                    @php $pendentes = $avaliacoesPorAluno[$aluno->id] ?? []; @endphp
+                                    
+                                    @if(count($pendentes) > 0)
+                                        <div x-data="{ open: false }" class="relative inline-block text-left">
+                                            <button @click="open = !open" @click.outside="open = false" class="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded shadow-sm transition flex items-center gap-1">
+                                                Responder ({{ count($pendentes) }}) <i class="ph-bold ph-caret-down"></i>
+                                            </button>
+                                            
+                                            <div x-show="open" x-transition x-cloak class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden text-left">
+                                                <div class="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                                    Formulários Pendentes
+                                                </div>
+                                                @foreach($pendentes as $av)
+                                                    @foreach($av->faseAtual->formularios as $form)
+                                                        <!-- Mude o nome da rota abaixo para a rota pública do seu Form Builder -->
+                                                        <a href="/formulario-aprendizagem/{{ $form->slug }}/{{ $aluno->id }}" target="_blank" class="block px-4 py-3 text-xs font-bold text-gray-700 hover:bg-orange-50 hover:text-orange-700 border-b border-gray-100 last:border-0 transition">
+                                                            {{ $form->titulo }}<br>
+                                                            <span class="text-[10px] text-gray-400 font-normal">{{ $av->ciclo->nome }}</span>
+                                                        </a>
+                                                    @endforeach
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-md border border-green-200 shadow-sm"><i class="ph-bold ph-check"></i> Em dia</span>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

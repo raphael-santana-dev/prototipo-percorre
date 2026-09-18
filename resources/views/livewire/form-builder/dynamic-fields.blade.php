@@ -1,12 +1,27 @@
 <div class="p-6 max-w-[1400px] mx-auto h-full flex flex-col font-sans">
     
+    <!-- CABEÇALHO ATUALIZADO COM BADGE DE CONTEXTO -->
     <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
         <div>
-            <a href="{{ $contextoTipo === 'ciclo' ? route('ciclos.index') : route('formularios.index') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para {{ $contextoTipo === 'ciclo' ? 'Ciclos' : 'Formulários' }}
+            <a href="{{ route('formbuilder.hub') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
+                <i class="ph ph-arrow-left"></i> Voltar para a Central
             </a>
-            <h2 class="text-2xl font-bold text-gray-900 mt-1">Construtor do Formulário</h2>
-            <p class="text-gray-500 text-sm">Gerenciando blocos para: <span class="font-bold text-purpura-600">{{ $contextoNome }}</span></p>
+            <div class="flex items-center gap-3 mt-1">
+                <h2 class="text-2xl font-bold text-gray-900">Construtor do Formulário</h2>
+                
+                <!-- O Badge dinâmico de identificação -->
+                @if($badgeContexto === 'Avaliação de Aprendizagem')
+                    <span class="px-2.5 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-md border border-orange-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-tree-structure"></i> {{ $badgeContexto }}</span>
+                @elseif($badgeContexto === 'Pré-Inscrição (Lead)')
+                    <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-md border border-emerald-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-funnel"></i> {{ $badgeContexto }}</span>
+                @elseif($badgeContexto === 'Inscrição Oficial')
+                    <span class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-md border border-indigo-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-calendar-check"></i> {{ $badgeContexto }}</span>
+                @else
+                    <span class="px-2.5 py-1 bg-purpura-100 text-purpura-700 text-xs font-bold rounded-md border border-purpura-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-list-dashes"></i> {{ $badgeContexto }}</span>
+                @endif
+            </div>
+            
+            <p class="text-gray-500 text-sm mt-1">Estruturando blocos para: <span class="font-bold text-gray-800">{{ $contextoNome }}</span></p>
         </div>
         
         <div class="flex items-center gap-3">

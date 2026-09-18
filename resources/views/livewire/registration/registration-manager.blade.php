@@ -9,7 +9,6 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            <!-- NOVO: Botão de Copiar Embed (Inscrição) -->
             <div x-data="{ copiado: false }" class="relative inline-block text-left mr-2">
                 <button @click="
                     let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
@@ -60,7 +59,9 @@
                 </label>
                 <select wire:model.live="filtroStatus" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todos os Status</option>
-                    @foreach($statusInscricoesDb as $status) <option value="{{ $status->id }}">{{ $status->nome }}</option> @endforeach
+                    @foreach($statusInscricoesDb as $id => $nome) 
+                        <option value="{{ $id }}">{{ $nome }}</option> 
+                    @endforeach                
                 </select>
             </div>
 
@@ -70,7 +71,7 @@
                 </label>
                 <select wire:model.live="filtroCiclo" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todos os Semestres</option>
-                    @foreach($ciclosDb as $ciclo) <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option> @endforeach
+                    @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                 </select>
             </div>
 
@@ -80,9 +81,9 @@
                 </label>
                 <select wire:model.live="filtroEtapa" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todas as Etapas</option>
-                    @if(isset($etapasDb))
-                        @foreach($etapasDb as $etp)
-                            <option value="{{ $etp->numero }}">Passo {{ $etp->numero }} - {{ $etp->titulo ?? $etp->nome ?? 'Formulário' }}</option>
+                    @if(!empty($etapasDb))
+                        @foreach($etapasDb as $numero => $nome)
+                            <option value="{{ $numero }}">Passo {{ $numero }} - {{ $nome ?? 'Formulário' }}</option>
                         @endforeach
                     @endif
                     <option value="Finalizado">Finalizado (Concluído)</option>
@@ -95,7 +96,7 @@
                 </label>
                 <select wire:model.live="filtroUnidade" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todas as Unidades</option>
-                    @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                    @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                 </select>
             </div>
 
@@ -105,7 +106,7 @@
                 </label>
                 <select wire:model.live="filtroTurno" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todos os Turnos</option>
-                    @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                    @foreach($turnosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                 </select>
             </div>
 
@@ -115,7 +116,7 @@
                 </label>
                 <select wire:model.live="filtroCurso" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
                     <option value="">Todos os Cursos</option>
-                    @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                    @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                 </select>
             </div>
 
@@ -149,8 +150,8 @@
                     <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase hidden sm:block">Alterar para:</span>
                     <select wire:model="novoStatusId" class="w-full sm:w-auto border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-md py-1.5 px-3 focus:ring-purpura-500 text-xs font-bold shadow-sm">
                         <option value="">Selecione o status...</option>
-                        @foreach($statusInscricoesDb as $status)
-                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                        @foreach($statusInscricoesDb as $id => $nome)
+                            <option value="{{ $id }}">{{ $nome }}</option>
                         @endforeach
                     </select>
                     <button wire:click="salvarStatusEmLote" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold transition shadow-sm shrink-0">
@@ -426,8 +427,8 @@
                     <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase hidden lg:block ml-2">Mover para:</span>
                     <select wire:model="novoStatusId" class="w-full md:w-56 text-sm font-bold border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md py-2 focus:ring-purpura-500 shadow-sm">
                         <option value="">Selecione o novo status...</option>
-                        @foreach($statusInscricoesDb as $status)
-                            <option value="{{ $status->id }}">{{ $status->nome }}</option>
+                        @foreach($statusInscricoesDb as $id => $nome)
+                            <option value="{{ $id }}">{{ $nome }}</option>
                         @endforeach
                     </select>
                     <button wire:click="salvarStatusEmLote" class="px-5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-md text-sm font-bold transition shadow-sm whitespace-nowrap">
@@ -584,8 +585,8 @@
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Ciclo de Ingresso <span class="text-red-500">*</span></label>
                     <select wire:model="ciclo_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
                         <option value="">Selecione o Semestre/Ciclo...</option>
-                        @foreach($ciclosDb as $ciclo)
-                            <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option>
+                        @foreach($ciclosDb as $id => $nome)
+                            <option value="{{ $id }}">{{ $nome }}</option>
                         @endforeach
                     </select>
                     @error('ciclo_id') <span class="text-red-500 text-[10px] font-bold uppercase mt-1 block">{{ $message }}</span> @enderror

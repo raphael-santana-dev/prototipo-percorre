@@ -168,6 +168,16 @@
                             </div>
                         @endif
 
+                        <div class="flex items-center pt-2 mt-4 bg-purpura-50 dark:bg-gray-900/50 p-3 rounded-lg border border-purpura-100 dark:border-gray-700">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" wire:model="replicar_para_features" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-gray-800 dark:text-gray-200">Replicar em Features Toggles</span>
+                                    <span class="text-[10px] text-gray-500 font-medium">Cria ou atualiza uma flag de ativação para a tela associada a esta ação.</span>
+                                </div>
+                            </label>
+                        </div>
+
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" wire:click="fecharModal" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
                                 Cancelar
@@ -177,6 +187,42 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($modalConfirmacaoAberto)
+        <div class="fixed inset-0 z-[60] overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/80 backdrop-blur-sm" wire:click="ignorarCriacaoAusentes"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                <div class="relative z-[60] inline-block px-4 pt-5 pb-4 overflow-visible text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-start gap-4">
+                        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full dark:bg-yellow-900/30">
+                            <i class="text-2xl text-yellow-600 ph-fill ph-warning-circle dark:text-yellow-500"></i>
+                        </div>
+                        <div class="mt-1">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Correspondência não encontrada</h3>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                O sistema não encontrou os seguintes Feature Toggles para atualizar:
+                            </p>
+                            <ul class="mt-3 space-y-1 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded-md border border-gray-100 dark:border-gray-700">
+                                @foreach($pendenciasReplicacao as $pendencia)
+                                    <li class="flex items-center gap-2"><i class="text-red-500 ph-bold ph-x"></i> {{ $pendencia }}</li>
+                                @endforeach
+                            </ul>
+                            <p class="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Deseja criar as Features ausentes automaticamente agora?</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6 sm:mt-8 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <button type="button" wire:click="ignorarCriacaoAusentes" class="px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                            Não, atualizar apenas existentes
+                        </button>
+                        <button type="button" wire:click="confirmarCriacaoAusentes" class="px-4 py-2 text-sm font-bold text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700">
+                            Sim, criar os ausentes
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

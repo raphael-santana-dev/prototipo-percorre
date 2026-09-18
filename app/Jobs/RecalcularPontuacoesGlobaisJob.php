@@ -45,7 +45,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
                 if (empty($regras)) continue;
 
-                $ciclo->inscricoes()->chunk(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
+                $ciclo->inscricoes()->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
                         $scoreBase = 0;
