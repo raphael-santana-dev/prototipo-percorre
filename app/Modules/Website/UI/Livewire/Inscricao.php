@@ -580,6 +580,42 @@ class Inscricao extends Component
         if (is_string($regras)) $regras = json_decode($regras, true) ?? [];
         if (empty($regras) || !is_array($regras)) return ['total' => 0, 'detalhes' => null];
 
+        // TRADUTOR DE REGRAS P/ PORTUGUÊS CLARO
+        $formatarCondicao = function($operador, $valor) {
+            $valores = array_map('trim', explode(',', (string)$valor));
+            switch ($operador) {
+                case '=': return "Exigência: Igual a '{$valor}'";
+                case '!=': return "Exigência: Diferente de '{$valor}'";
+                case '>=': return "Exigência: Maior ou igual a {$valor}";
+                case '<=': return "Exigência: Menor ou igual a {$valor}";
+                case '>': return "Exigência: Maior que {$valor}";
+                case '<': return "Exigência: Menor que {$valor}";
+                case 'between': 
+                    $v1 = $valores[0] ?? '';
+                    $v2 = $valores[1] ?? '';
+                    return "Exigência: Estar entre {$v1} e {$v2}";
+                case 'in': 
+                    return "Exigência: Dentre as opções (" . implode(' ou ', $valores) . ")";
+                default: return "Exigência: {$operador} {$valor}";
+            }
+        };
+
+        // TRADUTOR: Busca o nome real do dado em vez do ID ou campo bruto
+        $obterResposta = function($campo) {
+            if ($campo === 'idade' && !empty($this->data_nascimento)) return \Carbon\Carbon::parse($this->data_nascimento)->age . ' anos';
+            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? \App\Models\Curso::find($this->curso)->nome ?? 'Curso não informado';
+            if ($campo === 'turno_id') return $this->turnosDisponiveis[$this->turno] ?? \App\Modules\Turno\Domain\Models\Turno::find($this->turno)->nome ?? 'Turno não informado';
+            if ($campo === 'unidade_id') return $this->unidadesDisponiveis[$this->unidade] ?? \App\Modules\Unidade\Domain\Models\Unidade::find($this->unidade)->nome ?? 'Unidade não informada';
+            if ($campo === 'estado') return $this->estado ?? 'Estado não informado';
+            if ($campo === 'cidade') return $this->cidade ?? 'Cidade não informada';
+            if ($campo === 'possui_deficiencia') return ucfirst($this->possui_deficiencia) ?? 'Não informada';
+            
+            if (isset($this->respostas[$campo])) {
+                return is_array($this->respostas[$campo]) ? implode(', ', $this->respostas[$campo]) : $this->respostas[$campo];
+            }
+            return '';
+        };
+
         $avaliarCondicao = function($regra) {
             if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') return true; 
 
@@ -588,7 +624,7 @@ class Inscricao extends Component
             $valorResposta = null;
 
             if ($campo === 'idade' && !empty($this->data_nascimento)) {
-                $valorResposta = Carbon::parse($this->data_nascimento)->age;
+                $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
             } elseif ($campo === 'curso_id') {
                 $valorResposta = $this->curso;
             } elseif ($campo === 'turno_id') {
@@ -632,8 +668,15 @@ class Inscricao extends Component
                 $scoreBase += $pontos;
                 $acertosPadrao++;
                 
+                $valorEncontrado = $obterResposta($regra['campo'] ?? '');
+                $respostaDada = (!empty($valorEncontrado) || $valorEncontrado === '0' || $valorEncontrado === 0) ? $valorEncontrado : 'Não informada / Em branco';
+
                 $detalhes['auditoria_detalhada'][] = [
-                    'tipo_regra' => 'padrao', 'campo_avaliado' => $regra['campo'], 'resposta_dada' => "Condição atendida", 'pontos_ganhos' => $pontos, 'condicao' => "{$regra['operador']} {$regra['valor']}"
+                    'tipo_regra' => 'padrao', 
+                    'campo_avaliado' => $regra['campo'], 
+                    'resposta_dada' => $respostaDada, 
+                    'pontos_ganhos' => $pontos, 
+                    'condicao' => $formatarCondicao($regra['operador'] ?? '=', $regra['valor'] ?? '')
                 ];
             }
         }
@@ -651,13 +694,23 @@ class Inscricao extends Component
                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                 } elseif ($tipo === 'multiplicador_percentual') {
                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                    $motivo = "Bônus de {$multiplicador}% aplicado sobre a Pontuação Base ({$scoreBase} pts).";
+                    $motivo = "Multiplicador de {$multiplicador}% aplicado sobre a Pontuação Base ({$scoreBase} pts).";
                 }
 
                 if ($pontosGanhos > 0) {
                     $scoreBonus += $pontosGanhos;
+                    
+                    $campoAvaliado = $escopo === 'todos' ? 'Regra Global' : ($regra['campo'] ?? 'Regra Específica');
+                    
+                    $valorEncontradoEspecial = $obterResposta($regra['campo'] ?? '');
+                    $respostaDadaEspecial = $escopo === 'todos' ? 'Benefício aplicado a todos' : (!empty($valorEncontradoEspecial) ? $valorEncontradoEspecial : 'Ativada');
+
                     $detalhes['auditoria_detalhada'][] = [
-                        'tipo_regra' => 'especial', 'campo_avaliado' => ($escopo === 'todos') ? 'Regra Global' : $regra['campo'], 'resposta_dada' => "Benefício Ativado", 'pontos_ganhos' => $pontosGanhos, 'condicao' => $motivo
+                        'tipo_regra' => 'especial', 
+                        'campo_avaliado' => $campoAvaliado, 
+                        'resposta_dada' => $respostaDadaEspecial, 
+                        'pontos_ganhos' => $pontosGanhos, 
+                        'condicao' => $motivo
                     ];
                 }
             }
@@ -665,7 +718,7 @@ class Inscricao extends Component
 
         $totalFinal = $scoreBase + $scoreBonus;
         if ($totalFinal > 0) {
-            $detalhes['motivo_auditoria'] = "Avaliação automática. Base: {$scoreBase} pts. Bônus: {$scoreBonus} pts. Total: {$totalFinal} pts.";
+            $detalhes['motivo_auditoria'] = "Avaliação de requisitos concluída com sucesso. A resposta do candidato correspondeu a {$acertosPadrao} regra(s) base. Pontos conquistados diretamente: {$scoreBase}. Acréscimos por bônus: {$scoreBonus}. Total = {$totalFinal} pontos.";
         } else {
             $detalhes = null; 
         }

@@ -21,7 +21,7 @@
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body class="h-full flex items-center justify-center transition-colors duration-500 bg-slate-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased">
+<body class="h-full flex items-center justify-center transition-colors duration-500 bg-slate-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
     
     {{ $slot }}
 

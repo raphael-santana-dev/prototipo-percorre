@@ -1,6 +1,7 @@
-<div class="p-6 mx-auto font-sans relative max-w-7xl" 
+<div class="w-full font-sans relative" 
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
+    
     <x-page-header 
         title="Inscrições" 
         icon="ph ph-clipboard-text"
@@ -9,137 +10,133 @@
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
-            <div x-data="{ copiado: false }" class="relative inline-block text-left mr-2">
-                <button @click="
-                    let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
-                    navigator.clipboard.writeText(code); 
-                    copiado = true; 
-                    setTimeout(() => copiado = false, 2000);
-                " class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50"
-                  :class="copiado ? '!text-green-700 !border-green-300 !bg-green-50' : ''">
-                    <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i> 
-                    <span x-text="copiado ? 'Copiado!' : 'Incorporar'"></span>
-                </button>
-            </div>
-
-            <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
-                <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                    <i class="text-lg ph ph-export"></i> Exportar <i class="ph ph-caret-down"></i>
-                </button>
-                <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
-                    <div class="py-1">
-                        <button wire:click="solicitarExportacao('xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 font-bold text-left gap-2">
-                            <i class="ph-fill ph-file-xls text-lg"></i> Formato Excel (.xlsx)
-                        </button>
-                        <button wire:click="solicitarExportacao('csv')" class="flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-bold text-left gap-2">
-                            <i class="ph-fill ph-file-csv text-lg"></i> Formato CSV (.csv)
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.cria')))
-                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                    <i class="ph ph-plus text-lg"></i> Nova Inscrição
-                </button>
-            @endif
-        </x-slot>
-
-        <x-slot name="filters" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar Candidato
-                </label>
-                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-tag text-purpura-500"></i> Status
-                </label>
-                <select wire:model.live="filtroStatus" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todos os Status</option>
-                    @foreach($statusInscricoesDb as $id => $nome) 
-                        <option value="{{ $id }}">{{ $nome }}</option> 
-                    @endforeach                
-                </select>
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-calendar-check text-purpura-500"></i> Semestre / Ciclo
-                </label>
-                <select wire:model.live="filtroCiclo" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todos os Semestres</option>
-                    @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-steps text-purpura-500"></i> Etapa (Formulário)
-                </label>
-                <select wire:model.live="filtroEtapa" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todas as Etapas</option>
-                    @if(!empty($etapasDb))
-                        @foreach($etapasDb as $numero => $nome)
-                            <option value="{{ $numero }}">Passo {{ $numero }} - {{ $nome ?? 'Formulário' }}</option>
-                        @endforeach
-                    @endif
-                    <option value="Finalizado">Finalizado (Concluído)</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-buildings text-purpura-500"></i> Unidade
-                </label>
-                <select wire:model.live="filtroUnidade" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todas as Unidades</option>
-                    @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-clock text-purpura-500"></i> Turno
-                </label>
-                <select wire:model.live="filtroTurno" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todos os Turnos</option>
-                    @foreach($turnosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
-                    <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
-                </label>
-                <select wire:model.live="filtroCurso" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
-                    <option value="">Todos os Cursos</option>
-                    @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                </select>
-            </div>
-
-            @if($filtroNome !== '' || $filtroStatus !== '' || $filtroCiclo !== '' || $filtroUnidade !== '' || $filtroTurno !== '' || $filtroCurso !== '')
-                <div class="flex justify-end col-span-1 md:col-span-2 lg:col-span-3 mt-2 border-t border-gray-100 dark:border-gray-700 pt-4">
-                    <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                        <i class="ph-bold ph-x"></i> Limpar Filtros
+            <div class="flex flex-wrap items-center justify-end gap-2 w-full">
+                <div x-data="{ copiado: false }" class="relative inline-block text-left">
+                    <button @click="
+                        let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                        navigator.clipboard.writeText(code); 
+                        copiado = true; 
+                        setTimeout(() => copiado = false, 2000);
+                    " class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                      :class="copiado ? '!text-green-700 !border-green-300 !bg-green-50 dark:!bg-green-900/30 dark:!text-green-400' : ''">
+                        <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i> 
+                        <span x-text="copiado ? 'Copiado!' : 'Incorporar'"></span>
                     </button>
                 </div>
-            @endif
+
+                <div x-data="{ openExport: false }" class="relative inline-block text-left">
+                    <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="text-lg ph ph-export"></i> Exportar <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50 dark:bg-gray-800 dark:border-gray-700 dark:divide-gray-700">
+                        <div class="py-1">
+                            <button wire:click="solicitarExportacao('xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 font-bold text-left gap-2 dark:text-green-400 dark:hover:bg-gray-700">
+                                <i class="ph-fill ph-file-xls text-lg"></i> Formato Excel (.xlsx)
+                            </button>
+                            <button wire:click="solicitarExportacao('csv')" class="flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-bold text-left gap-2 dark:text-blue-400 dark:hover:bg-gray-700">
+                                <i class="ph-fill ph-file-csv text-lg"></i> Formato CSV (.csv)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar')))
+                    <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                        <i class="ph ph-plus text-lg"></i> Nova Inscrição
+                    </button>
+                @endif
+            </div>
+        </x-slot>
+
+        <x-slot name="filters">
+            <!-- Grid fixado para evitar overflow nas opções de filtro -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 w-full">
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar
+                    </label>
+                    <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                </div>
+
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-tag text-purpura-500"></i> Status
+                    </label>
+                    <select wire:model.live="filtroStatus" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos os Status</option>
+                        @foreach($statusInscricoesDb as $id => $nome) 
+                            <option value="{{ $id }}">{{ $nome }}</option> 
+                        @endforeach                
+                    </select>
+                </div>
+
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-calendar-check text-purpura-500"></i> Ciclo
+                    </label>
+                    <select wire:model.live="filtroCiclo" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos os Semestres</option>
+                        @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                </div>
+
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-steps text-purpura-500"></i> Etapa
+                    </label>
+                    <select wire:model.live="filtroEtapa" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todas as Etapas</option>
+                        @if(!empty($etapasDb))
+                            @foreach($etapasDb as $numero => $nome)
+                                <option value="{{ $numero }}">Passo {{ $numero }} - {{ $nome ?? 'Formulário' }}</option>
+                            @endforeach
+                        @endif
+                        <option value="Finalizado">Finalizado (Concluído)</option>
+                    </select>
+                </div>
+
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-buildings text-purpura-500"></i> Unidade
+                    </label>
+                    <select wire:model.live="filtroUnidade" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todas as Unidades</option>
+                        @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                </div>
+
+                <div class="w-full">
+                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                        <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
+                    </label>
+                    <select wire:model.live="filtroCurso" class="w-full px-3 py-2 text-sm border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <option value="">Todos os Cursos</option>
+                        @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                </div>
+
+                @if($filtroNome !== '' || $filtroStatus !== '' || $filtroCiclo !== '' || $filtroUnidade !== '' || $filtroTurno !== '' || $filtroCurso !== '')
+                    <div class="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-6 flex justify-end mt-2 border-t border-gray-100 dark:border-gray-700 pt-4 w-full">
+                        <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                            <i class="ph-bold ph-x"></i> Limpar Filtros
+                        </button>
+                    </div>
+                @endif
+            </div>
         </x-slot>
     </x-page-header>
 
     @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-        <div class="flex items-center justify-end gap-2 mb-4">
-            <span class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400">Selecionar rápido:</span>
+        <!-- Adicionado flex-wrap para telas menores -->
+        <div class="flex flex-wrap items-center justify-end gap-2 mb-4 w-full">
+            <span class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400 w-full sm:w-auto text-right">Selecionar rápido:</span>
             <button wire:click="selecionarQuantidade(10)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Top 10</button>
             <button wire:click="selecionarQuantidade(50)" class="text-xs px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition">Top 50</button>
             <button wire:click="abrirModalSelecaoAvancada" class="text-xs px-3 py-1.5 bg-purpura-50 border border-purpura-200 text-purpura-700 hover:bg-purpura-100 font-bold rounded-lg shadow-sm transition flex items-center gap-1.5"><i class="ph-bold ph-faders"></i> Avançado</button>
         </div>
 
         @if(count($selecionadas) > 0)
-        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm">
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full">
             <div class="flex items-center shrink-0">
                 <span class="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
                 <button wire:click="desmarcarTodas" class="ml-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 hover:underline font-medium">Limpar seleção</button>
@@ -488,7 +485,7 @@
     @endif
 
     @if($modalSelecaoAvancadaAberto)
-        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-md">
+        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-md px-4">
             <div class="flex flex-col w-full max-w-2xl overflow-hidden bg-white shadow-2xl dark:bg-gray-800 rounded-xl">
                 
                 <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
@@ -499,8 +496,8 @@
                     <button wire:click="$set('modalSelecaoAvancadaAberto', false)" class="text-gray-400 transition hover:text-red-500"><i class="text-2xl ph ph-x"></i></button>
                 </div>
                 
-                <div class="p-6 space-y-5">
-                    <label class="flex items-start gap-3 p-3 transition border rounded-lg cursor-pointer hover:bg-purpura-50 dark:hover:bg-gray-700 {{ $selecaoPreencherVagas ? 'border-purpura-500 bg-purpura-50/50' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900' }}">
+                <div class="p-6 space-y-5 overflow-y-auto max-h-[60vh]">
+                    <label class="flex items-start gap-3 p-3 transition border rounded-lg cursor-pointer hover:bg-purpura-50 dark:hover:bg-gray-700 {{ $selecaoPreencherVagas ? 'border-purpura-500 bg-purpura-50/50 dark:bg-purpura-900/30' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900' }}">
                         <input type="checkbox" wire:model.live="selecaoPreencherVagas" class="w-5 h-5 mt-0.5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                         <div class="flex flex-col">
                             <span class="font-bold text-gray-900 text-md dark:text-white">Preencher Vagas Automaticamente</span>
@@ -509,7 +506,7 @@
                     </label>
 
                     @if(!$selecaoPreencherVagas)
-                        <div class="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
                             <div>
                                 <label class="block mb-1 text-xs font-bold text-gray-700 uppercase dark:text-gray-400">Quantidade</label>
                                 <input type="number" wire:model="selecaoQtd" min="1" class="w-full p-2 text-sm font-bold border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
@@ -562,7 +559,7 @@
                     @error('nome') <span class="text-red-500 text-[10px] font-bold uppercase mt-1 block">{{ $message }}</span> @enderror
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">CPF <span class="text-red-500">*</span></label>
                         <input type="text" wire:model="cpf" x-mask="999.999.999-99" placeholder="000.000.000-00" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-purpura-500 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
@@ -604,7 +601,7 @@
     @endif
 
     @if($modalAntiSpamAberto)
-        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="fixed inset-0 z-[120] flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
                     <h3 class="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
@@ -619,37 +616,39 @@
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                        <table class="w-full text-left text-sm whitespace-nowrap">
-                            <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-200">
-                                <tr>
-                                    <th class="px-4 py-2 font-bold uppercase text-[10px]">Candidato</th>
-                                    <th class="px-4 py-2 font-bold uppercase text-[10px] text-right">Ação de Remoção</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach($conflitosAntiSpam as $conflito)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
-                                        <td class="px-4 py-3">
-                                            <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
-                                            <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="text-xs font-bold text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-1 rounded transition shadow-sm">
-                                                Tirar da Lista
-                                            </button>
-                                        </td>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-2 font-bold uppercase text-[10px]">Candidato</th>
+                                        <th class="px-4 py-2 font-bold uppercase text-[10px] text-right">Ação de Remoção</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    @foreach($conflitosAntiSpam as $conflito)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" wire:key="conflito-{{ $conflito['id'] }}">
+                                            <td class="px-4 py-3">
+                                                <span class="block font-bold text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
+                                                <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="text-xs font-bold text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2 py-1 rounded transition shadow-sm">
+                                                    Tirar da Lista
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center gap-4">
-                    <button wire:click="cancelarAntiSpam" class="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row justify-center items-center gap-4">
+                    <button wire:click="cancelarAntiSpam" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
                         Cancelar Tudo
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition flex items-center gap-2">
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition flex items-center justify-center gap-2">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar E-mail
                     </button>
                 </div>

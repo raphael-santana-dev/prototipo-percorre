@@ -60,8 +60,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-{{-- Se for Embed, deixa o fundo do body transparente para herdar do site que incorporou e evitar conflitos --}}
-<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 {{ request()->query('embed') ? 'bg-transparent' : 'bg-slate-50 dark:bg-gray-950' }} dark:text-gray-100 antialiased relative">
+<body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 {{ request()->query('embed') ? 'bg-transparent' : 'bg-slate-50 dark:bg-gray-950' }} dark:text-gray-100 antialiased relative overflow-x-hidden">
     
     @if(!request()->query('embed'))
     <div x-data="{ drawerOpen: false }">
@@ -150,11 +149,9 @@
     </div>
     @endif
 
-    <!-- Conteúdo da Página -->
     <main class="flex-1 flex flex-col relative">
         {{ $slot }}
 
-        <!-- NOVO: BOTÃO FLUTUANTE DE TEMA (APENAS MODO EMBED) -->
         @if(request()->query('embed'))
             <button @click="toggleTema()" type="button" title="Alternar Tema" class="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 bg-white border border-gray-200 rounded-full shadow-lg text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition-all duration-300">
                 <i class="text-2xl ph-fill ph-moon" x-show="tema === 'light'"></i>
@@ -164,7 +161,6 @@
 
     </main>
 
-    <!-- RODAPÉ INSTITUCIONAL (Oculto no Embed) -->
     @if(!request()->query('embed'))
     <footer class="bg-[#1f072e] text-gray-300 pt-16 pb-12 transition-colors duration-300 mt-auto relative z-10 dark:bg-gray-950 dark:border-t dark:border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
