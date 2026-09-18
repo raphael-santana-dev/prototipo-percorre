@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class Importacao extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'importacoes';
     protected $guarded = [];
 

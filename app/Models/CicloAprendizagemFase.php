@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class CicloAprendizagemFase extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'ciclo_aprendizagem_fases';
     protected $guarded = ['id'];
     
