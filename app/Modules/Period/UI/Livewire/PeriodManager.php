@@ -10,7 +10,6 @@ use App\Models\Curso;
 use App\Models\StatusInscricao;
 use App\Models\OfertaVaga;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
-use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
@@ -30,14 +29,14 @@ class PeriodManager extends Component
     // Passo 1: Dados Básicos
     public $nome, $ano, $semestre, $data_inicio, $data_fim, $status = false;
 
-    // Passo 2: Estrutura Acadêmica
+    // Passo 2: Estrutura Académica (Gravando Combinações Únicas)
     public array $unidadesSelecionadas = []; 
     public array $cursosSelecionados = []; 
     public array $turnosSelecionados = []; 
     public $activeUnidadeId = null;
     public $activeCursoId = null;
 
-    // Passo 3: Distribuição de Vagas
+    // Passo 3: Distribuição de Vagas (Auto-gerada)
     public array $ofertasVagas = [];
 
     // Passo 4: Etapas do Ciclo (Pipeline)
@@ -47,7 +46,7 @@ class PeriodManager extends Component
     // Passo 5: Documentos Exigidos
     public array $documentosExigidos = []; 
 
-    // Passo 6: Conclusão / Sucesso
+    // Passo 6: Conclusão
     public ?int $cicloCriadoId = null;
 
     public $modelClass = Ciclo::class;
@@ -56,8 +55,6 @@ class PeriodManager extends Component
     public $filtro_ano = '';
     public $filtro_semestre = '';
     public $filtro_status = '';
-
-    public bool $unicoAtivo = true;
 
     public function mount()
     {
@@ -97,14 +94,12 @@ class PeriodManager extends Component
         $this->semestre = date('n') <= 6 ? 1 : 2;
         $this->passoAtual = 1;
 
-        // Carrega status padrão iniciais se houver
         $statusIniciais = StatusInscricao::orderBy('id')->take(3)->pluck('id')->map(fn($v) => (string)$v)->toArray();
         $this->statusSelecionados = $statusIniciais;
 
         $this->modalAberto = true;
     }
 
-    // Navegação do Stepper Wizard
     public function proximoPasso()
     {
         if ($this->passoAtual === 1) {
@@ -117,13 +112,13 @@ class PeriodManager extends Component
             $this->salvarPasso1Parcial();
         } elseif ($this->passoAtual === 2) {
             $this->salvarPasso2Parcial();
+            $this->sincronizarCombinacoesVagas(); 
         } elseif ($this->passoAtual === 3) {
             $this->salvarPasso3Parcial();
         } elseif ($this->passoAtual === 4) {
             $this->salvarPasso4Parcial();
         } elseif ($this->passoAtual === 5) {
             $this->salvarPasso5Final();
-            return; // O passo 5 persiste tudo e vai para o sucesso (Passo 6)
         }
 
         if ($this->passoAtual < 6) {
@@ -140,13 +135,11 @@ class PeriodManager extends Component
 
     public function irParaPasso(int $passo)
     {
-        // Só permite navegar via menu lateral se o ciclo já tiver sido criado no banco
         if ($passo < $this->passoAtual || $this->cicloIdEmEdicao) {
             $this->passoAtual = $passo;
         }
     }
 
-    // Persistência Incremental por Passo
     private function salvarPasso1Parcial()
     {
         if ($this->status) {
@@ -179,9 +172,74 @@ class PeriodManager extends Component
     {
         if (!$this->cicloIdEmEdicao) return;
         $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
+        
         $ciclo->unidades()->sync($this->unidadesSelecionadas);
-        $ciclo->cursos()->sync($this->cursosSelecionados);
-        $ciclo->turnos()->sync($this->turnosSelecionados);
+        
+        // Extrai os IDs reais dos formatos isolados "UnidadeID-CursoID"
+        $cursosUnicos = collect($this->cursosSelecionados)->map(fn($v) => explode('-', $v)[1] ?? $v)->unique()->filter()->toArray();
+        $ciclo->cursos()->sync($cursosUnicos);
+        
+        // Extrai os IDs reais dos formatos "UnidadeID-CursoID-TurnoID"
+        $turnosUnicos = collect($this->turnosSelecionados)->map(fn($v) => explode('-', $v)[2] ?? $v)->unique()->filter()->toArray();
+        $ciclo->turnos()->sync($turnosUnicos);
+    }
+
+    private function sincronizarCombinacoesVagas()
+    {
+        $cursosDb = Curso::with('turnosVinculados')->get();
+        $unidadesDb = \App\Modules\Unidade\Domain\Models\Unidade::pluck('nome', 'id');
+        
+        $ofertasExistentes = [];
+        foreach ($this->ofertasVagas as $oferta) {
+            if (!empty($oferta['unidade_id']) && !empty($oferta['curso_id']) && !empty($oferta['turno_id'])) {
+                $key = $oferta['unidade_id'] . '-' . $oferta['curso_id'] . '-' . $oferta['turno_id'];
+                $ofertasExistentes[$key] = $oferta;
+            }
+        }
+
+        $novasOfertas = [];
+
+        foreach ($this->turnosSelecionados as $combo) {
+            $parts = explode('-', $combo);
+            if (count($parts) === 3) {
+                $uId = $parts[0];
+                $cId = $parts[1];
+                $tId = $parts[2];
+                
+                // Validação para garantir que a Unidade e Curso ainda estão selecionados
+                if (!in_array($uId, $this->unidadesSelecionadas)) continue;
+                if (!in_array("{$uId}-{$cId}", $this->cursosSelecionados)) continue;
+
+                $curso = $cursosDb->firstWhere('id', $cId);
+                $turno = $curso ? $curso->turnosVinculados->firstWhere('id', $tId) : null;
+                
+                if (!$curso || !$turno) continue;
+
+                $key = $combo;
+                
+                if (isset($ofertasExistentes[$key])) {
+                    $novasOfertas[] = array_merge($ofertasExistentes[$key], [
+                        'unidade_nome' => $unidadesDb[$uId] ?? 'Unidade',
+                        'curso_nome' => $curso->nome,
+                        'turno_nome' => $turno->nome,
+                    ]);
+                } else {
+                    $novasOfertas[] = [
+                        'unidade_id' => (string) $uId,
+                        'unidade_nome' => $unidadesDb[$uId] ?? 'Unidade',
+                        'curso_id' => (string) $cId,
+                        'curso_nome' => $curso->nome,
+                        'turno_id' => (string) $tId,
+                        'turno_nome' => $turno->nome,
+                        'vagas' => '',
+                        'idade_min' => '',
+                        'idade_max' => '',
+                    ];
+                }
+            }
+        }
+
+        $this->ofertasVagas = $novasOfertas;
     }
 
     private function salvarPasso3Parcial()
@@ -227,15 +285,9 @@ class PeriodManager extends Component
         $this->dispatch('sucesso', msg: 'Ciclo configurado com sucesso!');
     }
 
-    // Auxiliares do Passo 2 (Cascata Explorer)
     public function setActiveUnidade($id) { $this->activeUnidadeId = $id; $this->activeCursoId = null; }
     public function setActiveCurso($id) { $this->activeCursoId = $id; }
 
-    // Auxiliares do Passo 3 (Vagas)
-    public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null]; }
-    public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
-
-    // Auxiliares do Passo 4 (Pipeline)
     public function adicionarStatusPipeline()
     {
         if (!empty($this->novoStatusSelecionado) && !in_array($this->novoStatusSelecionado, $this->statusSelecionados)) {
@@ -246,7 +298,6 @@ class PeriodManager extends Component
     public function removerStatusPipeline($id) { $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); }
     public function atualizarOrdemStatus($ordemIds) { $this->statusSelecionados = $ordemIds; }
 
-    // Auxiliares do Passo 5 (Documentos)
     public function addDocumento() { $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true]; }
     public function removeDocumento($index) { unset($this->documentosExigidos[$index]); $this->documentosExigidos = array_values($this->documentosExigidos); }
 
@@ -255,7 +306,7 @@ class PeriodManager extends Component
         abort_if(!feature('ciclo.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
         Ciclo::findOrFail($id)->delete();
-        $this->dispatch('sucesso', msg: 'Ciclo excluído com sucesso!');
+        $this->dispatch('sucesso', msg: 'Ciclo eliminado com sucesso!');
     }
 
     public function duplicar(int $id)

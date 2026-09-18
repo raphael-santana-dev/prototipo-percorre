@@ -139,7 +139,7 @@
                     @php
                         $passosLista = [
                             1 => ['titulo' => 'Informações Gerais', 'desc' => 'Nome, datas e período'],
-                            2 => ['titulo' => 'Estrutura Acadêmica', 'desc' => 'Unidades, cursos e turnos'],
+                            2 => ['titulo' => 'Estrutura Académica', 'desc' => 'Unidades, cursos e turnos'],
                             3 => ['titulo' => 'Distribuição de Vagas', 'desc' => 'Capacidade e faixa etária'],
                             4 => ['titulo' => 'Etapas do Ciclo', 'desc' => 'Funil de status (CRM)'],
                             5 => ['titulo' => 'Documentos Exigidos', 'desc' => 'Exigências de matrícula'],
@@ -149,7 +149,7 @@
 
                     @foreach($passosLista as $num => $info)
                         <div wire:click="irParaPasso({{ $num }})" 
-                             class="flex items-start gap-3.5 p-3 rounded-xl transition cursor-pointer {{ $passoAtual === $num ? 'bg-purpura-50 dark:bg-purpura-900/40 border border-purpura-200 dark:border-purpura-800 shadow-sm' : ($cicloIdEmEdicao && $num < $passoAtual ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'opacity-60') }}">
+                             class="flex items-start gap-3.5 p-3 rounded-xl transition cursor-pointer {{ $passoAtual === $num ? 'bg-purpura-50 dark:bg-purpura-900/40 border border-purpura-200 dark:border-purpura-800 shadow-sm' : ($cicloIdEmEdicao && $num < $passoAtual ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'opacity-60 pointer-events-none') }}">
                             <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0 {{ $passoAtual === $num ? 'bg-purpura-600 text-white shadow' : ($cicloIdEmEdicao && $num < $passoAtual ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400') }}">
                                 @if($cicloIdEmEdicao && $num < $passoAtual)
                                     <i class="ph-bold ph-check"></i>
@@ -220,7 +220,7 @@
                         @if($passoAtual === 2)
                             <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
-                                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-tree-structure text-purpura-600"></i> Passo 2: Estrutura Acadêmica</h3>
+                                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-tree-structure text-purpura-600"></i> Passo 2: Estrutura Académica</h3>
                                     <p class="text-xs text-gray-500 mt-1">Selecione as Unidades, Cursos e Turnos disponíveis neste processo seletivo.</p>
                                 </div>
 
@@ -229,7 +229,7 @@
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500">1. Unidades</div>
                                         <div class="flex-1 overflow-y-auto p-2 space-y-1">
                                             @foreach($unidadesDb as $u)
-                                                <div wire:click="setActiveUnidade({{ $u->id }})" class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                                <div wire:key="unidade-{{ $u->id }}" wire:click="setActiveUnidade({{ $u->id }})" class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                                                     <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
                                                         <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 rounded text-purpura-600">
                                                         <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $u->nome }}</span>
@@ -245,9 +245,10 @@
                                         <div class="flex-1 overflow-y-auto p-2 space-y-1">
                                             @if($activeUnidadeId)
                                                 @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $activeUnidadeId)) as $c)
-                                                    <div wire:click="setActiveCurso({{ $c->id }})" class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                                    <div wire:key="curso-{{ $activeUnidadeId }}-{{ $c->id }}" wire:click="setActiveCurso({{ $c->id }})" class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
                                                         <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                                            <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 rounded text-purpura-600">
+                                                            {{-- Ajuste 1: Registo isolado da combinação Unidade-Curso --}}
+                                                            <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $activeUnidadeId }}-{{ $c->id }}" class="w-4 h-4 rounded text-purpura-600">
                                                             <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $c->nome }}</span>
                                                         </label>
                                                         <i class="ph ph-caret-right text-lg {{ $activeCursoId == $c->id ? 'text-purpura-500' : 'text-gray-300' }}"></i>
@@ -263,14 +264,18 @@
                                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500">3. Turnos</div>
                                         <div class="flex-1 overflow-y-auto p-2 space-y-1">
                                             @if($activeCursoId)
-                                                @foreach($cursosDb->firstWhere('id', $activeCursoId)->turnosVinculados as $t)
-                                                    <div class="flex items-center p-2.5 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition">
-                                                        <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                                            <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 rounded text-purpura-600">
-                                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
-                                                        </label>
-                                                    </div>
-                                                @endforeach
+                                                @php $cs = $cursosDb->firstWhere('id', $activeCursoId); @endphp
+                                                @if($cs)
+                                                    @foreach($cs->turnosVinculados as $t)
+                                                        <div wire:key="turno-{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="flex items-center p-2.5 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition">
+                                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                                {{-- Ajuste 1: Registo isolado da combinação exata --}}
+                                                                <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="w-4 h-4 rounded text-purpura-600">
+                                                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
                                             @else
                                                 <div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs font-bold uppercase">Selecione um Curso</div>
                                             @endif
@@ -282,82 +287,51 @@
 
                         <!-- PASSO 3: DISTRIBUIÇÃO DE VAGAS -->
                         @if($passoAtual === 3)
-    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
-        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
-            <div>
-                <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-users-three text-purpura-600"></i> Passo 3: Distribuição de Vagas</h3>
-                <p class="text-xs text-gray-500 mt-1">Estabeleça o limite de vagas e faixas etárias para cada cruzamento acadêmico.</p>
-            </div>
-            <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                <i class="ph-bold ph-plus text-sm"></i> Adicionar Oferta
-            </button>
-        </div>
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
+                                    <div>
+                                        <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-users-three text-purpura-600"></i> Passo 3: Distribuição de Vagas</h3>
+                                        <p class="text-xs text-gray-500 mt-1">Preencha o limite de vagas e faixas etárias para cada combinação académica selecionada.</p>
+                                    </div>
+                                </div>
 
-        <div class="space-y-3">
-            @forelse($ofertasVagas as $index => $oferta)
-                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col xl:flex-row gap-3 items-end">
-                    <div class="flex-1 w-full">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
-                        <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2">
-                            <option value="">Selecione...</option>
-                            @foreach($unidadesDb as $u) 
-                                @if(in_array((string)$u->id, $unidadesSelecionadas)) 
-                                    <option value="{{ $u->id }}">{{ $u->nome }}</option> 
-                                @endif 
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex-1 w-full">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
-                        <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2" @if(!$oferta['unidade_id']) disabled @endif>
-                            <option value="">Selecione...</option>
-                            @if($oferta['unidade_id'])
-                                @foreach($cursosDb as $c) 
-                                    @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id'])) 
-                                        <option value="{{ $c->id }}">{{ $c->nome }}</option> 
-                                    @endif 
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-                    <div class="flex-1 w-full">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
-                        <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2" @if(!$oferta['curso_id']) disabled @endif>
-                            <option value="">Selecione...</option>
-                            @if($oferta['curso_id'])
-                                @php $cs = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
-                                @if($cs) 
-                                    @foreach($cs->turnosVinculados as $t) 
-                                        @if(in_array((string)$t->id, $turnosSelecionados)) 
-                                            <option value="{{ $t->id }}">{{ $t->nome }}</option> 
-                                        @endif 
-                                    @endforeach 
-                                @endif
-                            @endif
-                        </select>
-                    </div>
-                    <div class="w-full xl:w-24">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas</label>
-                        <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600">
-                    </div>
-                    <div class="w-full xl:w-20">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
-                        <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center">
-                    </div>
-                    <div class="w-full xl:w-20">
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
-                        <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center">
-                    </div>
-                    <div class="w-full xl:w-auto">
-                        <button type="button" wire:click="removeOferta({{ $index }})" class="w-full xl:w-auto p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 rounded-lg shadow-sm hover:bg-red-500 hover:text-white transition"><i class="ph-bold ph-trash"></i></button>
-                    </div>
-                </div>
-            @empty
-                <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-400 text-xs font-bold">Nenhuma oferta de vaga cadastrada.</div>
-            @endforelse
-        </div>
-    </div>
-@endif
+                                <div class="space-y-3">
+                                    @forelse($ofertasVagas as $index => $oferta)
+                                        <div wire:key="oferta-{{ $index }}" class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col xl:flex-row gap-3 items-end">
+                                            
+                                            {{-- Ajuste 2: Matriz Visual Limpa --}}
+                                            <div class="flex-1 w-full">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
+                                                <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">{{ $oferta['unidade_nome'] ?? '' }}</div>
+                                            </div>
+                                            <div class="flex-1 w-full">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
+                                                <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 truncate" title="{{ $oferta['curso_nome'] ?? '' }}">{{ $oferta['curso_nome'] ?? '' }}</div>
+                                            </div>
+                                            <div class="w-full xl:w-28">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
+                                                <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">{{ $oferta['turno_nome'] ?? '' }}</div>
+                                            </div>
+                                            
+                                            <div class="w-full xl:w-24">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600">
+                                            </div>
+                                            <div class="w-full xl:w-20">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium">
+                                            </div>
+                                            <div class="w-full xl:w-20">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium">
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-400 text-xs font-bold">Volte ao Passo 2 e selecione as combinações académicas.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        @endif
 
                         <!-- PASSO 4: ETAPAS DO CICLO (PIPELINE) -->
                         @if($passoAtual === 4)
@@ -426,7 +400,7 @@
 
                                 <div class="space-y-3">
                                     @forelse($documentosExigidos as $index => $doc)
-                                        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col md:flex-row gap-4 items-end">
+                                        <div wire:key="doc-{{ $index }}" class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col md:flex-row gap-4 items-end">
                                             <div class="flex-1 w-full">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Documento *</label>
                                                 <input type="text" wire:model="documentosExigidos.{{ $index }}.nome" placeholder="Ex: Histórico Escolar" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 font-bold">
@@ -458,7 +432,7 @@
                                 </div>
                                 <div>
                                     <h3 class="text-2xl font-black text-gray-900 dark:text-white">Ciclo Criado e Configurado!</h3>
-                                    <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">Todas as etapas, vagas e regras acadêmicas foram salvas com sucesso. Agora você pode avançar para o Construtor de Formulários para montar as perguntas públicas da inscrição.</p>
+                                    <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">Todas as etapas, vagas e regras académicas foram guardadas com sucesso. Agora pode avançar para o Construtor de Formulários para montar as perguntas públicas da inscrição.</p>
                                 </div>
                                 
                                 @if($cicloCriadoId)
