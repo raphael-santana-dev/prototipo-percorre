@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class AlunoCicloAprendizagem extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'aluno_ciclo_aprendizagem';
     protected $guarded = ['id'];
 

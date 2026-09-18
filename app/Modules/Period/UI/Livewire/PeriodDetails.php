@@ -26,6 +26,7 @@ class PeriodDetails extends Component
 
     public Ciclo $ciclo;
     public string $modelClass = \App\Models\Ciclo::class; 
+    public bool $unicoAtivo = true;
     
     public $abaAtiva = 'visao-geral'; 
 

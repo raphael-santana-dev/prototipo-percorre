@@ -3,9 +3,11 @@
 namespace App\Modules\Financeiro\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class Orcamento extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'orcamentos';
     
     protected $guarded = ['id'];

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RegistraAuditoria;
 
 class OfertaVaga extends Model
 {
+    use RegistraAuditoria;
     protected $table = 'ofertas_vagas';
     
     protected $fillable = [
