@@ -16,10 +16,12 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
     public $timeout = 3600;
     protected $trackingId;
+    protected $cicloId; // NOVO: Recebe o filtro da tela
 
-    public function __construct($trackingId)
+    public function __construct($trackingId, $cicloId = null)
     {
         $this->trackingId = $trackingId;
+        $this->cicloId = $cicloId;
     }
 
     public function handle(): void
@@ -27,7 +29,14 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        $ciclos = Ciclo::where('status', true)->whereNotNull('regras_pontuacao')->get();
+        // CORREÇÃO: Aplica a restrição de ciclo_id enviado pelo usuário, caso exista.
+        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        if ($this->cicloId) {
+            $queryCiclos->where('id', $this->cicloId);
+        } else {
+            $queryCiclos->where('status', true);
+        }
+        $ciclos = $queryCiclos->get();
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {

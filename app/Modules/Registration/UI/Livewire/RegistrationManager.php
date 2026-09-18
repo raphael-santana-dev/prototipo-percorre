@@ -536,9 +536,10 @@ class RegistrationManager extends Component
             'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
+        // INJEÇÃO DA VARIÁVEL: $this->filtroCiclo
         \Illuminate\Support\Facades\Bus::chain([
-            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
-            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $this->filtroCiclo),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
         ])->dispatch();
         
         $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
@@ -554,14 +555,10 @@ class RegistrationManager extends Component
             'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
+        // INJEÇÃO DA VARIÁVEL: $this->filtroCiclo
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->filtroCiclo))->afterResponse();
+        
         $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
-    }
-
-    public function limparFiltros()
-    {
-        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
-        $this->resetPage();
     }
 
     public function getFabActionsProperty()
@@ -582,7 +579,7 @@ class RegistrationManager extends Component
                 'always_show_label' => true,
                 'bg_color' => 'bg-indigo-500 hover:bg-indigo-600',
                 'icon_color' => 'text-white',
-                'confirm' => 'Gerar a posição de ranking cruzado para todas as inscrições ativas? O motor analisará Unidade, Curso e Turno em segundo plano.'
+                'confirm' => 'Gerar a posição de ranking cruzado para as inscrições do Ciclo selecionado no filtro? O motor processará em segundo plano.'
             ],
             [
                 'label' => 'Recalcular Pontuação',
@@ -591,9 +588,15 @@ class RegistrationManager extends Component
                 'always_show_label' => true,
                 'bg_color' => 'bg-orange-500 hover:bg-orange-600',
                 'icon_color' => 'text-white',
-                'confirm' => 'Processar as pontuações e regras Multiplicadoras de TODAS as inscrições? Essa ação rodará na nuvem.'
+                'confirm' => 'Processar as pontuações e regras Multiplicadoras das inscrições do Ciclo selecionado? Essa ação rodará na nuvem.'
             ]
         ];
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
+        $this->resetPage();
     }
 
     public function getHeadersProperty()

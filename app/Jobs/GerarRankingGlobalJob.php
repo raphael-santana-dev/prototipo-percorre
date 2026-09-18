@@ -17,10 +17,12 @@ class GerarRankingGlobalJob implements ShouldQueue
 
     public $timeout = 3600;
     protected $trackingId;
+    protected $cicloId; // NOVO: Recebe o filtro da tela
 
-    public function __construct($trackingId)
+    public function __construct($trackingId, $cicloId = null)
     {
         $this->trackingId = $trackingId;
+        $this->cicloId = $cicloId;
     }
 
     public function handle(): void
@@ -28,7 +30,14 @@ class GerarRankingGlobalJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        $ciclos = Ciclo::where('status', true)->whereNotNull('regras_pontuacao')->get();
+        // CORREÇÃO: Aplica a restrição de ciclo_id enviado pelo usuário.
+        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        if ($this->cicloId) {
+            $queryCiclos->where('id', $this->cicloId);
+        } else {
+            $queryCiclos->where('status', true);
+        }
+        $ciclos = $queryCiclos->get();
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
@@ -39,7 +48,6 @@ class GerarRankingGlobalJob implements ShouldQueue
 
         try {
             foreach ($ciclos as $ciclo) {
-                // 1. Zera os rankings atuais do ciclo de forma rápida
                 DB::table('inscricoes')->where('ciclo_id', $ciclo->id)->update([
                     'posicao_ranking' => null, 
                     'posicao_ranking_geral' => null,
@@ -47,8 +55,6 @@ class GerarRankingGlobalJob implements ShouldQueue
                     'posicao_ranking_curso' => null,
                 ]);
 
-                // 2. Delega 100% do cálculo e atualização para o PostgreSQL (Window Functions)
-                // Isso elimina o risco de OOM (Out of Memory) no PHP e roda em milissegundos.
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
