@@ -17,7 +17,7 @@ class GerarRankingGlobalJob implements ShouldQueue
 
     public $timeout = 3600;
     protected $trackingId;
-    protected $cicloId; // NOVO: Recebe o filtro da tela
+    protected $cicloId;
 
     public function __construct($trackingId, $cicloId = null)
     {
@@ -30,7 +30,6 @@ class GerarRankingGlobalJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        // CORREÇÃO: Aplica a restrição de ciclo_id enviado pelo usuário.
         $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
         if ($this->cicloId) {
             $queryCiclos->where('id', $this->cicloId);
@@ -41,20 +40,26 @@ class GerarRankingGlobalJob implements ShouldQueue
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
-            $totalInscricoes += $ciclo->inscricoes()->count();
+            $totalInscricoes += $ciclo->inscricoes()->where('etapa_atual', 99)->count();
         }
 
         if ($tracking) $tracking->update(['total_linhas' => $totalInscricoes]);
 
         try {
             foreach ($ciclos as $ciclo) {
-                DB::table('inscricoes')->where('ciclo_id', $ciclo->id)->update([
-                    'posicao_ranking' => null, 
-                    'posicao_ranking_geral' => null,
-                    'posicao_ranking_unidade' => null,
-                    'posicao_ranking_curso' => null,
-                ]);
+                // 1. Zera classificações de quem NÃO finalizou (restaura consistência)
+                DB::table('inscricoes')
+                    ->where('ciclo_id', $ciclo->id)
+                    ->where('etapa_atual', '!=', 99)
+                    ->whereNotNull('posicao_ranking_geral')
+                    ->update([
+                        'posicao_ranking' => null, 
+                        'posicao_ranking_geral' => null,
+                        'posicao_ranking_unidade' => null,
+                        'posicao_ranking_curso' => null,
+                    ]);
 
+                // 2. Window Function restrita apenas a quem FINALIZOU (etapa_atual = 99)
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
@@ -65,6 +70,7 @@ class GerarRankingGlobalJob implements ShouldQueue
                         FROM inscricoes
                         WHERE ciclo_id = :ciclo_id
                           AND deleted_at IS NULL
+                          AND etapa_atual = 99
                     )
                     UPDATE inscricoes i
                     SET posicao_ranking_geral = r.rank_geral,

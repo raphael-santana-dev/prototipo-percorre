@@ -314,13 +314,57 @@ class Inscricao extends Component
             $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
             if ($inscricaoDB) {
                 $inscricaoDB->update(['etapa_atual' => 99]);
-                
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
             }
 
             $this->etapaAtual = 99; 
+            
+            // OTIMIZAÇÃO: Recalcula o ranking do candidato de forma instantânea
+            $this->atualizarRankingInstantaneo();
+
             $this->dispatch('inscricao-concluida');
         }
+    }
+
+    private function atualizarRankingInstantaneo()
+    {
+        if (!$this->cicloAtivoId) return;
+
+        // 1. Zera classificações antigas de quem não está finalizado (proteção de consistência)
+        \Illuminate\Support\Facades\DB::table('inscricoes')
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->where('etapa_atual', '!=', 99)
+            ->whereNotNull('posicao_ranking_geral')
+            ->update([
+                'posicao_ranking' => null, 
+                'posicao_ranking_geral' => null,
+                'posicao_ranking_unidade' => null,
+                'posicao_ranking_curso' => null,
+            ]);
+
+        // 2. Calcula as posições usando a Pontuação + Desempate por Ordem de Chegada
+        $query = "
+            WITH RankedData AS (
+                SELECT id,
+                    RANK() OVER (ORDER BY pontuacao_total DESC, created_at ASC) as rank_geral,
+                    RANK() OVER (PARTITION BY unidade_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_unidade,
+                    RANK() OVER (PARTITION BY unidade_id, curso_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_curso,
+                    RANK() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_turma
+                FROM inscricoes
+                WHERE ciclo_id = :ciclo_id
+                  AND deleted_at IS NULL
+                  AND etapa_atual = 99
+            )
+            UPDATE inscricoes i
+            SET posicao_ranking_geral = r.rank_geral,
+                posicao_ranking_unidade = r.rank_unidade,
+                posicao_ranking_curso = r.rank_curso,
+                posicao_ranking = r.rank_turma
+            FROM RankedData r
+            WHERE i.id = r.id;
+        ";
+
+        \Illuminate\Support\Facades\DB::statement($query, ['ciclo_id' => $this->cicloAtivoId]);
     }
 
     private function salvarProgresso($statusForcado = null)
@@ -580,7 +624,6 @@ class Inscricao extends Component
         if (is_string($regras)) $regras = json_decode($regras, true) ?? [];
         if (empty($regras) || !is_array($regras)) return ['total' => 0, 'detalhes' => null];
 
-        // TRADUTOR DE REGRAS P/ PORTUGUÊS CLARO
         $formatarCondicao = function($operador, $valor) {
             $valores = array_map('trim', explode(',', (string)$valor));
             switch ($operador) {
@@ -600,7 +643,6 @@ class Inscricao extends Component
             }
         };
 
-        // TRADUTOR: Busca o nome real do dado em vez do ID ou campo bruto
         $obterResposta = function($campo) {
             if ($campo === 'idade' && !empty($this->data_nascimento)) return \Carbon\Carbon::parse($this->data_nascimento)->age . ' anos';
             if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? \App\Models\Curso::find($this->curso)->nome ?? 'Curso não informado';
