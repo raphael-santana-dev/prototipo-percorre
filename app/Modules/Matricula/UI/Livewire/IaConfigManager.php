@@ -38,6 +38,15 @@ class IaConfigManager extends Component
     public $model_nome = '';
     public $model_codigo = '';
 
+    // CADASTRO COMBINADO (PROVEDOR + MODELO)
+    public $modalCombinedAberto = false;
+    public $c_provider_nome = '';
+    public $c_provider_driver = 'openai_compatible';
+    public $c_provider_api_url = '';
+    public $c_provider_api_key = '';
+    public $c_model_nome = '';
+    public $c_model_codigo = '';
+
     // DOCUMENTOS
     public $cicloSelecionado = '';
     public $nomeDocumento = '';
@@ -70,11 +79,59 @@ class IaConfigManager extends Component
         ConfiguracaoIa::updateOrCreate(['id' => 1], [
             'ai_model_id' => $this->ai_model_id,
             'prompt_documentos' => $this->prompt_documentos,
-            'is_ativa' => $this->is_ativa
+            'is_ativa' => $this->is_ativa,
+            'provedor' => 'dinamico', 
+            'api_key' => 'dinamico'
         ]);
 
         $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com segurança!');
     }
+
+    // ==========================================
+    // CRUD COMBINADO: PROVEDOR E MODELO
+    // ==========================================
+    public function abrirModalCombined()
+    {
+        $this->reset([
+            'c_provider_nome', 'c_provider_driver', 'c_provider_api_url', 'c_provider_api_key',
+            'c_model_nome', 'c_model_codigo'
+        ]);
+        $this->modalCombinedAberto = true;
+    }
+
+    public function salvarCombined()
+    {
+        $this->validate([
+            'c_provider_nome' => 'required',
+            'c_provider_driver' => 'required',
+            'c_model_nome' => 'required',
+            'c_model_codigo' => 'required',
+        ]);
+
+        $providerData = [
+            'nome' => $this->c_provider_nome,
+            'driver' => $this->c_provider_driver,
+            'api_url' => $this->c_provider_api_url,
+        ];
+
+        if (!empty($this->c_provider_api_key)) {
+            $providerData['api_key'] = Crypt::encryptString($this->c_provider_api_key);
+        }
+
+        // 1. Cria o Provedor
+        $novoProvedor = AiProvider::create($providerData);
+
+        // 2. Cria o Modelo Vinculado ao novo Provedor
+        AiModel::create([
+            'ai_provider_id' => $novoProvedor->id,
+            'nome' => $this->c_model_nome,
+            'codigo' => $this->c_model_codigo,
+        ]);
+
+        $this->modalCombinedAberto = false;
+        $this->dispatch('sucesso', msg: 'Provedor e Modelo criados e vinculados com sucesso!');
+    }
+
 
     // ==========================================
     // CRUD: PROVEDORES
@@ -112,7 +169,6 @@ class IaConfigManager extends Component
             $data['api_key'] = null;
         }
 
-        // CORREÇÃO: Evita enviar "id nulo" para o Postgres separando a criação da edição
         if ($this->provider_id) {
             AiProvider::findOrFail($this->provider_id)->update($data);
         } else {
@@ -159,7 +215,6 @@ class IaConfigManager extends Component
             'codigo' => $this->model_codigo,
         ];
 
-        // CORREÇÃO: Evita enviar "id nulo" para o Postgres separando a criação da edição
         if ($this->model_id) {
             AiModel::findOrFail($this->model_id)->update($data);
         } else {
