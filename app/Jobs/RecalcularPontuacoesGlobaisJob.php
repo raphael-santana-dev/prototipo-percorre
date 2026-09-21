@@ -56,11 +56,11 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $ciclo->inscricoes()->with(['curso', 'turno', 'unidade'])->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
-                        // CORREÇÃO: Pula o cálculo se a inscrição estiver incompleta, mas contabiliza na barra
+                        // CORREÇÃO: Insere 0 em vez de null para respeitar a restrição NOT NULL do banco
                         if (!$inscricao->unidade_id || !$inscricao->curso_id || !$inscricao->turno_id) {
-                            if ($inscricao->pontuacao_total !== null) {
+                            if ($inscricao->pontuacao_total !== 0) {
                                 $inscricao->update([
-                                    'pontuacao_total' => null,
+                                    'pontuacao_total' => 0,
                                     'pontuacao_detalhes' => null
                                 ]);
                             }
@@ -207,7 +207,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 });
             }
 
-            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $atualizados]);
+            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $totalInscricoes]);
 
         } catch (\Throwable $e) {
             if ($tracking) {
