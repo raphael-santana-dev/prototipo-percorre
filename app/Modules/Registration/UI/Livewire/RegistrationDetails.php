@@ -25,6 +25,31 @@ class RegistrationDetails extends Component
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
     }
 
+    // Busca de Data Flexível (JSON -> Fallback Eloquent)
+    public function getDataInscricao()
+    {
+        $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);
+        $dataRaw = $dinamicos['Submission started'] ?? $dinamicos['submission started'] ?? $dinamicos['Submission Started'] ?? $this->inscricao->created_at;
+        
+        try {
+            return \Carbon\Carbon::parse($dataRaw);
+        } catch (\Exception $e) {
+            return clone $this->inscricao->created_at;
+        }
+    }
+
+    public function getDataAtualizacao()
+    {
+        $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);
+        $dataRaw = $dinamicos['Last updated'] ?? $dinamicos['last updated'] ?? $dinamicos['Last Updated'] ?? $this->inscricao->updated_at;
+        
+        try {
+            return \Carbon\Carbon::parse($dataRaw);
+        } catch (\Exception $e) {
+            return clone $this->inscricao->updated_at;
+        }
+    }
+
     public function atualizarStatus()
     {
         abort_if(!feature('inscricao.editar'), 403);

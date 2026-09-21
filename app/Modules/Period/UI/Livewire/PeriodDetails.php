@@ -244,7 +244,7 @@ class PeriodDetails extends Component
             new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
         ])->dispatch();
         
-        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
+        $this->dispatch('sucesso', msg: "Processamento iniciado! Acompanhe o progresso no Gerenciador de Integrações.");
     }
 
     public function gerarRanking()

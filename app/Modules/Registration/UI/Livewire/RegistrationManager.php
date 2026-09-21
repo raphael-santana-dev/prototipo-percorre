@@ -542,7 +542,7 @@ class RegistrationManager extends Component
             new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
         ])->dispatch();
         
-        $this->dispatch('sucesso', msg: "Processamento em cascata iniciado! Acompanhe as duas etapas no Gerenciador de Integrações.");
+        $this->dispatch('sucesso', msg: "Processamento iniciado! Acompanhe o progresso no Gerenciador de Integrações.");
     }
 
     public function gerarRankingGlobal()

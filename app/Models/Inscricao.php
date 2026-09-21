@@ -42,6 +42,7 @@ class Inscricao extends Model
         'pontuacao_detalhes',
         'posicao_ranking',
         'dados_dinamicos',
+        'metadados', 
         'curso_id',
         'turno_id',
         'unidade_id',
@@ -56,6 +57,7 @@ class Inscricao extends Model
 
     protected $casts = [
         'dados_dinamicos' => 'array',
+        'metadados' => 'array', 
         'pontuacao_detalhes' => 'array',
         'data_nascimento' => 'date',
         'status' => 'boolean'

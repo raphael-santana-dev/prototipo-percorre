@@ -28,11 +28,17 @@
         <div class="w-full mx-auto {{ $formWidth }} form-container">
             @if($inscricoesAbertas)
                 @if($etapaAtual <= $totalEtapas)
-                    <div class="mb-8 progresso-container">
-                        <div class="font-bold {{ $formBgUrl ? 'text-white drop-shadow-md' : 'text-gray-700 dark:text-gray-300' }} mb-2 text-sm">Passo {{ $etapaAtual }} de {{ $totalEtapas }}</div>
-                        <div class="flex gap-2">
+                    <div class="mb-8 progresso-container flex flex-col items-center sm:items-start">
+                        <!-- Badge translúcido que respeita o tema (Claro/Escuro) -->
+                        <div class="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-lg text-gray-800 dark:text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-3 transition-colors duration-300">
+                            <i class="ph-bold ph-list-numbers text-purpura-600 dark:text-yellow-400"></i>
+                            Passo {{ $etapaAtual }} de {{ $totalEtapas }}
+                        </div>
+                        
+                        <!-- Wrapper translúcido que respeita o tema -->
+                        <div class="flex gap-2 w-full bg-white/60 dark:bg-gray-900/40 p-1.5 rounded-full backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-inner transition-colors duration-300">
                             @for($i = 1; $i <= $totalEtapas; $i++)
-                                <div class="h-2 rounded-full w-full {{ $etapaAtual >= $i ? 'bg-yellow-400 shadow-sm' : 'bg-gray-200/60 dark:bg-gray-700/60 backdrop-blur-sm' }}"></div>
+                                <div class="h-2 rounded-full w-full transition-all duration-500 {{ $etapaAtual >= $i ? 'bg-purpura-600 shadow-[0_0_8px_rgba(147,51,234,0.5)] dark:bg-yellow-400 dark:shadow-[0_0_10px_rgba(250,204,21,0.6)]' : 'bg-gray-300/80 dark:bg-white/20' }}"></div>
                             @endfor
                         </div>
                     </div>

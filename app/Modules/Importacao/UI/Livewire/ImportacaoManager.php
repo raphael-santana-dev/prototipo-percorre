@@ -55,6 +55,7 @@ class ImportacaoManager extends Component
     public array $previewCabecalhos = [];
     public array $previewDados = [];
 
+    // OTIMIZAÇÃO: Inclusão do created_at e updated_at nas opções de mapeamento nativo
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
         'email' => 'E-mail',
@@ -82,6 +83,8 @@ class ImportacaoManager extends Component
         'posicao_ranking' => 'Posição no Ranking',
         'etapa_atual' => 'Progresso (Etapa Atual)',
         'regiao' => 'Região (Ex.: Norte, Sul, Leste, Oeste)',
+        'created_at' => 'Data da Inscrição (created_at)',
+        'updated_at' => 'Última Atualização (updated_at)',
     ];
 
     public function mount()
@@ -413,8 +416,16 @@ class ImportacaoManager extends Component
                 }
             }
 
+            // OTIMIZAÇÃO: Automação para inferir colunas de timestamps como 'created_at' e 'updated_at'
             $colunaLower = strtolower($colunaPlanilha);
-            if (str_contains($colunaLower, 'data') || str_contains($colunaLower, 'nascimento')) {
+            
+            if (str_contains($colunaLower, 'submission started') || str_contains($colunaLower, 'created') || str_contains($colunaLower, 'criado em') || str_contains($colunaLower, 'data de criação')) {
+                $melhorDestino = 'created_at';
+                $tipoSugerido = 'data';
+            } elseif (str_contains($colunaLower, 'last updated') || str_contains($colunaLower, 'updated') || str_contains($colunaLower, 'atualizado em') || str_contains($colunaLower, 'modificado')) {
+                $melhorDestino = 'updated_at';
+                $tipoSugerido = 'data';
+            } elseif (str_contains($colunaLower, 'data') || str_contains($colunaLower, 'nascimento')) {
                 $tipoSugerido = 'data';
             } elseif (str_contains($colunaLower, 'renda') || str_contains($colunaLower, 'valor') || str_contains($colunaLower, 'salario')) {
                 $tipoSugerido = 'monetario';

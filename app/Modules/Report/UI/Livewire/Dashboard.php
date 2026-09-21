@@ -31,7 +31,6 @@ class Dashboard extends Component
     public array $graficoPCD = [];
 
     public array $graficosDinamicos = [];
-
     public array $graficoDetalhado = [];
     public string $tituloDetalhado = '';
 
@@ -62,13 +61,10 @@ class Dashboard extends Component
     {
         if (!$this->filtroCiclo) return;
 
-        // OTIMIZAÇÃO: Cache de 30 minutos (1800 segundos). Isso impede que a página derreta 
-        // o banco de dados se 50 administradores derem F5 ao mesmo tempo.
         $cacheKey = 'dashboard_gerencial_ciclo_' . $this->filtroCiclo;
 
         $dadosProcessados = \Illuminate\Support\Facades\Cache::remember($cacheKey, 1800, function () {
             
-            // 1. DELEGAÇÃO PARA O BANCO (GROUP BY NATIVO) em vez de iterar foreach no PHP
             $statusContagem = Inscricao::where('ciclo_id', $this->filtroCiclo)
                 ->join('status_inscricoes', 'inscricoes.status_inscricao_id', '=', 'status_inscricoes.id')
                 ->groupBy('status_inscricoes.nome')
@@ -84,22 +80,17 @@ class Dashboard extends Component
                 ->groupBy('unidades.nome')
                 ->pluck(DB::raw('count(inscricoes.id) as total'), 'unidades.nome')->toArray();
 
-            $inscricoesPorDia = Inscricao::where('ciclo_id', $this->filtroCiclo)
-                ->selectRaw('DATE(created_at) as data_criacao, count(id) as total')
-                ->groupBy('data_criacao')
-                ->pluck('total', 'data_criacao')
-                ->toArray();
-
             $pcdContagemDb = Inscricao::where('ciclo_id', $this->filtroCiclo)
                 ->groupBy('possui_deficiencia')
                 ->pluck(DB::raw('count(id) as total'), 'possui_deficiencia')->toArray();
 
-            // 2. Extração limpa para campos dinâmicos e idades (apenas os dados necessários)
-            $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'data_nascimento')
+            // Modificação: Trazemos as 3 colunas de dados flexíveis do banco
+            $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'metadados', 'data_nascimento', 'created_at')
                 ->where('ciclo_id', $this->filtroCiclo)->get();
                 
             $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
             $pcdContagem = ['Sim' => 0, 'Não' => 0];
+            $inscricoesPorDia = [];
             $vagasPreenchidas = 0;
 
             foreach (['Aprovado', 'Selecionado'] as $s) {
@@ -128,6 +119,18 @@ class Dashboard extends Component
                     elseif ($idade <= 45) $idadesContagem['35 a 45']++;
                     else $idadesContagem['Acima de 45']++;
                 }
+
+                $meta = is_string($insc->metadados) ? json_decode($insc->metadados, true) : ($insc->metadados ?? []);
+                
+                // Prioriza a data bruta da importação (Submission started), senão faz fallback para o created_at
+                $dataCriacaoRaw = $meta['Submission started'] ?? $meta['submission started'] ?? $meta['Submission Started'] ?? $insc->created_at;
+                try {
+                    $dataCriacao = Carbon::parse($dataCriacaoRaw)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $dataCriacao = $insc->created_at ? $insc->created_at->format('Y-m-d') : now()->format('Y-m-d');
+                }
+                
+                $inscricoesPorDia[$dataCriacao] = ($inscricoesPorDia[$dataCriacao] ?? 0) + 1;
 
                 $dinamicos = is_string($insc->dados_dinamicos) ? json_decode($insc->dados_dinamicos, true) : ($insc->dados_dinamicos ?? []);
                 foreach ($camposFormulario as $campo) {
@@ -174,7 +177,6 @@ class Dashboard extends Component
             ];
         });
 
-        // 3. Alocação dos dados do cache para as variáveis públicas do Livewire
         $this->graficoInscricoesDia = ['title' => 'Inscrições diárias', 'type' => 'area', 'height' => 350, 'labels' => $dadosProcessados['labelsDias'], 'series' => [['name' => 'Novas Inscrições', 'data' => $dadosProcessados['dadosDias']]]];
         $this->graficoVagas = ['title' => 'Vagas disponíveis', 'type' => 'donut', 'height' => 350, 'labels' => ['Vagas Preenchidas', 'Vagas Abertas'], 'series' => [$dadosProcessados['vagasPreenchidas'], max(0, $dadosProcessados['totalVagas'] - $dadosProcessados['vagasPreenchidas'])]];
         $this->graficoInscricoes = ['title' => 'Status', 'type' => 'bar', 'height' => 350, 'labels' => array_keys($dadosProcessados['statusContagem']), 'series' => [['name' => 'Inscritos', 'data' => array_values($dadosProcessados['statusContagem'])]]];

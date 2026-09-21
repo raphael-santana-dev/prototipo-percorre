@@ -8,7 +8,7 @@
 
     <x-details-card 
         title="Ficha do Candidato" 
-        subtitle="Inscrição iniciada em {{ $inscricao->created_at->format('d/m/Y \à\s H:i') }}"
+        subtitle="Inscrição iniciada em {{ $this->getDataInscricao()->format('d/m/Y \à\s H:i') }}"
         backUrl="{{ route('inscricoes.index') ?? '#' }}"
         backLabel="Voltar à Lista"
         avatarInitials="{{ strtoupper(substr($inscricao->nome, 0, 2)) }}"
@@ -64,11 +64,8 @@
             <span class="block text-sm font-bold text-gray-900 mt-1">{{ $inscricao->unidade->nome ?? 'Não informada' }}</span>
         </div>
         <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Curso & Turno</span>
-            <span class="block text-sm font-bold text-gray-900 mt-1">
-                {{ $inscricao->curso->nome ?? 'Não informado' }}
-                <span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 ml-1">{{ $inscricao->turno->nome ?? '-' }}</span>
-            </span>
+            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Última Atualização</span>
+            <span class="block text-sm font-bold text-gray-900 mt-1">{{ $this->getDataAtualizacao()->format('d/m/Y \à\s H:i') }}</span>
         </div>
     </x-details-card>
 
@@ -138,6 +135,7 @@
                         <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                             @foreach($dinamicos as $chave => $valor)
                                 @continue(str_contains(strtolower($chave), 'form_config'))
+                                @continue(in_array(strtolower(trim($chave)), ['submission started', 'last updated']))
                                 
                                 @php
                                     $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
@@ -177,6 +175,29 @@
                     @endif
                 </section>
 
+                <section class="mt-10">
+                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                        <i class="ph-fill ph-code text-lg text-purpura-500"></i> Metadados Ocultos (Importação)
+                    </h3>
+                    
+                    @php
+                        $metaArr = is_string($inscricao->metadados) ? json_decode($inscricao->metadados, true) : ($inscricao->metadados ?? []);
+                    @endphp
+
+                    @if(is_array($metaArr) && count($metaArr) > 0)
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                            @foreach($metaArr as $chave => $valor)
+                                <div>
+                                    <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">{{ $chave }}</dt>
+                                    <dd class="block text-sm font-bold text-gray-900 break-words">{{ is_array($valor) ? json_encode($valor) : $valor }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    @else
+                        <p class="text-gray-500 text-sm font-medium">Nenhum metadado de sistema foi registrado para este candidato.</p>
+                    @endif
+                </section>
+
             </div>
         </div>
 
@@ -205,18 +226,26 @@
                             <div class="space-y-3 mb-4">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
                                 @foreach($detalhes['auditoria_detalhada'] as $info)
+                                    @php
+                                        $isPadrao = ($info['tipo_regra'] ?? 'padrao') === 'padrao';
+                                    @endphp
                                     <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors shadow-sm">
                                         <div class="flex-1 pr-3">
                                             <span class="text-[10px] font-bold text-gray-900 uppercase block mb-1">
                                                 {{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}
                                             </span>
                                             
-                                            <p class="text-xs text-gray-600 mb-1" title="{{ $info['resposta_dada'] ?? '-' }}">
-                                                Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
-                                            </p>
-
-                                            @if(isset($info['condicao']))
-                                                <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight"><i class="ph-fill ph-info"></i> {{ $info['condicao'] }}</p>
+                                            @if($isPadrao)
+                                                <p class="text-xs text-gray-600 mb-1">
+                                                    Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
+                                                </p>
+                                                <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight">
+                                                    <i class="ph-fill ph-info"></i> {{ $info['condicao'] ?? '' }}
+                                                </p>
+                                            @else
+                                                <p class="text-[10px] text-indigo-600 font-bold mt-1 leading-tight">
+                                                    {{ $info['condicao'] ?? 'Bônus/Multiplicador aplicado' }}
+                                                </p>
                                             @endif
                                         </div>
                                         <span class="text-green-700 font-extrabold bg-green-50 px-2 py-1 rounded-md text-[11px] border border-green-200 shrink-0">
@@ -224,13 +253,6 @@
                                         </span>
                                     </div>
                                 @endforeach
-                            </div>
-                        @endif
-                        
-                        @if(isset($detalhes['motivo_auditoria']))
-                            <div class="bg-gray-900 rounded-lg p-3 text-[10px] font-mono text-green-400 leading-relaxed border border-gray-800 mt-4 break-words">
-                                <span class="text-gray-500">&gt; Logs:</span><br>
-                                {{ $detalhes['motivo_auditoria'] }}
                             </div>
                         @endif
                     @else

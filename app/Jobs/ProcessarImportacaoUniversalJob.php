@@ -313,13 +313,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         if ($permiteAutoCadastro) {
             $dadosNovo = ['nome' => $nomePlanilha];
-            
             if (str_contains($classeModel, 'Curso')) $dadosNovo['status'] = 'Ativo';
             if (str_contains($classeModel, 'Unidade')) $dadosNovo['status'] = 'Ativa';
-            
             $novo = $classeModel::create($dadosNovo);
             $this->cacheVinculos[$classeModel]->push($novo);
-            
             $this->relatorioAutoCadastro['novos'][$tipoVinculo][] = $nomePlanilha;
             return $novo->id;
         }
@@ -356,6 +353,13 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
     {
         $dadosFixos = [];
         $dadosDinamicos = [];
+        $metadados = []; 
+
+        $linhaFormatada = [];
+        foreach ($linhaOriginal as $k => $v) {
+            $cleanKey = mb_convert_encoding(trim($k), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+            $linhaFormatada[$cleanKey] = $v;
+        }
 
         $autoCadastroAtivo = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -365,49 +369,23 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $destino = $config['destino'] ?? 'ignorar';
             if ($destino === 'ignorar') continue;
 
-            $valorPlanilha = trim((string) ($linhaOriginal[$colunaPlanilha] ?? ''));
+            $valorPlanilha = trim((string) ($linhaFormatada[$colunaPlanilha] ?? ''));
             if ($valorPlanilha === '') continue;
 
             $tipoMapeado = $config['tipo'] ?? 'texto';
 
-            if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data')) {
-                $valData = str_replace('/', '-', $valorPlanilha); 
-                
-                if (preg_match('/^(\d{2})-(\d{2})-(\d{2})$/', $valData, $m)) {
-                    $p1 = (int)$m[1];
-                    $p2 = (int)$m[2];
-                    $y = (int)$m[3];
-                    $year = $y < 50 ? 2000 + $y : 1900 + $y;
-                    
-                    if ($p1 > 12) {
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
-                    } elseif ($p2 > 12) {
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p1, $p2);
-                    } else {
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
-                    }
-                } 
-                elseif (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $valData, $m)) {
-                    $p1 = (int)$m[1];
-                    $p2 = (int)$m[2];
-                    $year = (int)$m[3];
-
-                    if ($p1 > 12) { 
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
-                    } elseif ($p2 > 12) { 
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p1, $p2);
-                    } else { 
-                        $valorPlanilha = sprintf('%04d-%02d-%02d', $year, $p2, $p1);
-                    }
-                }
+            if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data') || in_array($destino, ['created_at', 'updated_at'])) {
+                $precisaDeHora = in_array($destino, ['created_at', 'updated_at']) || $tipoMapeado === 'data_hora';
+                try {
+                    $parsed = \Carbon\Carbon::parse(str_replace('/', '-', $valorPlanilha));
+                    $valorPlanilha = $precisaDeHora ? $parsed->format('Y-m-d H:i:s') : $parsed->format('Y-m-d');
+                } catch (\Exception $e) {}
             }
 
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
                 $valTemp = preg_replace('/[^0-9,-]/', '', $valorPlanilha); 
                 $valTemp = str_replace(',', '.', $valTemp);
-                if (is_numeric($valTemp)) {
-                    $valorPlanilha = $valTemp;
-                }
+                if (is_numeric($valTemp)) $valorPlanilha = $valTemp;
             }
 
             if (in_array($destino, ['curso_id', 'unidade_id', 'turno_id'])) {
@@ -425,13 +403,16 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 } else {
                     throw new \Exception("{$tipoLabel}: O nome '{$valorPlanilha}' não atingiu 50% de similaridade com o banco e o auto-cadastro está desativado.");
                 }
-                
                 continue; 
             }
 
+            // Separação oficial: Campos dinâmicos vão para dados_dinamicos, 
+            // e os que marcarem a opção 'dados_dinamicos' na tela vão para metadados!
             if (str_starts_with($destino, 'dinamico:')) {
                 $chaveNome = str_replace('dinamico:', '', $destino);
                 $dadosDinamicos[$chaveNome] = $valorPlanilha;
+            } elseif ($destino === 'dados_dinamicos') {
+                $metadados[$colunaPlanilha] = $valorPlanilha;
             } else {
                 $dadosFixos[$destino] = $valorPlanilha;
             }
@@ -452,43 +433,25 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         foreach ($configsRelacionamento as $config) {
             $coluna = $config->coluna;
-            
             if (array_key_exists($coluna, $dadosFixos)) {
-                
                 if (!empty($dadosFixos[$coluna])) {
                     if (!is_numeric($dadosFixos[$coluna])) {
                         $termoOriginal = trim($dadosFixos[$coluna]);
-                        
-                        $termo = preg_replace('/[\r\n]+.*/s', '', $termoOriginal);
-                        $termo = explode(',', $termo)[0];
-                        $termo = explode(';', $termo)[0];
-                        $termo = trim($termo);
-                        
-                        if (strlen($termo) > 80) {
-                            $termo = trim(substr($termo, 0, 80));
-                        }
-
+                        $termo = trim(explode(';', explode(',', preg_replace('/[\r\n]+.*/s', '', $termoOriginal))[0])[0]);
+                        if (strlen($termo) > 80) $termo = trim(substr($termo, 0, 80));
                         if ($coluna === 'unidade_id' && str_contains($termo, '-')) {
-                            $partes = explode('-', $termo);
-                            $termo = trim(end($partes));
+                            $termo = trim(end(explode('-', $termo)));
                         }
 
                         $ModelClass = $config->model_class;
                         $campoBusca = $config->campo_busca;
-
                         $registro = $ModelClass::where($campoBusca, 'ilike', '%' . $termo . '%')->first();
 
                         if (!$registro && $permiteAutoCadastro && $config->auto_cadastro) {
                             $payload = $config->payload_padrao ?? [];
                             $payload[$campoBusca] = $termo;
-                            
-                            if (!isset($payload['slug'])) {
-                                $payload['slug'] = Str::slug($termo);
-                            }
-                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) {
-                                $payload['horario_inicio'] = '00:00:00';
-                            }
-
+                            if (!isset($payload['slug'])) $payload['slug'] = Str::slug($termo);
+                            if (str_contains($ModelClass, 'Turno') && !isset($payload['horario_inicio'])) $payload['horario_inicio'] = '00:00:00';
                             $registro = $ModelClass::create($payload);
                         }
 
@@ -505,13 +468,17 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
+        $dadosFixos['metadados'] = $metadados;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
         $dadosFixos['criado_por'] = $this->importacao->user_id;
 
         $mesclarDuplicatas = filter_var($mapeamento['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        Inscricao::withoutEvents(function () use ($dadosFixos, $mesclarDuplicatas) {
+        Inscricao::withoutEvents(function () use ($dadosFixos, $mesclarDuplicatas, $metadados) {
+            $hasCreated = isset($dadosFixos['created_at']) && $dadosFixos['created_at'] !== '';
+            $hasUpdated = isset($dadosFixos['updated_at']) && $dadosFixos['updated_at'] !== '';
+
             if (!empty($dadosFixos['cpf']) && !empty($dadosFixos['ciclo_id'])) {
                 $inscricaoExistente = Inscricao::where('cpf', $dadosFixos['cpf'])
                                                ->where('ciclo_id', $dadosFixos['ciclo_id'])
@@ -523,31 +490,53 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     }
 
                     $dadosAtuais = $inscricaoExistente->toArray();
+                    
                     $dinamicoAntigo = is_string($inscricaoExistente->dados_dinamicos) ? json_decode($inscricaoExistente->dados_dinamicos, true) : ($inscricaoExistente->dados_dinamicos ?? []);
                     $dinamicoNovo = $dadosFixos['dados_dinamicos'] ?? [];
-                    
                     foreach ($dinamicoNovo as $chaveNova => $valorNovo) {
-                        if (!isset($dinamicoAntigo[$chaveNova]) || empty(trim($dinamicoAntigo[$chaveNova]))) {
-                            $dinamicoAntigo[$chaveNova] = $valorNovo;
-                        }
+                        $dinamicoAntigo[$chaveNova] = $valorNovo;
                     }
                     $dadosFixos['dados_dinamicos'] = $dinamicoAntigo;
 
+                    // Mescla a nova coluna de metadados
+                    $metaAntigo = is_string($inscricaoExistente->metadados) ? json_decode($inscricaoExistente->metadados, true) : ($inscricaoExistente->metadados ?? []);
+                    foreach ($metadados as $k => $v) {
+                        $metaAntigo[$k] = $v;
+                    }
+                    $dadosFixos['metadados'] = $metaAntigo;
+
                     foreach ($dadosFixos as $coluna => $valorImportado) {
-                        if (in_array($coluna, ['id', 'created_at', 'updated_at', 'student_id', 'dados_dinamicos', 'origem'])) continue;
+                        if (in_array($coluna, ['id', 'student_id', 'dados_dinamicos', 'metadados', 'origem'])) continue;
+                        if (in_array($coluna, ['created_at', 'updated_at'])) continue; 
+
                         $valorAtualBanco = $dadosAtuais[$coluna] ?? null;
-                        
                         if ($valorAtualBanco !== null && trim((string)$valorAtualBanco) !== '') {
                             unset($dadosFixos[$coluna]);
                         }
                     }
 
-                    $inscricaoExistente->update($dadosFixos);
+                    $inscricaoExistente->timestamps = false;
+                    $inscricaoExistente->forceFill($dadosFixos);
+                    
+                    if ($hasCreated) $inscricaoExistente->created_at = $dadosFixos['created_at'];
+                    if ($hasUpdated) $inscricaoExistente->updated_at = $dadosFixos['updated_at'];
+                    
+                    $inscricaoExistente->save();
                     return;
                 }
             }
 
-            Inscricao::create($dadosFixos);
+            $novaInscricao = new Inscricao();
+            $novaInscricao->timestamps = false;
+            $novaInscricao->forceFill($dadosFixos);
+            
+            if ($hasCreated) $novaInscricao->created_at = $dadosFixos['created_at'];
+            else $novaInscricao->created_at = now();
+
+            if ($hasUpdated) $novaInscricao->updated_at = $dadosFixos['updated_at'];
+            else $novaInscricao->updated_at = now();
+
+            $novaInscricao->save();
         });
     }
 }

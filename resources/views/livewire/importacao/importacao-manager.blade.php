@@ -1,7 +1,7 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
     <x-page-header 
-        title="Gerenciador de Integrações (I/O)" 
+        title="Gerenciador de Integrações" 
         icon="ph ph-arrows-left-right"
         badge=""
         :breadcrumbs="$breadcrumbs ?? []">
