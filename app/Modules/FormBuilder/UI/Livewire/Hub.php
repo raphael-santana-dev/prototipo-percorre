@@ -14,18 +14,14 @@ use App\Models\CicloAprendizagem;
 #[Title('Central de Formulários')]
 class Hub extends Component
 {
-    // Modais
     public $modalCicloAberto = false;
     public $modalPreInscricaoAberto = false;
     public $modalAprendizagemAberto = false;
 
-    // Listas do Banco
     public $ciclos, $unidades, $cursos, $ciclosAprendizagem;
 
-    // Campos de Pré-Inscrição
     public $preInscricao = ['ciclo_id' => '', 'unidade_id' => '', 'curso_id' => ''];
     
-    // Campos de Aprendizagem
     public $aprendizagem = ['ciclo_id' => '', 'fase_id' => ''];
     public $fasesAprendizagem = [];
 

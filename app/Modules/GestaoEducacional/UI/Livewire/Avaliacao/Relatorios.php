@@ -91,7 +91,6 @@ class Relatorios extends Component
             
             fputcsv($file, ['ID_ALUNO', 'NOME_ALUNO', 'TURMA', 'ANO_PERIODO', 'CICLO', 'MEDIA_PARCIAL', 'MEDIA_FINAL'], ';');
 
-            // DELEGAÇÃO DE MEMÓRIA: Usa Chunk de 500 registros para evitar Out Of Memory (OOM) no servidor.
             $query->chunk(500, function ($registros) use ($file) {
                 $studentIds = $registros->pluck('student_id')->unique();
                 $periodoIds = $registros->pluck('periodo_id')->unique();

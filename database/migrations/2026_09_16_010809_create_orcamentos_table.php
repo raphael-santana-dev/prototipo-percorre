@@ -11,14 +11,12 @@ return new class extends Migration
         Schema::create('orcamentos', function (Blueprint $table) {
             $table->id();
             
-            // Dados de identificação do Protheus
             $table->string('filial', 10)->index()->nullable();
             $table->string('ano', 4)->index()->nullable();
             $table->string('natureza')->index()->nullable();
             $table->integer('moeda')->nullable();
             $table->string('cmoeda', 10)->nullable();
             
-            // Valores mensais
             $table->decimal('valor_jan', 15, 2)->default(0);
             $table->decimal('valor_fev', 15, 2)->default(0);
             $table->decimal('valor_mar', 15, 2)->default(0);
@@ -32,12 +30,9 @@ return new class extends Migration
             $table->decimal('valor_nov', 15, 2)->default(0);
             $table->decimal('valor_dez', 15, 2)->default(0);
             
-            // Informações adicionais
             $table->string('ccusto')->nullable();
             $table->string('xcat')->nullable();
             
-            // Hash único para evitar duplicidade na hora do "Update/Sincronização"
-            // Vamos criar uma chave única baseada em Filial + Ano + Natureza + Centro de Custo
             $table->string('chave_composta')->unique()->nullable();
 
             $table->timestamps();

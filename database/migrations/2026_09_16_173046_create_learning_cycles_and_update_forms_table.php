@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Tabela: Ciclos de Aprendizagem (O Período Global)
         Schema::create('ciclos_aprendizagem', function (Blueprint $table) {
             $table->id();
             $table->string('nome')->comment('Ex: Avaliação de Desempenho 2026.2');
@@ -19,7 +18,6 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // 2. Tabela: Fases do Ciclo de Aprendizagem (O Workflow)
         Schema::create('ciclo_aprendizagem_fases', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ciclo_aprendizagem_id')->constrained('ciclos_aprendizagem')->cascadeOnDelete();
@@ -29,7 +27,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 3. Tabela: Controle de em qual fase cada aluno está no Ciclo
         Schema::create('aluno_ciclo_aprendizagem', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ciclo_aprendizagem_id')->constrained('ciclos_aprendizagem')->cascadeOnDelete();
@@ -39,15 +36,12 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 4. Atualização da tabela de Formulários
         Schema::table('formularios', function (Blueprint $table) {
             
-            // Vínculos para Pré-Inscrições (Usam o ciclo seletivo normal e estrutura acadêmica)
             $table->unsignedBigInteger('ciclo_id')->nullable()->after('tipo');
             $table->unsignedBigInteger('unidade_id')->nullable()->after('ciclo_id');
             $table->unsignedBigInteger('curso_id')->nullable()->after('unidade_id');
 
-            // Vínculo para Avaliação de Aprendizagem
             $table->foreignId('ciclo_aprendizagem_fase_id')->nullable()->after('curso_id')
                   ->constrained('ciclo_aprendizagem_fases')->nullOnDelete();
 

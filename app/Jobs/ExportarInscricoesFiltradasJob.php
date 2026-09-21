@@ -36,7 +36,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
 
             $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
             
-            // Aplicação de Filtros
             if (!empty($this->filtros['nome'])) {
                 $query->where(function($q) {
                     $q->where('nome', 'ilike', '%' . $this->filtros['nome'] . '%')
@@ -53,7 +52,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
                 else $query->where('etapa_atual', $this->filtros['etapa']);
             }
 
-            // OTIMIZAÇÃO: Coleta os IDs dos ciclos de forma levíssima
             $ciclosIds = (clone $query)->pluck('ciclo_id')->unique()->filter()->toArray();
             
             $camposOficiais = CampoFormulario::whereIn('ciclo_id', $ciclosIds)
@@ -76,7 +74,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
                 }
             }
 
-            // OTIMIZAÇÃO DE MEMÓRIA: Pluck apenas no JSON em vez de carregar a Model inteira
             $dadosDinamicosAll = (clone $query)->whereNotNull('dados_dinamicos')->pluck('dados_dinamicos');
             foreach ($dadosDinamicosAll as $json) {
                 $dinamicos = is_string($json) ? json_decode($json, true) : ($json ?? []);
@@ -109,7 +106,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
 
             if ($isCsv) {
                 $file = fopen($caminhoAbsoluto, 'w');
-                // Injeta o BOM para o Excel ler o UTF-8 (Acentos) perfeitamente
                 fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
             } else {
                 $writer = \Spatie\SimpleExcel\SimpleExcelWriter::create($caminhoAbsoluto);
@@ -118,7 +114,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             $linhasProcessadas = 0;
             $cabecalhosEscritos = false;
 
-            // OTIMIZAÇÃO OOM: O cursor() itera um registro por vez sem entupir a RAM
             foreach ($query->cursor() as $insc) {
                 $etapaExibicao = $insc->etapa_atual == 99 ? 'Finalizado' : ($insc->etapa_atual == 100 ? 'Em Espera' : 'Passo ' . $insc->etapa_atual);
                 
@@ -168,14 +163,12 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
                     $linha[$label] = is_array($valor) ? implode(', ', $valor) : $valor;
                 }
 
-                // Escreve os cabeçalhos dinâmicos na 1º linha do CSV
                 if ($isCsv && !$cabecalhosEscritos) {
                     fputcsv($file, array_keys($linha), ';');
                     $cabecalhosEscritos = true;
                 }
 
                 if ($isCsv) {
-                    // SEGURANÇA: Prevenção contra CSV/Formula Injection
                     $linhaSanitizada = array_map(function ($valor) {
                         $valorStr = (string) $valor;
                         if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
@@ -206,7 +199,6 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             ]);
 
         } catch (\Throwable $e) {
-            // Tratamento global de erros para nunca congelar em "Processando..."
             $tracking->update([
                 'status' => 'erro',
                 'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Interno', 'mensagem' => $e->getMessage()]])

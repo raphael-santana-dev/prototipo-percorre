@@ -35,7 +35,6 @@ class IaConfigManager extends Component
     public $model_nome = '';
     public $model_codigo = '';
 
-    // CADASTRO COMBINADO (PROVEDOR + MODELO)
     public $modalCombinedAberto = false;
     public $c_provider_nome = '';
     public $c_provider_driver = 'openai_compatible';
@@ -44,7 +43,6 @@ class IaConfigManager extends Component
     public $c_model_nome = '';
     public $c_model_codigo = '';
 
-    // DOCUMENTOS
     public $cicloSelecionado = '';
     public $nomeDocumento = '';
     public $descricaoDocumento = '';
@@ -84,9 +82,6 @@ class IaConfigManager extends Component
         $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com segurança!');
     }
 
-    // ==========================================
-    // CRUD COMBINADO: PROVEDOR E MODELO
-    // ==========================================
     public function abrirModalCombined()
     {
         $this->reset([
@@ -115,10 +110,8 @@ class IaConfigManager extends Component
             $providerData['api_key'] = Crypt::encryptString($this->c_provider_api_key);
         }
 
-        // 1. Cria o Provedor
         $novoProvedor = AiProvider::create($providerData);
 
-        // 2. Cria o Modelo Vinculado ao novo Provedor
         AiModel::create([
             'ai_provider_id' => $novoProvedor->id,
             'nome' => $this->c_model_nome,
@@ -129,10 +122,6 @@ class IaConfigManager extends Component
         $this->dispatch('sucesso', msg: 'Provedor e Modelo criados e vinculados com sucesso!');
     }
 
-
-    // ==========================================
-    // CRUD: PROVEDORES
-    // ==========================================
     public function abrirModalProvider($id = null)
     {
         $this->reset(['provider_id', 'provider_nome', 'provider_driver', 'provider_api_url', 'provider_api_key']);

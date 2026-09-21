@@ -61,6 +61,9 @@
                     
                     <div class="lg:col-span-1">
                         <h4 class="text-xs font-bold text-purpura-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-graduation-cap text-lg"></i> Interesse Acadêmico</h4>
+                        <button wire:click="abrirModalSolicitacao" class="text-[10px] bg-purpura-100 text-purpura-700 px-2 py-1 rounded font-bold hover:bg-purpura-200 transition shadow-sm">
+                            Solicitar Alteração
+                        </button>
                         <div class="flex flex-col gap-3 bg-slate-50 dark:bg-gray-900/50 p-5 rounded-xl border border-slate-100 dark:border-gray-700 h-full">
                             <div>
                                 <span class="block text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-0.5">Curso Escolhido</span>
@@ -114,5 +117,92 @@
                 <p class="text-slate-500 dark:text-slate-400 font-medium">Nenhuma inscrição vinculada a este perfil foi encontrada.</p>
             </div>
         @endif
+    @endif
+
+    @if(isset($minhasSolicitacoes) && count($minhasSolicitacoes) > 0)
+    <div class="mt-8">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Minhas Solicitações Registradas</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-slate-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Data</th>
+                        <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Tipo</th>
+                        <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Resposta do Polo</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    @foreach($minhasSolicitacoes as $solic)
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ $solic->created_at->format('d/m/Y H:i') }}</td>
+                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ $solic->tema === 'alteracao_academica' ? 'Troca de Curso/Turno' : str_replace('_', ' ', $solic->tema) }}</td>
+                        <td class="px-4 py-3">
+                            @if($solic->status === 'aprovada')
+                                <span class="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Aprovada</span>
+                            @elseif($solic->status === 'rejeitada')
+                                <span class="px-2.5 py-1 bg-red-100 text-red-700 text-[10px] font-bold uppercase rounded-md">Reprovada</span>
+                            @else
+                                <span class="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold uppercase rounded-md">Em Análise</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400 truncate max-w-xs" title="{{ $solic->resposta_admin }}">
+                            {{ $solic->resposta_admin ?: '-' }}
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    <!-- MODAL DE SOLICITAÇÃO ACADÊMICA -->
+    @if($modalSolicitacaoAberto)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="ph-fill ph-swap text-purpura-600"></i> Solicitar Alteração
+                </h3>
+                <button wire:click="$set('modalSolicitacaoAberto', false)" class="text-gray-400 hover:text-gray-600"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <form wire:submit.prevent="salvarSolicitacao" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Nova Unidade</label>
+                    <select wire:model="novaUnidadeId" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <option value="">Selecione...</option>
+                        @foreach($unidadesDb as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
+                    </select>
+                    @error('novaUnidadeId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Novo Curso</label>
+                    <select wire:model="novoCursoId" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <option value="">Selecione...</option>
+                        @foreach($cursosDb as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                    </select>
+                    @error('novoCursoId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Novo Turno</label>
+                    <select wire:model="novoTurnoId" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <option value="">Selecione...</option>
+                        @foreach($turnosDb as $t) <option value="{{ $t->id }}">{{ $t->nome }}</option> @endforeach
+                    </select>
+                    @error('novoTurnoId') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Justificativa</label>
+                    <textarea wire:model="motivoSolicitacao" rows="3" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"></textarea>
+                    @error('motivoSolicitacao') <span class="text-red-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" wire:click="$set('modalSolicitacaoAberto', false)" class="px-4 py-2 border rounded-lg text-sm font-bold text-gray-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-sm font-bold">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
     @endif
 </div>

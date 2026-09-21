@@ -39,13 +39,11 @@ class Formulario extends Model
         'data_fim' => 'datetime',
     ];
 
-    // Relacionamento com Fase de Aprendizagem
     public function faseAprendizagem()
     {
         return $this->belongsTo(CicloAprendizagemFase::class, 'ciclo_aprendizagem_fase_id');
     }
 
-    // Relacionamentos para Pré-Inscrições
     public function cicloSeletivo()
     {
         return $this->belongsTo(Ciclo::class, 'ciclo_id');

@@ -17,7 +17,6 @@ class Dashboard extends Component
     {
         $usuario = Auth::guard('company')->user();
 
-        // 1. Coleta os Aprendizes vinculados à Empresa (e ao Gestor, se for o caso)
         $alunosQuery = Student::where('empresa_id', $usuario->empresa_id)
             ->where('is_active', true)
             ->where('is_aprendiz', true);
@@ -28,7 +27,6 @@ class Dashboard extends Component
         
         $alunosIds = $alunosQuery->pluck('id')->toArray();
 
-        // 2. Analisa o Workflow de Avaliações
         $avaliacoes = AlunoCicloAprendizagem::with('faseAtual')
             ->whereIn('student_id', $alunosIds)
             ->get();
@@ -39,7 +37,6 @@ class Dashboard extends Component
         foreach ($avaliacoes as $av) {
             $respondedores = $av->faseAtual->respondedores_permitidos ?? [];
             
-            // A métrica só contabiliza se a fase atual exigir a resposta da Empresa
             if (in_array('company', $respondedores)) {
                 if ($av->status === '2') { // 2 = Enviada/Pendente
                     $pendentes++;

@@ -63,7 +63,6 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
                         $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
 
-                        // TRADUTOR DE REGRAS P/ PORTUGUÊS CLARO
                         $formatarCondicao = function($operador, $valor) {
                             $valores = array_map('trim', explode(',', (string)$valor));
                             switch ($operador) {

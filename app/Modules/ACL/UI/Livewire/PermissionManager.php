@@ -128,7 +128,6 @@ class PermissionManager extends Component
                 $fullName = strtolower(trim($item['module'])) . '.' . strtolower(trim($item['action']));
                 $correspondenciaEncontrada = false;
 
-                // Se for edição, verifica se o nome ANTIGO existe na tabela espelho
                 if ($this->permissionId) {
                     $permissionAntiga = Permission::find($this->permissionId);
                     if ($permissionAntiga) {
@@ -139,7 +138,6 @@ class PermissionManager extends Component
                     }
                 }
 
-                // Só lança para a pendência se não achou nem o antigo e nem o novo
                 if (!$correspondenciaEncontrada && !Feature::where('name', $fullName)->exists()) {
                     $this->pendenciasReplicacao[] = $fullName;
                 }
@@ -176,7 +174,6 @@ class PermissionManager extends Component
             $fullName = $moduleFinal . '.' . $actionFinal;
             $nomeAntigo = null;
 
-            // ATUALIZA OU CRIA A PERMISSÃO
             if ($this->permissionId) {
                 if (Permission::where('name', $fullName)->where('id', '!=', $this->permissionId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta permissão já existe.');
@@ -205,16 +202,13 @@ class PermissionManager extends Component
                 ]);
             }
 
-            // ATUALIZA OU CRIA O ESPELHO NOS FEATURE TOGGLES
             if ($this->replicar_para_features) {
                 $featureTarget = null;
                 
-                // Tenta achar a Feature pelo nome antigo (caso seja uma edição)
                 if ($nomeAntigo) {
                     $featureTarget = Feature::where('name', $nomeAntigo)->first();
                 }
                 
-                // Se não achou pelo antigo, tenta achar pelo nome novo
                 if (!$featureTarget) {
                     $featureTarget = Feature::where('name', $fullName)->first();
                 }

@@ -39,7 +39,7 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_equipe'] = 'Aprendizagem: Nova Avaliação (Notificar Equipe IOS)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_aluno'] = 'Aprendizagem: Nova Avaliação (Notificar Aluno)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa'] = 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
-
+        $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);

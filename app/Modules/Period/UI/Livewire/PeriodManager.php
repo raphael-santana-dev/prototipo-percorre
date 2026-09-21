@@ -26,27 +26,21 @@ class PeriodManager extends Component
     public int $passoAtual = 1;
     public ?int $cicloIdEmEdicao = null;
 
-    // Passo 1: Dados Básicos
     public $nome, $ano, $semestre, $data_inicio, $data_fim, $status = false;
 
-    // Passo 2: Estrutura Académica (Gravando Combinações Únicas)
     public array $unidadesSelecionadas = []; 
     public array $cursosSelecionados = []; 
     public array $turnosSelecionados = []; 
     public $activeUnidadeId = null;
     public $activeCursoId = null;
 
-    // Passo 3: Distribuição de Vagas (Auto-gerada)
     public array $ofertasVagas = [];
 
-    // Passo 4: Etapas do Ciclo (Pipeline)
     public array $statusSelecionados = [];
     public $novoStatusSelecionado = ''; 
 
-    // Passo 5: Documentos Exigidos
     public array $documentosExigidos = []; 
 
-    // Passo 6: Conclusão
     public ?int $cicloCriadoId = null;
 
     public $modelClass = Ciclo::class;
@@ -175,11 +169,9 @@ class PeriodManager extends Component
         
         $ciclo->unidades()->sync($this->unidadesSelecionadas);
         
-        // Extrai os IDs reais dos formatos isolados "UnidadeID-CursoID"
         $cursosUnicos = collect($this->cursosSelecionados)->map(fn($v) => explode('-', $v)[1] ?? $v)->unique()->filter()->toArray();
         $ciclo->cursos()->sync($cursosUnicos);
         
-        // Extrai os IDs reais dos formatos "UnidadeID-CursoID-TurnoID"
         $turnosUnicos = collect($this->turnosSelecionados)->map(fn($v) => explode('-', $v)[2] ?? $v)->unique()->filter()->toArray();
         $ciclo->turnos()->sync($turnosUnicos);
     }
@@ -206,7 +198,6 @@ class PeriodManager extends Component
                 $cId = $parts[1];
                 $tId = $parts[2];
                 
-                // Validação para garantir que a Unidade e Curso ainda estão selecionados
                 if (!in_array($uId, $this->unidadesSelecionadas)) continue;
                 if (!in_array("{$uId}-{$cId}", $this->cursosSelecionados)) continue;
 

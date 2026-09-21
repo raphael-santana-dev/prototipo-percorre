@@ -47,7 +47,6 @@ class GerarRankingGlobalJob implements ShouldQueue
 
         try {
             foreach ($ciclos as $ciclo) {
-                // 1. Zera classificações de quem NÃO finalizou (restaura consistência)
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
                     ->where('etapa_atual', '!=', 99)
@@ -59,7 +58,6 @@ class GerarRankingGlobalJob implements ShouldQueue
                         'posicao_ranking_curso' => null,
                     ]);
 
-                // 2. Window Function restrita apenas a quem FINALIZOU (etapa_atual = 99)
                 $query = "
                     WITH RankedData AS (
                         SELECT id,

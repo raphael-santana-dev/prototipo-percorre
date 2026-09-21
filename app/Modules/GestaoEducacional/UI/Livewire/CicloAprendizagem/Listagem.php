@@ -18,10 +18,8 @@ class Listagem extends Component
     public $modalAberto = false;
     public $busca = '';
     
-    // Campos do Form
     public $nome, $data_inicio, $data_fim, $ano, $ciclo_mes, $prazo_dias, $data_fechamento;
     public $fases = []; 
-    // Opções de quem pode responder
     public $opcoesRespondedores = [
         'student' => 'Aprendiz (Estudante)',
         'company' => 'Gestor (Empresa)',
@@ -30,7 +28,6 @@ class Listagem extends Component
 
     public function mount()
     {
-        // Começa com pelo menos 1 fase padrão
         $this->adicionarFase();
     }
 
@@ -79,8 +76,8 @@ class Listagem extends Component
             'data_fim' => $this->data_fim,
             'ano' => date('Y', strtotime($this->data_inicio)),
             'ciclo_mes' => date('m', strtotime($this->data_inicio)),
-            'prazo_dias' => 10, // Valor padrão, pode ser ajustado
-            'data_fechamento' => now()->addDays(10), // Valor padrão, pode ser ajustado
+            'prazo_dias' => 10,
+            'data_fechamento' => now()->addDays(10), 
         ]);
 
         foreach ($this->fases as $index => $fase) {

@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Tabela de Contatos Locais
         Schema::create('rd_crm_contacts', function (Blueprint $table) {
             $table->id();
             $table->string('rd_id')->nullable()->comment('Preenchido automaticamente após enviar pro RD');
@@ -19,7 +18,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Tabela de Negociações (Deals) vinculadas ao contato
         Schema::create('rd_crm_deals', function (Blueprint $table) {
             $table->id();
             $table->string('rd_id')->nullable()->comment('Preenchido após o POST dar sucesso');

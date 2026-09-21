@@ -34,7 +34,7 @@
                             </td>
                             <td class="p-4">
                                 <span class="font-bold text-gray-700 dark:text-gray-300 text-sm block">
-                                    {{ str_replace('_', ' ', $req->tema) }}
+                                    {{ $req->tema === 'alteracao_academica' ? 'Alteração de Unidade/Curso/Turno' : str_replace('_', ' ', $req->tema) }}
                                 </span>
                                 <span class="text-xs text-gray-500 block mt-1 max-w-xs truncate" title="{{ $req->justificativa }}">
                                     "{{ $req->justificativa }}"

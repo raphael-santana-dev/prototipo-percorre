@@ -80,7 +80,7 @@ class AprendizesManager extends Component
         
         $avaliacoes = \App\Models\AlunoCicloAprendizagem::with(['faseAtual.formularios', 'ciclo'])
             ->whereIn('student_id', $aprendizesIds)
-            ->where('status', '2') // Apenas o que está Pendente
+            ->where('status', '2')
             ->get();
             
         $avaliacoesPorAluno = [];
@@ -95,7 +95,7 @@ class AprendizesManager extends Component
 
         return view('livewire.company.aprendizes-manager', [
             'aprendizes' => $aprendizes,
-            'avaliacoesPorAluno' => $avaliacoesPorAluno, // Passando a variável para a view
+            'avaliacoesPorAluno' => $avaliacoesPorAluno,
             'gestores' => $gestores,
             'usuario' => $usuario
         ]);
