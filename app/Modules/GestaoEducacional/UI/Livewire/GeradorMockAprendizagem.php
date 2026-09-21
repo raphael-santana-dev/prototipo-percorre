@@ -34,7 +34,6 @@ class GeradorMockAprendizagem extends Component
         DB::beginTransaction();
 
         try {
-            // 1. Garante que exista um Ciclo de Aprendizagem (Ex: Maio 2026)
             $ciclo = CicloAprendizagem::firstOrCreate(
                 ['ano' => date('Y'), 'ciclo_mes' => '05'],
                 [
@@ -47,7 +46,6 @@ class GeradorMockAprendizagem extends Component
                 ]
             );
 
-            // 2. Garante que existam as fases de workflow
             $faseAprendiz = CicloAprendizagemFase::firstOrCreate(
                 ['ciclo_aprendizagem_id' => $ciclo->id, 'ordem' => 1],
                 ['nome' => 'Fase 1 - Autoavaliação do Aprendiz', 'respondedores_permitidos' => ['student']]
@@ -62,7 +60,6 @@ class GeradorMockAprendizagem extends Component
 
             for ($i = 0; $i < $this->quantidadeInjecao; $i++) {
                 
-                // 3. Cria a Empresa Fictícia
                 $empresa = Empresa::create([
                     'razao_social' => $faker->company . ' LTDA',
                     'nome_fantasia' => $faker->company,
@@ -70,7 +67,6 @@ class GeradorMockAprendizagem extends Component
                     'is_active' => true
                 ]);
 
-                // 4. Cria o Gestor (CompanyUser)
                 $gestorEmail = 'gestor.' . $faker->unique()->numerify('####') . '@empresa.com';
                 $gestor = CompanyUser::create([
                     'name' => 'Gestor ' . $faker->firstName,
@@ -82,7 +78,6 @@ class GeradorMockAprendizagem extends Component
                     'password' => Hash::make('senha123')
                 ]);
 
-                // 5. Cria o Aprendiz (Student) vinculado à Empresa e Gestor
                 $alunoEmail = 'aprendiz.' . $faker->unique()->numerify('####') . '@sistema.com';
                 $aluno = Student::create([
                     'name' => $faker->name,
@@ -93,20 +88,19 @@ class GeradorMockAprendizagem extends Component
                     'slug' => Str::slug($faker->name . '-' . Str::random(4)),
                     'empresa_id' => $empresa->id,
                     'gestor_id' => $gestor->id,
-                    'is_aprendiz' => true, // 2 = Aprendiz
-                    'aprendizagem_ios' => 1, // 1 = Sim
+                    'is_aprendiz' => true,
+                    'aprendizagem_ios' => 1, 
                     'data_inicio_contrato' => now()->subMonths(3)->format('Y-m-d'),
                     'data_fim_contrato' => now()->addMonths(9)->format('Y-m-d')
                 ]);
 
-                // 6. Injeta a Avaliação na Trilha do Workflow
                 $faseAtual = rand(1, 2) == 1 ? $faseAprendiz->id : $faseEmpresa->id;
                 
                 AlunoCicloAprendizagem::create([
                     'ciclo_aprendizagem_id' => $ciclo->id,
                     'student_id' => $aluno->id,
                     'fase_atual_id' => $faseAtual,
-                    'status' => '2', // Enviada/Pendente
+                    'status' => '2',
                     'data_geracao' => now()->subDays(2),
                     'data_envio' => now()->subDays(1),
                     'data_prazo' => now()->addDays(8),

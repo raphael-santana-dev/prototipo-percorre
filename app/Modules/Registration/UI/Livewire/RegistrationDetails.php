@@ -25,7 +25,6 @@ class RegistrationDetails extends Component
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
     }
 
-    // Busca de Data Flexível (JSON -> Fallback Eloquent)
     public function getDataInscricao()
     {
         $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);

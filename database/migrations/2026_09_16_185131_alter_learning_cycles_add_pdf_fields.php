@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Injetando regras temporais exigidas no PDF
         Schema::table('ciclos_aprendizagem', function (Blueprint $table) {
             $table->string('ano', 4)->nullable()->after('nome');
             $table->string('ciclo_mes', 2)->nullable()->after('ano')->comment('05=Maio, 11=Novembro');
@@ -16,7 +15,6 @@ return new class extends Migration
             $table->date('data_fechamento')->nullable()->after('prazo_dias');
         });
 
-        // 2. Removendo o status antigo (enum) e adicionando os novos campos na tabela de acompanhamento
         Schema::table('aluno_ciclo_aprendizagem', function (Blueprint $table) {
             $table->dropColumn('status');
         });

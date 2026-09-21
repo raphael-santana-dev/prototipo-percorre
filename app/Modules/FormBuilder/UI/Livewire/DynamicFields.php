@@ -67,10 +67,8 @@ class DynamicFields extends Component
             $this->contextoNome = $model->nome;
             $this->badgeContexto = 'Inscrição Oficial';
         } else {
-            // Carrega o formulário com todas as novas relações que criamos
             $model = \App\Models\Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])->findOrFail($id);
             
-            // Inteligência para montar o título dinâmico baseado no tipo do formulário
             if ($model->tipo === 'aprendizagem') {
                 $cicloNome = $model->faseAprendizagem->ciclo->nome ?? 'Ciclo Indefinido';
                 $faseNome = $model->faseAprendizagem->nome ?? 'Fase Indefinida';

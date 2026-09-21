@@ -84,7 +84,6 @@ class Dashboard extends Component
                 ->groupBy('possui_deficiencia')
                 ->pluck(DB::raw('count(id) as total'), 'possui_deficiencia')->toArray();
 
-            // Modificação: Trazemos as 3 colunas de dados flexíveis do banco
             $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'metadados', 'data_nascimento', 'created_at')
                 ->where('ciclo_id', $this->filtroCiclo)->get();
                 
@@ -122,7 +121,6 @@ class Dashboard extends Component
 
                 $meta = is_string($insc->metadados) ? json_decode($insc->metadados, true) : ($insc->metadados ?? []);
                 
-                // Prioriza a data bruta da importação (Submission started), senão faz fallback para o created_at
                 $dataCriacaoRaw = $meta['Submission started'] ?? $meta['submission started'] ?? $meta['Submission Started'] ?? $insc->created_at;
                 try {
                     $dataCriacao = Carbon::parse($dataCriacaoRaw)->format('Y-m-d');

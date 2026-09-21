@@ -247,7 +247,6 @@
                                                 @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $activeUnidadeId)) as $c)
                                                     <div wire:key="curso-{{ $activeUnidadeId }}-{{ $c->id }}" wire:click="setActiveCurso({{ $c->id }})" class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
                                                         <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                                            {{-- Ajuste 1: Registo isolado da combinação Unidade-Curso --}}
                                                             <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $activeUnidadeId }}-{{ $c->id }}" class="w-4 h-4 rounded text-purpura-600">
                                                             <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $c->nome }}</span>
                                                         </label>
@@ -269,7 +268,6 @@
                                                     @foreach($cs->turnosVinculados as $t)
                                                         <div wire:key="turno-{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="flex items-center p-2.5 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition">
                                                             <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                                                {{-- Ajuste 1: Registo isolado da combinação exata --}}
                                                                 <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="w-4 h-4 rounded text-purpura-600">
                                                                 <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
                                                             </label>
@@ -299,7 +297,6 @@
                                     @forelse($ofertasVagas as $index => $oferta)
                                         <div wire:key="oferta-{{ $index }}" class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col xl:flex-row gap-3 items-end">
                                             
-                                            {{-- Ajuste 2: Matriz Visual Limpa --}}
                                             <div class="flex-1 w-full">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
                                                 <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">{{ $oferta['unidade_nome'] ?? '' }}</div>

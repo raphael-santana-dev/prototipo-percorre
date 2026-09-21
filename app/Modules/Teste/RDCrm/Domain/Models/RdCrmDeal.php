@@ -9,7 +9,6 @@ class RdCrmDeal extends Model
     protected $table = 'rd_crm_deals';
     protected $guarded = ['id'];
     
-    // Converte automaticamente o JSON do banco para Array no PHP
     protected $casts = [
         'campos_customizados' => 'array',
         'sincronizado' => 'boolean'

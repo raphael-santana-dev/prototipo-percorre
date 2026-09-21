@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Tabela para armazenar os Funis (Pipelines)
         Schema::create('rd_crm_pipelines', function (Blueprint $table) {
             $table->id();
             $table->string('rd_id')->unique()->comment('ID original do RD Station');
@@ -17,7 +16,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Tabela para armazenar as Etapas de cada Funil (Deal Stages)
         Schema::create('rd_crm_deal_stages', function (Blueprint $table) {
             $table->id();
             $table->foreignId('rd_crm_pipeline_id')->constrained('rd_crm_pipelines')->cascadeOnDelete();

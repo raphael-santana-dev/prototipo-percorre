@@ -59,7 +59,6 @@ class SolicitacoesManager extends Component
                 \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])->update(['status' => '1', 'data_resposta' => null]);
             }
 
-            // === NOVA REGRA DE ALTERAÇÃO ACADÊMICA ===
             if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
                 $inscricao = \App\Models\Inscricao::where('student_id', $this->solicitacaoAtiva->solicitante_id)->latest()->first();
                 if ($inscricao) {
@@ -72,7 +71,6 @@ class SolicitacoesManager extends Component
             }
         }
 
-        // DISPARO DE EMAIL PARA ALTERAÇÃO (Sendo aprovado ou rejeitado)
         if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
             $estudante = $this->solicitacaoAtiva->solicitante;
             if ($estudante && $estudante->email) {

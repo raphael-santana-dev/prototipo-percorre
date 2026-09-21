@@ -18,7 +18,6 @@ class AlunoCicloAprendizagem extends Model
 
     public function student()
     {
-        // Ajuste o namespace do Student caso necessário
         return $this->belongsTo(\App\Modules\Student\Domain\Models\Student::class, 'student_id');
     }
 

@@ -28,7 +28,6 @@ class FormularioAprendizagem extends Component
 
     public function mount($slug, $aluno_id)
     {
-        // 1. Carrega o Formulário e o Aluno
         $this->formulario = Formulario::with('faseAprendizagem.ciclo')
             ->where('slug', $slug)
             ->where('tipo', 'aprendizagem')
@@ -36,7 +35,6 @@ class FormularioAprendizagem extends Component
             
         $this->aluno = Student::findOrFail($aluno_id);
         
-        // 2. IDENTIFICAÇÃO E SEGURANÇA (Quem está acessando?)
         $tipoUsuarioLogado = '';
         
         if (auth('student')->check()) {
@@ -46,7 +44,6 @@ class FormularioAprendizagem extends Component
         } elseif (auth('company')->check()) {
             $user = auth('company')->user();
             
-            // Valida se a empresa do gestor bate com a empresa do aluno
             if ($user->empresa_id !== $this->aluno->empresa_id) {
                 abort(403, 'Este aprendiz não pertence à sua organização.');
             }
@@ -58,7 +55,6 @@ class FormularioAprendizagem extends Component
             abort(403, 'Você precisa estar logado.');
         }
 
-        // 3. REGRA DO WORKFLOW (A Fase Atual)
         $this->cicloAluno = AlunoCicloAprendizagem::where('student_id', $this->aluno->id)
             ->where('ciclo_aprendizagem_id', $this->formulario->faseAprendizagem->ciclo_aprendizagem_id)
             ->first();
@@ -68,14 +64,13 @@ class FormularioAprendizagem extends Component
             return;
         }
 
-        // 4. VALIDAÇÃO DE PERMISSÃO DA FASE
         $faseDoFormulario = $this->formulario->faseAprendizagem;
         
         if ($this->cicloAluno->fase_atual_id === $faseDoFormulario->id) {
             $permitidos = $faseDoFormulario->respondedores_permitidos ?? [];
             
             if (in_array($tipoUsuarioLogado, $permitidos)) {
-                $this->podeResponder = true; // Liberado para escrever!
+                $this->podeResponder = true;
             } else {
                 $this->mensagemBloqueio = 'Esta fase exige preenchimento de outro responsável (Ex: Aguardando o gestor da empresa).';
             }
@@ -83,8 +78,6 @@ class FormularioAprendizagem extends Component
             $this->mensagemBloqueio = 'O aluno está em outra fase deste ciclo. Apenas leitura permitida.';
         }
 
-        // 5. PREPARAÇÃO DO FORM BUILDER (Recuperando dados salvos)
-        // 5. PREPARAÇÃO DO FORM BUILDER (Recuperando dados salvos)
         $this->camposDinamicos = $this->formulario->campos;
         
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
@@ -167,7 +160,7 @@ class FormularioAprendizagem extends Component
 
     public function render()
     {
-        $layout = 'components.layouts.app'; // Padrão
+        $layout = 'components.layouts.app';
         
         if (auth('student')->check()) {
             $layout = 'components.layouts.student-app';

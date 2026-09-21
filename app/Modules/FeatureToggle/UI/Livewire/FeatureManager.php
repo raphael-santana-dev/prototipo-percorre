@@ -113,7 +113,6 @@ class FeatureManager extends Component
                 $fullName = strtolower(trim($item['module'])) . '.' . strtolower(trim($item['action']));
                 $correspondenciaEncontrada = false;
 
-                // Se for edição, verifica se o nome ANTIGO existe na tabela espelho
                 if ($this->featureId) {
                     $featureAntiga = Feature::find($this->featureId);
                     if ($featureAntiga) {
@@ -124,7 +123,6 @@ class FeatureManager extends Component
                     }
                 }
 
-                // Só lança para a pendência se não achou nem o antigo e nem o novo
                 if (!$correspondenciaEncontrada && !Permission::where('name', $fullName)->exists()) {
                     $this->pendenciasReplicacao[] = $fullName;
                 }
@@ -161,7 +159,6 @@ class FeatureManager extends Component
             $fullName = $moduleFinal . '.' . $actionFinal;
             $nomeAntigo = null;
 
-            // ATUALIZA OU CRIA A FEATURE
             if ($this->featureId) {
                 if (Feature::where('name', $fullName)->where('id', '!=', $this->featureId)->exists()) {
                     $this->addError("items.{$index}.action", 'Esta feature já está cadastrada.');
@@ -187,16 +184,13 @@ class FeatureManager extends Component
                 $featureService->create($moduleFinal, $fullName, $item['description']);
             }
 
-            // ATUALIZA OU CRIA O ESPELHO NO ACL (PERMISSÃO)
             if ($this->replicar_para_permissoes) {
                 $permissionTarget = null;
                 
-                // Tenta achar a permissão pelo nome antigo (caso seja uma edição)
                 if ($nomeAntigo) {
                     $permissionTarget = Permission::where('name', $nomeAntigo)->first();
                 }
                 
-                // Se não achou pelo antigo, tenta achar pelo nome novo
                 if (!$permissionTarget) {
                     $permissionTarget = Permission::where('name', $fullName)->first();
                 }

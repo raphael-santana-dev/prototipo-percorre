@@ -406,8 +406,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 continue; 
             }
 
-            // Separação oficial: Campos dinâmicos vão para dados_dinamicos, 
-            // e os que marcarem a opção 'dados_dinamicos' na tela vão para metadados!
             if (str_starts_with($destino, 'dinamico:')) {
                 $chaveNome = str_replace('dinamico:', '', $destino);
                 $dadosDinamicos[$chaveNome] = $valorPlanilha;
@@ -498,7 +496,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     }
                     $dadosFixos['dados_dinamicos'] = $dinamicoAntigo;
 
-                    // Mescla a nova coluna de metadados
                     $metaAntigo = is_string($inscricaoExistente->metadados) ? json_decode($inscricaoExistente->metadados, true) : ($inscricaoExistente->metadados ?? []);
                     foreach ($metadados as $k => $v) {
                         $metaAntigo[$k] = $v;

@@ -87,7 +87,6 @@ class Dashboard extends Component
             }
         }
 
-        // Traz as solicitações para a listagem
         $minhasSolicitacoes = Solicitacao::where('solicitante_type', get_class($student))
             ->where('solicitante_id', $student->id)
             ->latest()

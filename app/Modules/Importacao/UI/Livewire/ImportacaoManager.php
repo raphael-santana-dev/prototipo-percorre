@@ -55,7 +55,6 @@ class ImportacaoManager extends Component
     public array $previewCabecalhos = [];
     public array $previewDados = [];
 
-    // OTIMIZAÇÃO: Inclusão do created_at e updated_at nas opções de mapeamento nativo
     public $opcoesMapeamento = [
         'nome' => 'Nome Completo',
         'email' => 'E-mail',
@@ -416,7 +415,6 @@ class ImportacaoManager extends Component
                 }
             }
 
-            // OTIMIZAÇÃO: Automação para inferir colunas de timestamps como 'created_at' e 'updated_at'
             $colunaLower = strtolower($colunaPlanilha);
             
             if (str_contains($colunaLower, 'submission started') || str_contains($colunaLower, 'created') || str_contains($colunaLower, 'criado em') || str_contains($colunaLower, 'data de criação')) {
@@ -701,7 +699,7 @@ class ImportacaoManager extends Component
                 $linhaSanitizada = array_map(function ($valor) {
                     $valorStr = (string) $valor;
                     if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
-                        return "'" . $valorStr; // Adiciona aspas simples para forçar leitura como texto
+                        return "'" . $valorStr;
                     }
                     return $valorStr;
                 }, $linha);

@@ -34,13 +34,11 @@
                             <div class="flex items-center justify-end gap-2">
                                 
                                 @php
-                                    // Busca todos os formulários vinculados às fases deste ciclo
                                     $formsPreview = \App\Models\Formulario::whereHas('faseAprendizagem', function($q) use ($ciclo) {
                                         $q->where('ciclo_aprendizagem_id', $ciclo->id);
                                     })->get();
                                 @endphp
 
-                                <!-- Pré-visualização do(s) Formulário(s) -->
                                 @if($formsPreview->count() === 1)
                                     <a href="{{ route('formularios.publico', ['id' => $formsPreview->first()->id, 'slug' => $formsPreview->first()->slug, 'preview' => 'true']) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Pré-visualizar Formulário">
                                         <i class="text-lg ph ph-eye"></i>
