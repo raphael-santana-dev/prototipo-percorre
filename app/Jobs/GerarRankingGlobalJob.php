@@ -49,10 +49,9 @@ class GerarRankingGlobalJob implements ShouldQueue
         try {
             foreach ($ciclos as $ciclo) {
                 
-                // 1. Zera todos os rankings desse ciclo incondicionalmente
-                // Isso garante que inscrições que perderam curso/turno sejam limpas
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
+                    ->whereNotNull('posicao_ranking_geral')
                     ->update([
                         'posicao_ranking' => null, 
                         'posicao_ranking_geral' => null,
@@ -60,8 +59,8 @@ class GerarRankingGlobalJob implements ShouldQueue
                         'posicao_ranking_curso' => null,
                     ]);
 
-                // 2. Ranking rígido (ROW_NUMBER) com desempate por Data de Chegada e ID 
-                // Excluindo quem não tem vínculo preenchido
+                // CORREÇÃO: ROW_NUMBER evita qualquer empate (usa created_at e ID como critério)
+                // O filtro IS NOT NULL garante que incompletos sejam ignorados no ranking
                 $query = "
                     WITH RankedData AS (
                         SELECT id,

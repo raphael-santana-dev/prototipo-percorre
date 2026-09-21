@@ -53,15 +53,21 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
                 if (empty($regras)) continue;
 
-                $ciclo->inscricoes()
-                    ->whereNotNull('unidade_id')
-                    ->whereNotNull('curso_id')
-                    ->whereNotNull('turno_id')
-                    ->with(['curso', 'turno', 'unidade'])
-                    ->orderBy('id')
-                    ->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
+                $ciclo->inscricoes()->with(['curso', 'turno', 'unidade'])->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
+                        // CORREÇÃO: Pula o cálculo se a inscrição estiver incompleta, mas contabiliza na barra
+                        if (!$inscricao->unidade_id || !$inscricao->curso_id || !$inscricao->turno_id) {
+                            if ($inscricao->pontuacao_total !== null) {
+                                $inscricao->update([
+                                    'pontuacao_total' => null,
+                                    'pontuacao_detalhes' => null
+                                ]);
+                            }
+                            $atualizados++;
+                            continue;
+                        }
+
                         $scoreBase = 0;
                         $scoreBonus = 0;
                         $acertosPadrao = 0;

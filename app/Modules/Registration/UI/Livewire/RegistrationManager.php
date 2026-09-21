@@ -254,11 +254,14 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
-        $inscricao = Inscricao::find($id);
+        $inscricao = Inscricao::with('curso')->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
             $this->dispatch('erro', msg: 'O candidato já está neste status!');
             return;
         }
+
+        if (!$this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId)) return;
+
         $this->verificarAntiSpam(collect([$inscricao]), $statusId, false);
     }
 
@@ -289,6 +292,62 @@ class RegistrationManager extends Component
     }
 
     public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
+    private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
+    {
+        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        // Se a ação não for uma aprovação, deixa passar livremente
+        if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) {
+            return true; 
+        }
+
+        $agrupadas = $inscricoes->groupBy(function($insc) {
+            return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}";
+        });
+
+        foreach ($agrupadas as $chave => $grupoInscricoes) {
+            $partes = explode('-', $chave);
+            if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
+                $this->dispatch('erro', msg: 'Não é possível aprovar inscrições que não possuem Unidade, Curso ou Turno definidos.');
+                return false;
+            }
+
+            $unidade_id = $partes[0];
+            $curso_id = $partes[1];
+            $turno_id = $partes[2];
+
+            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $unidade_id)
+                ->where('curso_id', $curso_id)
+                ->where('turno_id', $turno_id)
+                ->first();
+
+            if (!$oferta) {
+                $this->dispatch('erro', msg: "Não há oferta de vagas configurada para uma das combinações selecionadas.");
+                return false;
+            }
+
+            $ocupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $unidade_id)
+                ->where('curso_id', $curso_id)
+                ->where('turno_id', $turno_id)
+                ->whereHas('statusInscricao', function($q) {
+                    $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+                })
+                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray())
+                ->count();
+
+            $vagasRestantes = $oferta->vagas - $ocupadas;
+            $tentandoAprovar = $grupoInscricoes->count();
+
+            if ($tentandoAprovar > $vagasRestantes) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Vagas insuficientes para {$cursoNome}. Tentando aprovar {$tentandoAprovar}, mas restam apenas {$vagasRestantes} vagas.");
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public function executarSelecaoAvancada()
     {
@@ -308,7 +367,6 @@ class RegistrationManager extends Component
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
                 
-                // 1. Descobre quantas vagas já estão preenchidas no sistema por aprovados/selecionados
                 $vagasOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
                     ->where('unidade_id', $oferta->unidade_id)
                     ->where('curso_id', $oferta->curso_id)
@@ -317,7 +375,6 @@ class RegistrationManager extends Component
                         $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
                     })->count();
 
-                // 2. Calcula as vagas restantes. Se já encheu ou superlotou, pula este ciclo
                 $vagasRestantes = $oferta->vagas - $vagasOcupadas;
                 if ($vagasRestantes <= 0) continue;
 
@@ -334,7 +391,6 @@ class RegistrationManager extends Component
                     $queryInsc->orderBy('id', 'asc');
                 }
 
-                // 3. Captura apenas a quantidade necessária para fechar os 100%
                 $ids = $queryInsc->limit($vagasRestantes)->pluck('id')->toArray();
                 $idsSelecionados = array_merge($idsSelecionados, $ids);
             }
@@ -393,11 +449,13 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         if (count($this->selecionadas) === 0) return;
         
-        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
+        $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
             return;
         }
+
+        if (!$this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $statusId)) return;
 
         $this->verificarAntiSpam($inscricoesValidas, $statusId, true);
     }
