@@ -314,13 +314,57 @@ class Inscricao extends Component
             $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
             if ($inscricaoDB) {
                 $inscricaoDB->update(['etapa_atual' => 99]);
-                
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
             }
 
             $this->etapaAtual = 99; 
+            
+            // OTIMIZAÇÃO: Recalcula o ranking do candidato de forma instantânea
+            $this->atualizarRankingInstantaneo();
+
             $this->dispatch('inscricao-concluida');
         }
+    }
+
+    private function atualizarRankingInstantaneo()
+    {
+        if (!$this->cicloAtivoId) return;
+
+        // 1. Zera classificações antigas de quem não está finalizado (proteção de consistência)
+        \Illuminate\Support\Facades\DB::table('inscricoes')
+            ->where('ciclo_id', $this->cicloAtivoId)
+            ->where('etapa_atual', '!=', 99)
+            ->whereNotNull('posicao_ranking_geral')
+            ->update([
+                'posicao_ranking' => null, 
+                'posicao_ranking_geral' => null,
+                'posicao_ranking_unidade' => null,
+                'posicao_ranking_curso' => null,
+            ]);
+
+        // 2. Calcula as posições usando a Pontuação + Desempate por Ordem de Chegada
+        $query = "
+            WITH RankedData AS (
+                SELECT id,
+                    RANK() OVER (ORDER BY pontuacao_total DESC, created_at ASC) as rank_geral,
+                    RANK() OVER (PARTITION BY unidade_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_unidade,
+                    RANK() OVER (PARTITION BY unidade_id, curso_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_curso,
+                    RANK() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_turma
+                FROM inscricoes
+                WHERE ciclo_id = :ciclo_id
+                  AND deleted_at IS NULL
+                  AND etapa_atual = 99
+            )
+            UPDATE inscricoes i
+            SET posicao_ranking_geral = r.rank_geral,
+                posicao_ranking_unidade = r.rank_unidade,
+                posicao_ranking_curso = r.rank_curso,
+                posicao_ranking = r.rank_turma
+            FROM RankedData r
+            WHERE i.id = r.id;
+        ";
+
+        \Illuminate\Support\Facades\DB::statement($query, ['ciclo_id' => $this->cicloAtivoId]);
     }
 
     private function salvarProgresso($statusForcado = null)
@@ -580,6 +624,40 @@ class Inscricao extends Component
         if (is_string($regras)) $regras = json_decode($regras, true) ?? [];
         if (empty($regras) || !is_array($regras)) return ['total' => 0, 'detalhes' => null];
 
+        $formatarCondicao = function($operador, $valor) {
+            $valores = array_map('trim', explode(',', (string)$valor));
+            switch ($operador) {
+                case '=': return "Exigência: Igual a '{$valor}'";
+                case '!=': return "Exigência: Diferente de '{$valor}'";
+                case '>=': return "Exigência: Maior ou igual a {$valor}";
+                case '<=': return "Exigência: Menor ou igual a {$valor}";
+                case '>': return "Exigência: Maior que {$valor}";
+                case '<': return "Exigência: Menor que {$valor}";
+                case 'between': 
+                    $v1 = $valores[0] ?? '';
+                    $v2 = $valores[1] ?? '';
+                    return "Exigência: Estar entre {$v1} e {$v2}";
+                case 'in': 
+                    return "Exigência: Dentre as opções (" . implode(' ou ', $valores) . ")";
+                default: return "Exigência: {$operador} {$valor}";
+            }
+        };
+
+        $obterResposta = function($campo) {
+            if ($campo === 'idade' && !empty($this->data_nascimento)) return \Carbon\Carbon::parse($this->data_nascimento)->age . ' anos';
+            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? \App\Models\Curso::find($this->curso)->nome ?? 'Curso não informado';
+            if ($campo === 'turno_id') return $this->turnosDisponiveis[$this->turno] ?? \App\Modules\Turno\Domain\Models\Turno::find($this->turno)->nome ?? 'Turno não informado';
+            if ($campo === 'unidade_id') return $this->unidadesDisponiveis[$this->unidade] ?? \App\Modules\Unidade\Domain\Models\Unidade::find($this->unidade)->nome ?? 'Unidade não informada';
+            if ($campo === 'estado') return $this->estado ?? 'Estado não informado';
+            if ($campo === 'cidade') return $this->cidade ?? 'Cidade não informada';
+            if ($campo === 'possui_deficiencia') return ucfirst($this->possui_deficiencia) ?? 'Não informada';
+            
+            if (isset($this->respostas[$campo])) {
+                return is_array($this->respostas[$campo]) ? implode(', ', $this->respostas[$campo]) : $this->respostas[$campo];
+            }
+            return '';
+        };
+
         $avaliarCondicao = function($regra) {
             if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') return true; 
 
@@ -588,7 +666,7 @@ class Inscricao extends Component
             $valorResposta = null;
 
             if ($campo === 'idade' && !empty($this->data_nascimento)) {
-                $valorResposta = Carbon::parse($this->data_nascimento)->age;
+                $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
             } elseif ($campo === 'curso_id') {
                 $valorResposta = $this->curso;
             } elseif ($campo === 'turno_id') {
@@ -632,8 +710,15 @@ class Inscricao extends Component
                 $scoreBase += $pontos;
                 $acertosPadrao++;
                 
+                $valorEncontrado = $obterResposta($regra['campo'] ?? '');
+                $respostaDada = (!empty($valorEncontrado) || $valorEncontrado === '0' || $valorEncontrado === 0) ? $valorEncontrado : 'Não informada / Em branco';
+
                 $detalhes['auditoria_detalhada'][] = [
-                    'tipo_regra' => 'padrao', 'campo_avaliado' => $regra['campo'], 'resposta_dada' => "Condição atendida", 'pontos_ganhos' => $pontos, 'condicao' => "{$regra['operador']} {$regra['valor']}"
+                    'tipo_regra' => 'padrao', 
+                    'campo_avaliado' => $regra['campo'], 
+                    'resposta_dada' => $respostaDada, 
+                    'pontos_ganhos' => $pontos, 
+                    'condicao' => $formatarCondicao($regra['operador'] ?? '=', $regra['valor'] ?? '')
                 ];
             }
         }
@@ -651,13 +736,23 @@ class Inscricao extends Component
                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                 } elseif ($tipo === 'multiplicador_percentual') {
                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                    $motivo = "Bônus de {$multiplicador}% aplicado sobre a Pontuação Base ({$scoreBase} pts).";
+                    $motivo = "Multiplicador de {$multiplicador}% aplicado sobre a Pontuação Base ({$scoreBase} pts).";
                 }
 
                 if ($pontosGanhos > 0) {
                     $scoreBonus += $pontosGanhos;
+                    
+                    $campoAvaliado = $escopo === 'todos' ? 'Regra Global' : ($regra['campo'] ?? 'Regra Específica');
+                    
+                    $valorEncontradoEspecial = $obterResposta($regra['campo'] ?? '');
+                    $respostaDadaEspecial = $escopo === 'todos' ? 'Benefício aplicado a todos' : (!empty($valorEncontradoEspecial) ? $valorEncontradoEspecial : 'Ativada');
+
                     $detalhes['auditoria_detalhada'][] = [
-                        'tipo_regra' => 'especial', 'campo_avaliado' => ($escopo === 'todos') ? 'Regra Global' : $regra['campo'], 'resposta_dada' => "Benefício Ativado", 'pontos_ganhos' => $pontosGanhos, 'condicao' => $motivo
+                        'tipo_regra' => 'especial', 
+                        'campo_avaliado' => $campoAvaliado, 
+                        'resposta_dada' => $respostaDadaEspecial, 
+                        'pontos_ganhos' => $pontosGanhos, 
+                        'condicao' => $motivo
                     ];
                 }
             }
@@ -665,7 +760,7 @@ class Inscricao extends Component
 
         $totalFinal = $scoreBase + $scoreBonus;
         if ($totalFinal > 0) {
-            $detalhes['motivo_auditoria'] = "Avaliação automática. Base: {$scoreBase} pts. Bônus: {$scoreBonus} pts. Total: {$totalFinal} pts.";
+            $detalhes['motivo_auditoria'] = "Avaliação de requisitos concluída com sucesso. A resposta do candidato correspondeu a {$acertosPadrao} regra(s) base. Pontos conquistados diretamente: {$scoreBase}. Acréscimos por bônus: {$scoreBonus}. Total = {$totalFinal} pontos.";
         } else {
             $detalhes = null; 
         }

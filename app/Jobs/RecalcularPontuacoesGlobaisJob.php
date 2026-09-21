@@ -16,10 +16,12 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
     public $timeout = 3600;
     protected $trackingId;
+    protected $cicloId;
 
-    public function __construct($trackingId)
+    public function __construct($trackingId, $cicloId = null)
     {
         $this->trackingId = $trackingId;
+        $this->cicloId = $cicloId;
     }
 
     public function handle(): void
@@ -27,7 +29,13 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        $ciclos = Ciclo::where('status', true)->whereNotNull('regras_pontuacao')->get();
+        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        if ($this->cicloId) {
+            $queryCiclos->where('id', $this->cicloId);
+        } else {
+            $queryCiclos->where('status', true);
+        }
+        $ciclos = $queryCiclos->get();
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
@@ -45,7 +53,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $regras = is_string($ciclo->regras_pontuacao) ? json_decode($ciclo->regras_pontuacao, true) : $ciclo->regras_pontuacao;
                 if (empty($regras)) continue;
 
-                $ciclo->inscricoes()->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
+                $ciclo->inscricoes()->with(['curso', 'turno', 'unidade'])->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
                         $scoreBase = 0;
@@ -54,6 +62,41 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                         $detalhes = ['auditoria_detalhada' => []];
 
                         $respostas = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
+
+                        // TRADUTOR DE REGRAS P/ PORTUGUÊS CLARO
+                        $formatarCondicao = function($operador, $valor) {
+                            $valores = array_map('trim', explode(',', (string)$valor));
+                            switch ($operador) {
+                                case '=': return "Exigência: Igual a '{$valor}'";
+                                case '!=': return "Exigência: Diferente de '{$valor}'";
+                                case '>=': return "Exigência: Maior ou igual a {$valor}";
+                                case '<=': return "Exigência: Menor ou igual a {$valor}";
+                                case '>': return "Exigência: Maior que {$valor}";
+                                case '<': return "Exigência: Menor que {$valor}";
+                                case 'between': 
+                                    $v1 = $valores[0] ?? '';
+                                    $v2 = $valores[1] ?? '';
+                                    return "Exigência: Estar entre {$v1} e {$v2}";
+                                case 'in': 
+                                    return "Exigência: Dentre as opções (" . implode(' ou ', $valores) . ")";
+                                default: return "Exigência: {$operador} {$valor}";
+                            }
+                        };
+
+                        $obterResposta = function($campo) use ($inscricao, $respostas) {
+                            if ($campo === 'idade' && $inscricao->data_nascimento) return \Carbon\Carbon::parse($inscricao->data_nascimento)->age . ' anos';
+                            if ($campo === 'curso_id') return $inscricao->curso->nome ?? 'Curso não informado';
+                            if ($campo === 'turno_id') return $inscricao->turno->nome ?? 'Turno não informado';
+                            if ($campo === 'unidade_id') return $inscricao->unidade->nome ?? 'Unidade não informada';
+                            if ($campo === 'estado') return $inscricao->estado ?? 'Estado não informado';
+                            if ($campo === 'cidade') return $inscricao->cidade ?? 'Cidade não informada';
+                            if ($campo === 'possui_deficiencia') return ucfirst($inscricao->possui_deficiencia) ?? 'Não informada';
+                            
+                            if (isset($respostas[$campo])) {
+                                return is_array($respostas[$campo]) ? implode(', ', $respostas[$campo]) : $respostas[$campo];
+                            }
+                            return '';
+                        };
 
                         $avaliarCondicao = function($regra) use ($inscricao, $respostas) {
                             if (($regra['escopo'] ?? 'especifico') === 'todos' && ($regra['tipo_regra'] ?? 'padrao') !== 'padrao') return true; 
@@ -90,8 +133,16 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                                 $pontos = (float) ($regra['pontos'] ?? 0);
                                 $scoreBase += $pontos;
                                 $acertosPadrao++;
+                                
+                                $valorEncontrado = $obterResposta($regra['campo'] ?? '');
+                                $respostaDada = (!empty($valorEncontrado) || $valorEncontrado === '0' || $valorEncontrado === 0) ? $valorEncontrado : 'Não informada / Em branco';
+
                                 $detalhes['auditoria_detalhada'][] = [
-                                    'tipo_regra' => 'padrao', 'campo_avaliado' => $regra['campo'], 'resposta_dada' => "Condição atendida", 'pontos_ganhos' => $pontos, 'condicao' => "{$regra['operador']} {$regra['valor']}"
+                                    'tipo_regra' => 'padrao', 
+                                    'campo_avaliado' => $regra['campo'], 
+                                    'resposta_dada' => $respostaDada, 
+                                    'pontos_ganhos' => $pontos, 
+                                    'condicao' => $formatarCondicao($regra['operador'] ?? '=', $regra['valor'] ?? '')
                                 ];
                             }
                         }
@@ -108,13 +159,24 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                                     $motivo = "Bônus (+{$multiplicador} pts) multiplicado por {$acertosPadrao} acertos base.";
                                 } elseif ($tipo === 'multiplicador_percentual') {
                                     $pontosGanhos = $scoreBase * ($multiplicador / 100); 
-                                    $motivo = "Bônus de {$multiplicador}% aplicado sobre Score Pontuação ({$scoreBase} pts).";
+                                    $motivo = "Multiplicador de {$multiplicador}% aplicado sobre a pontuação base ({$scoreBase} pts).";
                                 }
 
                                 if ($pontosGanhos > 0) {
                                     $scoreBonus += $pontosGanhos;
+                                    
+                                    $escopo = $regra['escopo'] ?? 'especifico';
+                                    $campoAvaliado = $escopo === 'todos' ? 'Regra Global' : ($regra['campo'] ?? 'Regra Específica');
+                                    
+                                    $valorEncontradoEspecial = $obterResposta($regra['campo'] ?? '');
+                                    $respostaDadaEspecial = $escopo === 'todos' ? 'Benefício aplicado a todos' : (!empty($valorEncontradoEspecial) ? $valorEncontradoEspecial : 'Ativada');
+
                                     $detalhes['auditoria_detalhada'][] = [
-                                        'tipo_regra' => 'especial', 'campo_avaliado' => ($regra['escopo'] ?? 'especifico') === 'todos' ? 'Regra Global' : $regra['campo'], 'resposta_dada' => "Benefício Ativado", 'pontos_ganhos' => $pontosGanhos, 'condicao' => $motivo
+                                        'tipo_regra' => 'especial', 
+                                        'campo_avaliado' => $campoAvaliado, 
+                                        'resposta_dada' => $respostaDadaEspecial, 
+                                        'pontos_ganhos' => $pontosGanhos, 
+                                        'condicao' => $motivo
                                     ];
                                 }
                             }
@@ -124,7 +186,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
                         $inscricao->update([
                             'pontuacao_total' => $totalFinal,
-                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Recálculo Global (Background Job). Pontuação Base: {$scoreBase}. Bônus: {$scoreBonus}. Total: {$totalFinal} pts."]) : null
+                            'pontuacao_detalhes' => $totalFinal > 0 ? array_merge($detalhes, ['motivo_auditoria' => "Avaliação de requisitos concluída com sucesso. A resposta do candidato correspondeu a {$acertosPadrao} regra(s) base. Pontos conquistados diretamente: {$scoreBase}. Acréscimos por bônus: {$scoreBonus}. Total = {$totalFinal} pontos."]) : null
                         ]);
                         
                         $atualizados++;

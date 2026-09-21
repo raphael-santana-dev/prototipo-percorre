@@ -205,14 +205,18 @@
                             <div class="space-y-3 mb-4">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
                                 @foreach($detalhes['auditoria_detalhada'] as $info)
-                                    <div class="bg-white border border-white p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors">
+                                    <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors shadow-sm">
                                         <div class="flex-1 pr-3">
-                                            <span class="text-[10px] font-bold text-gray-900 uppercase block">{{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}</span>
+                                            <span class="text-[10px] font-bold text-gray-900 uppercase block mb-1">
+                                                {{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}
+                                            </span>
                                             
-                                            @if(isset($info['tipo_regra']) && $info['tipo_regra'] === 'especial')
-                                                <p class="text-[10px] text-indigo-600 font-bold mt-1 leading-tight">{{ $info['condicao'] ?? 'Bônus/Multiplicador aplicado' }}</p>
-                                            @else
-                                                <p class="text-xs text-gray-500 mt-0.5 truncate" title="{{ $info['resposta_dada'] ?? '-' }}">Resp: <b>{{ $info['resposta_dada'] ?? '-' }}</b></p>
+                                            <p class="text-xs text-gray-600 mb-1" title="{{ $info['resposta_dada'] ?? '-' }}">
+                                                Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
+                                            </p>
+
+                                            @if(isset($info['condicao']))
+                                                <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight"><i class="ph-fill ph-info"></i> {{ $info['condicao'] }}</p>
                                             @endif
                                         </div>
                                         <span class="text-green-700 font-extrabold bg-green-50 px-2 py-1 rounded-md text-[11px] border border-green-200 shrink-0">
@@ -225,7 +229,7 @@
                         
                         @if(isset($detalhes['motivo_auditoria']))
                             <div class="bg-gray-900 rounded-lg p-3 text-[10px] font-mono text-green-400 leading-relaxed border border-gray-800 mt-4 break-words">
-                                <span class="text-gray-500">&gt; Motivo:</span><br>
+                                <span class="text-gray-500">&gt; Logs:</span><br>
                                 {{ $detalhes['motivo_auditoria'] }}
                             </div>
                         @endif

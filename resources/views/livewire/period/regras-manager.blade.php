@@ -82,6 +82,8 @@
                             <select wire:model="regras.{{ $index }}.operador" class="w-full border-gray-200 rounded text-xs bg-gray-50 focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm @error("regras.$index.operador") border-red-500 bg-red-50 text-red-700 @enderror">
                                 <option value="=">Igual a</option>
                                 <option value="!=">Diferente de</option>
+                                <option value=">">Maior que</option>
+                                <option value="<">Menor que</option>
                                 <option value=">=">Maior ou igual a</option>
                                 <option value="<=">Menor ou igual a</option>
                                 <option value="between">Entre valores</option>

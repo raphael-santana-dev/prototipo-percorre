@@ -17,10 +17,12 @@ class GerarRankingGlobalJob implements ShouldQueue
 
     public $timeout = 3600;
     protected $trackingId;
+    protected $cicloId;
 
-    public function __construct($trackingId)
+    public function __construct($trackingId, $cicloId = null)
     {
         $this->trackingId = $trackingId;
+        $this->cicloId = $cicloId;
     }
 
     public function handle(): void
@@ -28,27 +30,36 @@ class GerarRankingGlobalJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        $ciclos = Ciclo::where('status', true)->whereNotNull('regras_pontuacao')->get();
+        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        if ($this->cicloId) {
+            $queryCiclos->where('id', $this->cicloId);
+        } else {
+            $queryCiclos->where('status', true);
+        }
+        $ciclos = $queryCiclos->get();
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
-            $totalInscricoes += $ciclo->inscricoes()->count();
+            $totalInscricoes += $ciclo->inscricoes()->where('etapa_atual', 99)->count();
         }
 
         if ($tracking) $tracking->update(['total_linhas' => $totalInscricoes]);
 
         try {
             foreach ($ciclos as $ciclo) {
-                // 1. Zera os rankings atuais do ciclo de forma rápida
-                DB::table('inscricoes')->where('ciclo_id', $ciclo->id)->update([
-                    'posicao_ranking' => null, 
-                    'posicao_ranking_geral' => null,
-                    'posicao_ranking_unidade' => null,
-                    'posicao_ranking_curso' => null,
-                ]);
+                // 1. Zera classificações de quem NÃO finalizou (restaura consistência)
+                DB::table('inscricoes')
+                    ->where('ciclo_id', $ciclo->id)
+                    ->where('etapa_atual', '!=', 99)
+                    ->whereNotNull('posicao_ranking_geral')
+                    ->update([
+                        'posicao_ranking' => null, 
+                        'posicao_ranking_geral' => null,
+                        'posicao_ranking_unidade' => null,
+                        'posicao_ranking_curso' => null,
+                    ]);
 
-                // 2. Delega 100% do cálculo e atualização para o PostgreSQL (Window Functions)
-                // Isso elimina o risco de OOM (Out of Memory) no PHP e roda em milissegundos.
+                // 2. Window Function restrita apenas a quem FINALIZOU (etapa_atual = 99)
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
@@ -59,6 +70,7 @@ class GerarRankingGlobalJob implements ShouldQueue
                         FROM inscricoes
                         WHERE ciclo_id = :ciclo_id
                           AND deleted_at IS NULL
+                          AND etapa_atual = 99
                     )
                     UPDATE inscricoes i
                     SET posicao_ranking_geral = r.rank_geral,

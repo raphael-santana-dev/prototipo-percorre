@@ -21,7 +21,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body class="h-full antialiased text-gray-900 transition-colors duration-300 bg-slate-50 dark:bg-gray-900 dark:text-gray-100">
+<body class="h-full antialiased text-gray-900 transition-colors duration-300 bg-slate-50 dark:bg-gray-900 dark:text-gray-100 overflow-x-hidden">
     
     <div x-data="{ drawerOpen: false }">
         
