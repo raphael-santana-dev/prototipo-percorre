@@ -39,6 +39,7 @@ class SolicitacoesManager extends Component
         $this->validate(['textoResposta' => 'required|string|min:5'], ['textoResposta.required' => 'Insira um feedback ou justificativa para esta decisão.']);
 
         $statusFinal = $this->acaoResposta === 'aprovar' ? 'aprovada' : 'rejeitada';
+        $payload = $this->solicitacaoAtiva->payload;
         
         $this->solicitacaoAtiva->update([
             'status' => $statusFinal,
@@ -47,20 +48,39 @@ class SolicitacoesManager extends Component
         ]);
 
         if ($statusFinal === 'aprovada') {
-            $payload = $this->solicitacaoAtiva->payload;
-
             if ($this->solicitacaoAtiva->tema === 'cadastro_nova_inscricao') {
                 $inscricao = \App\Models\Inscricao::create($payload);
-                
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
             }
-
             if ($this->solicitacaoAtiva->tema === 'avaliacao_aluno_fase') {
-                AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])->update(['status' => '1', 'data_resposta' => null]);
+                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])->update(['status' => '1', 'data_resposta' => null]);
             }
-            
             if ($this->solicitacaoAtiva->tema === 'avaliacao_prof_total') {
-                AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])->update(['status' => '1', 'data_resposta' => null]);
+                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])->update(['status' => '1', 'data_resposta' => null]);
+            }
+
+            // === NOVA REGRA DE ALTERAÇÃO ACADÊMICA ===
+            if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
+                $inscricao = \App\Models\Inscricao::where('student_id', $this->solicitacaoAtiva->solicitante_id)->latest()->first();
+                if ($inscricao) {
+                    $inscricao->update([
+                        'unidade_id' => $payload['nova_unidade_id'] ?? $inscricao->unidade_id,
+                        'curso_id' => $payload['novo_curso_id'] ?? $inscricao->curso_id,
+                        'turno_id' => $payload['novo_turno_id'] ?? $inscricao->turno_id,
+                    ]);
+                }
+            }
+        }
+
+        // DISPARO DE EMAIL PARA ALTERAÇÃO (Sendo aprovado ou rejeitado)
+        if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
+            $estudante = $this->solicitacaoAtiva->solicitante;
+            if ($estudante && $estudante->email) {
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('solicitacao.alteracao_academica', $estudante->email, [
+                    'aluno_nome' => $estudante->name ?? $estudante->nome ?? 'Estudante',
+                    'status_solicitacao' => ucfirst($statusFinal),
+                    'resposta_admin' => $this->textoResposta
+                ]);
             }
         }
 
