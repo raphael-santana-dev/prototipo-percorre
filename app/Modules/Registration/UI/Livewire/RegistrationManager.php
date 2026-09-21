@@ -47,7 +47,10 @@ class RegistrationManager extends Component
 
     public bool $modalAntiSpamAberto = false;
     public array $conflitosAntiSpam = [];
-    public array $dadosAcaoPendente = [];
+
+    public $acaoPendenteStatusId = null;
+    public array $acaoPendenteIds = [];
+    public string $acaoPendenteNomeStatus = '';
     
     public function mount()
     {
@@ -402,10 +405,10 @@ class RegistrationManager extends Component
 
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
-            $this->dadosAcaoPendente = [
-                'statusId' => $statusId, 'idsOriginais' => $idsValidos, 
-                'isLote' => $isLote, 'nomeStatus' => $statusNovo->nome
-            ];
+            $this->acaoPendenteStatusId = $statusId;
+            $this->acaoPendenteIds = $idsValidos;
+            $this->acaoPendenteNomeStatus = $statusNovo->nome;
+            
             $this->modalAntiSpamAberto = true;
             $this->modalLoteAberto = false; 
             return; 
@@ -417,10 +420,10 @@ class RegistrationManager extends Component
     public function removerConflitoAntiSpam($idConflito)
     {
         $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
-        $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
+        $this->acaoPendenteIds = array_values(array_diff($this->acaoPendenteIds, [$idConflito]));
 
         if (empty($this->conflitosAntiSpam)) {
-            if (empty($this->dadosAcaoPendente['idsOriginais'])) {
+            if (empty($this->acaoPendenteIds)) {
                 $this->cancelarAntiSpam();
                 $this->dispatch('erro', msg: 'Nenhuma inscrição restou para ser processada.');
                 return;
@@ -431,7 +434,7 @@ class RegistrationManager extends Component
 
     public function prosseguirComReenvioAntiSpam()
     {
-        $this->executarMudancaStatusFinal($this->dadosAcaoPendente['idsOriginais'], $this->dadosAcaoPendente['statusId']);
+        $this->executarMudancaStatusFinal($this->acaoPendenteIds, $this->acaoPendenteStatusId);
         $this->cancelarAntiSpam();
     }
 
@@ -439,7 +442,9 @@ class RegistrationManager extends Component
     {
         $this->modalAntiSpamAberto = false;
         $this->conflitosAntiSpam = [];
-        $this->dadosAcaoPendente = [];
+        $this->acaoPendenteStatusId = null;
+        $this->acaoPendenteIds = [];
+        $this->acaoPendenteNomeStatus = '';
     }
 
     private function executarMudancaStatusFinal($ids, $statusId)

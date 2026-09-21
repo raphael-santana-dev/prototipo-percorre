@@ -50,6 +50,8 @@ class PeriodManager extends Component
     public $filtro_semestre = '';
     public $filtro_status = '';
 
+    public bool $unicoAtivo = true;
+
     public function mount()
     {
         abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está desativado.');

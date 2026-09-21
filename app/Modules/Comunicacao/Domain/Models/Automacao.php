@@ -15,6 +15,14 @@ class Automacao extends Model
         'status' => 'boolean',
     ];
 
+    protected $fillable = [
+        'nome',
+        'evento_gatilho',
+        'template_id',
+        'tipo_acao',
+        'status'
+    ];
+
     public function template()
     {
         return $this->belongsTo(EmailTemplate::class, 'template_id');
