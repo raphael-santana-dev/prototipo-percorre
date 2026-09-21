@@ -20,9 +20,14 @@ class PreInscricao extends Component
     public bool $finalizado = false;
     public array $formSettings = [];
 
+    // NOVAS VARIÁVEIS PARA CAPTAÇÃO DE INTERESSE
+    public bool $deseja_informar = false;
+    public $unidade_interesse = null;
+    public $curso_interesse = null;
+    public $turno_interesse = null;
+
     public function mount($slug)
     {
-        // Garante que só carregue se for do tipo correto
         $this->formulario = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug)
@@ -48,11 +53,33 @@ class PreInscricao extends Component
 
     public function avancarEtapa()
     {
-        // Aqui você pode injetar o método regrasPorEtapa() do FormularioPublico para validação
+        // Se desejar informar, exigir seleção:
+        if ($this->etapaAtual == 1 && $this->deseja_informar) {
+            $this->validate([
+                'unidade_interesse' => 'required',
+                'curso_interesse' => 'required',
+                'turno_interesse' => 'required',
+            ], [
+                'unidade_interesse.required' => 'Obrigatório.',
+                'curso_interesse.required' => 'Obrigatório.',
+                'turno_interesse.required' => 'Obrigatório.',
+            ]);
+        }
+
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            // Salva o Lead no banco de dados
+            // Em formulários avulsos (Pre-inscrição), podemos gravar os campos de interesse
+            // dentro do json das "respostas", já que a tabela RespostaFormulario não 
+            // tem as colunas unidade_interesse_id estruturadas como na tabela de Inscrições.
+            if ($this->deseja_informar) {
+                $this->respostas['_interesse_captacao'] = [
+                    'unidade_id' => $this->unidade_interesse,
+                    'curso_id' => $this->curso_interesse,
+                    'turno_id' => $this->turno_interesse,
+                ];
+            }
+
             RespostaFormulario::create([
                 'formulario_id' => $this->formulario->id,
                 'user_id' => auth()->check() ? auth()->id() : null,
@@ -66,6 +93,14 @@ class PreInscricao extends Component
 
     public function render()
     {
-        return view('livewire.website.pre-inscricao')->title($this->formulario->titulo);
+        $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get();
+        $cursosInteresseDb = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->get();
+        $turnosInteresseDb = \App\Modules\Turno\Domain\Models\Turno::all(); 
+
+        return view('livewire.website.pre-inscricao', [
+            'unidadesInteresseDb' => $unidadesInteresseDb,
+            'cursosInteresseDb' => $cursosInteresseDb,
+            'turnosInteresseDb' => $turnosInteresseDb,
+        ])->title($this->formulario->titulo);
     }
 }

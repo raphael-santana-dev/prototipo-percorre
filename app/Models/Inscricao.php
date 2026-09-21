@@ -52,7 +52,11 @@ class Inscricao extends Model
         'posicao_ranking_curso',
         'slug',
         'criado_por',
-        'origem'
+        'origem',
+        'deseja_informar',
+        'unidade_interesse_id',
+        'curso_interesse_id',
+        'turno_interesse_id',
     ];
 
     protected $casts = [

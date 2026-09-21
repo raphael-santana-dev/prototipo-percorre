@@ -28,14 +28,13 @@
         <div class="w-full mx-auto {{ $formWidth }} form-container">
             @if($inscricoesAbertas)
                 @if($etapaAtual <= $totalEtapas)
+                    
                     <div class="mb-8 progresso-container flex flex-col items-center sm:items-start">
-                        <!-- Badge translúcido que respeita o tema (Claro/Escuro) -->
                         <div class="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-lg text-gray-800 dark:text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-3 transition-colors duration-300">
                             <i class="ph-bold ph-list-numbers text-purpura-600 dark:text-yellow-400"></i>
                             Passo {{ $etapaAtual }} de {{ $totalEtapas }}
                         </div>
                         
-                        <!-- Wrapper translúcido que respeita o tema -->
                         <div class="flex gap-2 w-full bg-white/60 dark:bg-gray-900/40 p-1.5 rounded-full backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-inner transition-colors duration-300">
                             @for($i = 1; $i <= $totalEtapas; $i++)
                                 <div class="h-2 rounded-full w-full transition-all duration-500 {{ $etapaAtual >= $i ? 'bg-purpura-600 shadow-[0_0_8px_rgba(147,51,234,0.5)] dark:bg-yellow-400 dark:shadow-[0_0_10px_rgba(250,204,21,0.6)]' : 'bg-gray-300/80 dark:bg-white/20' }}"></div>
@@ -225,8 +224,52 @@
                                         @endif
                                     </div>
                                 @else
-                                    <div class="col-span-12 mt-4 p-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-md text-center">
-                                        <p class="text-red-600 dark:text-red-400 font-bold m-0">Não há vagas disponíveis para a sua idade na localidade selecionada.</p>
+                                    <div class="col-span-12 mt-4 p-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-md transition-all duration-300">
+                                        <p class="text-red-600 dark:text-red-400 font-bold m-0 text-center">
+                                            Não há vagas disponíveis para o seu perfil e localidade selecionada no momento.
+                                        </p>
+                                        
+                                        <div class="mt-4 pt-4 border-t border-red-200 dark:border-red-800/50 flex justify-center">
+                                            <label class="flex items-center gap-3 cursor-pointer group">
+                                                <input type="checkbox" wire:model.live="deseja_informar" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 bg-white dark:bg-gray-800 dark:border-gray-600 transition-colors">
+                                                <span class="text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-purpura-600 dark:group-hover:text-purpura-400 transition-colors">Desejo registrar meu interesse para aberturas de futuras turmas</span>
+                                            </label>
+                                        </div>
+
+                                        @if($deseja_informar)
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 animate-fade-in-down">
+                                                <div>
+                                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Unidade de Interesse <span class="text-red-500">*</span></label>
+                                                    <select wire:model="unidade_interesse" class="{{ $inputClassBase }} @error('unidade_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                        <option value="">Selecione a Unidade...</option>
+                                                        @foreach($unidadesInteresseDb ?? [] as $u)
+                                                            <option value="{{ $u->id }}">{{ $u->nome }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('unidade_interesse') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Curso de Interesse <span class="text-red-500">*</span></label>
+                                                    <select wire:model="curso_interesse" class="{{ $inputClassBase }} @error('curso_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                        <option value="">Selecione o Curso...</option>
+                                                        @foreach($cursosInteresseDb ?? [] as $c)
+                                                            <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('curso_interesse') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Turno de Interesse <span class="text-red-500">*</span></label>
+                                                    <select wire:model="turno_interesse" class="{{ $inputClassBase }} @error('turno_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                        <option value="">Selecione o Turno...</option>
+                                                        @foreach($turnosInteresseDb ?? [] as $t)
+                                                            <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('turno_interesse') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
                             @endif

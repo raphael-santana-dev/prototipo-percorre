@@ -40,6 +40,12 @@ class Inscricao extends Component
     public array $formSettings = [];
     public bool $use_vacancy_limit = false; 
 
+    // NOVAS VARIÁVEIS PARA CAPTAÇÃO DE INTERESSE
+    public bool $deseja_informar = false;
+    public $unidade_interesse = null;
+    public $curso_interesse = null;
+    public $turno_interesse = null;
+
     public function mount()
     {
         $ciclo = Ciclo::with(['campos' => function($query) {
@@ -107,6 +113,12 @@ class Inscricao extends Component
                     $this->curso = $inscricaoRetomada->curso_id;
                     $this->turno = $inscricaoRetomada->turno_id;
 
+                    // RECUPERA DADOS DE INTERESSE
+                    $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
+                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                    $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
+                    $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
+
                     $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
                     if (is_array($dadosAntigos)) {
                         foreach ($dadosAntigos as $chave => $valor) {
@@ -172,6 +184,12 @@ class Inscricao extends Component
                 $this->curso = $inscricaoRetomada->curso_id;
                 $this->turno = $inscricaoRetomada->turno_id;
 
+                // RECUPERA DADOS DE INTERESSE
+                $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
+                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
+                $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
+
                 $dadosAntigos = is_string($inscricaoRetomada->dados_dinamicos) ? json_decode($inscricaoRetomada->dados_dinamicos, true) : $inscricaoRetomada->dados_dinamicos;
                 if (is_array($dadosAntigos)) {
                     foreach ($dadosAntigos as $chave => $valor) {
@@ -223,6 +241,11 @@ class Inscricao extends Component
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
                 $regras['curso'] = 'required';
+            } elseif ($this->deseja_informar && !$this->temVagasDisponiveis) {
+                // Se não tem vaga mas ele deseja informar, força ele a escolher.
+                $regras['unidade_interesse'] = 'required';
+                $regras['curso_interesse'] = 'required';
+                $regras['turno_interesse'] = 'required';
             }
         }
         if ($etapa === $this->totalEtapas) {
@@ -275,7 +298,10 @@ class Inscricao extends Component
         
         $this->validate($regrasFinais, [
             'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos.',
-            'respostas.*.required' => 'Este campo é obrigatório.'
+            'respostas.*.required' => 'Este campo é obrigatório.',
+            'unidade_interesse.required' => 'Obrigatório caso deseje informar.',
+            'curso_interesse.required' => 'Obrigatório caso deseje informar.',
+            'turno_interesse.required' => 'Obrigatório caso deseje informar.'
         ]);
 
         if ($this->etapaAtual === 1 && $this->temVagasDisponiveis && $this->use_vacancy_limit) {
@@ -319,7 +345,6 @@ class Inscricao extends Component
 
             $this->etapaAtual = 99; 
             
-            // OTIMIZAÇÃO: Recalcula o ranking do candidato de forma instantânea
             $this->atualizarRankingInstantaneo();
 
             $this->dispatch('inscricao-concluida');
@@ -330,7 +355,6 @@ class Inscricao extends Component
     {
         if (!$this->cicloAtivoId) return;
 
-        // 1. Zera classificações antigas de quem não está finalizado (proteção de consistência)
         \Illuminate\Support\Facades\DB::table('inscricoes')
             ->where('ciclo_id', $this->cicloAtivoId)
             ->where('etapa_atual', '!=', 99)
@@ -342,7 +366,6 @@ class Inscricao extends Component
                 'posicao_ranking_curso' => null,
             ]);
 
-        // 2. Calcula as posições usando a Pontuação + Desempate por Ordem de Chegada
         $query = "
             WITH RankedData AS (
                 SELECT id,
@@ -395,6 +418,12 @@ class Inscricao extends Component
             'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
             'dados_dinamicos' => $this->respostas, 
             'slug' => Str::slug($this->nome),
+
+            // SALVA OS DADOS DE INTERESSE
+            'deseja_informar' => $this->deseja_informar ? 1 : 0,
+            'unidade_interesse_id' => $this->unidade_interesse,
+            'curso_interesse_id' => $this->curso_interesse,
+            'turno_interesse_id' => $this->turno_interesse,
         ];
 
         if ($statusForcado) {
@@ -770,6 +799,21 @@ class Inscricao extends Component
 
     public function render()
     {
-        return view('livewire.website.inscricao');
+        // VARIÁVEIS DO NOVO BLOCO (ENVIADAS PARA A VIEW)
+        $unidadesInteresseDb = collect();
+        if ($this->estado) {
+            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::where('estado', $this->estado)
+                                    ->whereIn('status', ['Ativa', '1', true])
+                                    ->get();
+        }
+        
+        $cursosInteresseDb = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->get();
+        $turnosInteresseDb = \App\Modules\Turno\Domain\Models\Turno::all(); 
+
+        return view('livewire.website.inscricao', [
+            'unidadesInteresseDb' => $unidadesInteresseDb,
+            'cursosInteresseDb' => $cursosInteresseDb,
+            'turnosInteresseDb' => $turnosInteresseDb,
+        ]);
     }
 }
