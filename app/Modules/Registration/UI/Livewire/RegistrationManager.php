@@ -184,20 +184,21 @@ class RegistrationManager extends Component
         
         if (!empty($this->filtroNome)) {
             $query->where(function($q) {
-                $q->where('nome', 'ilike', '%' . $this->filtroNome . '%')
-                  ->orWhere('cpf', 'like', '%' . $this->filtroNome . '%');
+                // Prefixado com inscricoes. para evitar ambiguidade no JOIN de métricas
+                $q->where('inscricoes.nome', 'ilike', '%' . $this->filtroNome . '%')
+                  ->orWhere('inscricoes.cpf', 'like', '%' . $this->filtroNome . '%');
             });
         }
-        if (!empty($this->filtroStatus)) $query->where('status_inscricao_id', $this->filtroStatus);
-        if (!empty($this->filtroUnidade)) $query->where('unidade_id', $this->filtroUnidade);
-        if (!empty($this->filtroTurno)) $query->where('turno_id', $this->filtroTurno);
-        if (!empty($this->filtroCurso)) $query->where('curso_id', $this->filtroCurso);
-        if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
+        if (!empty($this->filtroStatus)) $query->where('inscricoes.status_inscricao_id', $this->filtroStatus);
+        if (!empty($this->filtroUnidade)) $query->where('inscricoes.unidade_id', $this->filtroUnidade);
+        if (!empty($this->filtroTurno)) $query->where('inscricoes.turno_id', $this->filtroTurno);
+        if (!empty($this->filtroCurso)) $query->where('inscricoes.curso_id', $this->filtroCurso);
+        if (!empty($this->filtroCiclo)) $query->where('inscricoes.ciclo_id', $this->filtroCiclo);
         if (!empty($this->filtroEtapa)) {
             if ($this->filtroEtapa === 'Finalizado') {
-                $query->where('etapa_atual', 99);
+                $query->where('inscricoes.etapa_atual', 99);
             } else {
-                $query->where('etapa_atual', $this->filtroEtapa);
+                $query->where('inscricoes.etapa_atual', $this->filtroEtapa);
             }
         }
 
@@ -483,7 +484,6 @@ class RegistrationManager extends Component
 
     public function solicitarExportacao($formato = 'csv')
     {
-        // CORREÇÃO: Impede que o objeto $event do Livewire assuma o valor da string
         if (!is_string($formato)) {
             $formato = 'csv';
         }
@@ -536,7 +536,6 @@ class RegistrationManager extends Component
             'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        // INJEÇÃO DA VARIÁVEL: $this->filtroCiclo
         \Illuminate\Support\Facades\Bus::chain([
             new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $this->filtroCiclo),
             new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
@@ -555,7 +554,6 @@ class RegistrationManager extends Component
             'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        // INJEÇÃO DA VARIÁVEL: $this->filtroCiclo
         dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->filtroCiclo))->afterResponse();
         
         $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
@@ -684,12 +682,9 @@ class RegistrationManager extends Component
 
         $etapasDb = [];
         if (!empty($this->filtroCiclo)) {
-            // OTIMIZAÇÃO: Pluck array associativo
             $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->pluck('nome', 'numero')->toArray();
         }
 
-        // OTIMIZAÇÃO EXTREMA: pluck('nome', 'id') transforma coleções Eloquent pesadas em arrays levíssimos, 
-        // eliminando overhead de hidratação do Livewire
         $dropdowns = Cache::remember('filtros_registration_arr', 3600, function() {
             return [
                 'status' => \App\Models\StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
