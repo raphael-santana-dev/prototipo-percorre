@@ -49,9 +49,10 @@ class GerarRankingGlobalJob implements ShouldQueue
         try {
             foreach ($ciclos as $ciclo) {
                 
+                // 1. Zera todos os rankings desse ciclo incondicionalmente
+                // Isso garante que inscrições que perderam curso/turno sejam limpas
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
-                    ->whereNotNull('posicao_ranking_geral')
                     ->update([
                         'posicao_ranking' => null, 
                         'posicao_ranking_geral' => null,
@@ -59,16 +60,21 @@ class GerarRankingGlobalJob implements ShouldQueue
                         'posicao_ranking_curso' => null,
                     ]);
 
+                // 2. Ranking rígido (ROW_NUMBER) com desempate por Data de Chegada e ID 
+                // Excluindo quem não tem vínculo preenchido
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
-                            RANK() OVER (ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC) as rank_geral,
-                            RANK() OVER (PARTITION BY unidade_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC) as rank_unidade,
-                            RANK() OVER (PARTITION BY unidade_id, curso_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC) as rank_curso,
-                            RANK() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC) as rank_turma
+                            ROW_NUMBER() OVER (ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_geral,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_unidade,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id, curso_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_curso,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_turma
                         FROM inscricoes
                         WHERE ciclo_id = :ciclo_id
                           AND deleted_at IS NULL
+                          AND unidade_id IS NOT NULL
+                          AND curso_id IS NOT NULL
+                          AND turno_id IS NOT NULL
                     )
                     UPDATE inscricoes i
                     SET posicao_ranking_geral = r.rank_geral,

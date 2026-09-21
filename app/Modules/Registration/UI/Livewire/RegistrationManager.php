@@ -307,6 +307,20 @@ class RegistrationManager extends Component
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
+                
+                // 1. Descobre quantas vagas já estão preenchidas no sistema por aprovados/selecionados
+                $vagasOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
+                    ->where('unidade_id', $oferta->unidade_id)
+                    ->where('curso_id', $oferta->curso_id)
+                    ->where('turno_id', $oferta->turno_id)
+                    ->whereHas('statusInscricao', function($q) {
+                        $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+                    })->count();
+
+                // 2. Calcula as vagas restantes. Se já encheu ou superlotou, pula este ciclo
+                $vagasRestantes = $oferta->vagas - $vagasOcupadas;
+                if ($vagasRestantes <= 0) continue;
+
                 $queryInsc = $this->obterQueryFiltrada()
                     ->where('ciclo_id', $oferta->ciclo_id)->where('unidade_id', $oferta->unidade_id)
                     ->where('curso_id', $oferta->curso_id)->where('turno_id', $oferta->turno_id)
@@ -320,7 +334,8 @@ class RegistrationManager extends Component
                     $queryInsc->orderBy('id', 'asc');
                 }
 
-                $ids = $queryInsc->limit($oferta->vagas)->pluck('id')->toArray();
+                // 3. Captura apenas a quantidade necessária para fechar os 100%
+                $ids = $queryInsc->limit($vagasRestantes)->pluck('id')->toArray();
                 $idsSelecionados = array_merge($idsSelecionados, $ids);
             }
         } else {
