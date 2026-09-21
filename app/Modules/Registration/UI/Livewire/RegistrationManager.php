@@ -293,12 +293,17 @@ class RegistrationManager extends Component
     public function executarSelecaoAvancada()
     {
         $this->validate(['selecaoQtd' => 'required|integer|min:1']);
+        
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior antes de utilizar a seleção avançada.');
+            return;
+        }
+
         $idsSelecionados = [];
 
         if ($this->selecaoPreencherVagas) {
             $queryOfertas = \App\Models\OfertaVaga::query();
-            if (!empty($this->filtroCiclo)) $queryOfertas->where('ciclo_id', $this->filtroCiclo);
-            else $queryOfertas->whereIn('ciclo_id', \App\Models\Ciclo::where('status', true)->pluck('id'));
+            $queryOfertas->where('ciclo_id', $this->filtroCiclo);
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
@@ -405,6 +410,8 @@ class RegistrationManager extends Component
 
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
+            
+            // Gravação segura em propriedades isoladas
             $this->acaoPendenteStatusId = $statusId;
             $this->acaoPendenteIds = $idsValidos;
             $this->acaoPendenteNomeStatus = $statusNovo->nome;
@@ -531,14 +538,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para recalcular a pontuação.');
+            return;
+        }
+
+        $ciclo = Ciclo::find($this->filtroCiclo);
+        $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
+
         $trackingScore = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '1/2: Recálculo de Pontuação (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         $trackingRank = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '2/2: Geração de Ranking (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         \Illuminate\Support\Facades\Bus::chain([
@@ -546,7 +561,7 @@ class RegistrationManager extends Component
             new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
         ])->dispatch();
         
-        $this->dispatch('sucesso', msg: "Processamento iniciado! Acompanhe o progresso no Gerenciador de Integrações.");
+        $this->dispatch('sucesso', msg: "Processamento iniciado para o ciclo selecionado! Acompanhe no Gerenciador de Integrações.");
     }
 
     public function gerarRankingGlobal()
@@ -554,14 +569,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para gerar o ranking.');
+            return;
+        }
+
+        $ciclo = Ciclo::find($this->filtroCiclo);
+        $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
+
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => 'Geração de Ranking: ' . $nomeCiclo, 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->filtroCiclo))->afterResponse();
         
-        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
+        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado para o ciclo selecionado. Acompanhe no Gerenciador de Integrações.");
     }
 
     public function getFabActionsProperty()

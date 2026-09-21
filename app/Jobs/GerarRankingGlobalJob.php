@@ -19,34 +19,34 @@ class GerarRankingGlobalJob implements ShouldQueue
     protected $trackingId;
     protected $cicloId;
 
-    public function __construct($trackingId, $cicloId = null)
+    public function __construct($trackingId,$cicloId = null)
     {
-        $this->trackingId = $trackingId;
-        $this->cicloId = $cicloId;
+        $this->trackingId =$trackingId;
+        $this->cicloId =$cicloId;
     }
 
     public function handle(): void
     {
         $tracking = Importacao::find($this->trackingId);
-        if ($tracking) $tracking->update(['status' => 'processando']);
+        if ($tracking)$tracking->update(['status' => 'processando']);
 
-        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        // REMOVIDA A TRAVA `whereNotNull('regras_pontuacao')`
+        $queryCiclos = Ciclo::query();
+        
         if ($this->cicloId) {
-            $queryCiclos->where('id', $this->cicloId);
+            $queryCiclos->where('id',$this->cicloId);
         } else {
             $queryCiclos->where('status', true);
         }
-        $ciclos = $queryCiclos->get();
-        
-        $totalInscricoes = 0;
-        foreach ($ciclos as $ciclo) {
-            $totalInscricoes += $ciclo->inscricoes()->where('etapa_atual', 99)->count();
+        $ciclos = $queryCiclos->get();$totalInscricoes = 0;
+        foreach ($ciclos as$ciclo) {
+            $totalInscricoes +=$ciclo->inscricoes()->where('etapa_atual', 99)->count();
         }
 
-        if ($tracking) $tracking->update(['total_linhas' => $totalInscricoes]);
+        if ($tracking) $tracking->update(['total_linhas' =>$totalInscricoes]);
 
         try {
-            foreach ($ciclos as $ciclo) {
+            foreach ($ciclos as$ciclo) {
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
                     ->where('etapa_atual', '!=', 99)
@@ -79,14 +79,13 @@ class GerarRankingGlobalJob implements ShouldQueue
                     WHERE i.id = r.id;
                 ";
 
-                DB::statement($query, ['ciclo_id' => $ciclo->id]);
+                DB::statement($query, ['ciclo_id' =>$ciclo->id]);
             }
 
-            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $totalInscricoes]);
+            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' =>$totalInscricoes]);
 
         } catch (\Throwable $e) {
-            if ($tracking) {
-                $tracking->update([
+            if ($tracking) {$tracking->update([
                     'status' => 'erro',
                     'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]])
                 ]);
