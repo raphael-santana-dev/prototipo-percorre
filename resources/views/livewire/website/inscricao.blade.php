@@ -42,7 +42,7 @@
                         </div>
                     </div>
                     
-                    <div class="{{ $cardClass }} rounded-xl border-t-4 border-purpura-600 p-6 md:p-10 card-form transition-all duration-300">
+                    <div class="{{ $cardClass }} rounded-xl p-6 md:p-10 card-form transition-all duration-300">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                             @if($etapaAtual === 1)
                                 <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">

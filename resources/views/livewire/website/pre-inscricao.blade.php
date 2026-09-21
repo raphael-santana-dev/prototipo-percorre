@@ -19,7 +19,7 @@
                 <p class="text-gray-600 text-lg">Agradecemos o seu interesse. Entraremos em contato assim que abrirmos novas turmas.</p>
             </div>
         @else
-            <div class="{{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-emerald-600">
+            <div class="{{ $cardClass }} p-8 md:p-12 rounded-xl">
                 <div class="mb-8 border-b border-gray-200 pb-6">
                     <h1 class="text-3xl font-extrabold mb-2 text-gray-900">{{ $formulario->titulo }}</h1>
                     <p class="text-gray-600 font-medium">Pré-Inscrição de Interesse</p>

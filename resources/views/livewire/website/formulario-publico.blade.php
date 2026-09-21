@@ -21,7 +21,7 @@
     <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         
         @if($bloqueado)
-            <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-yellow-500 transition-all duration-300 relative overflow-hidden">
+            <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center transition-all duration-300 relative overflow-hidden">
                 <div class="absolute inset-0 bg-yellow-50/30 dark:bg-yellow-900/10 pointer-events-none"></div>
                 
                 <div class="relative z-10">
