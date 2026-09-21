@@ -260,9 +260,10 @@ class RegistrationManager extends Component
             return;
         }
 
-        if (!$this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId)) return;
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
+        if ($inscricoesProcessar->isEmpty()) return;
 
-        $this->verificarAntiSpam(collect([$inscricao]), $statusId, false);
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
     }
 
     public function selecionarQuantidade($quantidade)
@@ -292,23 +293,26 @@ class RegistrationManager extends Component
     }
 
     public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
+    
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
     {
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        // Se a ação não for uma aprovação, deixa passar livremente
+        // Se a ação não for uma aprovação, deixa passar tudo livremente
         if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) {
-            return true; 
+            return $inscricoes; 
         }
 
         $agrupadas = $inscricoes->groupBy(function($insc) {
             return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}";
         });
 
+        $inscricoesAprovadas = collect();
+
         foreach ($agrupadas as $chave => $grupoInscricoes) {
             $partes = explode('-', $chave);
             if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
-                $this->dispatch('erro', msg: 'Não é possível aprovar inscrições que não possuem Unidade, Curso ou Turno definidos.');
-                return false;
+                $this->dispatch('erro', msg: 'Algumas inscrições sem vínculos acadêmicos foram ignoradas na aprovação.');
+                continue;
             }
 
             $unidade_id = $partes[0];
@@ -322,8 +326,8 @@ class RegistrationManager extends Component
                 ->first();
 
             if (!$oferta) {
-                $this->dispatch('erro', msg: "Não há oferta de vagas configurada para uma das combinações selecionadas.");
-                return false;
+                $this->dispatch('erro', msg: "Não há oferta de vagas configurada para uma das combinações selecionadas. Ignorado.");
+                continue;
             }
 
             $ocupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
@@ -339,14 +343,24 @@ class RegistrationManager extends Component
             $vagasRestantes = $oferta->vagas - $ocupadas;
             $tentandoAprovar = $grupoInscricoes->count();
 
+            if ($vagasRestantes <= 0) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Vagas esgotadas para {$cursoNome}. Nenhuma nova inscrição foi aprovada nesta turma.");
+                continue;
+            }
+
+            // O CORTE INTELIGENTE: Pega estritamente a quantidade de alunos que cabe nas vagas
             if ($tentandoAprovar > $vagasRestantes) {
                 $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
-                $this->dispatch('erro', msg: "Vagas insuficientes para {$cursoNome}. Tentando aprovar {$tentandoAprovar}, mas restam apenas {$vagasRestantes} vagas.");
-                return false;
+                $this->dispatch('erro', msg: "Atenção: Restavam apenas {$vagasRestantes} vagas para {$cursoNome}. Aprovamos apenas essa quantidade respeitando a ordem do ranking!");
+                
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
+            } else {
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
             }
         }
 
-        return true;
+        return $inscricoesAprovadas;
     }
 
     public function executarSelecaoAvancada()
@@ -455,9 +469,16 @@ class RegistrationManager extends Component
             return;
         }
 
-        if (!$this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $statusId)) return;
+        // PRESERVAR ORDEM DA SELEÇÃO: Garante que o ranking da tela seja mantido no banco para aprovar os melhores
+        $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
+            return array_search((string)$model->id, $this->selecionadas);
+        })->values();
 
-        $this->verificarAntiSpam($inscricoesValidas, $statusId, true);
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $statusId);
+        
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, true);
     }
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)

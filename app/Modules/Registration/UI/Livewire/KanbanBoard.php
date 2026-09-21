@@ -55,35 +55,43 @@ class KanbanBoard extends Component
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
     {
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) return true;
+        if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) return $inscricoes;
 
         $agrupadas = $inscricoes->groupBy(function($insc) { return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}"; });
+
+        $inscricoesAprovadas = collect();
 
         foreach ($agrupadas as $chave => $grupoInscricoes) {
             $partes = explode('-', $chave);
             if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
-                $this->dispatch('erro', msg: 'Inscrições sem vínculos não podem ser aprovadas.');
-                return false;
+                $this->dispatch('erro', msg: 'Inscrições sem vínculos não puderam ser processadas para preenchimento de vaga.');
+                continue;
             }
 
             $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)->where('unidade_id', $partes[0])->where('curso_id', $partes[1])->where('turno_id', $partes[2])->first();
 
-            if (!$oferta) {
-                $this->dispatch('erro', msg: "Não há oferta configurada para esta combinação.");
-                return false;
-            }
+            if (!$oferta) continue;
 
             $ocupadas = \App\Models\Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)->where('unidade_id', $partes[0])->where('curso_id', $partes[1])->where('turno_id', $partes[2])->whereHas('statusInscricao', function($q) { $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']); })->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray())->count();
 
             $vagasRestantes = $oferta->vagas - $ocupadas;
             $tentandoAprovar = $grupoInscricoes->count();
 
+            if ($vagasRestantes <= 0) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Vagas esgotadas para {$cursoNome}. Movimentação impedida.");
+                continue;
+            }
+
             if ($tentandoAprovar > $vagasRestantes) {
-                $this->dispatch('erro', msg: "Vagas insuficientes! Restam {$vagasRestantes} vagas, mas você tentou aprovar {$tentandoAprovar}.");
-                return false;
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Atenção: Aprovamos apenas as {$vagasRestantes} vagas que restavam para {$cursoNome}.");
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
+            } else {
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
             }
         }
-        return true;
+        return $inscricoesAprovadas;
     }
 
     public function limparFiltros()
@@ -117,8 +125,15 @@ class KanbanBoard extends Component
             return;
         }
 
-        if (!$this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $this->statusDestinoLote)) return;
-        $this->verificarAntiSpam($inscricoesValidas, $this->statusDestinoLote, true);
+        // PRESERVAR A ORDEM DE SELEÇÃO NO KANBAN
+        $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
+            return array_search((string)$model->id, $this->selecionados);
+        })->values();
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $this->statusDestinoLote);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $this->statusDestinoLote, true);
     }
 
     public function showQuickView(int $id)
@@ -169,8 +184,10 @@ class KanbanBoard extends Component
             return;
         }
 
-        if (!$this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status)) return;
-        $this->verificarAntiSpam(collect([$inscricao]), $status, false);
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $status, false);
     }
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
