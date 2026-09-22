@@ -238,7 +238,7 @@
 
                 <div>
                     <label class="block text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Formato da Publicação</label>
-                    <select wire:model="tipo" class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <select wire:model.live="tipo" class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="padrao">Padrão (Notícia Clássica)</option>
                         <option value="carrossel">Galeria Carrossel</option>
                         <option value="story">Visual Story (Mobile-first)</option>

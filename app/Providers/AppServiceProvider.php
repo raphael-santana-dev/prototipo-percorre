@@ -187,6 +187,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('conteudo.create',  \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class);
         Livewire::component('conteudo.categorias',  \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class);
         Livewire::component('conteudo.index',  \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class);
+        Livewire::component('conteudo.show',  \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class);
+        Livewire::component('portal.index',  \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class);
     
 
         Event::listen(Authenticated::class, function (Authenticated $event) {

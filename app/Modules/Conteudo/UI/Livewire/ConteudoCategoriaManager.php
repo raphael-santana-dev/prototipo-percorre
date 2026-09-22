@@ -80,7 +80,8 @@ class ConteudoCategoriaManager extends Component
     public function salvar()
     {
         $this->validate([
-            'nome' => 'required|string|max:255|unique:conteudo_categorias,nome,' . $this->categoriaId,
+            // CORREÇÃO: Apenas anexa a exclusão do ID se ele existir
+            'nome' => 'required|string|max:255|unique:conteudo_categorias,nome' . ($this->categoriaId ? ',' . $this->categoriaId : ''),
         ]);
 
         ConteudoCategoria::updateOrCreate(
