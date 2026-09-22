@@ -142,6 +142,13 @@ class ConteudoForm extends Component
 
     public function salvar()
     {
+        // 1. MOTOR DE VALIDAÇÃO: Higienização de Público-Alvo Absoluto
+        // Se "geral" estiver presente, ignora qualquer outra seleção recebida do frontend.
+        if (in_array('geral', $this->publico_alvo)) {
+            $this->publico_alvo = ['geral'];
+        }
+
+        // 2. MOTOR DE VALIDAÇÃO: Regras Base e Agendamento
         $this->validate([
             'titulo' => 'required|string|max:255',
             'categoria_id' => 'required|exists:conteudo_categorias,id',
@@ -149,7 +156,38 @@ class ConteudoForm extends Component
             'publico_alvo' => 'required|array|min:1',
             'data_inicio' => 'nullable|date',
             'data_fim' => 'nullable|date|after_or_equal:data_inicio',
+            'ordem_destaque' => 'required_if:is_destaque,true|nullable|integer|min:1|max:5',
+        ], [
+            'data_fim.after_or_equal' => 'A data de término não pode ser anterior à data de início.',
+            'publico_alvo.required' => 'Selecione pelo menos um público-alvo para esta publicação.',
+            'ordem_destaque.required_if' => 'Ao marcar como destaque, escolher a posição é obrigatório.',
         ]);
+
+        // 3. MOTOR DE VALIDAÇÃO: Limite Máximo de Destaques
+        if ($this->is_destaque) {
+            $totalDestaques = Conteudo::where('is_destaque', true)
+                ->when($this->conteudoId, function($q) {
+                    return $q->where('id', '!=', $this->conteudoId);
+                })
+                ->count();
+
+            if ($totalDestaques >= 5) {
+                $this->dispatch('erro', msg: 'Ação bloqueada: O sistema já atingiu o limite máximo de 5 publicações em destaque.');
+                return; // Trava a execução
+            }
+            
+            // Reordenação Inteligente: Remove o destaque de quem ocupava a mesma posição
+            Conteudo::where('is_destaque', true)
+                    ->where('ordem_destaque', $this->ordem_destaque)
+                    ->when($this->conteudoId, fn($q) => $q->where('id', '!=', $this->conteudoId))
+                    ->update(['is_destaque' => false, 'ordem_destaque' => null]);
+        }
+
+        // 4. MOTOR DE VALIDAÇÃO: Consistência de Formatos
+        if (in_array($this->tipo, ['carrossel', 'story']) && empty($this->slides)) {
+            $this->dispatch('erro', msg: 'Para formatos de Carrossel ou Story, é obrigatório adicionar pelo menos um item (slide) no construtor.');
+            return; // Trava a execução
+        }
 
         // Processa as imagens dos slides dinâmicos
         $slidesProcessados = [];
@@ -180,15 +218,17 @@ class ConteudoForm extends Component
             'texto_overlay' => $this->texto_overlay,
             'opcoes_visuais' => [
                 'texto_destaque_overlay' => $this->texto_destaque_overlay,
-                'slides' => $slidesProcessados, // Guarda os slides processados no JSON
+                'slides' => $slidesProcessados, 
             ],
         ];
 
+        // Gravação dos Banners
         $dados['banner_interno'] = $this->banner_interno_upload ? $this->processarImagemBase64($this->banner_interno_upload, 'interno') : $this->banner_interno_path;
         $dados['banner_desktop'] = $this->banner_desktop_upload ? $this->processarImagemBase64($this->banner_desktop_upload, 'desktop') : $this->banner_desktop_path;
         $dados['banner_mobile'] = $this->banner_mobile_upload ? $this->processarImagemBase64($this->banner_mobile_upload, 'mobile') : $this->banner_mobile_path;
         $dados['banner_destaque'] = $this->banner_destaque_upload ? $this->processarImagemBase64($this->banner_destaque_upload, 'destaque') : $this->banner_destaque_path;
 
+        // Persistência na Base de Dados
         if ($this->conteudoId) {
             Conteudo::findOrFail($this->conteudoId)->update($dados);
         } else {
@@ -197,7 +237,7 @@ class ConteudoForm extends Component
             Conteudo::create($dados);
         }
 
-        $this->dispatch('sucesso', msg: 'Conteúdo guardado com sucesso!');
+        $this->dispatch('sucesso', msg: 'Conteúdo validado e guardado com sucesso!');
         return redirect()->route('conteudo.index');
     }
 

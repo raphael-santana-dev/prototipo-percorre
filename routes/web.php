@@ -27,8 +27,8 @@ Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::clas
     ->name('formularios.publico')
     ->middleware('throttle:30,1');
 
-// Route::get('/portal-noticias/{slug}', \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class)->name('conteudo.show');
-
+    Route::get('/portal', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class)->name('portal.index');
+Route::get('/portal/{slug}', \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class)->name('conteudo.show');
 
 Route::middleware('guest:student,company,web')->group(function () {
     Route::get('/redefinir-senha/{token}', \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class)->name('password.reset');
