@@ -54,8 +54,11 @@ class KanbanBoard extends Component
 
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) return $inscricoes;
+        $config = $this->getVagasConfig();
+
+        if (!in_array((string)$statusId, $config['status_ids']) && !in_array((int)$statusId, $config['status_ids'])) {
+            return $inscricoes; 
+        }
 
         $agrupadas = $inscricoes->groupBy(function($insc) { return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}"; });
 
@@ -72,7 +75,21 @@ class KanbanBoard extends Component
 
             if (!$oferta) continue;
 
-            $ocupadas = \App\Models\Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)->where('unidade_id', $partes[0])->where('curso_id', $partes[1])->where('turno_id', $partes[2])->whereHas('statusInscricao', function($q) { $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']); })->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray())->count();
+            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $partes[0])
+                ->where('curso_id', $partes[1])
+                ->where('turno_id', $partes[2])
+                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
+
+            if ($config['regra'] === 'por_matricula') {
+                $queryOcupadas->whereHas('student', function($q) {
+                    $q->where('matriculado', true);
+                });
+            } else {
+                $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+            }
+
+            $ocupadas = $queryOcupadas->count();
 
             $vagasRestantes = $oferta->vagas - $ocupadas;
             $tentandoAprovar = $grupoInscricoes->count();
@@ -112,6 +129,17 @@ class KanbanBoard extends Component
         if ($inscricao && $inscricao->status_inscricao_id == $novoStatusId) return; 
         
         $this->verificarAntiSpam(collect([$inscricao]), $novoStatusId, false);
+    }
+
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
     }
 
     public function moverLote()

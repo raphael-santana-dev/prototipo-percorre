@@ -296,9 +296,9 @@ class RegistrationManager extends Component
     
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        // Se a ação não for uma aprovação, deixa passar tudo livremente
-        if (!$statusNovo || !in_array(strtolower(trim($statusNovo->nome)), ['aprovado', 'selecionado'])) {
+        $config = $this->getVagasConfig();
+
+        if (!in_array((string)$statusId, $config['status_ids']) && !in_array((int)$statusId, $config['status_ids'])) {
             return $inscricoes; 
         }
 
@@ -330,15 +330,21 @@ class RegistrationManager extends Component
                 continue;
             }
 
-            $ocupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
                 ->where('unidade_id', $unidade_id)
                 ->where('curso_id', $curso_id)
                 ->where('turno_id', $turno_id)
-                ->whereHas('statusInscricao', function($q) {
-                    $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
-                })
-                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray())
-                ->count();
+                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
+
+            if ($config['regra'] === 'por_matricula') {
+                $queryOcupadas->whereHas('student', function($q) {
+                    $q->where('matriculado', true);
+                });
+            } else {
+                $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+            }
+
+            $ocupadas = $queryOcupadas->count();
 
             $vagasRestantes = $oferta->vagas - $ocupadas;
             $tentandoAprovar = $grupoInscricoes->count();
@@ -349,11 +355,9 @@ class RegistrationManager extends Component
                 continue;
             }
 
-            // O CORTE INTELIGENTE: Pega estritamente a quantidade de alunos que cabe nas vagas
             if ($tentandoAprovar > $vagasRestantes) {
                 $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
                 $this->dispatch('erro', msg: "Atenção: Restavam apenas {$vagasRestantes} vagas para {$cursoNome}. Aprovamos apenas essa quantidade respeitando a ordem do ranking!");
-                
                 $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
             } else {
                 $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
@@ -361,6 +365,53 @@ class RegistrationManager extends Component
         }
 
         return $inscricoesAprovadas;
+    }
+
+    private function getOfertasValidas()
+    {
+        if (!$this->use_vacancy_limit) return null;
+
+        $ofertas = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloAtivoId)->get();
+        $config = $this->getVagasConfig();
+
+        $query = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
+            ->where('ciclo_id', $this->cicloAtivoId);
+
+        if ($config['regra'] === 'por_matricula') {
+            $query->whereHas('student', function($q) {
+                $q->where('matriculado', true);
+            });
+        } else {
+            $query->whereIn('status_inscricao_id', $config['status_ids']);
+        }
+
+        $ocupadas = $query->groupBy('curso_id', 'unidade_id', 'turno_id')
+            ->get()
+            ->keyBy(function($item) {
+                return "{$item->unidade_id}-{$item->curso_id}-{$item->turno_id}";
+            });
+
+        $validas = [];
+        foreach ($ofertas as $oferta) {
+            $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
+            $qtdOcupada = isset($ocupadas[$key]) ? $ocupadas[$key]->total : 0;
+            
+            if ($oferta->vagas > $qtdOcupada) {
+                $validas[$key] = true;
+            }
+        }
+        return $validas;
+    }
+
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
     }
 
     public function executarSelecaoAvancada()
@@ -377,18 +428,25 @@ class RegistrationManager extends Component
         if ($this->selecaoPreencherVagas) {
             $queryOfertas = \App\Models\OfertaVaga::query();
             $queryOfertas->where('ciclo_id', $this->filtroCiclo);
+            $config = $this->getVagasConfig();
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
                 
-                $vagasOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
+                $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
                     ->where('unidade_id', $oferta->unidade_id)
                     ->where('curso_id', $oferta->curso_id)
-                    ->where('turno_id', $oferta->turno_id)
-                    ->whereHas('statusInscricao', function($q) {
-                        $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
-                    })->count();
+                    ->where('turno_id', $oferta->turno_id);
 
+                if ($config['regra'] === 'por_matricula') {
+                    $queryOcupadas->whereHas('student', function($q) {
+                        $q->where('matriculado', true);
+                    });
+                } else {
+                    $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+                }
+
+                $vagasOcupadas = $queryOcupadas->count();
                 $vagasRestantes = $oferta->vagas - $vagasOcupadas;
                 if ($vagasRestantes <= 0) continue;
 
