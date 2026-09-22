@@ -9,7 +9,6 @@ use App\Models\Conteudo;
 use App\Models\ConteudoCategoria;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-use App\Helpers\BreadcrumbHelper;
 
 #[Layout('components.layouts.app')]
 #[Title('Formulário de Conteúdo - Administrativo')]
@@ -26,23 +25,25 @@ class ConteudoForm extends Component
     public $data_fim = null;
     public $publico_alvo = ['geral'];
     
-    // Destaque e Overlays
     public $is_destaque = false;
     public $ordem_destaque = null;
     public $texto_overlay = '';
     public $texto_destaque_overlay = '';
 
-    // Imagens (Base64 vindas do Cropper)
+    // Imagens Base64
     public $banner_interno_upload = null;
     public $banner_desktop_upload = null;
     public $banner_mobile_upload = null;
     public $banner_destaque_upload = null;
 
-    // Caminhos Atuais (Imagens já salvas)
+    // Caminhos Atuais
     public $banner_interno_path = null;
     public $banner_desktop_path = null;
     public $banner_mobile_path = null;
     public $banner_destaque_path = null;
+
+    // ARRAY DINÂMICO PARA CARROSSEL E STORY
+    public array $slides = [];
 
     public array $breadcrumbs = [];
 
@@ -65,11 +66,12 @@ class ConteudoForm extends Component
             $this->ordem_destaque = $conteudo->ordem_destaque;
             $this->texto_overlay = $conteudo->texto_overlay;
             
-            // Extracção do JSON de opções visuais
             $opcoes = is_string($conteudo->opcoes_visuais) ? json_decode($conteudo->opcoes_visuais, true) : ($conteudo->opcoes_visuais ?? []);
             $this->texto_destaque_overlay = $opcoes['texto_destaque_overlay'] ?? '';
+            
+            // Carrega os slides guardados
+            $this->slides = $opcoes['slides'] ?? [];
 
-            // Paths atuais
             $this->banner_interno_path = $conteudo->banner_interno;
             $this->banner_desktop_path = $conteudo->banner_desktop;
             $this->banner_mobile_path = $conteudo->banner_mobile;
@@ -92,12 +94,36 @@ class ConteudoForm extends Component
         }
     }
 
-    // Processador Genérico de Base64 para Imagens JPG/PNG
+    // ==== LÓGICA DO CONSTRUTOR DE SLIDES ====
+    public function addSlide()
+    {
+        $this->slides[] = [
+            'imagem_upload' => null,
+            'imagem_path' => null,
+            'texto' => '',
+            'posicao_texto' => 'bottom' // Padrão: Rodapé para não tapar a imagem
+        ];
+    }
+
+    public function removeSlide($index)
+    {
+        unset($this->slides[$index]);
+        $this->slides = array_values($this->slides);
+    }
+
+    public function removerImagemSlide($index)
+    {
+        $this->slides[$index]['imagem_upload'] = null;
+        $this->slides[$index]['imagem_path'] = null;
+    }
+
     private function processarImagemBase64($base64String, $prefix)
     {
         if (!$base64String) return null;
 
         $image_parts = explode(";base64,", $base64String);
+        if(count($image_parts) < 2) return null; // Prevenção de formato inválido
+        
         $image_base64 = base64_decode($image_parts[1]);
         $fileName = $prefix . '_' . uniqid() . '.jpg';
         $path = 'conteudos/' . $fileName;
@@ -110,7 +136,6 @@ class ConteudoForm extends Component
     {
         $propertyUpload = $tipo . '_upload';
         $propertyPath = $tipo . '_path';
-        
         $this->$propertyUpload = null;
         $this->$propertyPath = null;
     }
@@ -126,6 +151,21 @@ class ConteudoForm extends Component
             'data_fim' => 'nullable|date|after_or_equal:data_inicio',
         ]);
 
+        // Processa as imagens dos slides dinâmicos
+        $slidesProcessados = [];
+        foreach ($this->slides as $slide) {
+            $path = $slide['imagem_path'] ?? null;
+            if (!empty($slide['imagem_upload'])) {
+                $path = $this->processarImagemBase64($slide['imagem_upload'], 'slide_' . $this->tipo);
+            }
+            
+            $slidesProcessados[] = [
+                'imagem_path' => $path,
+                'texto' => $slide['texto'] ?? '',
+                'posicao_texto' => $slide['posicao_texto'] ?? 'bottom',
+            ];
+        }
+
         $dados = [
             'titulo' => $this->titulo,
             'categoria_id' => $this->categoria_id,
@@ -140,25 +180,14 @@ class ConteudoForm extends Component
             'texto_overlay' => $this->texto_overlay,
             'opcoes_visuais' => [
                 'texto_destaque_overlay' => $this->texto_destaque_overlay,
+                'slides' => $slidesProcessados, // Guarda os slides processados no JSON
             ],
         ];
 
-        // Processamento das Imagens (Se houver upload novo, descodifica. Se não, mantém o path atual)
-        $dados['banner_interno'] = $this->banner_interno_upload 
-            ? $this->processarImagemBase64($this->banner_interno_upload, 'interno') 
-            : $this->banner_interno_path;
-
-        $dados['banner_desktop'] = $this->banner_desktop_upload 
-            ? $this->processarImagemBase64($this->banner_desktop_upload, 'desktop') 
-            : $this->banner_desktop_path;
-
-        $dados['banner_mobile'] = $this->banner_mobile_upload 
-            ? $this->processarImagemBase64($this->banner_mobile_upload, 'mobile') 
-            : $this->banner_mobile_path;
-
-        $dados['banner_destaque'] = $this->banner_destaque_upload 
-            ? $this->processarImagemBase64($this->banner_destaque_upload, 'destaque') 
-            : $this->banner_destaque_path;
+        $dados['banner_interno'] = $this->banner_interno_upload ? $this->processarImagemBase64($this->banner_interno_upload, 'interno') : $this->banner_interno_path;
+        $dados['banner_desktop'] = $this->banner_desktop_upload ? $this->processarImagemBase64($this->banner_desktop_upload, 'desktop') : $this->banner_desktop_path;
+        $dados['banner_mobile'] = $this->banner_mobile_upload ? $this->processarImagemBase64($this->banner_mobile_upload, 'mobile') : $this->banner_mobile_path;
+        $dados['banner_destaque'] = $this->banner_destaque_upload ? $this->processarImagemBase64($this->banner_destaque_upload, 'destaque') : $this->banner_destaque_path;
 
         if ($this->conteudoId) {
             Conteudo::findOrFail($this->conteudoId)->update($dados);

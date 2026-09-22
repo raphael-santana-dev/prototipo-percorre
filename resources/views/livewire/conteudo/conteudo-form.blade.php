@@ -61,7 +61,84 @@
                     }">
                         <div x-ref="quillEditor" class="min-h-[400px] border-0 rounded-b-md text-base dark:bg-gray-800 dark:text-white"></div>
                     </div>
+
+                    <!-- CONSTRUTOR DINÂMICO PARA CARROSSEL E STORY -->
+              @if($tipo === 'carrossel' || $tipo === 'story')
+                  <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 animate-fade-in-up">
+                      <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 mb-5">
+                          <div>
+                              <h3 class="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+                                  <i class="ph-fill {{ $tipo === 'story' ? 'ph-instagram-logo' : 'ph-images' }} text-purpura-500"></i> 
+                                  Construtor de {{ $tipo === 'story' ? 'Stories' : 'Galeria (Carrossel)' }}
+                              </h3>
+                              <p class="text-[10px] text-gray-500 mt-1">
+                                  O recorte forçará o formato {{ $tipo === 'story' ? 'Vertical (9:16)' : 'Horizontal (16:9)' }}.
+                              </p>
+                          </div>
+                          <button type="button" wire:click="addSlide" class="px-3 py-1.5 bg-purpura-100 text-purpura-700 rounded-lg text-xs font-bold hover:bg-purpura-200 transition shadow-sm flex items-center gap-1">
+                              <i class="ph-bold ph-plus"></i> Novo Item
+                          </button>
+                      </div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          @foreach($slides as $index => $slide)
+                              <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 relative group shadow-sm">
+                                  <button type="button" wire:click="removeSlide({{ $index }})" class="absolute top-2 right-2 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white p-1 rounded transition opacity-0 group-hover:opacity-100">
+                                      <i class="ph-bold ph-x"></i>
+                                  </button>
+                                  
+                                  <span class="absolute top-2 left-2 bg-gray-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">#{{ $index + 1 }}</span>
+
+                                  <!-- Imagem do Slide -->
+                                  <div class="mt-4">
+                                      @if(!empty($slide['imagem_upload']) || !empty($slide['imagem_path']))
+                                          <div class="relative rounded overflow-hidden border border-gray-200 {{ $tipo === 'story' ? 'w-32 mx-auto h-48' : 'w-full h-32' }}">
+                                              <img src="{{ $slide['imagem_upload'] ?? Storage::url($slide['imagem_path']) }}" class="w-full h-full object-cover">
+                                              <button type="button" wire:click="removerImagemSlide({{ $index }})" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md shadow hover:bg-red-600 transition"><i class="ph-bold ph-trash text-xs"></i></button>
+                                          </div>
+                                      @else
+                                          <label class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition {{ $tipo === 'story' ? 'w-32 mx-auto h-48' : 'w-full h-32' }}">
+                                              <i class="ph ph-upload-simple text-2xl text-gray-400"></i>
+                                              <span class="text-[9px] font-bold mt-1 text-gray-500 uppercase">Fazer Crop</span>
+                                              <input type="file" accept="image/*" class="hidden" @change="openCropper($event, 'slides.{{ $index }}.imagem_upload', {{ $tipo === 'story' ? 9/16 : 16/9 }})">
+                                          </label>
+                                      @endif
+                                  </div>
+
+                                  <!-- Configurações de Overlay do Slide -->
+                                  <div class="mt-4 space-y-3">
+                                      <div>
+                                          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Texto Overlay (Legenda)</label>
+                                          <input wire:model="slides.{{ $index }}.texto" type="text" placeholder="Escreva a legenda..." class="w-full text-xs rounded border-gray-300 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                      </div>
+                                      
+                                      @if($tipo === 'story')
+                                          <div>
+                                              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Ajuste Vertical do Texto</label>
+                                              <select wire:model="slides.{{ $index }}.posicao_texto" class="w-full text-xs rounded border-gray-300 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                  <option value="bottom">Rodapé (Inferior) - Ideal para visualização</option>
+                                                  <option value="center">Centro</option>
+                                                  <option value="top">Topo (Superior)</option>
+                                              </select>
+                                          </div>
+                                      @endif
+                                  </div>
+                              </div>
+                          @endforeach
+                          
+                          @if(empty($slides))
+                              <div class="col-span-1 md:col-span-2 py-8 text-center border-2 border-dashed border-gray-300 rounded-xl">
+                                  <i class="ph-fill ph-cards text-4xl text-gray-300 mb-2"></i>
+                                  <p class="text-sm font-bold text-gray-500">Nenhum slide adicionado.</p>
+                                  <p class="text-xs text-gray-400">Clique em "Novo Item" para construir a sequência.</p>
+                              </div>
+                          @endif
+                      </div>
+                  </div>
+              @endif
                 </div>
+
+                
             </div>
 
             <!-- MÓDULO DE IMAGENS & BANNERS -->
