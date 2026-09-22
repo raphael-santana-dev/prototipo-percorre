@@ -1,7 +1,7 @@
-<div x-data="{ open: false, fullscreen: false }" 
-     x-on:show-quick-view-drawer.window="open = true; fullscreen = false;" 
+<div x-data="{ open: false }" 
+     x-on:show-quick-view-drawer.window="open = true" 
      x-on:close-quick-view-drawer.window="open = false"
-     @keydown.escape.window="open = false; fullscreen = false;"
+     @keydown.escape.window="open = false"
      class="relative z-[100]" 
      aria-labelledby="slide-over-title" 
      role="dialog" 
@@ -10,6 +10,7 @@
 
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
         
+        {{-- BACKDROP ESCURO --}}
         <div x-show="open" 
              x-transition:enter="ease-in-out duration-300" 
              x-transition:enter-start="opacity-0" 
@@ -23,7 +24,7 @@
         </div>
 
         @php
-            $maxWidthClass = match($maxWidth) {
+            $maxWidthClass = match($maxWidth ?? 'md') {
                 'sm' => 'sm:max-w-sm',
                 'md' => 'sm:max-w-md',
                 'lg' => 'sm:max-w-lg',
@@ -45,11 +46,11 @@
                      x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
                      x-transition:leave-start="translate-x-0"
                      x-transition:leave-end="translate-x-full"
-                     class="w-screen pointer-events-auto transition-all duration-300"
-                     :class="fullscreen ? 'max-w-full' : '{{ $maxWidthClass }}'">
+                     class="w-screen {{ $maxWidthClass }} pointer-events-auto">
                      
                     <div class="flex flex-col h-full bg-white shadow-2xl dark:bg-gray-800">
                         
+                        {{-- HEADER DO DRAWER --}}
                         <div class="px-6 py-6 bg-purpura-700 sm:px-8 shrink-0">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-center gap-3 text-white">
@@ -66,19 +67,15 @@
                                     </div>
                                 </div>
                                 
-                                <div class="flex items-center ml-3 h-7 gap-1">
-                                    @if($allowFullscreen)
-                                        <button @click="fullscreen = !fullscreen" type="button" class="p-1.5 rounded-lg text-purpura-200 hover:text-white hover:bg-purpura-600 focus:outline-none transition-colors" title="Alternar Tela Cheia">
-                                            <i class="text-2xl ph" :class="fullscreen ? 'ph-corners-in' : 'ph-corners-out'"></i>
-                                        </button>
-                                    @endif
-                                    <button @click="open = false" type="button" class="p-1.5 rounded-lg text-purpura-200 hover:text-white hover:bg-purpura-600 focus:outline-none transition-colors">
+                                <div class="flex items-center ml-3 h-7">
+                                    <button @click="open = false" type="button" class="text-purpura-200 hover:text-white focus:outline-none transition-colors">
                                         <i class="text-2xl ph ph-x"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
 
+                        {{-- CONTEÚDO --}}
                         <div class="relative flex-1 px-6 py-6 overflow-y-auto sm:px-8 custom-scrollbar">
                             <div class="space-y-6">
                                 @forelse($data as $key => $value)
@@ -99,9 +96,10 @@
                             </div>
                         </div>
                         
+                        {{-- FOOTER --}}
                         <div class="flex flex-shrink-0 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             <button @click="open = false" type="button" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white border-gray-300 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
-                                Fechar
+                                Fechar Painel
                             </button>
                         </div>
                     </div>

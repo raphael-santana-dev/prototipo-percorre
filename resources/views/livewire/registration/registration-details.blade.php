@@ -237,7 +237,6 @@
                                             
                                             @if($isPadrao)
                                                 <p class="text-xs text-gray-600 mb-1">
-                                                    {{ var_dump($info['resposta_dada']) }}
                                                     Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
                                                 </p>
                                                 <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight">
