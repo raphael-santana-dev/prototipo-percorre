@@ -72,6 +72,17 @@ class RegistrationManager extends Component
         }
     }
 
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
+    }
+
     public function fecharModal()
     {
         $this->modalAberto = false;
@@ -187,7 +198,6 @@ class RegistrationManager extends Component
         
         if (!empty($this->filtroNome)) {
             $query->where(function($q) {
-                // Prefixado com inscricoes. para evitar ambiguidade no JOIN de métricas
                 $q->where('inscricoes.nome', 'ilike', '%' . $this->filtroNome . '%')
                   ->orWhere('inscricoes.cpf', 'like', '%' . $this->filtroNome . '%');
             });
@@ -250,50 +260,6 @@ class RegistrationManager extends Component
         ]);
     }
 
-    #[On('quick-change-status')]
-    public function alterarStatusQuickView($id, $statusId)
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        $inscricao = Inscricao::with('curso')->find($id);
-        if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
-            $this->dispatch('erro', msg: 'O candidato já está neste status!');
-            return;
-        }
-
-        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
-        if ($inscricoesProcessar->isEmpty()) return;
-
-        $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
-    }
-
-    public function selecionarQuantidade($quantidade)
-    {
-        $this->desmarcarTodas();
-        $query = $this->obterQueryFiltrada();
-        $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
-        $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
-
-        if ($temRanking) {
-            $this->ordenacaoCampo = 'posicao_ranking_geral';
-            $this->ordenacaoDirecao = 'asc';
-            $query->whereNotNull('posicao_ranking_geral')->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
-        } elseif ($temPontuacao) {
-            $this->ordenacaoCampo = 'pontuacao_total';
-            $this->ordenacaoDirecao = 'desc';
-            $query->where('pontuacao_total', '>', 0)->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
-        } else {
-            $this->ordenacaoCampo = 'id';
-            $this->ordenacaoDirecao = 'asc';
-            $query->orderBy('id', 'asc');
-        }
-
-        $this->resetPage();
-        $this->selecionadas = $query->take((int) $quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
-    }
-
-    public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
-    
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
     {
         $config = $this->getVagasConfig();
@@ -337,8 +303,9 @@ class RegistrationManager extends Component
                 ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
 
             if ($config['regra'] === 'por_matricula') {
-                $queryOcupadas->whereHas('student', function($q) {
-                    $q->where('matriculado', true);
+                $queryOcupadas->where(function($q) use ($config) {
+                    $q->whereIn('student_id', \App\Modules\Student\Domain\Models\Student::where('matriculado', true)->select('id'))
+                      ->orWhereIn('status_inscricao_id', $config['status_ids']);
                 });
             } else {
                 $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
@@ -367,52 +334,49 @@ class RegistrationManager extends Component
         return $inscricoesAprovadas;
     }
 
-    private function getOfertasValidas()
+    #[On('quick-change-status')]
+    public function alterarStatusQuickView($id, $statusId)
     {
-        if (!$this->use_vacancy_limit) return null;
+        abort_if(!feature('inscricao.editar'), 403);
+        $inscricao = Inscricao::with('curso')->find($id);
+        if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
+            $this->dispatch('erro', msg: 'O candidato já está neste status!');
+            return;
+        }
 
-        $ofertas = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloAtivoId)->get();
-        $config = $this->getVagasConfig();
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
+        if ($inscricoesProcessar->isEmpty()) return;
 
-        $query = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
-            ->where('ciclo_id', $this->cicloAtivoId);
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
+    }
 
-        if ($config['regra'] === 'por_matricula') {
-            $query->whereHas('student', function($q) {
-                $q->where('matriculado', true);
-            });
+    public function selecionarQuantidade($quantidade)
+    {
+        $this->desmarcarTodas();
+        $query = $this->obterQueryFiltrada();
+        $temRanking = (clone $query)->whereNotNull('posicao_ranking_geral')->exists();
+        $temPontuacao = (clone $query)->where('pontuacao_total', '>', 0)->exists();
+
+        if ($temRanking) {
+            $this->ordenacaoCampo = 'posicao_ranking_geral';
+            $this->ordenacaoDirecao = 'asc';
+            $query->whereNotNull('posicao_ranking_geral')->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
+        } elseif ($temPontuacao) {
+            $this->ordenacaoCampo = 'pontuacao_total';
+            $this->ordenacaoDirecao = 'desc';
+            $query->where('pontuacao_total', '>', 0)->orderBy('pontuacao_total', 'desc')->orderBy('created_at', 'asc');
         } else {
-            $query->whereIn('status_inscricao_id', $config['status_ids']);
+            $this->ordenacaoCampo = 'id';
+            $this->ordenacaoDirecao = 'asc';
+            $query->orderBy('id', 'asc');
         }
 
-        $ocupadas = $query->groupBy('curso_id', 'unidade_id', 'turno_id')
-            ->get()
-            ->keyBy(function($item) {
-                return "{$item->unidade_id}-{$item->curso_id}-{$item->turno_id}";
-            });
-
-        $validas = [];
-        foreach ($ofertas as $oferta) {
-            $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
-            $qtdOcupada = isset($ocupadas[$key]) ? $ocupadas[$key]->total : 0;
-            
-            if ($oferta->vagas > $qtdOcupada) {
-                $validas[$key] = true;
-            }
-        }
-        return $validas;
+        $this->resetPage();
+        $this->selecionadas = $query->take((int) $quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
     }
 
-    private function getVagasConfig()
-    {
-        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
-        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
-        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
-        if (empty($statusIds)) {
-            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
-        }
-        return ['regra' => $regra, 'status_ids' => $statusIds];
-    }
+    public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
 
     public function executarSelecaoAvancada()
     {
@@ -439,8 +403,9 @@ class RegistrationManager extends Component
                     ->where('turno_id', $oferta->turno_id);
 
                 if ($config['regra'] === 'por_matricula') {
-                    $queryOcupadas->whereHas('student', function($q) {
-                        $q->where('matriculado', true);
+                    $queryOcupadas->where(function($q) use ($config) {
+                        $q->whereIn('student_id', \App\Modules\Student\Domain\Models\Student::where('matriculado', true)->select('id'))
+                          ->orWhereIn('status_inscricao_id', $config['status_ids']);
                     });
                 } else {
                     $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
@@ -527,13 +492,11 @@ class RegistrationManager extends Component
             return;
         }
 
-        // PRESERVAR ORDEM DA SELEÇÃO: Garante que o ranking da tela seja mantido no banco para aprovar os melhores
         $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
             return array_search((string)$model->id, $this->selecionadas);
         })->values();
 
         $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $statusId);
-        
         if ($inscricoesProcessar->isEmpty()) return;
 
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, true);
@@ -563,7 +526,6 @@ class RegistrationManager extends Component
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
             
-            // Gravação segura em propriedades isoladas
             $this->acaoPendenteStatusId = $statusId;
             $this->acaoPendenteIds = $idsValidos;
             $this->acaoPendenteNomeStatus = $statusNovo->nome;
