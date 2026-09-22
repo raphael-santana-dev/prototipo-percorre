@@ -656,19 +656,19 @@ class Inscricao extends Component
         $formatarCondicao = function($operador, $valor) {
             $valores = array_map('trim', explode(',', (string)$valor));
             switch ($operador) {
-                case '=': return "Exigência: Igual a '{$valor}'";
-                case '!=': return "Exigência: Diferente de '{$valor}'";
-                case '>=': return "Exigência: Maior ou igual a {$valor}";
-                case '<=': return "Exigência: Menor ou igual a {$valor}";
-                case '>': return "Exigência: Maior que {$valor}";
-                case '<': return "Exigência: Menor que {$valor}";
+                case '=': return "Igual a '{$valor}'";
+                case '!=': return "Diferente de '{$valor}'";
+                case '>=': return "Maior ou igual a {$valor}";
+                case '<=': return "Menor ou igual a {$valor}";
+                case '>': return "Maior que {$valor}";
+                case '<': return "Menor que {$valor}";
                 case 'between': 
                     $v1 = $valores[0] ?? '';
                     $v2 = $valores[1] ?? '';
-                    return "Exigência: Estar entre {$v1} e {$v2}";
+                    return "Entre {$v1} e {$v2}";
                 case 'in': 
-                    return "Exigência: Dentre as opções (" . implode(' ou ', $valores) . ")";
-                default: return "Exigência: {$operador} {$valor}";
+                    return "Dentre as opções (" . implode(' ou ', $valores) . ")";
+                default: return "{$operador} {$valor}";
             }
         };
 

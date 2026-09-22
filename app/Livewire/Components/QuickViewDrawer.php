@@ -12,6 +12,8 @@ class QuickViewDrawer extends Component
     public string $subtitle = '';
     
     public array $data = []; 
+    public string $maxWidth = 'md';
+    public bool $allowFullscreen = false;
 
     #[On('load-quick-view')]
     public function loadData(array $payload)
@@ -20,6 +22,8 @@ class QuickViewDrawer extends Component
         $this->icon = $payload['icon'] ?? 'ph-info';
         $this->data = $payload['data'] ?? [];
         $this->subtitle = $payload['subtitle'] ?? '';
+        $this->maxWidth = $payload['maxWidth'] ?? 'md';
+        $this->allowFullscreen = $payload['allowFullscreen'] ?? false;
 
         $this->dispatch('show-quick-view-drawer');
     }

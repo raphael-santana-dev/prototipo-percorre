@@ -100,6 +100,100 @@ class RegistrationDetails extends Component
         $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
     }
 
+    public function abrirRegras()
+    {
+        $regrasRaw = is_string($this->inscricao->ciclo->regras_pontuacao)
+            ? json_decode($this->inscricao->ciclo->regras_pontuacao, true)
+            : ($this->inscricao->ciclo->regras_pontuacao ?? []);
+
+        $detalhes = is_string($this->inscricao->pontuacao_detalhes)
+            ? json_decode($this->inscricao->pontuacao_detalhes, true)
+            : ($this->inscricao->pontuacao_detalhes ?? []);
+
+        $auditoria = $detalhes['auditoria_detalhada'] ?? [];
+
+        $agrupadas = collect($regrasRaw)->groupBy(function($r) {
+            return $r['campo'] ?? 'Regra Global';
+        });
+
+        $html = '<div class="space-y-6">';
+        foreach ($agrupadas as $campo => $regras) {
+            $nomeCampoFormatado = str_replace('_', ' ', strtoupper($campo));
+            $html .= "<div class='bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm'>";
+            $html .= "<h4 class='text-xs font-bold text-gray-500 mb-3 tracking-wider flex items-center gap-2'><i class='ph-fill ph-check-square-offset text-purpura-500'></i> {$nomeCampoFormatado}</h4>";
+            $html .= "<div class='space-y-2'>";
+
+            foreach ($regras as $regra) {
+                $tipo = $regra['tipo_regra'] ?? 'padrao';
+                $pontos = $regra['pontos'] ?? 0;
+                $operador = $regra['operador'] ?? '=';
+                $valor = $regra['valor'] ?? '';
+
+                $valores = array_map('trim', explode(',', (string)$valor));
+                $condicaoStr = match ($operador) {
+                    '=' => "Igual a '{$valor}'",
+                    '!=' => "Diferente de '{$valor}'",
+                    '>=' => "Maior ou igual a {$valor}",
+                    '<=' => "Menor ou igual a {$valor}",
+                    '>' => "Maior que {$valor}",
+                    '<' => "Menor que {$valor}",
+                    'between' => "Entre " . ($valores[0] ?? '') . " e " . ($valores[1] ?? ''),
+                    'in' => "Dentre: " . implode(' ou ', $valores),
+                    default => "{$operador} {$valor}"
+                };
+
+                $pontosStr = $tipo === 'multiplicador_percentual' ? "+{$pontos}%" : "+{$pontos} pts";
+
+                // Cruza com a auditoria para ver se o aluno atendeu ESTA regra
+                $atendida = false;
+                foreach ($auditoria as $aud) {
+                    if (($aud['campo_avaliado'] ?? '') === $campo) {
+                        if ($aud['pontos_ganhos'] == $pontos && str_contains($aud['condicao'] ?? '', $valor)) {
+                            $atendida = true;
+                            break;
+                        }
+                        if (($aud['tipo_regra'] ?? '') === 'especial' && $tipo !== 'padrao') {
+                            if (str_contains($aud['condicao'] ?? '', (string)$pontos)) {
+                                $atendida = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $bgClass = $atendida ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-white border-gray-100 dark:bg-gray-700 dark:border-gray-600';
+                $icon = $atendida ? '<i class="ph-fill ph-check-circle text-green-500 text-lg"></i>' : '<i class="ph ph-circle text-gray-300 text-lg"></i>';
+                $textColor = $atendida ? 'text-green-800 dark:text-green-400' : 'text-gray-700 dark:text-gray-300';
+                $ptsColor = $atendida ? 'text-green-700 bg-green-100 dark:bg-green-900/50 px-2 py-0.5 rounded' : 'text-gray-400';
+
+                $html .= "<div class='flex items-center justify-between p-3 rounded-lg border {$bgClass}'>";
+                $html .= "<div class='flex items-center gap-3'>";
+                $html .= $icon;
+                $html .= "<span class='block text-sm font-bold {$textColor}'>{$condicaoStr}</span>";
+                $html .= "</div>";
+                $html .= "<span class='font-black text-[10px] {$ptsColor}'>{$pontosStr}</span>";
+                $html .= "</div>";
+            }
+            $html .= "</div></div>";
+        }
+        $html .= '</div>';
+
+        if ($agrupadas->isEmpty()) {
+            $html = '<div class="text-center py-8 text-gray-500"><i class="ph-fill ph-warning-circle text-4xl mb-2 text-gray-300"></i><p>Nenhuma regra configurada no ciclo.</p></div>';
+        }
+
+        $this->dispatch('load-quick-view', [
+            'title' => 'Mapa de Regras do Ciclo',
+            'subtitle' => 'Critérios avaliados para a pontuação',
+            'icon' => 'ph-list-numbers',
+            'maxWidth' => 'xl',
+            'allowFullscreen' => true,
+            'data' => [
+                'Critérios e Acertos do Candidato' => $html
+            ]
+        ]);
+    }
+
     public function render()
     {
         $todosStatus = StatusInscricao::orderBy('nome')->get();
