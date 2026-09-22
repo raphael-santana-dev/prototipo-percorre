@@ -30,7 +30,8 @@ class GerarRankingGlobalJob implements ShouldQueue
         $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
-        $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
+        $queryCiclos = Ciclo::query();
+        
         if ($this->cicloId) {
             $queryCiclos->where('id', $this->cicloId);
         } else {
@@ -40,16 +41,16 @@ class GerarRankingGlobalJob implements ShouldQueue
         
         $totalInscricoes = 0;
         foreach ($ciclos as $ciclo) {
-            $totalInscricoes += $ciclo->inscricoes()->where('etapa_atual', 99)->count();
+            $totalInscricoes += $ciclo->inscricoes()->count();
         }
 
         if ($tracking) $tracking->update(['total_linhas' => $totalInscricoes]);
 
         try {
             foreach ($ciclos as $ciclo) {
+                
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
-                    ->where('etapa_atual', '!=', 99)
                     ->whereNotNull('posicao_ranking_geral')
                     ->update([
                         'posicao_ranking' => null, 
@@ -58,17 +59,21 @@ class GerarRankingGlobalJob implements ShouldQueue
                         'posicao_ranking_curso' => null,
                     ]);
 
+                // CORREÇÃO: ROW_NUMBER evita qualquer empate (usa created_at e ID como critério)
+                // O filtro IS NOT NULL garante que incompletos sejam ignorados no ranking
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
-                            RANK() OVER (ORDER BY pontuacao_total DESC, created_at ASC) as rank_geral,
-                            RANK() OVER (PARTITION BY unidade_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_unidade,
-                            RANK() OVER (PARTITION BY unidade_id, curso_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_curso,
-                            RANK() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY pontuacao_total DESC, created_at ASC) as rank_turma
+                            ROW_NUMBER() OVER (ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_geral,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_unidade,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id, curso_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_curso,
+                            ROW_NUMBER() OVER (PARTITION BY unidade_id, curso_id, turno_id ORDER BY COALESCE(pontuacao_total, 0) DESC, created_at ASC, id ASC) as rank_turma
                         FROM inscricoes
                         WHERE ciclo_id = :ciclo_id
                           AND deleted_at IS NULL
-                          AND etapa_atual = 99
+                          AND unidade_id IS NOT NULL
+                          AND curso_id IS NOT NULL
+                          AND turno_id IS NOT NULL
                     )
                     UPDATE inscricoes i
                     SET posicao_ranking_geral = r.rank_geral,

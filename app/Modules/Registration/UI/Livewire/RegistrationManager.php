@@ -254,12 +254,16 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
-        $inscricao = Inscricao::find($id);
+        $inscricao = Inscricao::with('curso')->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
             $this->dispatch('erro', msg: 'O candidato já está neste status!');
             return;
         }
-        $this->verificarAntiSpam(collect([$inscricao]), $statusId, false);
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
     }
 
     public function selecionarQuantidade($quantidade)
@@ -289,19 +293,163 @@ class RegistrationManager extends Component
     }
 
     public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
+    
+    private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
+    {
+        $config = $this->getVagasConfig();
+
+        if (!in_array((string)$statusId, $config['status_ids']) && !in_array((int)$statusId, $config['status_ids'])) {
+            return $inscricoes; 
+        }
+
+        $agrupadas = $inscricoes->groupBy(function($insc) {
+            return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}";
+        });
+
+        $inscricoesAprovadas = collect();
+
+        foreach ($agrupadas as $chave => $grupoInscricoes) {
+            $partes = explode('-', $chave);
+            if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
+                $this->dispatch('erro', msg: 'Algumas inscrições sem vínculos acadêmicos foram ignoradas na aprovação.');
+                continue;
+            }
+
+            $unidade_id = $partes[0];
+            $curso_id = $partes[1];
+            $turno_id = $partes[2];
+
+            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $unidade_id)
+                ->where('curso_id', $curso_id)
+                ->where('turno_id', $turno_id)
+                ->first();
+
+            if (!$oferta) {
+                $this->dispatch('erro', msg: "Não há oferta de vagas configurada para uma das combinações selecionadas. Ignorado.");
+                continue;
+            }
+
+            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $unidade_id)
+                ->where('curso_id', $curso_id)
+                ->where('turno_id', $turno_id)
+                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
+
+            if ($config['regra'] === 'por_matricula') {
+                $queryOcupadas->whereHas('student', function($q) {
+                    $q->where('matriculado', true);
+                });
+            } else {
+                $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+            }
+
+            $ocupadas = $queryOcupadas->count();
+
+            $vagasRestantes = $oferta->vagas - $ocupadas;
+            $tentandoAprovar = $grupoInscricoes->count();
+
+            if ($vagasRestantes <= 0) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Vagas esgotadas para {$cursoNome}. Nenhuma nova inscrição foi aprovada nesta turma.");
+                continue;
+            }
+
+            if ($tentandoAprovar > $vagasRestantes) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Atenção: Restavam apenas {$vagasRestantes} vagas para {$cursoNome}. Aprovamos apenas essa quantidade respeitando a ordem do ranking!");
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
+            } else {
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
+            }
+        }
+
+        return $inscricoesAprovadas;
+    }
+
+    private function getOfertasValidas()
+    {
+        if (!$this->use_vacancy_limit) return null;
+
+        $ofertas = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloAtivoId)->get();
+        $config = $this->getVagasConfig();
+
+        $query = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
+            ->where('ciclo_id', $this->cicloAtivoId);
+
+        if ($config['regra'] === 'por_matricula') {
+            $query->whereHas('student', function($q) {
+                $q->where('matriculado', true);
+            });
+        } else {
+            $query->whereIn('status_inscricao_id', $config['status_ids']);
+        }
+
+        $ocupadas = $query->groupBy('curso_id', 'unidade_id', 'turno_id')
+            ->get()
+            ->keyBy(function($item) {
+                return "{$item->unidade_id}-{$item->curso_id}-{$item->turno_id}";
+            });
+
+        $validas = [];
+        foreach ($ofertas as $oferta) {
+            $key = "{$oferta->unidade_id}-{$oferta->curso_id}-{$oferta->turno_id}";
+            $qtdOcupada = isset($ocupadas[$key]) ? $ocupadas[$key]->total : 0;
+            
+            if ($oferta->vagas > $qtdOcupada) {
+                $validas[$key] = true;
+            }
+        }
+        return $validas;
+    }
+
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
+    }
 
     public function executarSelecaoAvancada()
     {
         $this->validate(['selecaoQtd' => 'required|integer|min:1']);
+        
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior antes de utilizar a seleção avançada.');
+            return;
+        }
+
         $idsSelecionados = [];
 
         if ($this->selecaoPreencherVagas) {
             $queryOfertas = \App\Models\OfertaVaga::query();
-            if (!empty($this->filtroCiclo)) $queryOfertas->where('ciclo_id', $this->filtroCiclo);
-            else $queryOfertas->whereIn('ciclo_id', \App\Models\Ciclo::where('status', true)->pluck('id'));
+            $queryOfertas->where('ciclo_id', $this->filtroCiclo);
+            $config = $this->getVagasConfig();
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
+                
+                $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
+                    ->where('unidade_id', $oferta->unidade_id)
+                    ->where('curso_id', $oferta->curso_id)
+                    ->where('turno_id', $oferta->turno_id);
+
+                if ($config['regra'] === 'por_matricula') {
+                    $queryOcupadas->whereHas('student', function($q) {
+                        $q->where('matriculado', true);
+                    });
+                } else {
+                    $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+                }
+
+                $vagasOcupadas = $queryOcupadas->count();
+                $vagasRestantes = $oferta->vagas - $vagasOcupadas;
+                if ($vagasRestantes <= 0) continue;
+
                 $queryInsc = $this->obterQueryFiltrada()
                     ->where('ciclo_id', $oferta->ciclo_id)->where('unidade_id', $oferta->unidade_id)
                     ->where('curso_id', $oferta->curso_id)->where('turno_id', $oferta->turno_id)
@@ -315,7 +463,7 @@ class RegistrationManager extends Component
                     $queryInsc->orderBy('id', 'asc');
                 }
 
-                $ids = $queryInsc->limit($oferta->vagas)->pluck('id')->toArray();
+                $ids = $queryInsc->limit($vagasRestantes)->pluck('id')->toArray();
                 $idsSelecionados = array_merge($idsSelecionados, $ids);
             }
         } else {
@@ -373,13 +521,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         if (count($this->selecionadas) === 0) return;
         
-        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
+        $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
             return;
         }
 
-        $this->verificarAntiSpam($inscricoesValidas, $statusId, true);
+        // PRESERVAR ORDEM DA SELEÇÃO: Garante que o ranking da tela seja mantido no banco para aprovar os melhores
+        $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
+            return array_search((string)$model->id, $this->selecionadas);
+        })->values();
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $statusId);
+        
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, true);
     }
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
@@ -405,6 +562,8 @@ class RegistrationManager extends Component
 
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
+            
+            // Gravação segura em propriedades isoladas
             $this->acaoPendenteStatusId = $statusId;
             $this->acaoPendenteIds = $idsValidos;
             $this->acaoPendenteNomeStatus = $statusNovo->nome;
@@ -531,14 +690,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para recalcular a pontuação.');
+            return;
+        }
+
+        $ciclo = Ciclo::find($this->filtroCiclo);
+        $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
+
         $trackingScore = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '1/2: Recálculo de Pontuação (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         $trackingRank = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '2/2: Geração de Ranking (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         \Illuminate\Support\Facades\Bus::chain([
@@ -546,7 +713,7 @@ class RegistrationManager extends Component
             new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
         ])->dispatch();
         
-        $this->dispatch('sucesso', msg: "Processamento iniciado! Acompanhe o progresso no Gerenciador de Integrações.");
+        $this->dispatch('sucesso', msg: "Processamento iniciado para o ciclo selecionado! Acompanhe no Gerenciador de Integrações.");
     }
 
     public function gerarRankingGlobal()
@@ -554,14 +721,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
+        if (empty($this->filtroCiclo)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para gerar o ranking.');
+            return;
+        }
+
+        $ciclo = Ciclo::find($this->filtroCiclo);
+        $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
+
         $tracking = \App\Models\Importacao::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => 'Geração de Ranking: ' . $nomeCiclo, 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->filtroCiclo))->afterResponse();
         
-        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
+        $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado para o ciclo selecionado. Acompanhe no Gerenciador de Integrações.");
     }
 
     public function getFabActionsProperty()

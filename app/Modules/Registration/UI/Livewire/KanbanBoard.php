@@ -52,6 +52,65 @@ class KanbanBoard extends Component
         }
     }
 
+    private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
+    {
+        $config = $this->getVagasConfig();
+
+        if (!in_array((string)$statusId, $config['status_ids']) && !in_array((int)$statusId, $config['status_ids'])) {
+            return $inscricoes; 
+        }
+
+        $agrupadas = $inscricoes->groupBy(function($insc) { return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}"; });
+
+        $inscricoesAprovadas = collect();
+
+        foreach ($agrupadas as $chave => $grupoInscricoes) {
+            $partes = explode('-', $chave);
+            if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
+                $this->dispatch('erro', msg: 'Inscrições sem vínculos não puderam ser processadas para preenchimento de vaga.');
+                continue;
+            }
+
+            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)->where('unidade_id', $partes[0])->where('curso_id', $partes[1])->where('turno_id', $partes[2])->first();
+
+            if (!$oferta) continue;
+
+            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $partes[0])
+                ->where('curso_id', $partes[1])
+                ->where('turno_id', $partes[2])
+                ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
+
+            if ($config['regra'] === 'por_matricula') {
+                $queryOcupadas->whereHas('student', function($q) {
+                    $q->where('matriculado', true);
+                });
+            } else {
+                $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+            }
+
+            $ocupadas = $queryOcupadas->count();
+
+            $vagasRestantes = $oferta->vagas - $ocupadas;
+            $tentandoAprovar = $grupoInscricoes->count();
+
+            if ($vagasRestantes <= 0) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Vagas esgotadas para {$cursoNome}. Movimentação impedida.");
+                continue;
+            }
+
+            if ($tentandoAprovar > $vagasRestantes) {
+                $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
+                $this->dispatch('erro', msg: "Atenção: Aprovamos apenas as {$vagasRestantes} vagas que restavam para {$cursoNome}.");
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
+            } else {
+                $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
+            }
+        }
+        return $inscricoesAprovadas;
+    }
+
     public function limparFiltros()
     {
         $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna']);
@@ -72,18 +131,37 @@ class KanbanBoard extends Component
         $this->verificarAntiSpam(collect([$inscricao]), $novoStatusId, false);
     }
 
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
+    }
+
     public function moverLote()
     {
         abort_if(!feature('inscricao.editar'), 403);
         $this->validate(['selecionados' => 'required|array|min:1', 'statusDestinoLote' => 'required|exists:status_inscricoes,id']);
 
-        $inscricoesValidas = Inscricao::whereIn('id', $this->selecionados)->where('status_inscricao_id', '!=', $this->statusDestinoLote)->get();
+        $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionados)->where('status_inscricao_id', '!=', $this->statusDestinoLote)->get();
         if ($inscricoesValidas->isEmpty()) {
-            $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão na coluna de destino!');
+            $this->dispatch('erro', msg: 'Todas as inscrições já estão na coluna de destino!');
             return;
         }
 
-        $this->verificarAntiSpam($inscricoesValidas, $this->statusDestinoLote, true);
+        // PRESERVAR A ORDEM DE SELEÇÃO NO KANBAN
+        $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
+            return array_search((string)$model->id, $this->selecionados);
+        })->values();
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao($inscricoesValidas, $this->statusDestinoLote);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $this->statusDestinoLote, true);
     }
 
     public function showQuickView(int $id)
@@ -128,12 +206,16 @@ class KanbanBoard extends Component
     #[On('quick-change-status-crm')]
     public function quickChangeStatus($id, $status)
     {
-        $inscricao = Inscricao::find($id);
+        $inscricao = Inscricao::with('curso')->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $status) {
             $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
             return;
         }
-        $this->verificarAntiSpam(collect([$inscricao]), $status, false);
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $status, false);
     }
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
