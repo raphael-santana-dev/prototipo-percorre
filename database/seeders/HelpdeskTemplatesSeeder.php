@@ -10,12 +10,6 @@ class HelpdeskTemplatesSeeder extends Seeder
 {
     public function run()
     {
-        $t1 = EmailTemplate::firstOrCreate(['nome' => 'Retomada de Inscrição'], [
-            'assunto' => 'Bem-vindo! Continue sua inscrição',
-            'corpo' => '<p>Olá <strong>{{nome}}</strong>,</p><p>Para concluir sua inscrição, clique no botão seguro abaixo:</p><p><br>{{link_retomada}}</p><br><p>Equipe Acadêmica.</p>'
-        ]);
-        Automacao::firstOrCreate(['evento_gatilho' => 'inscricao.criada'], ['nome' => 'Aviso de Nova Inscrição', 'template_id' => $t1->id, 'status' => true]);
-
         $t2 = EmailTemplate::firstOrCreate(['nome' => 'Admin: Solicitação de Novo Cadastro'], [
             'assunto' => 'Liberação de Cadastro de Inscrição',
             'corpo' => '<p>Olá!</p><p>O usuário <strong>{{nome_solicitante}}</strong> solicitou a inclusão de uma nova inscrição via painel e precisa de autorização.</p><p><strong>Justificativa:</strong> {{justificativa}}</p><br>{{link_painel}}'
