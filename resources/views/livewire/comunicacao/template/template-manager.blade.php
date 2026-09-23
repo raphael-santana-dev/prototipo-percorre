@@ -49,6 +49,10 @@
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
+                        <button wire:click="preVisualizar({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-800" title="Pré-visualizar E-mail">
+                            <i class="text-lg ph ph-eye"></i>
+                        </button>
+                        
                         @if(feature('template.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.editar')))
                             <a href="{{ route('templates.edit', $template->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50" title="Editar">
                                 <i class="text-lg ph ph-pencil-simple"></i>

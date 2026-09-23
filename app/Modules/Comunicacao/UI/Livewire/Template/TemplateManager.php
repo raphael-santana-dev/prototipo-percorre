@@ -37,8 +37,35 @@ class TemplateManager extends Component
             ['key' => 'id', 'label' => '#ID', 'sortable' => true, 'class' => 'w-16'],
             ['key' => 'nome', 'label' => 'Nome do Template', 'sortable' => true],
             ['key' => 'assunto', 'label' => 'Assunto do E-mail', 'sortable' => true],
-            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'text-right w-24'],
+            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'text-right w-32'],
         ];
+    }
+
+    public function preVisualizar($id)
+    {
+        $template = EmailTemplate::findOrFail($id);
+
+        $conteudoHtml = $template->corpo ?? $template->conteudo ?? $template->html ?? '<p class="text-gray-500 italic">Sem conteúdo disponível.</p>';
+
+        $html = '<div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mt-2 shadow-inner">';
+        $html .= '  <div class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700">';
+        $html .= '      <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Assunto do E-mail:</span>';
+        $html .= '      <span class="block text-sm font-bold text-gray-900 dark:text-gray-100">' . $template->assunto . '</span>';
+        $html .= '  </div>';
+        $html .= '  <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">';
+        $html .=        $conteudoHtml;
+        $html .= '  </div>';
+        $html .= '</div>';
+
+        $this->dispatch('load-quick-view', [
+            'title' => 'Pré-visualização do Template',
+            'subtitle' => $template->nome,
+            'icon' => 'ph-envelope-open',
+            'maxWidth' => '2xl', 
+            'data' => [
+                'Layout da Mensagem' => $html
+            ]
+        ]);
     }
 
     public function excluir($id)
