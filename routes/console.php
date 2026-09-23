@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schedule;
 use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob;
 use App\Modules\Teste\RDCrm\Services\RdCrmService;
-use App\Modules\Conteudo\Jobs\AtualizarStatusConteudoJob;
+use App\Jobs\AtualizarStatusConteudoJob;
 use App\Jobs\RevogarPermissoesExpiradasJob;
 
 Schedule::call(function () {
