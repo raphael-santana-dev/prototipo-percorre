@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             MaisStatusInscricaoSeeder::class,
             InscricaoRecebidaTemplateSeeder::class,
             InscricoesSeeder::class,
+            ConteudoSeeder::class,
         ]);
     }
 }
