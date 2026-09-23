@@ -15,7 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
-#[Title('Dashboard Estratégico - Relatórios')]
+#[Title('Dashboard - Relatórios')]
 class Dashboard extends Component
 {
     public $filtroCiclo = '';
