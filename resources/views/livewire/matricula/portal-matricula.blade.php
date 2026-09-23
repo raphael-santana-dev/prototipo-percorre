@@ -122,8 +122,7 @@
                                 @php
                                     $statusInfo = $arquivosEnviados[$doc->id];
                                     $status = $statusInfo['status'];
-                                    if ($doc->is_obrigatorio && in_array($status, ['pendente', 'invalido_ia'])) { $podeFinalizar = false; }
-                                @endphp
+                                    if ($doc->is_obrigatorio && in_array($status, ['pendente', 'invalido_ia', 'reprovado_manual'])) { $podeFinalizar = false; }                                @endphp
 
                                 <div class="bg-white border rounded-xl p-5 shadow-sm {{ $status === 'valido_ia' ? 'border-green-200 bg-green-50/20' : 'border-gray-200' }} transition-all flex flex-col">
                                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -138,9 +137,13 @@
                                         </div>
 
                                         <div class="shrink-0 w-full sm:w-auto">
-                                            @if($status === 'valido_ia')
+                                            @if($status === 'valido_ia' || $status === 'aprovado_manual')
                                                 <span class="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-green-50 text-green-700 text-[10px] uppercase tracking-wider font-bold rounded-lg border border-green-200">
                                                     <i class="ph-bold ph-check text-sm"></i> Aprovado
+                                                </span>
+                                            @elseif($status === 'reprovado_manual')
+                                                <span class="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-50 text-red-700 text-[10px] uppercase tracking-wider font-bold rounded-lg border border-red-200">
+                                                    <i class="ph-bold ph-x text-sm"></i> Reprovado
                                                 </span>
                                             @elseif($status === 'analise_manual')
                                                 <span class="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-yellow-50 text-yellow-700 text-[10px] uppercase tracking-wider font-bold rounded-lg border border-yellow-200">
@@ -169,6 +172,31 @@
                                             <div>
                                                 <p class="text-[10px] font-bold text-red-800 uppercase tracking-wider mb-0.5">Rejeitado pela IA (Tentativa {{ $statusInfo['tentativas'] }} de 3)</p>
                                                 <p class="text-[11px] text-red-600 leading-tight font-medium">{{ $statusInfo['motivo_rejeicao'] }}</p>
+                                            </div>
+                                        </div>
+                                    @elseif($status === 'reprovado_manual')
+                                        <div class="mt-4 bg-red-50/50 border border-red-100 p-3 rounded-lg flex items-start gap-2.5">
+                                            <i class="ph-fill ph-warning-circle text-red-500 text-base shrink-0"></i>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-red-800 uppercase tracking-wider mb-0.5">Avaliação da Secretaria</p>
+                                                <p class="text-[11px] text-red-600 leading-tight font-medium mb-1">Este documento foi reprovado. Um responsável irá entrar em contato com você em breve para orientações.</p>
+                                                <p class="text-[11px] text-red-700 font-bold">Motivo: {{ $statusInfo['motivo_rejeicao_humana'] ?? 'Divergência ou falha na documentação.' }}</p>
+                                            </div>
+                                        </div>
+                                    @elseif($status === 'valido_ia')
+                                        <div class="mt-4 bg-green-50/50 border border-green-100 p-3 rounded-lg flex items-start gap-2.5">
+                                            <i class="ph-fill ph-check-circle text-green-500 text-base shrink-0"></i>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-green-800 uppercase tracking-wider mb-0.5">Aprovação Automática (IA)</p>
+                                                <p class="text-[11px] text-green-600 leading-tight font-medium">Documento validado com sucesso.</p>
+                                            </div>
+                                        </div>
+                                    @elseif($status === 'aprovado_manual')
+                                        <div class="mt-4 bg-green-50/50 border border-green-100 p-3 rounded-lg flex items-start gap-2.5">
+                                            <i class="ph-fill ph-user text-green-500 text-base shrink-0"></i>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-green-800 uppercase tracking-wider mb-0.5">Avaliação da Secretaria</p>
+                                                <p class="text-[11px] text-green-600 leading-tight font-medium">Documento aprovado manualmente pela equipe.</p>
                                             </div>
                                         </div>
                                     @endif

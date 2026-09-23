@@ -196,11 +196,16 @@
             <div class="bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
                 
                 <div class="bg-white p-5 border-b border-gray-200 flex justify-between items-center shrink-0">
-                    <div>
-                        <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
-                            <i class="ph-fill ph-folder-user text-purpura-500"></i> Detalhes da Matrícula
-                        </h3>
-                        <p class="text-xs text-gray-500 font-medium mt-0.5">{{ $inscricaoSelecionada->nome }} • CPF: {{ $inscricaoSelecionada->cpf }}</p>
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                <i class="ph-fill ph-folder-user text-purpura-500"></i> Detalhes da Matrícula
+                            </h3>
+                            <p class="text-xs text-gray-500 font-medium mt-0.5">{{ $inscricaoSelecionada->nome }} • CPF: {{ $inscricaoSelecionada->cpf }}</p>
+                        </div>
+                        <button type="button" wire:click="showContactInfo({{ $inscricaoSelecionada->id }})" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition" title="Ver Contatos do Aluno">
+                            <i class="ph-bold ph-address-book text-xl"></i>
+                        </button>
                     </div>
                     <button wire:click="$set('modalDossieAberto', false)" class="text-gray-400 hover:text-red-500 transition"><i class="ph-bold ph-x text-2xl"></i></button>
                 </div>
@@ -224,6 +229,7 @@
                                     
                                     @if($status === 'valido_ia') <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider">IA Aprovou</span>
                                     @elseif($status === 'aprovado_manual') <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider">Sec. Aprovou</span>
+                                    @elseif($status === 'reprovado_manual') <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-50 text-red-700 border border-red-200 uppercase tracking-wider">Sec. Reprovou</span>
                                     @elseif($status === 'analise_manual' || $status === 'invalido_ia') <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 uppercase tracking-wider animate-pulse">Validar Manual</span>
                                     @else <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-gray-50 text-gray-500 border border-gray-200 uppercase tracking-wider">Pendente</span>
                                     @endif
@@ -240,14 +246,36 @@
                                         @endif
                                     </div>
                                     
-                                    @if($status === 'analise_manual' || $status === 'invalido_ia')
-                                        <div class="mt-2 mb-3 bg-red-50 p-3 rounded-lg border border-red-100 text-xs">
-                                            <span class="font-bold text-red-700 block mb-1"><i class="ph-fill ph-robot"></i> Parecer da IA:</span>
-                                            <span class="text-gray-700 font-mono">{{ $enviado->log_ia['motivo_rejeicao'] ?? 'Documento ilegível, descontextualizado ou divergente.' }}</span>
+                                    {{-- BOX DE MOTIVOS (IA E HUMANO) --}}
+                                    @if(in_array($status, ['valido_ia', 'invalido_ia', 'analise_manual', 'aprovado_manual', 'reprovado_manual']))
+                                        <div class="mt-2 mb-3 space-y-2 text-xs">
+                                            @if(isset($enviado->log_ia['motivo_rejeicao']) && !empty($enviado->log_ia['motivo_rejeicao']))
+                                                <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                                                    <span class="font-bold text-gray-700 block mb-1"><i class="ph-fill ph-robot text-purpura-500"></i> Parecer da IA:</span>
+                                                    <span class="text-gray-600 font-mono">{{ $enviado->log_ia['motivo_rejeicao'] }}</span>
+                                                </div>
+                                            @elseif($status === 'valido_ia')
+                                                <div class="bg-green-50 p-2.5 rounded-lg border border-green-200">
+                                                    <span class="font-bold text-green-700 block mb-1"><i class="ph-fill ph-robot text-green-500"></i> Parecer da IA:</span>
+                                                    <span class="text-green-600 font-mono">Documento validado com sucesso.</span>
+                                                </div>
+                                            @endif
+
+                                            @if($status === 'reprovado_manual')
+                                                <div class="bg-red-50 p-2.5 rounded-lg border border-red-200">
+                                                    <span class="font-bold text-red-700 block mb-1"><i class="ph-fill ph-user text-red-500"></i> Avaliação da Secretaria:</span>
+                                                    <span class="text-red-600 font-medium">{{ $enviado->log_ia['motivo_rejeicao_humana'] ?? 'Documento recusado.' }}</span>
+                                                </div>
+                                            @elseif($status === 'aprovado_manual')
+                                                <div class="bg-green-50 p-2.5 rounded-lg border border-green-200">
+                                                    <span class="font-bold text-green-700 block mb-1"><i class="ph-fill ph-user text-green-500"></i> Avaliação da Secretaria:</span>
+                                                    <span class="text-green-600 font-medium">Aprovado manualmente após revisão.</span>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endif
 
-                                    @if(!in_array($status, ['valido_ia', 'aprovado_manual']))
+                                    @if(!in_array($status, ['valido_ia', 'aprovado_manual', 'reprovado_manual']))
                                         <div x-data="{ subAcao: '' }" class="w-full mt-3 border-t border-gray-100 pt-3">
                                             
                                             <div class="flex gap-2" x-show="subAcao === ''">
@@ -263,7 +291,7 @@
                                             <div x-show="subAcao === 'reprovar'" x-cloak class="flex flex-col gap-2">
                                                 <textarea wire:model="motivosReprovacao.{{ $enviado->id }}" rows="2" class="w-full text-xs rounded-md border-gray-300 focus:border-red-500 focus:ring-red-500 shadow-sm" placeholder="Escreva o motivo para orientar o candidato..."></textarea>
                                                 @error('motivosReprovacao.'.$enviado->id) <span class="text-[10px] text-red-500 font-bold block leading-tight">{{ $message }}</span> @enderror
-                                                <button wire:click="reprovarDocumento({{ $enviado->id }})" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-md shadow-sm text-xs uppercase tracking-wider transition">Confirmar Recusa e Excluir Arquivo</button>
+                                                <button wire:click="reprovarDocumento({{ $enviado->id }})" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-md shadow-sm text-xs uppercase tracking-wider transition">Confirmar Recusa Definitiva</button>
                                                 <button @click="subAcao = ''" class="text-xs text-gray-500 font-bold hover:underline text-center">Cancelar ação</button>
                                             </div>
                                         </div>

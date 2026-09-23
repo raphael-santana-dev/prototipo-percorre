@@ -116,13 +116,15 @@ class PortalMatricula extends Component
                     'id' => $salvo->id,
                     'status' => $salvo->status_analise,
                     'tentativas' => $salvo->tentativas_ia,
-                    'motivo_rejeicao' => $salvo->log_ia['motivo_rejeicao'] ?? ''
+                    'motivo_rejeicao' => $salvo->log_ia['motivo_rejeicao'] ?? '',
+                    'motivo_rejeicao_humana' => $salvo->log_ia['motivo_rejeicao_humana'] ?? '' // INJEÇÃO DA RESPOSTA MANUAL
                 ];
             } else {
                 $this->arquivosEnviados[$doc->id] = [
                     'status' => 'pendente',
                     'tentativas' => 0,
-                    'motivo_rejeicao' => ''
+                    'motivo_rejeicao' => '',
+                    'motivo_rejeicao_humana' => ''
                 ];
             }
         }

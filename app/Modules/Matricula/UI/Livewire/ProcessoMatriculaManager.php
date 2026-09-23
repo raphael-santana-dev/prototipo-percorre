@@ -144,9 +144,9 @@ class ProcessoMatriculaManager extends Component
             Storage::disk('local')->delete($doc->arquivo_caminho);
         }
 
+        // Alterado para um status definitivo que impede o candidato de fazer reenvio
         $doc->update([
-            'status_analise' => 'pendente',
-            'tentativas_ia' => 0,
+            'status_analise' => 'reprovado_manual',
             'avaliado_por' => auth()->id(),
             'log_ia' => array_merge(
                 is_array($doc->log_ia) ? $doc->log_ia : [], 
@@ -155,7 +155,35 @@ class ProcessoMatriculaManager extends Component
         ]);
 
         $this->abrirDossie($doc->inscricao_id);
-        $this->dispatch('sucesso', msg: 'Documento reprovado. O portal foi reaberto para o candidato.');
+        $this->dispatch('sucesso', msg: 'Documento reprovado em definitivo. O candidato será notificado.');
+    }
+
+    public function showContactInfo(int $id)
+    {
+        $inscricao = Inscricao::findOrFail($id);
+        
+        $html = '<div class="space-y-5">';
+        
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->email ?? 'Não informado').'</span></div>';
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Celular / Telefone</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->celular ?? 'Não informado').'</span></div>';
+        
+        $endereco = collect([$inscricao->logradouro, $inscricao->numero, $inscricao->complemento, $inscricao->bairro, $inscricao->cidade, $inscricao->estado, $inscricao->cep])->filter()->implode(', ');
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Endereço Completo</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($endereco ?: 'Não preenchido').'</span></div>';
+        
+        if ($inscricao->nome_responsavel) {
+            $html .= '<div class="pt-2 border-t border-gray-200 dark:border-gray-700">';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-3"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Nome do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->nome_responsavel).'</span></div>';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Contato do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->telefone_responsavel ?? 'Não preenchido').'</span></div>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+
+        $this->dispatch('load-quick-view', [
+            'title' => 'Contatos do Candidato',
+            'subtitle' => $inscricao->nome . ' • CPF: ' . $inscricao->cpf,
+            'icon' => 'ph-address-book',
+            'data' => ['Informações Pessoais' => $html]
+        ]);
     }
 
     private function verificarConclusaoMatricula($inscricaoId)
