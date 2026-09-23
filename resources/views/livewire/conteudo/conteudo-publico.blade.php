@@ -88,7 +88,7 @@
                         <i class="ph-fill ph-trend-up text-purpura-500"></i> Em Alta (Mais Lidas)
                     </h3>
 
-                    @if(count($topLidas) > 0)
+                    @if(isset($topLidas) && $topLidas->count() > 0)
                         <div class="space-y-6">
                             @foreach($topLidas as $index => $top)
                                 <a href="{{ route('conteudo.show', $top->slug) }}" class="flex gap-4 group">

@@ -15,13 +15,29 @@ class ConteudoPublico extends Component
 
     public function mount($slug)
     {
-        $this->conteudo = Conteudo::with(['categoria', 'autor'])
-            ->publicados()
+        // Busca o conteúdo ignorando as validações temporais do escopo "publicados()"
+        // para podermos fazer a verificação de expiração manual abaixo.
+        $conteudo = Conteudo::with(['categoria', 'autor'])
             ->autorizado()
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // MOTOR DE VISUALIZAÇÃO: Contabiliza apenas se não estiver na sessão
+        // MOTOR DE EXPIRAÇÃO: Se tiver data de expiração, a data já passou e o conteúdo ainda consta como ativo
+        if ($conteudo->data_fim && $conteudo->data_fim->isPast() && $conteudo->is_active) {
+            // Altera o status fisicamente na base de dados para inativo
+            $conteudo->update(['is_active' => false]);
+            // Interrompe o acesso com página 404
+            abort(404);
+        }
+
+        // Se estiver inativo ou a data de início ainda estiver no futuro, bloqueia.
+        if (!$conteudo->is_active || ($conteudo->data_inicio && $conteudo->data_inicio->isFuture())) {
+            abort(404);
+        }
+
+        $this->conteudo = $conteudo;
+
+        // MOTOR DE VISUALIZAÇÃO
         $sessionKey = 'viewed_conteudo_' . $this->conteudo->id;
         if (!Session::has($sessionKey)) {
             $this->conteudo->increment('visualizacoes');
@@ -37,12 +53,12 @@ class ConteudoPublico extends Component
 
     public function render()
     {
-        // Movido para dentro do render (resolve o erro de count() e tipagem)
         $noticiasFundo = collect();
         if ($this->conteudo->tipo === 'story') {
             $noticiasFundo = Conteudo::publicados()->autorizado()->where('tipo', 'padrao')->latest()->take(6)->get();
         }
 
+        // Traz as Top 5 garantindo que estão publicadas e acessíveis
         $topLidas = Conteudo::with('categoria')
             ->publicados()
             ->autorizado()
@@ -55,7 +71,7 @@ class ConteudoPublico extends Component
 
         return view('livewire.conteudo.conteudo-publico', [
             'noticiasFundo' => $noticiasFundo,
-            'topLidas' => $topLidas
+            'topLidas' => $topLidas ?? collect() // Fallback de segurança garantindo que nunca é nulo
         ])->title($this->conteudo->titulo . ' - Portal Editorial');
     }
 }
