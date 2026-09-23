@@ -67,6 +67,27 @@ class KanbanBoard extends Component
         $this->limitesPorColuna[$statusId] = $atual + 10;
     }
 
+    #[On('atualizar-status-crm')] // Para suportar disparos via eventos, se necessário no futuro
+    public function atualizarStatus($id, $statusId)
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+
+        $inscricao = Inscricao::with('curso')->find($id);
+        
+        // Verifica se a inscrição existe e se realmente mudou de status
+        if (!$inscricao || $inscricao->status_inscricao_id == $statusId) {
+            return;
+        }
+
+        // Valida as vagas e regras de negócio antes de aprovar
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
+        
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        // Passa pelo funil de Anti-Spam antes de finalizar a mudança
+        $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
+    }
+
     private function getVagasConfig()
     {
         $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
@@ -283,15 +304,26 @@ class KanbanBoard extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($ids);
         
-        $tracking = \App\Models\Importacao::create([
-            'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-            'arquivo_nome' => "Alteração de Status via Fluxo: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
-        ]);
+        // CORREÇÃO UX: Se forem 10 ou menos registros (ex: Drag & Drop ou pequena seleção), 
+        // executa de forma SÍNCRONA (imediata) para que a tela reaja instantaneamente.
+        if ($qtd <= 10) {
+            dispatch_sync(new \App\Jobs\ProcessarStatusEmLoteJob(null, $ids, $statusId));
+            
+            $this->reset(['selecionados', 'statusDestinoLote']);
+            $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
+        } 
+        // Se for um movimento em massa (Lote pesado), envia para a Nuvem (Assíncrono)
+        else {
+            $tracking = \App\Models\Importacao::create([
+                'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+                'arquivo_nome' => "Alteração de Status via Fluxo: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
+            ]);
 
-        dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
-        
-        $this->reset(['selecionados', 'statusDestinoLote']);
-        $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
+            dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
+            
+            $this->reset(['selecionados', 'statusDestinoLote']);
+            $this->dispatch('sucesso', msg: "Ação autorizada! {$qtd} registros enviados para processamento.");
+        }
     }
 
     public function render()
