@@ -10,7 +10,7 @@ class HelpdeskTemplatesSeeder extends Seeder
 {
     public function run()
     {
-        $t1 = EmailTemplate::firstOrCreate(['nome' => 'Boas-Vindas e Formulário'], [
+        $t1 = EmailTemplate::firstOrCreate(['nome' => 'Retomada de Inscrição'], [
             'assunto' => 'Bem-vindo! Continue sua inscrição',
             'corpo' => '<p>Olá <strong>{{nome}}</strong>,</p><p>Para concluir sua inscrição, clique no botão seguro abaixo:</p><p><br>{{link_retomada}}</p><br><p>Equipe Acadêmica.</p>'
         ]);
