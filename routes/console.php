@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Schedule;
 use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob;
 use App\Modules\Teste\RDCrm\Services\RdCrmService;
-use App\Modules\Conteudo\Jobs\AtualizarStatusConteudoJob; // <-- Importar o novo Job
+use App\Modules\Conteudo\Jobs\AtualizarStatusConteudoJob;
+use App\Jobs\RevogarPermissoesExpiradasJob;
 
 Schedule::call(function () {
     $pendentes = Comunicado::where('status', 'pendente')
@@ -25,6 +26,8 @@ Schedule::call(function () {
 Schedule::job(new AtualizarStatusConteudoJob)->everyMinute();
 
 Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
+
+Schedule::job(new RevogarPermissoesExpiradasJob)->dailyAt('00:00');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
