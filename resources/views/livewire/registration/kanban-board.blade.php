@@ -182,7 +182,7 @@
                 
                 <div class="p-6 overflow-y-auto custom-scrollbar">
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium">
-                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $dadosAcaoPendente['nomeStatus'] ?? 'selecionada' }}</strong>.
+                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">

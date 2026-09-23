@@ -59,6 +59,9 @@
                     <a href="{{ route('company.aprendizes') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-indigo-600 hover:bg-indigo-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-indigo-400">
                         <i class="text-lg ph ph-student"></i> Aprendizes
                     </a>
+                    <a href="{{ route('portal.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-indigo-600 hover:bg-indigo-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-indigo-400">
+                        <i class="text-lg ph ph-newspaper"></i> Portal Editorial
+                    </a>
 
                     @if(auth('company')->user()->tipo_acesso === 'contato_principal')
                         <a href="{{ route('company.gestores') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-indigo-600 hover:bg-indigo-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-indigo-400">
@@ -89,6 +92,9 @@
                 </a>
                 <a href="{{ route('company.aprendizes') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-gray-700">
                     <i class="text-lg ph ph-student"></i> Aprendizes
+                </a>
+                <a href="{{ route('portal.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-gray-700">
+                    <i class="text-lg ph ph-newspaper"></i> Portal Editorial
                 </a>
                 @if(auth('company')->user()->tipo_acesso === 'contato_principal')
                     <a href="{{ route('company.gestores') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-gray-700">

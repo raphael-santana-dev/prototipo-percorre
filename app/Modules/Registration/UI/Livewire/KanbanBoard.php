@@ -28,7 +28,11 @@ class KanbanBoard extends Component
 
     public bool $modalAntiSpamAberto = false;
     public array $conflitosAntiSpam = [];
-    public array $dadosAcaoPendente = [];
+    
+    // VARIÁVEIS SEGURAS (Igual ao Manager)
+    public $acaoPendenteStatusId = null;
+    public array $acaoPendenteIds = [];
+    public string $acaoPendenteNomeStatus = '';
 
     public $limitesPorColuna = [];
 
@@ -50,6 +54,28 @@ class KanbanBoard extends Component
         if (in_array($nomePropriedade, ['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao'])) {
             $this->limitesPorColuna = [];
         }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna']);
+    }
+
+    public function carregarMais($statusId)
+    {
+        $atual = $this->limitesPorColuna[$statusId] ?? 7;
+        $this->limitesPorColuna[$statusId] = $atual + 10;
+    }
+
+    private function getVagasConfig()
+    {
+        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
+        if (empty($statusIds)) {
+            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        }
+        return ['regra' => $regra, 'status_ids' => $statusIds];
     }
 
     private function validarVagasDisponiveisParaAprovacao($inscricoes, $statusId)
@@ -82,8 +108,9 @@ class KanbanBoard extends Component
                 ->whereNotIn('id', $grupoInscricoes->pluck('id')->toArray());
 
             if ($config['regra'] === 'por_matricula') {
-                $queryOcupadas->whereHas('student', function($q) {
-                    $q->where('matriculado', true);
+                $queryOcupadas->where(function($q) use ($config) {
+                    $q->whereIn('student_id', \App\Modules\Student\Domain\Models\Student::where('matriculado', true)->select('id'))
+                      ->orWhereIn('status_inscricao_id', $config['status_ids']);
                 });
             } else {
                 $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
@@ -111,35 +138,19 @@ class KanbanBoard extends Component
         return $inscricoesAprovadas;
     }
 
-    public function limparFiltros()
+    #[On('quick-change-status-crm')]
+    public function quickChangeStatus($id, $status)
     {
-        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna']);
-    }
-
-    public function carregarMais($statusId)
-    {
-        $atual = $this->limitesPorColuna[$statusId] ?? 7;
-        $this->limitesPorColuna[$statusId] = $atual + 10;
-    }
-
-    public function atualizarStatus($inscricaoId, $novoStatusId)
-    {
-        abort_if(!feature('inscricao.editar'), 403);
-        $inscricao = Inscricao::find($inscricaoId);
-        if ($inscricao && $inscricao->status_inscricao_id == $novoStatusId) return; 
-        
-        $this->verificarAntiSpam(collect([$inscricao]), $novoStatusId, false);
-    }
-
-    private function getVagasConfig()
-    {
-        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
-        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
-        $statusIds = $statusJson ? json_decode($statusJson, true) : [];
-        if (empty($statusIds)) {
-            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+        $inscricao = Inscricao::with('curso')->find($id);
+        if ($inscricao && $inscricao->status_inscricao_id == $status) {
+            $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
+            return;
         }
-        return ['regra' => $regra, 'status_ids' => $statusIds];
+
+        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status);
+        if ($inscricoesProcessar->isEmpty()) return;
+
+        $this->verificarAntiSpam($inscricoesProcessar, $status, false);
     }
 
     public function moverLote()
@@ -153,7 +164,6 @@ class KanbanBoard extends Component
             return;
         }
 
-        // PRESERVAR A ORDEM DE SELEÇÃO NO KANBAN
         $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
             return array_search((string)$model->id, $this->selecionados);
         })->values();
@@ -203,21 +213,6 @@ class KanbanBoard extends Component
         ]);
     }
 
-    #[On('quick-change-status-crm')]
-    public function quickChangeStatus($id, $status)
-    {
-        $inscricao = Inscricao::with('curso')->find($id);
-        if ($inscricao && $inscricao->status_inscricao_id == $status) {
-            $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
-            return;
-        }
-
-        $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status);
-        if ($inscricoesProcessar->isEmpty()) return;
-
-        $this->verificarAntiSpam($inscricoesProcessar, $status, false);
-    }
-
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
     {
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
@@ -241,10 +236,10 @@ class KanbanBoard extends Component
 
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
-            $this->dadosAcaoPendente = [
-                'statusId' => $statusId, 'idsOriginais' => $idsValidos, 
-                'isLote' => $isLote, 'nomeStatus' => $statusNovo->nome
-            ];
+            $this->acaoPendenteStatusId = $statusId;
+            $this->acaoPendenteIds = $idsValidos;
+            $this->acaoPendenteNomeStatus = $statusNovo->nome;
+            
             $this->modalAntiSpamAberto = true;
             $this->reset(['selecionados', 'statusDestinoLote']);
             return; 
@@ -256,10 +251,10 @@ class KanbanBoard extends Component
     public function removerConflitoAntiSpam($idConflito)
     {
         $this->conflitosAntiSpam = array_values(array_filter($this->conflitosAntiSpam, fn($c) => $c['id'] != $idConflito));
-        $this->dadosAcaoPendente['idsOriginais'] = array_values(array_diff($this->dadosAcaoPendente['idsOriginais'], [$idConflito]));
+        $this->acaoPendenteIds = array_values(array_diff($this->acaoPendenteIds, [$idConflito]));
 
         if (empty($this->conflitosAntiSpam)) {
-            if (empty($this->dadosAcaoPendente['idsOriginais'])) {
+            if (empty($this->acaoPendenteIds)) {
                 $this->cancelarAntiSpam();
                 $this->dispatch('erro', msg: 'Nenhuma inscrição restou para ser processada.');
                 return;
@@ -270,7 +265,7 @@ class KanbanBoard extends Component
 
     public function prosseguirComReenvioAntiSpam()
     {
-        $this->executarMudancaStatusFinal($this->dadosAcaoPendente['idsOriginais'], $this->dadosAcaoPendente['statusId']);
+        $this->executarMudancaStatusFinal($this->acaoPendenteIds, $this->acaoPendenteStatusId);
         $this->cancelarAntiSpam();
     }
 
@@ -278,7 +273,9 @@ class KanbanBoard extends Component
     {
         $this->modalAntiSpamAberto = false;
         $this->conflitosAntiSpam = [];
-        $this->dadosAcaoPendente = [];
+        $this->acaoPendenteStatusId = null;
+        $this->acaoPendenteIds = [];
+        $this->acaoPendenteNomeStatus = '';
     }
 
     private function executarMudancaStatusFinal($ids, $statusId)

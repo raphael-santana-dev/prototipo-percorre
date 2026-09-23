@@ -75,6 +75,9 @@
                         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
                             <i class="text-lg ph ph-squares-four"></i> Dashboard
                         </a>
+                        <a href="{{ route('portal.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
+                            <i class="text-lg ph ph-newspaper"></i> Portal Editorial
+                        </a>
                         
                         @canany(['financeiro.orcamentos.atualizar.api', 'financeiro.orcamentos.detalhes', 'financeiro.orcamentos.listagem'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -250,6 +253,7 @@
                     <p class="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-gray-400 uppercase">Menu</p>
                     
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-squares-four"></i> Dashboard</a>
+                    <a href="{{ route('portal.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700"><i class="text-lg ph ph-newspaper"></i> Portal Editorial</a>
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                     <div x-data="{ open: false }" class="space-y-1">
