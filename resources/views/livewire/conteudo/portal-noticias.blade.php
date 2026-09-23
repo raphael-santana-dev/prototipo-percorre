@@ -1,40 +1,40 @@
-<div class="bg-gray-50 dark:bg-gray-900 min-h-screen font-sans pb-20">
+<div class="bg-white dark:bg-gray-900 min-h-screen font-sans pb-20">
     
     {{-- BARRA SUPERIOR E PESQUISA --}}
-    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 pt-8 pb-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 pt-8 pb-6">
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Portal Editorial</h1>
-                    <p class="text-sm text-gray-500 mt-1">Acompanhe as últimas atualizações, avisos e conteúdos exclusivos.</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purpura-600 rounded-full flex items-center justify-center text-white">
+                        <i class="ph-bold ph-compass text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Portal Editorial</h1>
                 </div>
-                <div class="relative w-full md:w-96">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
-                    <input wire:model.live.debounce.500ms="termoBusca" type="text" placeholder="Procurar publicações..." class="w-full pl-10 pr-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition dark:bg-gray-900 dark:border-gray-700 dark:text-white dark:focus:bg-gray-800">
+                
+                {{-- Navegação de Categorias (Estilo Navbar da Imagem) --}}
+                <div class="hidden lg:flex items-center gap-6 text-sm font-bold text-gray-600 dark:text-gray-300">
+                    <button wire:click="setCategoria('')" class="{{ $categoriaFiltro === '' ? 'text-purpura-600 border-b-2 border-purpura-600 pb-1' : 'hover:text-purpura-600 transition' }}">Todas</button>
+                    @foreach($categoriasDb as $cat)
+                        <button wire:click="setCategoria('{{ $cat->id }}')" class="{{ $categoriaFiltro === (string)$cat->id ? 'text-purpura-600 border-b-2 border-purpura-600 pb-1' : 'hover:text-purpura-600 transition' }}">{{ $cat->nome }}</button>
+                    @endforeach
                 </div>
-            </div>
-            
-            {{-- FILTROS DE CATEGORIA EM PILLS --}}
-            <div class="flex flex-wrap items-center gap-2 mt-6">
-                <button wire:click="setCategoria('')" class="px-4 py-1.5 rounded-full text-xs font-bold transition-colors {{ $categoriaFiltro === '' ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600' }}">
-                    Todas
-                </button>
-                @foreach($categoriasDb as $cat)
-                    <button wire:click="setCategoria('{{ $cat->id }}')" class="px-4 py-1.5 rounded-full text-xs font-bold transition-colors {{ $categoriaFiltro === (string)$cat->id ? 'bg-purpura-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600' }}">
-                        {{ $cat->nome }}
-                    </button>
-                @endforeach
+
+                <div class="relative w-full md:w-72">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input wire:model.live.debounce.500ms="termoBusca" type="text" placeholder="Pesquisar..." class="w-full pl-10 pr-4 py-2 rounded-full border-gray-200 bg-gray-50 focus:bg-white focus:ring-purpura-500 focus:border-purpura-500 text-sm shadow-sm transition dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-4">
+    {{-- APENAS MOSTRA DESTAQUES E STORIES SE NÃO HOUVER FILTROS ATIVOS --}}
+    @if(empty($categoriaFiltro) && empty($termoBusca))
         
-        {{-- CARROSSEL DE DESTAQUES (Visível apenas na vista inicial sem filtros) --}}
+        {{-- ================= HERO SECTION (DESTAQUES) ================= --}}
         @if($destaques->count() > 0)
             <div x-data="{ activeSlide: 0, slides: {{ $destaques->count() }}, timer: null }"
-                 x-init="timer = setInterval(() => { activeSlide = activeSlide === slides - 1 ? 0 : activeSlide + 1 }, 6000)"
-                 class="relative w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-2xl overflow-hidden mb-12 shadow-xl bg-gray-900">
+                 x-init="timer = setInterval(() => { activeSlide = activeSlide === slides - 1 ? 0 : activeSlide + 1 }, 7000)"
+                 class="relative w-full h-[75vh] min-h-[500px] bg-gray-900 overflow-hidden">
                 
                 @foreach($destaques as $index => $destaque)
                     <div x-show="activeSlide === {{ $index }}"
@@ -46,157 +46,199 @@
                          x-transition:leave-end="opacity-0"
                          class="absolute inset-0 w-full h-full">
 
-                        {{-- MAGIA DA RESPONSIVIDADE NATIVA: Desktop(16:9) vs Mobile(4:5) --}}
                         <picture>
                             <source media="(min-width: 768px)" srcset="{{ Storage::url($destaque->banner_destaque ?? $destaque->banner_desktop ?? $destaque->banner_interno) }}">
-                            <img src="{{ Storage::url($destaque->banner_destaque ?? $destaque->banner_mobile ?? $destaque->banner_interno) }}" class="w-full h-full object-cover transform scale-105 hover:scale-100 transition-transform duration-[10000ms] ease-out" alt="Capa Destaque">
+                            <img src="{{ Storage::url($destaque->banner_destaque ?? $destaque->banner_mobile ?? $destaque->banner_interno) }}" class="w-full h-full object-cover" alt="Hero">
                         </picture>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent flex flex-col justify-end p-8 md:p-14">
-                            <div class="max-w-4xl">
+                        <div class="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/50 to-transparent flex flex-col justify-center p-8 md:p-20">
+                            <div class="max-w-3xl">
                                 @if($destaque->categoria)
-                                    <span class="inline-block px-3 py-1 bg-purpura-600 text-white text-[10px] font-bold rounded mb-4 uppercase tracking-widest shadow">
-                                        {{ $destaque->categoria->nome }}
+                                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur text-white text-[10px] font-bold rounded-full mb-6 uppercase tracking-widest border border-white/30">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-green-400"></div> {{ $destaque->categoria->nome }}
                                     </span>
                                 @endif
                                 
-                                <h2 class="text-3xl md:text-5xl font-black text-white leading-tight mb-4 drop-shadow-md">
+                                <h2 class="text-4xl md:text-6xl font-black text-white leading-[1.1] mb-6 drop-shadow-lg">
                                     {{ $destaque->titulo }}
                                 </h2>
                                 
-                                @php
-                                    $opcoesVisuais = is_string($destaque->opcoes_visuais) ? json_decode($destaque->opcoes_visuais, true) : ($destaque->opcoes_visuais ?? []);
-                                    $txtOverlay = $opcoesVisuais['texto_destaque_overlay'] ?? $destaque->texto_overlay;
-                                @endphp
-                                
-                                @if($txtOverlay)
-                                    <p class="text-gray-200 text-base md:text-lg mb-6 line-clamp-2 drop-shadow">
-                                        {{ $txtOverlay }}
-                                    </p>
-                                @endif
-                                
-                                <a href="{{ route('conteudo.show', $destaque->slug) }}" class="inline-flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 backdrop-blur-md px-6 py-3 rounded-lg font-bold transition-all mt-2">
-                                    Aceder ao Conteúdo <i class="ph-bold ph-arrow-right"></i>
+                                <a href="{{ route('conteudo.show', $destaque->slug) }}" class="inline-flex items-center gap-2 text-white bg-transparent border border-white hover:bg-white hover:text-gray-900 px-6 py-3 rounded-full text-sm font-bold transition-all">
+                                    Ler História <i class="ph-bold ph-arrow-right"></i>
                                 </a>
                             </div>
                         </div>
                     </div>
                 @endforeach
 
-                {{-- NAVEGAÇÃO DO CARROSSEL (Bolinhas) --}}
+                {{-- Navegação Inferior do Hero (Estilo Referência) --}}
                 @if($destaques->count() > 1)
-                    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
+                    <div class="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-md border-t border-white/20 hidden md:flex h-20">
                         @foreach($destaques as $index => $destaque)
-                            <button @click="activeSlide = {{ $index }}; clearInterval(timer); timer = setInterval(() => { activeSlide = activeSlide === slides - 1 ? 0 : activeSlide + 1 }, 6000)" 
-                                    class="w-2.5 h-2.5 rounded-full transition-all duration-300"
-                                    :class="activeSlide === {{ $index }} ? 'bg-white scale-125 w-6' : 'bg-white/50 hover:bg-white/80'"></button>
+                            <button @click="activeSlide = {{ $index }}; clearInterval(timer); timer = setInterval(() => { activeSlide = activeSlide === slides - 1 ? 0 : activeSlide + 1 }, 7000)" 
+                                    class="flex-1 flex items-center gap-3 px-6 border-r border-white/10 hover:bg-white/10 transition text-left group"
+                                    :class="activeSlide === {{ $index }} ? 'bg-white/10 relative' : ''">
+                                
+                                <div x-show="activeSlide === {{ $index }}" class="absolute top-0 left-0 right-0 h-1 bg-purpura-500"></div>
+                                
+                                <span class="w-8 h-8 shrink-0 flex items-center justify-center rounded-full border border-white/30 text-white text-xs font-bold group-hover:border-white transition">
+                                    {{ $index + 1 }}
+                                </span>
+                                <span class="text-white text-xs font-medium line-clamp-2 opacity-80 group-hover:opacity-100 transition">
+                                    {{ $destaque->titulo }}
+                                </span>
+                            </button>
                         @endforeach
                     </div>
                 @endif
             </div>
         @endif
-        {{-- SECTION: STORIES --}}
-        @if(isset($stories) && $stories->count() > 0)
-            <div class="mb-10">
-                <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
-                    <i class="ph-fill ph-instagram-logo text-pink-500"></i> Web Stories
-                </h3>
-                <div class="flex gap-5 overflow-x-auto custom-scrollbar pb-4 snap-x">
-                    @foreach($stories as $story)
-                        <a href="{{ route('conteudo.show', $story->slug) }}" class="flex flex-col items-center gap-2 min-w-[80px] sm:min-w-[100px] snap-start group">
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purpura-600 shadow-md transform group-hover:scale-105 transition">
-                                <img src="{{ Storage::url($story->banner_mobile ?? $story->banner_interno) }}" class="w-full h-full object-cover rounded-full border-2 border-white dark:border-gray-900" alt="Story">
-                            </div>
-                            <span class="text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 text-center line-clamp-2 w-full">{{ $story->titulo }}</span>
-                        </a>
-                    @endforeach
-                </div>
-            </div>
-        @endif
 
-        {{-- SECTION: CARROSSEIS / GALERIAS --}}
-        @if(isset($carrosseis) && $carrosseis->count() > 0)
-            <div class="mb-12">
-                <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
-                    <i class="ph-fill ph-images text-blue-500"></i> Galerias & Carrosséis
-                </h3>
-                <div class="flex gap-5 overflow-x-auto custom-scrollbar pb-4 snap-x">
-                    @foreach($carrosseis as $carrossel)
-                        <a href="{{ route('conteudo.show', $carrossel->slug) }}" class="min-w-[280px] sm:min-w-[320px] bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 snap-start group">
-                            <div class="relative h-40 w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
-                                <img src="{{ Storage::url($carrossel->banner_desktop ?? $carrossel->banner_interno) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                                <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg shadow-sm">
-                                    <i class="ph-fill ph-images text-lg"></i>
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+            {{-- ================= FEATURED STORIES ================= --}}
+            @if($storiesRow->count() > 0)
+                <div class="mb-16">
+                    <div class="flex justify-between items-end mb-6">
+                        <h3 class="text-2xl font-black text-gray-900 dark:text-white border-l-4 border-purpura-600 pl-4 leading-none">
+                            Últimos Stories
+                        </h3>
+                        <button wire:click="$set('filtro_tipo', 'story')" class="text-sm font-bold text-gray-500 hover:text-purpura-600 flex items-center gap-1 transition">
+                            Ver todos <i class="ph-bold ph-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-4 overflow-x-auto pb-6 snap-x custom-scrollbar">
+                        @foreach($storiesRow as $story)
+                            <a href="{{ route('conteudo.show', $story->slug) }}" class="min-w-[160px] sm:min-w-[200px] h-64 sm:h-72 rounded-2xl relative overflow-hidden snap-start group shadow-sm">
+                                <img src="{{ Storage::url($story->banner_mobile ?? $story->banner_interno) }}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent flex flex-col justify-end p-4">
+                                    @if($story->categoria)
+                                        <span class="inline-block px-2 py-0.5 bg-white/20 backdrop-blur text-white text-[9px] font-bold rounded mb-2 uppercase w-max border border-white/20">
+                                            {{ $story->categoria->nome }}
+                                        </span>
+                                    @endif
+                                    <h4 class="text-white font-bold text-sm leading-snug line-clamp-3">{{ $story->titulo }}</h4>
                                 </div>
-                            </div>
-                            <div class="p-4 flex flex-col flex-1">
-                                <h4 class="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-500 transition-colors">{{ $carrossel->titulo }}</h4>
-                            </div>
-                        </a>
-                    @endforeach
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
-            </div>
-        @endif
-        {{-- GRELHA DE NOTÍCIAS --}}
-        <div class="mb-6 flex items-center justify-between">
-            <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                <i class="ph-fill ph-squares-four text-purpura-500"></i> Últimas Publicações
-            </h3>
+            @endif
         </div>
+    @endif
 
-        @if($noticias->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                @foreach($noticias as $noticia)
-                    <a href="{{ route('conteudo.show', $noticia->slug) }}" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1">
-                        
-                        {{-- CAPA DO CARD --}}
-                        <div class="relative h-48 w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
-                            <picture>
-                                <source media="(min-width: 768px)" srcset="{{ Storage::url($noticia->banner_desktop ?? $noticia->banner_interno) }}">
-                                <img src="{{ Storage::url($noticia->banner_mobile ?? $noticia->banner_interno) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Capa">
-                            </picture>  
+    <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 {{ (empty($categoriaFiltro) && empty($termoBusca)) ? 'mt-8' : 'mt-12' }}">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            
+            {{-- ================= COLUNA ESQUERDA: THE LATEST ================= --}}
+            <div class="lg:col-span-8">
+                <h3 class="text-2xl font-black text-gray-900 dark:text-white border-l-4 border-purpura-600 pl-4 leading-none mb-8">
+                    @if(!empty($termoBusca)) Resultados da Pesquisa @elseif(!empty($categoriaFiltro)) Publicações da Categoria @else As Últimas @endif
+                </h3>
 
-                            @if($noticia->categoria)
-                                <div class="absolute bottom-3 left-3">
-                                    <span class="px-2 py-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur text-purpura-700 dark:text-purpura-400 text-[9px] font-black uppercase tracking-wider rounded shadow-sm">
-                                        {{ $noticia->categoria->nome }}
-                                    </span>
+                @if($noticias->count() > 0)
+                    <div class="space-y-8">
+                        @foreach($noticias as $noticia)
+                            <a href="{{ route('conteudo.show', $noticia->slug) }}" class="flex flex-col sm:flex-row gap-6 group items-start border-b border-gray-100 dark:border-gray-800 pb-8 last:border-0">
+                                
+                                {{-- Imagem Lado Esquerdo --}}
+                                <div class="relative w-full sm:w-64 h-48 sm:h-40 shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm">
+                                    <picture>
+                                        <source media="(min-width: 768px)" srcset="{{ Storage::url($noticia->banner_desktop ?? $noticia->banner_interno) }}">
+                                        <img src="{{ Storage::url($noticia->banner_mobile ?? $noticia->banner_interno) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    </picture>
+                                    
+                                    {{-- BADGES DE FORMATO SOBRE A IMAGEM --}}
+                                    @if($noticia->tipo === 'carrossel')
+                                        <div class="absolute top-2 right-2 bg-black/70 backdrop-blur text-white px-2 py-1 rounded shadow text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider">
+                                            <i class="ph-fill ph-images text-sm"></i> Galeria
+                                        </div>
+                                    @elseif($noticia->tipo === 'story')
+                                        <div class="absolute top-2 right-2 bg-pink-600/90 backdrop-blur text-white px-2 py-1 rounded shadow text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider">
+                                            <i class="ph-fill ph-instagram-logo text-sm"></i> Story
+                                        </div>
+                                    @endif
                                 </div>
-                            @endif
-                        </div>
 
-                        {{-- CONTEÚDO DO CARD --}}
-                        <div class="p-5 flex flex-col flex-1">
-                            <h4 class="text-base font-bold text-gray-900 dark:text-white leading-snug group-hover:text-purpura-600 dark:group-hover:text-purpura-400 transition-colors line-clamp-3 mb-3">
-                                {{ $noticia->titulo }}
-                            </h4>
-                            
-                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                <span class="flex items-center gap-1.5">
-                                    <i class="ph-fill ph-calendar-blank"></i>
-                                    {{ $noticia->data_inicio ? $noticia->data_inicio->format('d M, Y') : $noticia->created_at->format('d M, Y') }}
-                                </span>
-                                <span class="flex items-center gap-1 text-purpura-600 dark:text-purpura-400 group-hover:translate-x-1 transition-transform">
-                                    Ler mais <i class="ph-bold ph-arrow-right"></i>
-                                </span>
-                            </div>
-                        </div>
-                    </a>
-                @endforeach
+                                {{-- Textos Lado Direito --}}
+                                <div class="flex flex-col flex-1 py-1">
+                                    @if($noticia->categoria)
+                                        <span class="text-[10px] font-black text-purpura-600 dark:text-purpura-400 uppercase tracking-widest mb-2 block">
+                                            {{ $noticia->categoria->nome }}
+                                        </span>
+                                    @endif
+                                    
+                                    <h4 class="text-xl font-black text-gray-900 dark:text-white leading-snug group-hover:text-purpura-600 dark:group-hover:text-purpura-400 transition-colors mb-3">
+                                        {{ $noticia->titulo }}
+                                    </h4>
+                                    
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
+                                        {{ $noticia->texto_overlay ?? strip_tags($noticia->corpo) }}
+                                    </p>
+
+                                    <div class="mt-auto flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <span class="flex items-center gap-1">
+                                            <i class="ph-bold ph-clock"></i>
+                                            {{ $noticia->data_inicio ? $noticia->data_inicio->diffForHumans() : $noticia->created_at->diffForHumans() }}
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <i class="ph-fill ph-eye"></i> {{ number_format($noticia->visualizacoes, 0, ',', '.') }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-10">
+                        {{ $noticias->links() }}
+                    </div>
+                @else
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-12 text-center">
+                        <i class="ph-fill ph-newspaper text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Sem resultados</h3>
+                        <p class="text-sm text-gray-500 mt-1">Nenhuma publicação encontrada para o critério de pesquisa.</p>
+                    </div>
+                @endif
             </div>
 
-            <div class="mt-10">
-                {{ $noticias->links() }}
-            </div>
-        @else
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center shadow-sm">
-                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="ph-fill ph-newspaper text-3xl text-gray-400"></i>
+            {{-- ================= COLUNA DIREITA: TRENDING SIDEBAR ================= --}}
+            @if(empty($categoriaFiltro) && empty($termoBusca) && $trending->count() > 0)
+                <div class="lg:col-span-4">
+                    <div class="sticky top-24">
+                        <h3 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2 mb-8">
+                            Em Alta <i class="ph-fill ph-fire text-green-500"></i>
+                        </h3>
+
+                        <div class="space-y-6">
+                            @foreach($trending as $index => $trend)
+                                <a href="{{ route('conteudo.show', $trend->slug) }}" class="flex gap-4 group items-start">
+                                    <div class="text-4xl font-black text-gray-200 dark:text-gray-700 group-hover:text-green-500 transition-colors pt-1">
+                                        #{{ $index + 1 }}
+                                    </div>
+                                    <div class="flex-1 pt-2">
+                                        <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-3 group-hover:text-purpura-600 dark:group-hover:text-purpura-400 transition-colors mb-2">
+                                            {{ $trend->titulo }}
+                                        </h4>
+                                        <div class="text-[10px] text-gray-400 font-medium flex items-center gap-2">
+                                            <span>{{ $trend->data_inicio ? $trend->data_inicio->diffForHumans() : $trend->created_at->diffForHumans() }}</span>
+                                            <span>•</span>
+                                            <span>{{ number_format($trend->visualizacoes, 0, ',', '.') }} leituras</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                        
+                        <div class="mt-8 bg-purpura-50 dark:bg-purpura-900/20 rounded-2xl p-6 text-center border border-purpura-100 dark:border-purpura-900/50">
+                            <h4 class="text-sm font-bold text-purpura-900 dark:text-purpura-300 mb-2">Fique por dentro!</h4>
+                            <p class="text-xs text-purpura-700 dark:text-purpura-400 mb-4">Aceda diariamente para ver os novos conteúdos, dicas e comunicados da instituição.</p>
+                        </div>
+                    </div>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Nenhum conteúdo encontrado</h3>
-                <p class="text-sm text-gray-500 mt-1">Ainda não existem publicações ativas para o filtro seleccionado.</p>
-            </div>
-        @endif
+            @endif
 
+        </div>
     </div>
 </div>

@@ -16,7 +16,8 @@ class Conteudo extends Model
         'categoria_id', 'autor_id', 'titulo', 'slug', 'tipo', 'corpo',
         'is_active', 'data_inicio', 'data_fim', 'publico_alvo',
         'is_destaque', 'ordem_destaque', 'banner_interno', 'banner_desktop',
-        'banner_mobile', 'banner_destaque', 'texto_overlay', 'opcoes_visuais'
+        'banner_mobile', 'banner_destaque', 'texto_overlay', 'opcoes_visuais',
+        'visualizacoes'
     ];
 
     protected $casts = [

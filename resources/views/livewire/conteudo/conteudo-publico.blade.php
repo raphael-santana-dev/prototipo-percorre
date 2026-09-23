@@ -32,47 +32,93 @@
 
     {{-- =============== 1. FORMATO PADRÃO (NOTÍCIA) =============== --}}
     @if($conteudo->tipo === 'padrao')
-        <article class="max-w-4xl mx-auto bg-white dark:bg-gray-800 sm:mt-8 sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {{-- Banner Principal --}}
-            <div class="relative w-full h-64 sm:h-96 bg-gray-100 dark:bg-gray-900 overflow-hidden">
-                <picture>
-                    <source media="(min-width: 768px)" srcset="{{ Storage::url($conteudo->banner_desktop ?? $conteudo->banner_interno) }}">
-                    <img src="{{ Storage::url($conteudo->banner_mobile ?? $conteudo->banner_interno) }}" class="w-full h-full object-cover" alt="Banner do Artigo">
-                </picture>
-                
-                @if($conteudo->texto_overlay)
-                    <div class="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/30 to-transparent flex items-end p-6 sm:p-10">
-                        <h2 class="text-2xl sm:text-4xl font-black text-white drop-shadow-md max-w-3xl">
-                            {{ $conteudo->texto_overlay }}
-                        </h2>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Cabeçalho do Artigo --}}
-            <div class="px-6 sm:px-12 pt-10 pb-6 border-b border-gray-100 dark:border-gray-700">
-                <h1 class="text-3xl sm:text-5xl font-black text-gray-900 dark:text-white leading-tight mb-6">
-                    {{ $conteudo->titulo }}
-                </h1>
-                
-                <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-                    <span class="flex items-center gap-1.5"><i class="ph-fill ph-calendar-blank text-purpura-500 text-base"></i> Publicado em {{ $conteudo->data_inicio ? $conteudo->data_inicio->format('d/m/Y \à\s H:i') : $conteudo->created_at->format('d/m/Y \à\s H:i') }}</span>
-                    @if($conteudo->autor)
-                        <span class="flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purpura-500 text-base"></i> Por {{ $conteudo->autor->name }}</span>
+            {{-- COLUNA ESQUERDA: ARTIGO PRINCIPAL --}}
+            <article class="lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                {{-- Banner Principal --}}
+                <div class="relative w-full h-64 sm:h-96 bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                    <picture>
+                        <source media="(min-width: 768px)" srcset="{{ Storage::url($conteudo->banner_desktop ?? $conteudo->banner_interno) }}">
+                        <img src="{{ Storage::url($conteudo->banner_mobile ?? $conteudo->banner_interno) }}" class="w-full h-full object-cover" alt="Banner do Artigo">
+                    </picture>
+                    
+                    @if($conteudo->texto_overlay)
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/30 to-transparent flex items-end p-6 sm:p-10">
+                            <h2 class="text-2xl sm:text-4xl font-black text-white drop-shadow-md max-w-3xl">
+                                {{ $conteudo->texto_overlay }}
+                            </h2>
+                        </div>
                     @endif
                 </div>
-            </div>
 
-            {{-- Corpo do Artigo (Renderização Nativa do Quill) --}}
-            <div class="px-6 sm:px-12 py-10">
-                <div class="ql-snow">
-                    <div class="ql-editor">
-                        {!! $conteudo->corpo !!}
+                {{-- Cabeçalho do Artigo --}}
+                <div class="px-6 sm:px-10 pt-10 pb-6 border-b border-gray-100 dark:border-gray-700">
+                    <h1 class="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight mb-6">
+                        {{ $conteudo->titulo }}
+                    </h1>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1.5"><i class="ph-fill ph-calendar-blank text-purpura-500 text-base"></i> Publicado em {{ $conteudo->data_inicio ? $conteudo->data_inicio->format('d/m/Y \à\s H:i') : $conteudo->created_at->format('d/m/Y \à\s H:i') }}</span>
+                            @if($conteudo->autor)
+                                <span class="flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purpura-500 text-base"></i> Por {{ $conteudo->autor->name }}</span>
+                            @endif
+                        </div>
+                        <span class="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                            <i class="ph-fill ph-eye text-base"></i> {{ number_format($conteudo->visualizacoes, 0, ',', '.') }} visualizações
+                        </span>
                     </div>
                 </div>
-            </div>
-        </article>
+
+                {{-- Corpo do Artigo (Renderização Nativa do Quill) --}}
+                <div class="px-6 sm:px-10 py-10">
+                    <div class="ql-snow">
+                        <div class="ql-editor">
+                            {!! $conteudo->corpo !!}
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            {{-- COLUNA DIREITA: TOP 5 MAIS LIDAS --}}
+            <aside class="lg:col-span-4 sticky top-24">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                    <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <i class="ph-fill ph-trend-up text-purpura-500"></i> Em Alta (Mais Lidas)
+                    </h3>
+
+                    @if(count($topLidas) > 0)
+                        <div class="space-y-6">
+                            @foreach($topLidas as $index => $top)
+                                <a href="{{ route('conteudo.show', $top->slug) }}" class="flex gap-4 group">
+                                    <div class="text-3xl font-black text-gray-200 dark:text-gray-700 group-hover:text-purpura-500 transition-colors pt-1">
+                                        #{{ $index + 1 }}
+                                    </div>
+                                    <div class="flex-1">
+                                        @if($top->categoria)
+                                            <span class="text-[9px] font-bold text-purpura-600 dark:text-purpura-400 uppercase tracking-widest block mb-1">
+                                                {{ $top->categoria->nome }}
+                                            </span>
+                                        @endif
+                                        <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-3 group-hover:text-purpura-600 dark:group-hover:text-purpura-400 transition-colors">
+                                            {{ $top->titulo }}
+                                        </h4>
+                                        <div class="mt-2 text-[10px] text-gray-400 font-medium flex items-center gap-2">
+                                            <span>{{ $top->data_inicio ? $top->data_inicio->diffForHumans() : $top->created_at->diffForHumans() }}</span>
+                                            <span>•</span>
+                                            <span>{{ number_format($top->visualizacoes, 0, ',', '.') }} leituras</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-gray-500 italic">Nenhuma outra publicação disponível no momento.</p>
+                    @endif
+                </div>
+            </aside>
+        </div>
     @endif
 
     {{-- =============== 2. FORMATO CARROSSEL =============== --}}

@@ -34,40 +34,38 @@ class PortalNoticias extends Component
     public function render()
     {
         $destaques = collect();
-        $stories = collect();
-        $carrosseis = collect();
+        $storiesRow = collect();
+        $trending = collect();
 
-        // Se não houver filtros aplicados, carregamos as vitrines exclusivas
         if (empty($this->categoriaFiltro) && empty($this->termoBusca)) {
+            
             $destaques = Conteudo::with('categoria')->publicados()->autorizado()
                 ->where('is_destaque', true)->orderBy('ordem_destaque', 'asc')->get();
 
-            $stories = Conteudo::with('categoria')->publicados()->autorizado()
+            $storiesRow = Conteudo::with('categoria')->publicados()->autorizado()
                 ->where('tipo', 'story')->where('is_destaque', false)
-                ->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->get();
+                ->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->take(6)->get();
 
-            $carrosseis = Conteudo::with('categoria')->publicados()->autorizado()
-                ->where('tipo', 'carrossel')->where('is_destaque', false)
-                ->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->get();
+            $trending = Conteudo::publicados()->autorizado()
+                ->where('tipo', 'padrao')
+                ->orderBy('visualizacoes', 'desc')
+                ->take(4)->get();
         }
 
-        // CARREGA A GRELHA PADRÃO DE NOTÍCIAS
-        $query = Conteudo::with('categoria')->publicados()->autorizado();
-
-        if (empty($this->categoriaFiltro) && empty($this->termoBusca)) {
-            $query->where('is_destaque', false)->where('tipo', 'padrao');
-        }
+        $query = Conteudo::with('categoria')->publicados()->autorizado()
+            ->where('is_destaque', false);
 
         if (!empty($this->categoriaFiltro)) $query->where('categoria_id', $this->categoriaFiltro);
         if (!empty($this->termoBusca)) $query->where('titulo', 'ilike', '%' . $this->termoBusca . '%');
 
-        $noticias = $query->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->paginate(12);
+        $noticias = $query->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->paginate(10);
+        
         $categoriasDb = ConteudoCategoria::where('is_active', true)->orderBy('nome')->get();
 
         return view('livewire.conteudo.portal-noticias', [
             'destaques' => $destaques,
-            'stories' => $stories,
-            'carrosseis' => $carrosseis,
+            'storiesRow' => $storiesRow,
+            'trending' => $trending,
             'noticias' => $noticias,
             'categoriasDb' => $categoriasDb,
         ]);
