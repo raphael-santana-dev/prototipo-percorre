@@ -68,7 +68,7 @@ class ConteudoSeeder extends Seeder
         $slidesStory = [
             ['imagem_path' => null, 'texto' => 'Deslize para acompanhar esta novidade exclusiva!', 'posicao_texto' => 'center'],
             ['imagem_path' => null, 'texto' => 'O Instituto Percorre está a trazer novas ferramentas.', 'posicao_texto' => 'bottom'],
-            ['imagem_path' => null, 'texto' => 'Aceda ao portal e confira o conteúdo completo.', 'posicao_texto' => 'top'],
+            ['imagem_path' => null, 'texto' => 'Acesse o portal e confira o conteúdo completo.', 'posicao_texto' => 'top'],
         ];
 
         for ($i = 1; $i <= 5; $i++) {

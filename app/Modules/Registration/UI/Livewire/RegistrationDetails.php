@@ -144,16 +144,39 @@ class RegistrationDetails extends Component
 
                 $pontosStr = $tipo === 'multiplicador_percentual' ? "+{$pontos}%" : "+{$pontos} pts";
 
-                // Cruza com a auditoria para ver se o aluno atendeu ESTA regra
+                // NOVO MOTOR DE MATCH DE REGRAS: À prova de falhas com separadores
                 $atendida = false;
                 foreach ($auditoria as $aud) {
-                    if (($aud['campo_avaliado'] ?? '') === $campo) {
-                        if ($aud['pontos_ganhos'] == $pontos && str_contains($aud['condicao'] ?? '', $valor)) {
-                            $atendida = true;
-                            break;
-                        }
-                        if (($aud['tipo_regra'] ?? '') === 'especial' && $tipo !== 'padrao') {
-                            if (str_contains($aud['condicao'] ?? '', (string)$pontos)) {
+                    $campoAuditoria = strtolower(trim($aud['campo_avaliado'] ?? ''));
+                    $campoAtual = strtolower(trim($campo));
+                    
+                    if ($campoAuditoria === $campoAtual || str_contains($campoAuditoria, $campoAtual) || str_contains($campoAtual, $campoAuditoria)) {
+                        if ($aud['pontos_ganhos'] == $pontos) {
+                            $condAudLimpa = str_replace('Exigência: ', '', $aud['condicao'] ?? '');
+                            
+                            // 1. Tenta correspondência exata ou contém a string formatada
+                            if ($condAudLimpa === $condicaoStr || str_contains($condAudLimpa, $condicaoStr) || str_contains($condicaoStr, $condAudLimpa)) {
+                                $atendida = true;
+                                break;
+                            }
+                            
+                            // 2. Se for 'between' ou 'in', procura as partes isoladas ('15' e '29')
+                            if (in_array($operador, ['between', 'in'])) {
+                                $allMatched = true;
+                                foreach ($valores as $v) {
+                                    if (!str_contains($condAudLimpa, trim($v))) {
+                                        $allMatched = false;
+                                        break;
+                                    }
+                                }
+                                if ($allMatched) {
+                                    $atendida = true;
+                                    break;
+                                }
+                            }
+
+                            // 3. Fallback cru
+                            if (!empty($valor) && str_contains($condAudLimpa, (string)$valor)) {
                                 $atendida = true;
                                 break;
                             }

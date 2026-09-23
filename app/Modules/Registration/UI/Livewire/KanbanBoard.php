@@ -195,6 +195,123 @@ class KanbanBoard extends Component
         $this->verificarAntiSpam($inscricoesProcessar, $this->statusDestinoLote, true);
     }
 
+    #[On('open-regras-crm')]
+    public function abrirRegras(int $id)
+    {
+        $inscricao = Inscricao::with('ciclo')->find($id);
+        if (!$inscricao) return;
+
+        $regrasRaw = is_string($inscricao->ciclo->regras_pontuacao)
+            ? json_decode($inscricao->ciclo->regras_pontuacao, true)
+            : ($inscricao->ciclo->regras_pontuacao ?? []);
+
+        $detalhes = is_string($inscricao->pontuacao_detalhes)
+            ? json_decode($inscricao->pontuacao_detalhes, true)
+            : ($inscricao->pontuacao_detalhes ?? []);
+
+        $auditoria = $detalhes['auditoria_detalhada'] ?? [];
+
+        $agrupadas = collect($regrasRaw)->groupBy(function($r) {
+            return $r['campo'] ?? 'Regra Global';
+        });
+
+        $html = '<div class="space-y-6">';
+        foreach ($agrupadas as $campo => $regras) {
+            $nomeCampoFormatado = str_replace('_', ' ', strtoupper($campo));
+            $html .= "<div class='bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm'>";
+            $html .= "<h4 class='text-xs font-bold text-gray-500 mb-3 tracking-wider flex items-center gap-2'><i class='ph-fill ph-check-square-offset text-purpura-500'></i> {$nomeCampoFormatado}</h4>";
+            $html .= "<div class='space-y-2'>";
+
+            foreach ($regras as $regra) {
+                $tipo = $regra['tipo_regra'] ?? 'padrao';
+                $pontos = $regra['pontos'] ?? 0;
+                $operador = $regra['operador'] ?? '=';
+                $valor = $regra['valor'] ?? '';
+
+                $valores = array_map('trim', explode(',', (string)$valor));
+                $condicaoStr = match ($operador) {
+                    '=' => "Igual a '{$valor}'",
+                    '!=' => "Diferente de '{$valor}'",
+                    '>=' => "Maior ou igual a {$valor}",
+                    '<=' => "Menor ou igual a {$valor}",
+                    '>' => "Maior que {$valor}",
+                    '<' => "Menor que {$valor}",
+                    'between' => "Entre " . ($valores[0] ?? '') . " e " . ($valores[1] ?? ''),
+                    'in' => "Dentre: " . implode(' ou ', $valores),
+                    default => "{$operador} {$valor}"
+                };
+
+                $pontosStr = $tipo === 'multiplicador_percentual' ? "+{$pontos}%" : "+{$pontos} pts";
+
+                $atendida = false;
+                foreach ($auditoria as $aud) {
+                    $campoAuditoria = strtolower(trim($aud['campo_avaliado'] ?? ''));
+                    $campoAtual = strtolower(trim($campo));
+                    
+                    if ($campoAuditoria === $campoAtual || str_contains($campoAuditoria, $campoAtual) || str_contains($campoAtual, $campoAuditoria)) {
+                        if ($aud['pontos_ganhos'] == $pontos) {
+                            $condAudLimpa = str_replace('Exigência: ', '', $aud['condicao'] ?? '');
+                            
+                            if ($condAudLimpa === $condicaoStr || str_contains($condAudLimpa, $condicaoStr) || str_contains($condicaoStr, $condAudLimpa)) {
+                                $atendida = true;
+                                break;
+                            }
+                            
+                            if (in_array($operador, ['between', 'in'])) {
+                                $allMatched = true;
+                                foreach ($valores as $v) {
+                                    if (!str_contains($condAudLimpa, trim($v))) {
+                                        $allMatched = false;
+                                        break;
+                                    }
+                                }
+                                if ($allMatched) {
+                                    $atendida = true;
+                                    break;
+                                }
+                            }
+
+                            if (!empty($valor) && str_contains($condAudLimpa, (string)$valor)) {
+                                $atendida = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $bgClass = $atendida ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-white border-gray-100 dark:bg-gray-700 dark:border-gray-600';
+                $icon = $atendida ? '<i class="ph-fill ph-check-circle text-green-500 text-lg"></i>' : '<i class="ph ph-circle text-gray-300 text-lg"></i>';
+                $textColor = $atendida ? 'text-green-800 dark:text-green-400' : 'text-gray-700 dark:text-gray-300';
+                $ptsColor = $atendida ? 'text-green-700 bg-green-100 dark:bg-green-900/50 px-2 py-0.5 rounded' : 'text-gray-400';
+
+                $html .= "<div class='flex items-center justify-between p-3 rounded-lg border {$bgClass}'>";
+                $html .= "<div class='flex items-center gap-3'>";
+                $html .= $icon;
+                $html .= "<span class='block text-sm font-bold {$textColor}'>{$condicaoStr}</span>";
+                $html .= "</div>";
+                $html .= "<span class='font-black text-[10px] {$ptsColor}'>{$pontosStr}</span>";
+                $html .= "</div>";
+            }
+            $html .= "</div></div>";
+        }
+        $html .= '</div>';
+
+        if ($agrupadas->isEmpty()) {
+            $html = '<div class="text-center py-8 text-gray-500"><i class="ph-fill ph-warning-circle text-4xl mb-2 text-gray-300"></i><p>Nenhuma regra configurada no ciclo.</p></div>';
+        }
+
+        $this->dispatch('load-quick-view', [
+            'title' => 'Mapa de Regras: ' . $inscricao->nome,
+            'subtitle' => 'Critérios avaliados e pontuados na auditoria',
+            'icon' => 'ph-list-numbers',
+            'maxWidth' => 'xl',
+            'allowFullscreen' => true,
+            'data' => [
+                'Critérios e Acertos do Candidato' => $html
+            ]
+        ]);
+    }
+
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
@@ -229,7 +346,15 @@ class KanbanBoard extends Component
                 'Status' => $botoesAcao,
                 'Interesse' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'</div>',
                 'Informações do Formulário' => $detalhesDinamicos,
-                'Ações' => '<a href="'.route('inscricoes.show', $inscricao->id).'" class="font-bold text-purpura-600 hover:underline">Ver Auditoria Completa</a>'
+                'Ações' => '
+                    <div class="flex flex-col gap-2 mt-2">
+                        <button @click="$dispatch(\'open-regras-crm\', { id: '.$id.' })" class="w-full text-left text-[11px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">
+                            <i class="ph-bold ph-list-numbers text-sm"></i> Visualizar Acertos (Mapa de Regras)
+                        </button>
+                        <a href="'.route('inscricoes.show', $inscricao->id).'" target="_blank" class="w-full text-left text-[11px] font-bold text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5 shadow-sm">
+                            <i class="ph-bold ph-arrow-square-out text-sm"></i> Ficha Completa & Auditoria
+                        </a>
+                    </div>'
             ]
         ]);
     }
