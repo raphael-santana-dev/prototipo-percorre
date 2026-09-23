@@ -64,7 +64,7 @@
                                 </h2>
                                 
                                 <a href="{{ route('conteudo.show', $destaque->slug) }}" class="inline-flex items-center gap-2 text-white bg-transparent border border-white hover:bg-white hover:text-gray-900 px-6 py-3 rounded-full text-sm font-bold transition-all">
-                                    Ler História <i class="ph-bold ph-arrow-right"></i>
+                                    Ler mais <i class="ph-bold ph-arrow-right"></i>
                                 </a>
                             </div>
                         </div>
@@ -229,11 +229,6 @@
                                     </div>
                                 </a>
                             @endforeach
-                        </div>
-                        
-                        <div class="mt-8 bg-purpura-50 dark:bg-purpura-900/20 rounded-2xl p-6 text-center border border-purpura-100 dark:border-purpura-900/50">
-                            <h4 class="text-sm font-bold text-purpura-900 dark:text-purpura-300 mb-2">Fique por dentro!</h4>
-                            <p class="text-xs text-purpura-700 dark:text-purpura-400 mb-4">Aceda diariamente para ver os novos conteúdos, dicas e comunicados da instituição.</p>
                         </div>
                     </div>
                 </div>
