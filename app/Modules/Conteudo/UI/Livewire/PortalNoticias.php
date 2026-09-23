@@ -33,43 +33,41 @@ class PortalNoticias extends Component
 
     public function render()
     {
-        // 1. CARREGA DESTAQUES (Aplicando a regra de acesso + limite de 5)
         $destaques = collect();
+        $stories = collect();
+        $carrosseis = collect();
+
+        // Se não houver filtros aplicados, carregamos as vitrines exclusivas
         if (empty($this->categoriaFiltro) && empty($this->termoBusca)) {
-            $destaques = Conteudo::with('categoria')
-                ->publicados()
-                ->autorizado()
-                ->where('is_destaque', true)
-                ->orderBy('ordem_destaque', 'asc')
-                ->get();
+            $destaques = Conteudo::with('categoria')->publicados()->autorizado()
+                ->where('is_destaque', true)->orderBy('ordem_destaque', 'asc')->get();
+
+            $stories = Conteudo::with('categoria')->publicados()->autorizado()
+                ->where('tipo', 'story')->where('is_destaque', false)
+                ->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->get();
+
+            $carrosseis = Conteudo::with('categoria')->publicados()->autorizado()
+                ->where('tipo', 'carrossel')->where('is_destaque', false)
+                ->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->get();
         }
 
-        // 2. CARREGA GRELHA GERAL
-        $query = Conteudo::with('categoria')
-            ->publicados()
-            ->autorizado();
+        // CARREGA A GRELHA PADRÃO DE NOTÍCIAS
+        $query = Conteudo::with('categoria')->publicados()->autorizado();
 
-        // Se não houver filtros, exclui os destaques da grelha de baixo para não repetir
         if (empty($this->categoriaFiltro) && empty($this->termoBusca)) {
-            $query->where('is_destaque', false);
+            $query->where('is_destaque', false)->where('tipo', 'padrao');
         }
 
-        if (!empty($this->categoriaFiltro)) {
-            $query->where('categoria_id', $this->categoriaFiltro);
-        }
+        if (!empty($this->categoriaFiltro)) $query->where('categoria_id', $this->categoriaFiltro);
+        if (!empty($this->termoBusca)) $query->where('titulo', 'ilike', '%' . $this->termoBusca . '%');
 
-        if (!empty($this->termoBusca)) {
-            $query->where('titulo', 'ilike', '%' . $this->termoBusca . '%');
-        }
-
-        $noticias = $query->orderBy('data_inicio', 'desc')
-                          ->orderBy('created_at', 'desc')
-                          ->paginate(12);
-
+        $noticias = $query->orderBy('data_inicio', 'desc')->orderBy('created_at', 'desc')->paginate(12);
         $categoriasDb = ConteudoCategoria::where('is_active', true)->orderBy('nome')->get();
 
         return view('livewire.conteudo.portal-noticias', [
             'destaques' => $destaques,
+            'stories' => $stories,
+            'carrosseis' => $carrosseis,
             'noticias' => $noticias,
             'categoriasDb' => $categoriasDb,
         ]);

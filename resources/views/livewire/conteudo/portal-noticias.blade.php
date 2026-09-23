@@ -95,7 +95,48 @@
                 @endif
             </div>
         @endif
+        {{-- SECTION: STORIES --}}
+        @if(isset($stories) && $stories->count() > 0)
+            <div class="mb-10">
+                <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-instagram-logo text-pink-500"></i> Web Stories
+                </h3>
+                <div class="flex gap-5 overflow-x-auto custom-scrollbar pb-4 snap-x">
+                    @foreach($stories as $story)
+                        <a href="{{ route('conteudo.show', $story->slug) }}" class="flex flex-col items-center gap-2 min-w-[80px] sm:min-w-[100px] snap-start group">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purpura-600 shadow-md transform group-hover:scale-105 transition">
+                                <img src="{{ Storage::url($story->banner_mobile ?? $story->banner_interno) }}" class="w-full h-full object-cover rounded-full border-2 border-white dark:border-gray-900" alt="Story">
+                            </div>
+                            <span class="text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 text-center line-clamp-2 w-full">{{ $story->titulo }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
+        {{-- SECTION: CARROSSEIS / GALERIAS --}}
+        @if(isset($carrosseis) && $carrosseis->count() > 0)
+            <div class="mb-12">
+                <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-images text-blue-500"></i> Galerias & Carrosséis
+                </h3>
+                <div class="flex gap-5 overflow-x-auto custom-scrollbar pb-4 snap-x">
+                    @foreach($carrosseis as $carrossel)
+                        <a href="{{ route('conteudo.show', $carrossel->slug) }}" class="min-w-[280px] sm:min-w-[320px] bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 snap-start group">
+                            <div class="relative h-40 w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
+                                <img src="{{ Storage::url($carrossel->banner_desktop ?? $carrossel->banner_interno) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg shadow-sm">
+                                    <i class="ph-fill ph-images text-lg"></i>
+                                </div>
+                            </div>
+                            <div class="p-4 flex flex-col flex-1">
+                                <h4 class="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-500 transition-colors">{{ $carrossel->titulo }}</h4>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         {{-- GRELHA DE NOTÍCIAS --}}
         <div class="mb-6 flex items-center justify-between">
             <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -113,17 +154,7 @@
                             <picture>
                                 <source media="(min-width: 768px)" srcset="{{ Storage::url($noticia->banner_desktop ?? $noticia->banner_interno) }}">
                                 <img src="{{ Storage::url($noticia->banner_mobile ?? $noticia->banner_interno) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Capa">
-                            </picture>
-                            
-                            @if($noticia->tipo === 'carrossel')
-                                <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg shadow-sm">
-                                    <i class="ph-fill ph-images text-lg"></i>
-                                </div>
-                            @elseif($noticia->tipo === 'story')
-                                <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white p-1.5 rounded-lg shadow-sm">
-                                    <i class="ph-fill ph-instagram-logo text-lg"></i>
-                                </div>
-                            @endif
+                            </picture>  
 
                             @if($noticia->categoria)
                                 <div class="absolute bottom-3 left-3">

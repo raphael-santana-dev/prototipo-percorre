@@ -82,12 +82,13 @@
 
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                           @foreach($slides as $index => $slide)
-                              <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 relative group shadow-sm">
-                                  <button type="button" wire:click="removeSlide({{ $index }})" class="absolute top-2 right-2 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white p-1 rounded transition opacity-0 group-hover:opacity-100">
+                              <!-- CORREÇÃO: wire:key evita a falha silenciosa do DOM no Livewire 3 -->
+                              <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 relative group shadow-sm" wire:key="slide-{{ $index }}">
+                                  <button type="button" wire:click="removeSlide({{ $index }})" class="absolute top-2 right-2 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white p-1 rounded transition opacity-0 group-hover:opacity-100 z-10">
                                       <i class="ph-bold ph-x"></i>
                                   </button>
                                   
-                                  <span class="absolute top-2 left-2 bg-gray-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">#{{ $index + 1 }}</span>
+                                  <span class="absolute top-2 left-2 bg-gray-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded z-10">#{{ $index + 1 }}</span>
 
                                   <!-- Imagem do Slide -->
                                   <div class="mt-4">
@@ -105,11 +106,31 @@
                                       @endif
                                   </div>
 
-                                  <!-- Configurações de Overlay do Slide -->
+                                  <!-- Configurações de Overlay do Slide (AGORA COM QUILL BÁSICO) -->
                                   <div class="mt-4 space-y-3">
                                       <div>
-                                          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Texto Overlay (Legenda)</label>
-                                          <input wire:model="slides.{{ $index }}.texto" type="text" placeholder="Escreva a legenda..." class="w-full text-xs rounded border-gray-300 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Texto Overlay (Legenda Rica)</label>
+                                          <div class="bg-white rounded-md border border-gray-300 dark:border-gray-700" wire:ignore x-data="{
+                                              slideTexto: @entangle('slides.' . $index . '.texto'),
+                                              init() {
+                                                  let quill = new Quill(this.$refs.quillSlide, {
+                                                      theme: 'snow',
+                                                      modules: {
+                                                          toolbar: [
+                                                              ['bold', 'italic', 'underline', 'strike'],
+                                                              [{ 'color': [] }, { 'background': [] }],
+                                                              [{ 'size': ['small', false, 'large'] }],
+                                                              ['link'],
+                                                              ['clean']
+                                                          ]
+                                                      }
+                                                  });
+                                                  quill.clipboard.dangerouslyPasteHTML(this.slideTexto || '');
+                                                  quill.on('text-change', () => { this.slideTexto = quill.root.innerHTML; });
+                                              }
+                                          }">
+                                              <div x-ref="quillSlide" class="min-h-[100px] border-0 rounded-b-md text-sm dark:bg-gray-800 dark:text-white"></div>
+                                          </div>
                                       </div>
                                       
                                       @if($tipo === 'story')
@@ -392,19 +413,16 @@
 
                 cropAndSave() {
                     if (this.cropperInstance) {
-                        // Obtém o canvas renderizado (HD)
                         let canvas = this.cropperInstance.getCroppedCanvas({
-                            width: 1200, 
+                            width: 1000, // Reduzido de 1200 para 1000
                             imageSmoothingEnabled: true,
                             imageSmoothingQuality: 'high',
                         });
                         
-                        // Converte para Base64 JPEG comprimido (0.9 de qualidade)
-                        let base64Image = canvas.toDataURL('image/jpeg', 0.9);
+                        // Reduzido para 0.8 de qualidade para não estourar o post_max_size do PHP
+                        let base64Image = canvas.toDataURL('image/jpeg', 0.8);
                         
-                        // Envia para a variável do Livewire dinamicamente
                         @this.set(this.targetLivewireProperty, base64Image);
-                        
                         this.closeCropper();
                     }
                 },

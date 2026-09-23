@@ -11,23 +11,23 @@ class ConteudoPublico extends Component
 {
     public Conteudo $conteudo;
     public array $slides = [];
+    public $noticiasFundo = [];
 
     public function mount($slug)
     {
-        // SEGURANÇA MÁXIMA: Os escopos publicados() e autorizado() validam a data, 
-        // o status e os guards da sessão num único comando direto na base de dados.
         $this->conteudo = Conteudo::with(['categoria', 'autor'])
-            ->publicados()
-            ->autorizado()
-            ->where('slug', $slug)
-            ->firstOrFail();
+            ->publicados()->autorizado()->where('slug', $slug)->firstOrFail();
 
-        // Extrair os slides (caso seja formato Carrossel ou Story)
         $opcoes = is_string($this->conteudo->opcoes_visuais) 
             ? json_decode($this->conteudo->opcoes_visuais, true) 
             : ($this->conteudo->opcoes_visuais ?? []);
             
         $this->slides = $opcoes['slides'] ?? [];
+
+        // Captura o grid para o fundo borrado se for Story
+        if ($this->conteudo->tipo === 'story') {
+            $this->noticiasFundo = Conteudo::publicados()->autorizado()->where('tipo', 'padrao')->latest()->take(6)->get();
+        }
     }
 
     public function render()

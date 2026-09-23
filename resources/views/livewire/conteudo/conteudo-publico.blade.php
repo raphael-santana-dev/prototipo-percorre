@@ -117,7 +117,24 @@
 
     {{-- =============== 3. FORMATO STORY =============== --}}
     @if($conteudo->tipo === 'story')
-        <div class="fixed inset-0 z-[100] bg-gray-900 flex justify-center items-center">
+        
+        {{-- O FUNDO BORRADO DA LISTAGEM (EFEITO VISUAL) --}}
+        <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none opacity-40 dark:opacity-20 flex flex-col pt-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 filter blur-lg transform scale-110">
+                @foreach($noticiasFundo as $fundo)
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl h-64 shadow-lg border border-gray-100 opacity-80 overflow-hidden">
+                        <div class="h-32 bg-gray-200 dark:bg-gray-700">
+                            @if($fundo->banner_desktop || $fundo->banner_interno)
+                                <img src="{{ Storage::url($fundo->banner_desktop ?? $fundo->banner_interno) }}" class="w-full h-full object-cover">
+                            @endif
+                        </div>
+                        <div class="p-4"><div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div><div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div></div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="fixed inset-0 z-[100] bg-black/70 backdrop-blur-xl flex justify-center items-center">
             
             {{-- Fechar Story --}}
             <a href="{{ route('portal.index') }}" class="absolute top-6 right-6 z-50 w-10 h-10 bg-white/10 hover:bg-white/30 backdrop-blur-md rounded-full text-white flex items-center justify-center transition">
@@ -143,16 +160,16 @@
                 {{-- Slides do Story --}}
                 @foreach($slides as $index => $slide)
                     @php
-                        // Ajusta a posição do texto baseado na configuração do construtor
+                        // Ajuste correto de posicionamento absoluto
                         $posClass = match($slide['posicao_texto'] ?? 'bottom') {
-                            'top' => 'top-20',
+                            'top' => 'top-16',
                             'center' => 'top-1/2 -translate-y-1/2',
-                            default => 'bottom-16',
+                            default => 'bottom-0', // Cravado em baixo como no Instagram
                         };
                         $bgGradient = match($slide['posicao_texto'] ?? 'bottom') {
-                            'top' => 'bg-gradient-to-b from-black/80 to-transparent pt-20 pb-10',
-                            'center' => 'bg-black/40 backdrop-blur-sm py-6 rounded-xl mx-4',
-                            default => 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-10 pb-16',
+                            'top' => 'bg-gradient-to-b from-black/80 to-transparent pt-12 pb-10',
+                            'center' => 'bg-black/60 backdrop-blur-sm py-4 rounded-xl mx-4',
+                            default => 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-20 pb-8',
                         };
                     @endphp
 
@@ -163,10 +180,10 @@
                         <img src="{{ Storage::url($slide['imagem_path']) }}" class="w-full h-full object-cover">
                         
                         @if(!empty($slide['texto']))
-                            <div class="absolute inset-x-0 {{ $posClass }} {{ $bgGradient }} px-6">
-                                <p class="text-white text-lg font-bold text-center drop-shadow-lg leading-tight">
-                                    {{ $slide['texto'] }}
-                                </p>
+                            <div class="absolute inset-x-0 {{ $posClass }} {{ $bgGradient }} px-6 flex flex-col justify-end">
+                                <div class="text-white text-base font-medium text-center drop-shadow-lg leading-tight ql-editor !p-0">
+                                    {!! $slide['texto'] !!}
+                                </div>
                             </div>
                         @endif
                     </div>

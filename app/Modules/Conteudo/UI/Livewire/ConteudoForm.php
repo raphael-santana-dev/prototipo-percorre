@@ -157,6 +157,9 @@ class ConteudoForm extends Component
             'data_inicio' => 'nullable|date',
             'data_fim' => 'nullable|date|after_or_equal:data_inicio',
             'ordem_destaque' => 'required_if:is_destaque,true|nullable|integer|min:1|max:5',
+            'corpo' => 'nullable', 
+            'texto_overlay' => 'nullable',
+            'texto_destaque_overlay' => 'nullable',
         ], [
             'data_fim.after_or_equal' => 'A data de término não pode ser anterior à data de início.',
             'publico_alvo.required' => 'Selecione pelo menos um público-alvo para esta publicação.',
