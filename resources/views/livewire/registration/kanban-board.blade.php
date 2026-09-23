@@ -47,10 +47,16 @@
                 @foreach($cursosDb as $cur) <option value="{{ $cur->id }}">{{ $cur->nome }}</option> @endforeach
             </select>
             
-            <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
-                <option value="">Todas as Unidades</option>
-                @foreach($unidadesDb as $uni) <option value="{{ $uni->id }}">{{ $uni->nome }}</option> @endforeach
-            </select>
+            @if($unidadesDb->count() === 1)
+                <div class="rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 shadow-sm text-xs w-full flex items-center px-3 text-purpura-600 dark:text-purpura-400 font-bold uppercase tracking-wider h-9">
+                    <i class="ph-fill ph-map-pin mr-2 text-purpura-400"></i> {{ $unidadesDb->first()->nome }}
+                </div>
+            @else
+                <select wire:model.live="filtroUnidade" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600">
+                    <option value="">Todas as Unidades</option>
+                    @foreach($unidadesDb as $uni) <option value="{{ $uni->id }}">{{ $uni->nome }}</option> @endforeach
+                </select>
+            @endif
             
             <div class="relative w-full">
                 <span class="absolute -top-2 left-2 bg-white dark:bg-gray-800 px-1 text-[9px] font-bold text-gray-500 uppercase tracking-wider">Registros Até</span>
@@ -104,28 +110,82 @@
                                 @if(isset($inscricoesGrupadas[$coluna->id]))
                                     @foreach($inscricoesGrupadas[$coluna->id] as $inscricao)
                                         
-                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-purpura-400 hover:shadow-md transition group relative" data-id="{{ $inscricao->id }}">
-                                            <div class="flex justify-between items-start mb-2">
+                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
+                                            
+                                            <!-- CABEÇALHO (ID, CHECKBOX, PONTOS) -->
+                                            <div class="flex justify-between items-start">
                                                 <div class="flex items-center gap-2">
                                                     <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-3 h-3 cursor-pointer" onmousedown="event.stopPropagation()">
                                                     <span class="text-[10px] font-bold text-gray-400 font-mono">#{{ str_pad($inscricao->id, 4, '0', STR_PAD_LEFT) }}</span>
                                                 </div>
-                                                <div class="flex gap-1" onmousedown="event.stopPropagation()">
-                                                    <button type="button" wire:click="showQuickView({{ $inscricao->id }})" class="p-1 text-gray-400 hover:text-purpura-600 hover:bg-gray-50 rounded transition" title="Resumo Rápido">
-                                                        <i class="ph-bold ph-eye text-sm"></i>
-                                                    </button>
-                                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1 text-gray-400 hover:text-ponkan-500 hover:bg-gray-50 rounded transition" title="Ficha Completa">
-                                                        <i class="ph-bold ph-arrow-square-out text-sm"></i>
-                                                    </a>
+                                                
+                                                <span class="bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800" title="Pontuação Total">
+                                                    {{ $inscricao->pontuacao_total ?? 0 }} pts
+                                                </span>
+                                            </div>
+
+                                            <!-- NOME DO ALUNO -->
+                                            <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</h4>
+                                            
+                                            <!-- EXIBIÇÃO DOS RANKINGS -->
+                                            <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/80 rounded border border-gray-100 dark:border-gray-700 p-1.5">
+                                                <div class="flex items-center gap-1" title="Ranking Geral">
+                                                    <i class="ph-fill ph-trophy text-yellow-500 text-[11px]"></i>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? $inscricao->posicao_ranking_geral ?? '-' }}º</span>
+                                                </div>
+                                                <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                                                <div class="flex items-center gap-1" title="Ranking na Unidade">
+                                                    <i class="ph-fill ph-buildings text-blue-500 text-[11px]"></i>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_unidade ?? $inscricao->posicao_ranking_unidade ?? '-' }}º</span>
+                                                </div>
+                                                <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                                                <div class="flex items-center gap-1" title="Ranking no Curso">
+                                                    <i class="ph-fill ph-graduation-cap text-purpura-500 text-[11px]"></i>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_curso ?? $inscricao->posicao_ranking_curso ?? '-' }}º</span>
                                                 </div>
                                             </div>
-                                            <h4 class="font-bold text-gray-900 text-sm truncate" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</h4>
-                                            
-                                            <div class="flex justify-between items-end mt-2 border-t border-gray-50 pt-2">
-                                                <span class="text-[11px] font-medium text-gray-500 truncate max-w-[150px]">{{ $inscricao->curso->nome ?? '-' }}</span>
+
+                                            <!-- INFOS DE UNIDADE/CURSO/TURNO (LINHA A LINHA) -->
+                                            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-2 space-y-1.5 border border-gray-100 dark:border-gray-700 mt-0.5">
+                                                <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 leading-none">
+                                                    <i class="ph-fill ph-map-pin text-purpura-400 shrink-0"></i> <span class="truncate">{{ $inscricao->unidade->nome ?? 'Unidade não inf.' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 leading-none">
+                                                    <i class="ph-fill ph-book-open text-purpura-400 shrink-0"></i> <span class="truncate">{{ $inscricao->curso->nome ?? 'Curso não inf.' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 leading-none">
+                                                    <i class="ph-fill ph-clock text-purpura-400 shrink-0"></i> <span class="truncate">{{ $inscricao->turno->nome ?? 'Turno não inf.' }}</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- RODAPÉ (TEMPO E BOTÕES RÁPIDOS) -->
+                                            <div class="flex justify-between items-center mt-1 pt-2 border-t border-gray-100 dark:border-gray-700" onmousedown="event.stopPropagation()">
+                                                
                                                 <span class="text-[9px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide">
-                                                    <i class="ph-fill ph-clock"></i> {{ $inscricao->updated_at->diffForHumans() }}
+                                                    <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at->diffForHumans(null, true, true) }}
                                                 </span>
+                                                
+                                                <div class="flex items-center gap-0.5">
+                                                    <!-- Botão de Contatos (Novo) -->
+                                                    <button type="button" wire:click="showContactInfo({{ $inscricao->id }})" class="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded transition" title="Ver Contatos e Endereço">
+                                                        <i class="ph-bold ph-address-book text-[15px]"></i>
+                                                    </button>
+
+                                                    <!-- Botão do Mapa de Regras (Direto no Card) -->
+                                                    <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-gray-700 rounded transition" title="Ver Acertos e Pontos">
+                                                        <i class="ph-bold ph-list-numbers text-[15px]"></i>
+                                                    </button>
+
+                                                    <!-- Status rápido -->
+                                                    <button type="button" wire:click="showQuickView({{ $inscricao->id }})" class="p-1 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded transition" title="Ações Rápidas">
+                                                        <i class="ph-bold ph-eye text-[15px]"></i>
+                                                    </button>
+
+                                                    <!-- Link Externo para Perfil -->
+                                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1 text-gray-400 hover:text-ponkan-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded transition" title="Ficha Completa da Inscrição">
+                                                        <i class="ph-bold ph-arrow-square-out text-[15px]"></i>
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
 

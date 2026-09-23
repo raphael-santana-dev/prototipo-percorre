@@ -67,24 +67,21 @@ class KanbanBoard extends Component
         $this->limitesPorColuna[$statusId] = $atual + 10;
     }
 
-    #[On('atualizar-status-crm')] // Para suportar disparos via eventos, se necessário no futuro
+    #[On('atualizar-status-crm')]
     public function atualizarStatus($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
 
         $inscricao = Inscricao::with('curso')->find($id);
         
-        // Verifica se a inscrição existe e se realmente mudou de status
         if (!$inscricao || $inscricao->status_inscricao_id == $statusId) {
             return;
         }
 
-        // Valida as vagas e regras de negócio antes de aprovar
         $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
         
         if ($inscricoesProcessar->isEmpty()) return;
 
-        // Passa pelo funil de Anti-Spam antes de finalizar a mudança
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
     }
 
@@ -312,6 +309,37 @@ class KanbanBoard extends Component
         ]);
     }
 
+    public function showContactInfo(int $id)
+    {
+        $inscricao = Inscricao::findOrFail($id);
+        
+        $html = '<div class="space-y-5">';
+        
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->email ?? 'Não informado').'</span></div>';
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Celular / Telefone</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->celular ?? 'Não informado').'</span></div>';
+        
+        $endereco = collect([$inscricao->logradouro, $inscricao->numero, $inscricao->complemento, $inscricao->bairro, $inscricao->cidade, $inscricao->estado, $inscricao->cep])->filter()->implode(', ');
+        $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Endereço Completo</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($endereco ?: 'Não preenchido').'</span></div>';
+        
+        if ($inscricao->nome_responsavel) {
+            $html .= '<div class="pt-2 border-t border-gray-200 dark:border-gray-700">';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-3"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Nome do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->nome_responsavel).'</span></div>';
+            $html .= '<div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-100 dark:border-blue-800"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Contato do Responsável</span><span class="block text-sm font-bold text-blue-900 dark:text-blue-100">'.($inscricao->telefone_responsavel ?? 'Não preenchido').'</span></div>';
+            $html .= '</div>';
+        }
+        
+        $html .= '</div>';
+
+        $this->dispatch('load-quick-view', [
+            'title' => 'Contatos do Candidato',
+            'subtitle' => $inscricao->nome . ' • CPF: ' . $inscricao->cpf,
+            'icon' => 'ph-address-book',
+            'data' => [
+                'Informações Pessoais' => $html
+            ]
+        ]);
+    }
+
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
@@ -429,15 +457,12 @@ class KanbanBoard extends Component
         $statusNovo = \App\Models\StatusInscricao::find($statusId);
         $qtd = count($ids);
         
-        // CORREÇÃO UX: Se forem 10 ou menos registros (ex: Drag & Drop ou pequena seleção), 
-        // executa de forma SÍNCRONA (imediata) para que a tela reaja instantaneamente.
         if ($qtd <= 10) {
             dispatch_sync(new \App\Jobs\ProcessarStatusEmLoteJob(null, $ids, $statusId));
             
             $this->reset(['selecionados', 'statusDestinoLote']);
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
         } 
-        // Se for um movimento em massa (Lote pesado), envia para a Nuvem (Assíncrono)
         else {
             $tracking = \App\Models\Importacao::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
@@ -497,8 +522,7 @@ class KanbanBoard extends Component
             if ($totalColuna > 0) {
                 $q = (clone $queryBase)
                     ->where('status_inscricao_id', $col->id)
-                    ->select('id', 'nome', 'cpf', 'curso_id', 'status_inscricao_id', 'updated_at')
-                    ->with(['curso:id,nome']) 
+                    ->with(['curso:id,nome', 'unidade:id,nome', 'turno:id,nome']) 
                     ->limit($limite);
                     
                 if ($this->ordenacao === 'nome_asc') {
@@ -515,12 +539,27 @@ class KanbanBoard extends Component
             }
         }
 
+        // Lógica Inteligente para o Filtro de Unidades baseado no utilizador
+        $user = auth()->user();
+        $unidadesQuery = Unidade::select('id', 'nome')->whereIn('status', ['Ativa', '1', true])->orderBy('nome');
+        
+        if (!$user->hasRole('dev') && method_exists($user, 'unidades') && $user->unidades()->count() > 0) {
+            $unidadesQuery->whereIn('id', $user->unidades->pluck('id'));
+        }
+        
+        $unidadesDb = $unidadesQuery->get();
+
+        // Se o utilizador tiver apenas 1 unidade, força esse filtro automaticamente
+        if ($unidadesDb->count() === 1 && empty($this->filtroUnidade)) {
+            $this->filtroUnidade = $unidadesDb->first()->id;
+        }
+
         return view('livewire.registration.kanban-board', [
             'ciclo' => $ciclo,
             'colunas' => $colunas,
             'inscricoesGrupadas' => $inscricoesGrupadas,
             'cursosDb' => Curso::select('id', 'nome')->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
-            'unidadesDb' => Unidade::select('id', 'nome')->whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'unidadesDb' => $unidadesDb,
             'resumo' => $resumo,
             'totalInscricoes' => $totalInscricoes
         ]);
