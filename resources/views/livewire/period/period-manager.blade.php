@@ -104,6 +104,7 @@
                         <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar"><i class="text-lg ph ph-copy"></i></button>
                         <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Completo"><i class="text-lg ph ph-pencil-simple"></i></a>
                         <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor"><i class="text-lg ph ph-list-dashes"></i></a>
+                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-star"></i></a>
                         <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir permanentemente?')"><i class="text-lg ph ph-trash"></i></button>
                     </div>
                 </td>

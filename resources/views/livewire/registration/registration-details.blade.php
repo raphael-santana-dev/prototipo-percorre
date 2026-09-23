@@ -240,11 +240,11 @@
                                                     Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
                                                 </p>
                                                 <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight">
-                                                    <i class="ph-fill ph-info"></i> {{ $info['condicao'] ?? '' }}
+                                                    <i class="ph-fill ph-info"></i> Condição atendida: {{ str_replace('Exigência: ', '', $info['condicao'] ?? '') }}
                                                 </p>
                                             @else
                                                 <p class="text-[10px] text-indigo-600 font-bold mt-1 leading-tight">
-                                                    {{ $info['condicao'] ?? 'Bônus/Multiplicador aplicado' }}
+                                                    <i class="ph-fill ph-info"></i> {{ str_replace('Exigência: ', '', $info['condicao'] ?? 'Bônus/Multiplicador aplicado') }}
                                                 </p>
                                             @endif
                                         </div>
@@ -253,6 +253,11 @@
                                         </span>
                                     </div>
                                 @endforeach
+                            </div>
+                            <div class="mt-3 text-right">
+                                <button wire:click="abrirRegras" class="text-[10px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-1.5 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5">
+                                    <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo de regras
+                                </button>
                             </div>
                         @endif
                     @else

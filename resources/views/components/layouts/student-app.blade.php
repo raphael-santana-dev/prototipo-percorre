@@ -74,6 +74,10 @@
                         <i class="text-lg ph ph-clipboard-text"></i> Avaliações
                     </a>
 
+                    <a href="{{ route('portal.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
+                        <i class="text-lg ph ph-newspaper"></i> Portal Editorial
+                    </a>
+
                     <a href="{{ route('student.profile') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400 ml-auto">
                         <i class="text-lg ph ph-user-circle"></i> Meu Perfil
                     </a>
@@ -104,6 +108,9 @@
                     </a>
                     <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
                         <i class="text-lg ph ph-clipboard-text"></i> Avaliações
+                    </a>
+                    <a href="{{ route('portal.index') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
+                        <i class="text-lg ph ph-newspaper"></i> Portal Editorial
                     </a>
                     <a href="{{ route('student.profile') }}" class="flex items-center gap-3 px-3 py-3 text-sm font-bold text-gray-700 rounded-lg dark:text-gray-200 hover:bg-orange-50 hover:text-ponkan-600 dark:hover:bg-gray-700">
                         <i class="text-lg ph ph-user-circle"></i> Meu Perfil

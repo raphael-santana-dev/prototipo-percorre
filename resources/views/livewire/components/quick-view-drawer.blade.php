@@ -10,6 +10,7 @@
 
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
         
+        {{-- BACKDROP ESCURO --}}
         <div x-show="open" 
              x-transition:enter="ease-in-out duration-300" 
              x-transition:enter-start="opacity-0" 
@@ -22,6 +23,19 @@
              aria-hidden="true">
         </div>
 
+        @php
+            $maxWidthClass = match($maxWidth ?? 'md') {
+                'sm' => 'sm:max-w-sm',
+                'md' => 'sm:max-w-md',
+                'lg' => 'sm:max-w-lg',
+                'xl' => 'sm:max-w-xl',
+                '2xl' => 'sm:max-w-2xl',
+                '3xl' => 'sm:max-w-3xl',
+                '4xl' => 'sm:max-w-4xl',
+                default => 'sm:max-w-md',
+            };
+        @endphp
+
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
             <div class="fixed inset-y-0 right-0 flex max-w-full pl-10 pointer-events-none sm:pl-16">
                 
@@ -32,11 +46,12 @@
                      x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
                      x-transition:leave-start="translate-x-0"
                      x-transition:leave-end="translate-x-full"
-                     class="w-screen max-w-md pointer-events-auto">
+                     class="w-screen {{ $maxWidthClass }} pointer-events-auto">
                      
                     <div class="flex flex-col h-full bg-white shadow-2xl dark:bg-gray-800">
                         
-                        <div class="px-6 py-6 bg-purpura-700 sm:px-8">
+                        {{-- HEADER DO DRAWER --}}
+                        <div class="px-6 py-6 bg-purpura-700 sm:px-8 shrink-0">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-center gap-3 text-white">
                                     <div class="p-2 bg-white/20 rounded-xl backdrop-blur-md">
@@ -60,14 +75,15 @@
                             </div>
                         </div>
 
-                        <div class="relative flex-1 px-6 py-6 overflow-y-auto sm:px-8">
+                        {{-- CONTEÚDO --}}
+                        <div class="relative flex-1 px-6 py-6 overflow-y-auto sm:px-8 custom-scrollbar">
                             <div class="space-y-6">
                                 @forelse($data as $key => $value)
                                     <div>
                                         <dt class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400">
                                             {{ $key }}
                                         </dt>
-                                        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                                        <dd class="mt-2 text-sm text-gray-900 dark:text-gray-100">
                                             {!! $value !!}
                                         </dd>
                                         @if(!$loop->last)
@@ -80,6 +96,7 @@
                             </div>
                         </div>
                         
+                        {{-- FOOTER --}}
                         <div class="flex flex-shrink-0 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             <button @click="open = false" type="button" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white border-gray-300 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                                 Fechar Painel
