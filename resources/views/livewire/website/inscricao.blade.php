@@ -356,9 +356,11 @@
                         No momento, não temos nenhum processo seletivo com inscrições abertas.<br>
                         Fique de olho em nossas redes sociais para não perder as próximas datas!
                     </p>
-                    <a href="/" class="inline-block bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-sm">
-                        Voltar ao Início
-                    </a>
+                    @if(!request()->query('embed'))
+                        <a href="/" class="inline-block bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 shadow-sm">
+                            Voltar ao Início
+                        </a>
+                    @endif
                 </div>
             @endif
         </div>
