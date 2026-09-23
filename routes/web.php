@@ -27,6 +27,9 @@ Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::clas
     ->name('formularios.publico')
     ->middleware('throttle:30,1');
 
+    Route::get('/portal', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class)->name('portal.index');
+Route::get('/portal/{slug}', \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class)->name('conteudo.show');
+
 Route::middleware('guest:student,company,web')->group(function () {
     Route::get('/redefinir-senha/{token}', \App\Modules\Portal\UI\Livewire\Auth\ResetPassword::class)->name('password.reset');
 });
@@ -50,7 +53,12 @@ Route::middleware('auth:web,student,company')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    
+    Route::get('/conteudo/categorias', \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class)->name('conteudo.categorias');
+    Route::get('/conteudo', \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class)->name('conteudo.index');
+    Route::get('/conteudo/novo', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.create');
+    Route::get('/conteudo/{id}/editar', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.edit');
+
+
     Route::get('/dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
 
