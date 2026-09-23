@@ -187,58 +187,101 @@
                 <i class="ph-bold ph-x text-xl"></i>
             </a>
 
-            <div x-data="{ active: 0, total: {{ count($slides) }} }" class="relative w-full max-w-md h-full sm:h-[90vh] sm:rounded-2xl overflow-hidden bg-black shadow-2xl">
-                
-                {{-- Barras de Progresso no Topo --}}
-                <div class="absolute top-4 left-4 right-4 z-40 flex gap-1.5">
-                    @foreach($slides as $index => $slide)
-                        <div class="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
-                            <div class="h-full bg-white transition-all duration-300" :class="active >= {{ $index }} ? 'w-full' : 'w-0'"></div>
-                        </div>
-                    @endforeach
-                </div>
-
-                {{-- Título Curto (Overlay) --}}
-                <div class="absolute top-8 left-4 right-16 z-40">
-                    <h1 class="text-white text-sm font-bold drop-shadow-md truncate">{{ $conteudo->titulo }}</h1>
-                </div>
-
-                {{-- Slides do Story --}}
+            <div x-data="{ 
+                active: 0, 
+                total: {{ count($slides) }},
+                progress: 0,
+                autoplayTimer: null,
+                paused: false,
+                startAutoplay() {
+                    clearInterval(this.autoplayTimer);
+                    this.progress = 0;
+                    this.autoplayTimer = setInterval(() => {
+                        if(!this.paused) {
+                            this.progress += 2; // 2% a cada 100ms = 5 segundos por slide
+                            if(this.progress >= 100) {
+                                this.next();
+                            }
+                        }
+                    }, 100);
+                },
+                next() {
+                    if(this.active < this.total - 1) {
+                        this.active++;
+                        this.startAutoplay();
+                    } else {
+                        // Se terminar o último Story, volta ao portal
+                        window.location.href = '{{ route('portal.index') }}'; 
+                    }
+                },
+                prev() {
+                    if(this.active > 0) {
+                        this.active--;
+                        this.startAutoplay();
+                    }
+                }
+             }" 
+             x-init="startAutoplay()"
+             class="relative w-full max-w-md h-full sm:h-[90vh] sm:rounded-2xl overflow-hidden bg-black shadow-2xl">
+            
+            {{-- Barras de Progresso Animadas no Topo --}}
+            <div class="absolute top-4 left-4 right-4 z-40 flex gap-1.5">
                 @foreach($slides as $index => $slide)
-                    @php
-                        // Ajuste correto de posicionamento absoluto
-                        $posClass = match($slide['posicao_texto'] ?? 'bottom') {
-                            'top' => 'top-16',
-                            'center' => 'top-1/2 -translate-y-1/2',
-                            default => 'bottom-0', // Cravado em baixo como no Instagram
-                        };
-                        $bgGradient = match($slide['posicao_texto'] ?? 'bottom') {
-                            'top' => 'bg-gradient-to-b from-black/80 to-transparent pt-12 pb-10',
-                            'center' => 'bg-black/60 backdrop-blur-sm py-4 rounded-xl mx-4',
-                            default => 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-20 pb-8',
-                        };
-                    @endphp
-
-                    <div x-show="active === {{ $index }}" 
-                         x-transition.opacity.duration.300ms
-                         class="absolute inset-0 w-full h-full">
-                         
-                        <img src="{{ Storage::url($slide['imagem_path']) }}" class="w-full h-full object-cover">
-                        
-                        @if(!empty($slide['texto']))
-                            <div class="absolute inset-x-0 {{ $posClass }} {{ $bgGradient }} px-6 flex flex-col justify-end">
-                                <div class="text-white text-base font-medium text-center drop-shadow-lg leading-tight ql-editor !p-0">
-                                    {!! $slide['texto'] !!}
-                                </div>
-                            </div>
-                        @endif
+                    <div class="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+                        <div class="h-full bg-white" 
+                             :style="active > {{ $index }} ? 'width: 100%' : (active === {{ $index }} ? 'width: ' + progress + '%' : 'width: 0%')"></div>
                     </div>
                 @endforeach
-
-                {{-- Zonas de Clique Invisíveis (Esquerda volta, Direita avança) --}}
-                <div class="absolute inset-y-0 left-0 w-1/3 z-30 cursor-pointer" @click="active = active === 0 ? 0 : active - 1"></div>
-                <div class="absolute inset-y-0 right-0 w-2/3 z-30 cursor-pointer" @click="active = active === total - 1 ? total - 1 : active + 1"></div>
             </div>
+
+            {{-- Título Curto (Overlay) --}}
+            <div class="absolute top-8 left-4 right-16 z-40">
+                <h1 class="text-white text-sm font-bold drop-shadow-md truncate">{{ $conteudo->titulo }}</h1>
+            </div>
+
+            {{-- Slides do Story --}}
+            @foreach($slides as $index => $slide)
+                @php
+                    $posClass = match($slide['posicao_texto'] ?? 'bottom') {
+                        'top' => 'top-16',
+                        'center' => 'top-1/2 -translate-y-1/2',
+                        default => 'bottom-0',
+                    };
+                    $bgGradient = match($slide['posicao_texto'] ?? 'bottom') {
+                        'top' => 'bg-gradient-to-b from-black/80 to-transparent pt-12 pb-10',
+                        'center' => 'bg-black/60 backdrop-blur-sm py-4 rounded-xl mx-4',
+                        default => 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-20 pb-8',
+                    };
+                @endphp
+
+                <div x-show="active === {{ $index }}" 
+                     x-transition.opacity.duration.300ms
+                     class="absolute inset-0 w-full h-full">
+                     
+                    <img src="{{ Storage::url($slide['imagem_path']) }}" class="w-full h-full object-cover">
+                    
+                    @if(!empty($slide['texto']))
+                        <div class="absolute inset-x-0 {{ $posClass }} {{ $bgGradient }} px-6 flex flex-col justify-end pointer-events-none">
+                            <div class="text-white text-base font-medium text-center drop-shadow-lg leading-tight ql-editor !p-0">
+                                {!! $slide['texto'] !!}
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+
+            {{-- Zonas de Interação (Toque e Clique) --}}
+            {{-- Segurar o dedo (touchstart/mousedown) pausa o Story. Largar (touchend/mouseup) retoma. --}}
+            <div class="absolute inset-y-0 left-0 w-1/3 z-30 cursor-pointer" 
+                 @click="prev()"
+                 @touchstart="paused = true" @touchend="paused = false"
+                 @mousedown="paused = true" @mouseup="paused = false"></div>
+                 
+            <div class="absolute inset-y-0 right-0 w-2/3 z-30 cursor-pointer" 
+                 @click="next()"
+                 @touchstart="paused = true" @touchend="paused = false"
+                 @mousedown="paused = true" @mouseup="paused = false"></div>
+        </div>
         </div>
     @endif
 

@@ -148,6 +148,14 @@ class ConteudoForm extends Component
             $this->publico_alvo = ['geral'];
         }
 
+        if (!empty($this->data_fim)) {
+            $this->is_active = false;
+        }
+
+        if ($this->is_active && empty($this->data_inicio)) {
+            $this->data_inicio = now()->format('Y-m-d\TH:i');
+        }
+
         // 2. MOTOR DE VALIDAÇÃO: Regras Base e Agendamento
         $this->validate([
             'titulo' => 'required|string|max:255',

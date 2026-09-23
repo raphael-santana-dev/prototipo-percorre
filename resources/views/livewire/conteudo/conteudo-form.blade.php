@@ -265,6 +265,19 @@
                         <option value="story">Visual Story (Mobile-first)</option>
                     </select>
                 </div>
+
+                <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label class="block text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Data de Publicação</label>
+                    <input wire:model="data_inicio" type="datetime-local" class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <p class="text-[9px] text-gray-400 mt-1">Se deixar vazio, assumirá a data e hora atual.</p>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Data de Expiração (Opcional)</label>
+                    <input wire:model="data_fim" type="datetime-local" class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <p class="text-[9px] text-gray-400 mt-1">Ao atingir esta data, a publicação será inativada automaticamente.</p>
+                    @error('data_fim') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                </div>
             </div>
 
             <div class="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/30 space-y-4">
