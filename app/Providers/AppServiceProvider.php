@@ -54,6 +54,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+
+//        if ($this->app->environment('production')) {
+  //          \Illuminate\Support\Facades\URL::forceScheme('https');
+    //    }
+
         Gate::before(function ($user, $ability) {
             return $user->hasRole('dev') ? true : null;
         });
@@ -178,12 +183,22 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('aprendizagem.listagem',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class);
         Livewire::component('aprendizagem.acompanhamento',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento::class);
         Livewire::component('aprendizagem.formulario',  \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class);
+        
+        Event::listen(Authenticated::class, function (Authenticated $event) {
+            $user = $event->user;
 
-        Livewire::component('conteudo.create',  \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class);
-        Livewire::component('conteudo.categorias',  \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class);
-        Livewire::component('conteudo.index',  \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class);
-        Livewire::component('conteudo.show',  \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class);
-        Livewire::component('portal.index',  \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class);
+            $expiredPermissionIds = DB::table('model_has_permissions')
+                ->where('model_id', $user->id)
+                ->where('model_type', get_class($user))
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', now()->toDateString())
+                ->pluck('permission_id');
+
+            if ($expiredPermissionIds->isNotEmpty()) {
+                $user->permissions()->detach($expiredPermissionIds);
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
+            }
+        });
 
         Event::listen(function (UserLogin $event) {
             $usuario = $event->user;
