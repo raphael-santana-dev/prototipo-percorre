@@ -15,8 +15,14 @@
                 @endforeach
             </select>
             
-            <button wire:click="carregarDados" class="px-4 py-2 bg-purpura-100 text-purpura-700 font-bold text-sm rounded-lg hover:bg-purpura-200 transition flex items-center gap-2">
-                <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="carregarDados"></i> Atualizar
+            <button wire:click="atualizarManualmente" 
+                    wire:loading.attr="disabled" 
+                    class="px-4 py-2 bg-purpura-100 text-purpura-700 font-bold text-sm rounded-lg hover:bg-purpura-200 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+                
+                <i class="ph-bold ph-arrows-clockwise inline-block" wire:loading.class="animate-spin" wire:target="atualizarManualmente"></i> 
+                
+                <span wire:loading.remove wire:target="atualizarManualmente">Atualizar</span>
+                <span wire:loading wire:target="atualizarManualmente">Atualizando...</span>
             </button>
         </div>
     </div>

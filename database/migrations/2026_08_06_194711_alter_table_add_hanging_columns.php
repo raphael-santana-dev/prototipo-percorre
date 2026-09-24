@@ -38,7 +38,7 @@ return new class extends Migration
         });
 
         Schema::table('inscricoes', function (Blueprint $table) {
-            $table->string('slug')->nullable()->unique();
+            $table->string('slug')->nullable();
             $table->boolean('status')->default(true);
         });
 

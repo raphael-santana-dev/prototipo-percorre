@@ -55,6 +55,14 @@ class Dashboard extends Component
     {
         $this->carregando = true;
         $this->graficoDetalhado = []; 
+        $this->carregarDados();
+    }
+
+    public function atualizarManualmente()
+    {
+        $this->carregando = true;
+        \Illuminate\Support\Facades\Cache::forget('dashboard_gerencial_ciclo_' . $this->filtroCiclo);
+        $this->carregarDados();
     }
 
     public function carregarDados()
@@ -84,7 +92,7 @@ class Dashboard extends Component
                 ->groupBy('possui_deficiencia')
                 ->pluck(DB::raw('count(id) as total'), 'possui_deficiencia')->toArray();
 
-            $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'metadados', 'data_nascimento', 'created_at')
+            $inscricoesDinamicas = Inscricao::select('dados_dinamicos', 'metadados', 'data_nascimento', 'created_at', 'data_inscricao')
                 ->where('ciclo_id', $this->filtroCiclo)->get();
                 
             $idadesContagem = ['Menor de 18' => 0, '18 a 24' => 0, '25 a 34' => 0, '35 a 45' => 0, 'Acima de 45' => 0];
@@ -122,11 +130,10 @@ class Dashboard extends Component
                 $meta = is_string($insc->metadados) ? json_decode($insc->metadados, true) : ($insc->metadados ?? []);
                 
                 $dataCriacaoRaw = $meta['Submission started'] ?? $meta['submission started'] ?? $meta['Submission Started'] ?? $insc->created_at;
-                try {
-                    $dataCriacao = Carbon::parse($dataCriacaoRaw)->format('Y-m-d');
-                } catch (\Exception $e) {
-                    $dataCriacao = $insc->created_at ? $insc->created_at->format('Y-m-d') : now()->format('Y-m-d');
-                }
+                
+                $dataCriacao = $insc->data_inscricao 
+                    ? \Carbon\Carbon::parse($insc->data_inscricao)->format('Y-m-d') 
+                    : $insc->created_at->format('Y-m-d');
                 
                 $inscricoesPorDia[$dataCriacao] = ($inscricoesPorDia[$dataCriacao] ?? 0) + 1;
 
