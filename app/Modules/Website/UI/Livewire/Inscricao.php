@@ -238,7 +238,7 @@ class Inscricao extends Component
     {
         $regras = [];
         if ($etapa === 1) {
-            if ($this->temVagasDisponiveis && $this->estado && $this->data_nascimento) {
+            if ($this->temVagasDisponiveis && $this->estado && ($this->data_nascimento < date('Y-m-d'))) {
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
                 $regras['curso'] = 'required';
@@ -316,7 +316,7 @@ class Inscricao extends Component
         }
 
         if ($this->etapaAtual === 1) {
-            if (!$this->temVagasDisponiveis && $this->data_nascimento && $this->estado) {
+            if (!$this->temVagasDisponiveis && ($this->data_nascimento < date('Y-m-d')) && $this->estado) {
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
                 
@@ -324,6 +324,7 @@ class Inscricao extends Component
                 if ($inscricaoDB) {
                     $inscricaoDB->update(['etapa_atual' => 100]);
                     $inscricaoDB->update(['data_inscricao' => date('Y-m-d H:i:s')]);
+                    
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -490,7 +491,14 @@ class Inscricao extends Component
         }
     }
 
-    public function updatedDataNascimento() { $this->atualizarDisponibilidade(); }
+    public function updatedDataNascimento() { 
+        if($this->data_nascimento < date('Y-m-d')){
+            $this->atualizarDisponibilidade(); 
+        } else {
+            $this->dispatch('erro', msg: 'A data de nascimento precisa ser menor do que a data atual.');
+        }
+        
+    }
 
     public function atualizarDisponibilidade()
     {
