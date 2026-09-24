@@ -1,29 +1,16 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
     <x-page-header 
-        title="Gerenciador de Integrações" 
-        icon="ph ph-arrows-left-right"
-        badge=""
+        title="Gestor de Importação (Inscrições)" 
+        icon="ph ph-files"
+        badge="Base de Candidatos"
         :breadcrumbs="$breadcrumbs ?? []">
 
         <x-slot name="filters">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                 <div class="md:col-span-3">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-files text-purpura-500"></i> Tipo de Registro
-                    </label>
-                    <select wire:model.live="filtro_tipo" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                        <option value="">Todos</option>
-                        <option value="inscricoes">Base de Inscrições</option>
-                        <option value="usuarios">Usuários do Sistema</option>
-                        <option value="campos">Blocos de Formulário</option>
-                        <option value="unidades">Unidades / Sedes</option>
-                        <option value="cursos">Cursos Ativos</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-activity text-purpura-500"></i> Status
+                        <i class="ph ph-activity text-purpura-500"></i> Status do Processo
                     </label>
                     <select wire:model.live="filtro_status" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                         <option value="">Todos</option>
@@ -46,19 +33,19 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
                         <i class="ph ph-calendar-plus text-purpura-500"></i> De (Data)
                     </label>
                     <input type="datetime-local" wire:model.live="filtro_data_inicio" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-3">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
                         <i class="ph ph-calendar-check text-purpura-500"></i> Até (Data)
                     </label>
                     <input type="datetime-local" wire:model.live="filtro_data_fim" class="w-full rounded-md border-gray-300 shadow-sm px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
-                @if($filtro_tipo !== '' || $filtro_status !== '' || $filtro_usuario !== '' || $filtro_data_inicio !== '' || $filtro_data_fim !== '')
+                @if($filtro_status !== '' || $filtro_usuario !== '' || $filtro_data_inicio !== '' || $filtro_data_fim !== '')
                     <div class="md:col-span-12 flex justify-end mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
                             <i class="ph-bold ph-x"></i> Limpar Filtros
@@ -70,36 +57,15 @@
 
         <x-slot name="actions">
             @if(feature('importacao.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.exportar')))
-                <div x-data="{ openExport: false }" class="relative inline-block text-left mr-2">
-                    <button @click="openExport = !openExport" @click.away="openExport = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                        <i class="text-lg ph ph-export"></i> Exportar Dados <i class="ph ph-caret-down"></i>
-                    </button>
-                    <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
-                        <div class="py-1">
-                            <button wire:click="solicitarExportacao('inscricoes', 'xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
-                                Base de Dados de Inscrições
-                            </button>
-                            <button wire:click="solicitarExportacao('usuarios', 'csv')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 font-medium text-left">
-                                Lista de Usuários Internos
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <button wire:click="solicitarExportacao" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 mr-2">
+                    <i class="text-lg ph ph-export"></i> Exportar Inscrições
+                </button>
             @endif
 
             @if(feature('importacao.acessar') && (auth()->user()->hasRole('dev') || auth()->user()->can('importacao.acessar')))
-                <div x-data="{ openTemplate: false }" class="relative inline-block text-left mr-2">
-                    <button @click="openTemplate = !openTemplate" @click.away="openTemplate = false" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                        <i class="text-lg ph ph-download-simple"></i> Planilhas Modelo <i class="ph ph-caret-down"></i>
-                    </button>
-                    <div x-show="openTemplate" x-cloak class="absolute right-0 w-64 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg z-50">
-                        <div class="py-1">
-                            <button wire:click="baixarTemplate('inscricoes')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purpura-600 gap-2 font-medium">
-                                <i class="ph ph-file-csv text-lg text-green-600"></i> Modelo: Inscrições
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <button wire:click="baixarTemplate" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 mr-2" title="Baixar Planilha Modelo">
+                    <i class="text-lg ph ph-download-simple"></i> Baixar Modelo
+                </button>
                 
                 <button wire:click="abrirModalUpload" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
                     <i class="ph ph-upload-simple text-lg"></i> Nova Importação
@@ -216,34 +182,20 @@
                 
                 <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                     <h3 class="mb-4 text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 flex items-center gap-2">
-                        <i class="ph-fill ph-upload-simple text-purpura-500 text-xl"></i> Adicionar à Fila
+                        <i class="ph-fill ph-upload-simple text-purpura-500 text-xl"></i> Importar Inscrições
                     </h3>
                     
                     <form wire:submit.prevent="processarUpload" class="space-y-5">
                         
                         <div>
-                            <label class="block mb-1 text-xs font-bold text-gray-700 uppercase tracking-wider">O que você vai importar?</label>
-                            <select wire:model.live="tipoImportacao" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 font-medium">
-                                <option value="">Selecione uma opção...</option>
-                                <option value="inscricoes">Inscrições de Estudantes</option>
-                                <option value="usuarios">Acessos: Usuários Administrativos</option>
-                                <option value="campos">Estrutura: Blocos de Formulário</option>
-                                <option value="unidades">Cadastros: Unidades / Sedes</option>
-                                <option value="cursos">Cadastros: Cursos Ativos</option>
+                            <label class="block mb-1 text-xs font-bold text-gray-700 uppercase tracking-wider">Ciclo Vinculado <span class="text-red-500">*</span></label>
+                            <select wire:model="cicloSelecionadoId" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                <option value="">Selecione o Ciclo de Inscrição...</option>
+                                @foreach($ciclosDisponiveis as $ciclo)
+                                    <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option>
+                                @endforeach
                             </select>
                         </div>
-
-                        @if(in_array($tipoImportacao, ['campos', 'inscricoes']))
-                            <div>
-                                <label class="block mb-1 text-xs font-bold text-gray-700 uppercase tracking-wider">Ciclo Vinculado <span class="text-red-500">*</span></label>
-                                <select wire:model="cicloSelecionadoId" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                    <option value="">Selecione o Ciclo...</option>
-                                    @foreach($ciclosDisponiveis as $ciclo)
-                                        <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endif
 
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                             <label class="block text-xs font-bold text-gray-800 mb-2 uppercase tracking-wider">Arquivo de Dados</label>
@@ -251,16 +203,16 @@
                             <div class="flex items-center justify-center w-full">
                                 <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-purpura-300 bg-purpura-50 rounded-lg cursor-pointer hover:bg-purpura-100 transition">
                                     <div class="flex flex-col items-center justify-center pt-5 pb-6 text-purpura-600">
-                                        <i class="ph ph-file-csv text-3xl mb-1"></i>
-                                        <p class="text-xs font-bold">Clique ou arraste o arquivo</p>
-                                        <p class="text-[10px] mt-1 font-medium text-purpura-500">.CSV, .XLSX, .JSON ou .XML (Máx: 50MB)</p>
+                                        <i class="ph ph-file-xls text-3xl mb-1"></i>
+                                        <p class="text-xs font-bold">Clique ou arraste a planilha</p>
+                                        <p class="text-[10px] mt-1 font-medium text-purpura-500">.CSV ou .XLSX (Máx: 50MB)</p>
                                     </div>
-                                    <input type="file" wire:model="arquivo" class="hidden" accept=".csv, .xlsx, .xls, .json, .xml">
+                                    <input type="file" wire:model="arquivo" class="hidden" accept=".csv, .xlsx, .xls">
                                 </label>
                             </div>
                             
                             <div wire:loading wire:target="arquivo" class="mt-2 text-xs font-bold text-purpura-600 flex items-center justify-center gap-2">
-                                <i class="ph ph-spinner animate-spin text-lg"></i> Analisando arquivo...
+                                <i class="ph ph-spinner animate-spin text-lg"></i> Lendo arquivo...
                             </div>
                             
                             @if($arquivo)
@@ -271,34 +223,32 @@
                             @error('arquivo') <span class="text-xs text-red-500 mt-2 block font-bold text-center">{{ $message }}</span> @enderror
                         </div>
 
-                        @if($tipoImportacao === 'inscricoes')
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <label class="flex items-start gap-3 p-3 border border-purpura-200 bg-purpura-50/50 rounded-lg cursor-pointer hover:bg-purpura-50 transition">
-                                    <div class="flex items-center h-5 mt-0.5">
-                                        <input type="checkbox" wire:model="permitirAutoCadastro" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                    </div>
-                                    <div class="flex flex-col">
-                                        <span class="text-sm text-purpura-900 font-bold">Auto-cadastrar Vínculos</span>
-                                        <span class="text-[10px] text-purpura-600 leading-tight mt-0.5">Cria cadastros no sistema se não existirem.</span>
-                                    </div>
-                                </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <label class="flex items-start gap-3 p-3 border border-purpura-200 bg-purpura-50/50 rounded-lg cursor-pointer hover:bg-purpura-50 transition">
+                                <div class="flex items-center h-5 mt-0.5">
+                                    <input type="checkbox" wire:model="permitirAutoCadastro" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-purpura-900 font-bold">Auto-cadastrar Vínculos</span>
+                                    <span class="text-[10px] text-purpura-600 leading-tight mt-0.5">Cria cadastros no sistema (Cursos, Unidades, Turnos) se não existirem.</span>
+                                </div>
+                            </label>
 
-                                <label class="flex items-start gap-3 p-3 border border-blue-200 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-50 transition">
-                                    <div class="flex items-center h-5 mt-0.5">
-                                        <input type="checkbox" wire:model="mesclarDuplicadas" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                                    </div>
-                                    <div class="flex flex-col">
-                                        <span class="text-sm text-blue-900 font-bold">Mesclar Duplicadas</span>
-                                        <span class="text-[10px] text-blue-600 leading-tight mt-0.5">Atualiza CPFs que já existem em vez de pular.</span>
-                                    </div>
-                                </label>
-                            </div>
-                        @endif
+                            <label class="flex items-start gap-3 p-3 border border-blue-200 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                                <div class="flex items-center h-5 mt-0.5">
+                                    <input type="checkbox" wire:model="mesclarDuplicadas" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-blue-900 font-bold">Mesclar Duplicadas</span>
+                                    <span class="text-[10px] text-blue-600 leading-tight mt-0.5">Atualiza Inscrições (CPFs) que já existem no Ciclo.</span>
+                                </div>
+                            </label>
+                        </div>
 
                         <div class="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-100">
                             <button type="button" wire:click="$set('modalUploadAberto', false)" class="px-4 py-2.5 text-sm font-bold border rounded-lg text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
                             <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 transition flex items-center gap-2">
-                                Avançar <i class="ph-bold ph-arrow-right"></i>
+                                Analisar Colunas <i class="ph-bold ph-arrow-right"></i>
                             </button>
                         </div>
                     </form>
@@ -318,7 +268,7 @@
                     <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                         <div>
                             <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2"><i class="ph-fill ph-git-merge text-ponkan-500"></i> Mapear Campos</h3>
-                            <p class="text-sm text-gray-500 font-medium">Nossa IA tentou cruzar as colunas da sua planilha com os campos do banco de dados.</p>
+                            <p class="text-sm text-gray-500 font-medium">Cruzámos as colunas da sua planilha com a base de Inscrições.</p>
                         </div>
                         <span class="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded text-xs">Etapa 2 de 2</span>
                     </div>
@@ -568,7 +518,7 @@
                                 <i class="ph-fill ph-rocket-launch text-3xl"></i>
                             </div>
                             <h3 class="text-xl font-black text-gray-900 mb-1">Processando Importação...</h3>
-                            <p class="text-sm font-medium text-gray-500">Não feche esta janela. O sistema está salvando os dados no servidor.</p>
+                            <p class="text-sm font-medium text-gray-500">Não feche esta janela. O sistema está lendo os blocos de dados.</p>
                         </div>
                         
                         <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6 relative overflow-hidden">
@@ -586,7 +536,7 @@
                                     <i class="ph-bold ph-check text-green-500"></i> {{ number_format($importacaoMonitoramento->linhas_processadas, 0, ',', '.') }} linhas
                                 </span>
                                 <span class="text-xs font-bold text-gray-500">
-                                    Total: {{ number_format($importacaoMonitoramento->total_linhas, 0, ',', '.') }}
+                                    Total Estimado: {{ number_format($importacaoMonitoramento->total_linhas, 0, ',', '.') }}
                                 </span>
                             </div>
                         </div>
@@ -598,7 +548,7 @@
 
                         <div class="bg-gray-900 rounded-xl p-4 shadow-inner border border-gray-800">
                             <div class="flex items-center gap-2 mb-2 text-gray-400 text-xs font-bold uppercase tracking-wider">
-                                <i class="ph-bold ph-terminal-window text-green-400"></i> Terminal / Memória
+                                <i class="ph-bold ph-terminal-window text-green-400"></i> Terminal de Tarefas (Chunks)
                             </div>
                             
                             <div class="font-mono text-xs text-gray-300">
@@ -606,13 +556,13 @@
                                     <span class="animate-pulse">▶</span> Lendo arquivo: {{ $importacaoMonitoramento->arquivo_nome }}
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-blue-400">ℹ</span> Lote atual processando a linha nº <span class="text-white font-bold">{{ $importacaoMonitoramento->linhas_processadas + 1 }}</span>...
+                                    <span class="text-blue-400">ℹ</span> Extraindo pacote atual (Linha <span class="text-white font-bold">{{ $importacaoMonitoramento->linhas_processadas + 1 }}</span>)...
                                 </div>
                                 
                                 @if($ultimoLog)
                                     <div class="mt-3 pt-3 border-t border-gray-700">
                                         <span class="text-red-400 block mb-1">⚠️ Último alerta capturado:</span>
-                                        <div class="text-gray-400 leading-tight">
+                                        <div class="text-gray-400 leading-tight truncate">
                                             [Linha {{ $ultimoLog['linha'] ?? '?' }}] {{ $ultimoLog['mensagem'] ?? 'Erro desconhecido' }}
                                         </div>
                                     </div>
@@ -623,7 +573,7 @@
                     @else
                         <div class="flex flex-col items-center justify-center p-8">
                             <i class="ph ph-spinner animate-spin text-4xl text-purpura-500 mb-4"></i>
-                            <h3 class="text-lg font-bold text-gray-900">Iniciando conexão com o servidor...</h3>
+                            <h3 class="text-lg font-bold text-gray-900">Iniciando alocação de memória...</h3>
                         </div>
                     @endif
 

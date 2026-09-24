@@ -8,25 +8,19 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\SimpleExcel\SimpleExcelReader;
 use App\Models\Importacao;
-use App\Models\User;
-use App\Models\CampoFormulario;
 use App\Models\Inscricao;
-use Illuminate\Database\QueryException;
 
 use App\Traits\FuzzyMatchingTrait;
-use App\Models\Curso;
-use App\Modules\Unidade\Domain\Models\Unidade;
-use App\Modules\Turno\Domain\Models\Turno;
 
 class ProcessarImportacaoUniversalJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, FuzzyMatchingTrait;
 
-    public $timeout = 3600; 
+    public $timeout = 7200; 
     protected $importacao;
 
     protected $relatorioAutoCadastro = [
@@ -43,117 +37,169 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $this->importacao = $importacao;
     }
 
+    private function detectarDelimitadorCsv($caminhoAbsoluto)
+    {
+        $handle = fopen($caminhoAbsoluto, 'r');
+        $primeiraLinha = fgets($handle);
+        fclose($handle);
+        
+        $virgulas = substr_count($primeiraLinha, ',');
+        $pontoVirgulas = substr_count($primeiraLinha, ';');
+        
+        return $pontoVirgulas > $virgulas ? ';' : ',';
+    }
+
+    private function repararCsvMalFormatado($caminhoAbsoluto)
+    {
+        $input = fopen($caminhoAbsoluto, 'r');
+        if (!$input) return;
+        
+        $primeiraLinha = fgets($input);
+        
+        $bom = pack('H*','EFBBBF');
+        $temBom = preg_match("/^$bom/", $primeiraLinha);
+        $primeiraLinhaLimpa = $temBom ? preg_replace("/^$bom/", '', $primeiraLinha) : $primeiraLinha;
+        $primeiraLinhaTrim = trim($primeiraLinhaLimpa);
+        
+        $envelopado = str_starts_with($primeiraLinhaTrim, '"') && str_ends_with($primeiraLinhaTrim, '"') && 
+                      !str_contains($primeiraLinhaTrim, '","') && !str_contains($primeiraLinhaTrim, '";"');
+
+        if ($temBom || $envelopado) {
+            $tempPath = $caminhoAbsoluto . '_cleaned.csv';
+            $output = fopen($tempPath, 'w');
+            
+            rewind($input);
+            $isFirstLine = true;
+            
+            while (($linha = fgets($input)) !== false) {
+                if ($isFirstLine && preg_match("/^$bom/", $linha)) {
+                    $linha = preg_replace("/^$bom/", '', $linha);
+                    $isFirstLine = false;
+                }
+                
+                $l = trim($linha);
+                if ($envelopado && str_starts_with($l, '"') && str_ends_with($l, '"')) {
+                    $l = substr($l, 1, -1);
+                    $l = str_replace('""', '"', $l);
+                }
+                if ($l !== '') {
+                    fwrite($output, $l . "\n");
+                }
+            }
+            fclose($input);
+            fclose($output);
+            rename($tempPath, $caminhoAbsoluto);
+        } else {
+            fclose($input);
+        }
+    }
+
     public function handle(): void
     {
+        DB::disableQueryLog();
+
         $linhaAtual = 0;
         $erros = [];
         $errosCriticos = 0;
 
         try {
             $this->importacao->update(['status' => 'processando']);
-            $caminhoAbsoluto = \Illuminate\Support\Facades\Storage::disk('local')->path($this->importacao->arquivo_caminho);
+            $caminhoAbsoluto = Storage::disk('local')->path($this->importacao->arquivo_caminho);
             $formato = $this->importacao->formato;
             
-            $registros = $this->extrairRegistrosLazy($caminhoAbsoluto, $formato);
+            if (!in_array($formato, ['csv', 'xlsx', 'xls'])) {
+                throw new \Exception("Apenas arquivos CSV ou Excel são permitidos.");
+            }
+            
+            if ($formato === 'csv') {
+                $this->repararCsvMalFormatado($caminhoAbsoluto);
+            }
+
+            $reader = SimpleExcelReader::create($caminhoAbsoluto);
+            if ($formato === 'csv') {
+                $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
+                $reader->useDelimiter($delimiter);
+            }
+
             $mapeamento = $this->importacao->mapeamento ?? [];
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
-            foreach ($registros as $linhaOriginal) {
-                $linhaAtual++;
-
-                if ($linhaAtual % 50 === 0) {
-                    if ($this->importacao->fresh()->status !== 'processando') {
-                        break; 
-                    }
-                    $this->importacao->update(['linhas_processadas' => $linhaAtual]);
+            $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar) {
+                
+                if ($this->importacao->fresh()->status !== 'processando') {
+                    return false; 
                 }
 
-                if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
-                    continue; 
-                }
+                foreach ($chunk as $linhaOriginal) {
+                    $linhaAtual++;
 
-                try {
-                    $dadosLimpos = [];
-                    foreach ($linhaOriginal as $key => $value) {
-                        $cleanKey = strtolower(trim(str_replace("\xEF\xBB\xBF", '', $key)));
-                        $dadosLimpos[$cleanKey] = $value;
+                    if (is_array($linhasParaReprocessar) && !in_array($linhaAtual, $linhasParaReprocessar)) {
+                        continue; 
                     }
 
-                    match ($this->importacao->tipo) {
-                        'campos' => $this->processarCampo($dadosLimpos, $mapeamento),
-                        'usuarios' => $this->processarUsuario($dadosLimpos),
-                        'inscricoes' => $this->processarInscricao($linhaOriginal, $mapeamento),
-                        default => throw new \Exception("Tipo de importação '{$this->importacao->tipo}' não implementado."),
-                    };
+                    try {
+                        $dadosLimpos = [];
+                        foreach ($linhaOriginal as $key => $value) {
+                            $cleanKey = strtolower(trim(str_replace("\xEF\xBB\xBF", '', $key)));
+                            $dadosLimpos[$cleanKey] = $value;
+                        }
 
-                } catch (\Illuminate\Database\QueryException $e) {
-                    $isDuplicate = $e->getCode() === '23505'; 
-                    $isNotNull = $e->getCode() === '23502';   
-                    
-                    if (!$isDuplicate) {
+                        $this->processarInscricao($dadosLimpos, $mapeamento);
+
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        $isDuplicate = $e->getCode() === '23505'; 
+                        $isNotNull = $e->getCode() === '23502';   
+                        
+                        if (!$isDuplicate) $errosCriticos++;
+
+                        $amigavel = 'Falha técnica ao salvar no banco de dados.';
+                        if ($isDuplicate) $amigavel = 'Candidato ignorado: O registro já existe (Desative a Mesclagem ou corrija o CPF).';
+                        if ($isNotNull) $amigavel = 'Falha ao vincular: Faltam dados na tabela destino.';
+
+                        $erros[] = [
+                            'linha' => $linhaAtual, 
+                            'tipo' => $isDuplicate ? 'Alerta (Duplicata)' : 'Erro de Banco',
+                            'mensagem' => $e->getMessage(),
+                            'amigavel' => $amigavel
+                        ];
+                    } catch (\Throwable $e) {
                         $errosCriticos++;
+                        $erros[] = [
+                            'linha' => $linhaAtual, 
+                            'tipo' => 'Erro de Dados',
+                            'mensagem' => $e->getMessage(),
+                            'amigavel' => 'Erro na planilha: ' . $e->getMessage()
+                        ];
                     }
-
-                    $amigavel = 'Falha técnica ao salvar no banco de dados.';
-                    if ($isDuplicate) $amigavel = 'Candidato ignorado: Registro já existe e a opção de mesclar está desativada.';
-                    if ($isNotNull) $amigavel = 'Falha ao auto-cadastrar vínculo: Faltam dados obrigatórios na tabela destino.';
-
-                    $erros[] = [
-                        'linha' => $linhaAtual, 
-                        'tipo' => $isDuplicate ? 'Alerta (Duplicata)' : 'Erro de Banco',
-                        'mensagem' => $e->getMessage(),
-                        'amigavel' => $amigavel
-                    ];
-                } catch (\Throwable $e) {
-                    $errosCriticos++;
-                    $erros[] = [
-                        'linha' => $linhaAtual, 
-                        'tipo' => 'Erro de Dados',
-                        'mensagem' => $e->getMessage(),
-                        'amigavel' => 'A informação na planilha é inválida: ' . $e->getMessage()
-                    ];
+                    
+                    unset($linhaOriginal, $dadosLimpos); 
                 }
 
                 if ($errosCriticos >= 1000) {
-                    throw new \Exception("Excesso de erros estruturais (1000+). Planilha corrompida ou fora do padrão. Operação abortada.");
+                    throw new \Exception("Excesso de falhas (1000+). Planilha fora do padrão. Operação abortada.");
                 }
 
-                if ($linhaAtual % 10 === 0) {
-                    if ($this->importacao->fresh()->status !== 'processando') {
-                        break; 
-                    }
-                    
-                    $this->importacao->update([
-                        'linhas_processadas' => $linhaAtual,
-                        'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
-                    ]);
-                }
-            }
+                $this->importacao->update([
+                    'linhas_processadas' => $linhaAtual,
+                    'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
+                ]);
+
+                if (function_exists('gc_collect_cycles')) gc_collect_cycles();
+            });
 
             if ($this->importacao->fresh()->status !== 'processando') {
-                return;
+                return; 
             }
 
             if (!empty($this->relatorioAutoCadastro['novos']) || !empty($this->relatorioAutoCadastro['50_porcento'])) {
-                $msgRelatorio = "Mapeamento IA (50%+): \n";
-                
+                $msgRelatorio = "Relatório Auto-Cadastro: \n";
                 foreach ($this->relatorioAutoCadastro['50_porcento'] ?? [] as $tipo => $itens) {
-                    if (!empty($itens)) {
-                        $msgRelatorio .= "- $tipo Compatíveis: " . implode(' | ', array_unique($itens)) . " \n";
-                    }
+                    if (!empty($itens)) $msgRelatorio .= "- $tipo Mesclados: " . implode(' | ', array_unique($itens)) . " \n";
                 }
                 foreach ($this->relatorioAutoCadastro['novos'] ?? [] as $tipo => $itens) {
-                    if (!empty($itens)) {
-                        $msgRelatorio .= "- $tipo Criados: " . implode(' | ', array_unique($itens)) . " \n";
-                    }
+                    if (!empty($itens)) $msgRelatorio .= "- $tipo Criados: " . implode(' | ', array_unique($itens)) . " \n";
                 }
-                
-                array_unshift($erros, [
-                    'linha' => 'INFO',
-                    'tipo' => 'Relatório: Inteligência Artificial',
-                    'mensagem' => $msgRelatorio,
-                    'amigavel' => $msgRelatorio
-                ]);
+                array_unshift($erros, ['linha' => 'INFO', 'tipo' => 'Log do Sistema', 'mensagem' => $msgRelatorio, 'amigavel' => $msgRelatorio]);
             }
 
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
@@ -164,24 +210,20 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
-            if ($this->importacao->tipo === 'inscricoes' && $linhaAtual > 0) {
+            if ($linhaAtual > 0) {
                 $usuario = $this->importacao->user; 
-                \Illuminate\Support\Facades\DB::table('auditoria_logs')->insert([
+                DB::table('auditoria_logs')->insert([
                     'tabela_alterada' => 'inscricoes',
                     'registro_id' => null,
                     'acao' => 'importacao_lote',
                     'informacao_anterior' => null,
-                    'nova_informacao' => json_encode([
-                        'total_linhas_lidas' => $linhaAtual, 
-                        'falhas' => count($erros),
-                        'arquivo_origem' => $this->importacao->arquivo_nome
-                    ], JSON_UNESCAPED_UNICODE),
-                    'usuario_id' => $usuario ? $usuario->id : null,
-                    'usuario_nome' => $usuario ? $usuario->name : 'Sistema (Job)',
-                    'usuario_role' => $usuario ? ($usuario->getRoleNames()->first() ?? 'N/A') : 'Sistema',
-                    'usuario_login' => $usuario ? $usuario->email : 'N/A',
-                    'ip' => 'Processo Background',
-                    'navegador' => 'Módulo de Integração Universal',
+                    'nova_informacao' => json_encode(['total_linhas_lidas' => $linhaAtual, 'falhas' => count($erros)], JSON_UNESCAPED_UNICODE),
+                    'usuario_id' => $usuario->id ?? null,
+                    'usuario_nome' => $usuario->name ?? 'Sistema',
+                    'usuario_role' => 'Sistema',
+                    'usuario_login' => $usuario->email ?? 'N/A',
+                    'ip' => '127.0.0.1',
+                    'navegador' => 'Background Job',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -190,89 +232,15 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         } catch (\Throwable $e) {
             array_unshift($erros, [
                 'linha' => 'Falha Crítica', 
-                'tipo' => 'Queda no Sistema',
+                'tipo' => 'Crash',
                 'mensagem' => $e->getMessage() . ' no arquivo ' . basename($e->getFile()) . ':' . $e->getLine(),
-                'amigavel' => 'A importação falhou de maneira irrecuperável: ' . $e->getMessage()
+                'amigavel' => 'A importação caiu: ' . $e->getMessage()
             ]);
             $this->importacao->update([
                 'status' => 'erro', 
                 'erro_mensagem' => json_encode($erros, JSON_UNESCAPED_UNICODE)
             ]);
         }
-    }
-
-    private function extrairRegistrosLazy(string $caminho, string $formato): iterable
-    {
-        if (in_array($formato, ['csv', 'xlsx', 'xls'])) {
-            $reader = SimpleExcelReader::create($caminho);
-            if ($formato === 'csv') {
-                $cabecalhoRaw = file_get_contents($caminho, false, null, 0, 250);
-                $reader->useDelimiter(strpos($cabecalhoRaw, ';') !== false ? ';' : ',');
-            }
-            foreach ($reader->getRows() as $rowProperties) {
-                yield $rowProperties;
-            }
-            return;
-        }
-
-        if ($formato === 'json') {
-            $dados = json_decode(file_get_contents($caminho), true);
-            foreach ($dados as $row) yield $row;
-            return;
-        }
-
-        if ($formato === 'xml') {
-            $xml = simplexml_load_file($caminho);
-            $json = json_encode($xml);
-            $dados = json_decode($json, true);
-            $primeiraChave = array_key_first($dados);
-            $dataset = $dados[$primeiraChave] ?? $dados;
-            foreach ($dataset as $row) yield $row;
-            return;
-        }
-
-        throw new \Exception("Formato de arquivo não suportado.");
-    }
-
-    private function processarCampo(array $dados, array $mapeamento)
-    {
-        $cicloId = $mapeamento['ciclo_id'] ?? null;
-        if (!$cicloId) throw new \Exception("ID do Ciclo ausente no mapeamento.");
-        $label = trim($dados['nome do campo'] ?? $dados['label'] ?? '');
-        if (empty($label)) throw new \Exception("A coluna 'Nome do Campo' (ou 'label') é obrigatória.");
-        $name = trim($dados['id no banco'] ?? $dados['id no banco (name)'] ?? $dados['name'] ?? '');
-        if (empty($name)) $name = Str::slug($label, '_');
-        $larguraVal = empty(trim($dados['largura'] ?? '')) ? 12 : (int)trim($dados['largura'] ?? '');
-        $isObrigatorio = in_array(strtolower(trim($dados['obrigatório'] ?? $dados['obrigatorio'] ?? 'nao')), ['sim', 's', '1', 'true', 'yes']);
-        $sempreVisivel = in_array(strtolower(trim($dados['sempre visível?'] ?? $dados['sempre visivel'] ?? 'sim')), ['sim', 's', '1', 'true', 'yes']);
-        
-        $regrasStr = trim($dados['regras de exibição'] ?? $dados['regras de exibicao'] ?? '');
-        $dependeDe = null; $dependeOperador = '='; $dependeValor = null;
-        if (!$sempreVisivel && !empty($regrasStr)) {
-            if (preg_match('/^([a-zA-Z0-9_]+)(>=|<=|!=|=|>|<)(.*)$/', $regrasStr, $matches)) {
-                $dependeDe = trim($matches[1]); $dependeOperador = trim($matches[2]); $dependeValor = trim($matches[3]);
-            } else { throw new \Exception("Regra mal formatada. Exemplo correto: 'como_conheceu=Instagram'."); }
-        }
-
-        $opcoesRaw = trim($dados['opções'] ?? $dados['opcoes'] ?? '');
-        $opcoesArray = null;
-        if (!empty($opcoesRaw)) {
-            if (str_starts_with(strtolower($opcoesRaw), 'bd:') || str_starts_with(strtolower($opcoesRaw), 'db:')) {
-                $partes = explode(':', $opcoesRaw);
-                $opcoesArray = ['origem_bd' => $partes[1] ?? '', 'filtro' => $partes[2] ?? ''];
-            } else {
-                $opcoesArray = array_map('trim', explode(',', $opcoesRaw));
-            }
-        }
-
-        CampoFormulario::updateOrCreate(
-            ['ciclo_id' => $cicloId, 'name' => $name],
-            [
-                'etapa' => (int)($dados['etapa'] ?? 1), 'ordem' => (int)($dados['ordem'] ?? 0), 'label' => $label,
-                'tipo' => trim($dados['tipo'] ?? 'text'), 'largura' => $larguraVal, 'subtipo' => trim($dados['subtipo'] ?? 'text'),
-                'opcoes' => $opcoesArray, 'obrigatorio' => $isObrigatorio, 'depende_de' => $dependeDe, 'depende_operador' => $dependeOperador, 'depende_valor' => $dependeValor,
-            ]
-        );
     }
 
     private function buscarOuCriarVinculo($classeModel, $nomePlanilha, $permiteAutoCadastro, $tipoVinculo)
@@ -324,42 +292,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         return null;
     }
 
-    private function processarUsuario(array $dados)
-    {
-        $cpfRaw = $dados['cpf'] ?? null;
-        if (empty($cpfRaw)) throw new \Exception("A coluna 'CPF' é obrigatória.");
-        $cpfLimpo = preg_replace('/[^0-9]/', '', $cpfRaw);
-        $email = trim($dados['e-mail'] ?? $dados['email'] ?? '');
-        $nome = trim($dados['nome completo'] ?? $dados['nome'] ?? 'Usuário Sem Nome');
-        $senha = trim($dados['senha'] ?? $cpfLimpo);
-        $usuario = User::where('cpf', $cpfLimpo)->orWhere('email', $email)->first();
-        if (!$usuario) { $usuario = User::create(['name' => $nome, 'email' => $email, 'cpf' => $cpfLimpo, 'password' => Hash::make($senha)]); } 
-        else { $usuario->update(['name' => $nome, 'cpf' => $cpfLimpo, 'email' => $email ?: $usuario->email]); }
-        $roleName = trim($dados['grupo de acesso'] ?? $dados['role'] ?? '');
-        if (!empty($roleName)) $usuario->assignRole(Str::slug($roleName, '-'));
-        $permissoesRaw = trim($dados['permissões extras'] ?? $dados['permissoes'] ?? '');
-        if (!empty($permissoesRaw)) {
-            $permissoesArray = array_map('trim', explode(',', $permissoesRaw));
-            $permissoesValidas = [];
-            foreach ($permissoesArray as $p) {
-                $pSlug = Str::slug($p, '_'); 
-                if (\Spatie\Permission\Models\Permission::where('name', $pSlug)->exists()) $permissoesValidas[] = $pSlug;
-            }
-            if (count($permissoesValidas) > 0) $usuario->givePermissionTo($permissoesValidas);
-        }
-    }
-
-    private function processarInscricao(array $linhaOriginal, array $mapeamento)
+    private function processarInscricao(array $linhaFormatada, array $mapeamento)
     {
         $dadosFixos = [];
         $dadosDinamicos = [];
         $metadados = []; 
-
-        $linhaFormatada = [];
-        foreach ($linhaOriginal as $k => $v) {
-            $cleanKey = mb_convert_encoding(trim($k), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
-            $linhaFormatada[$cleanKey] = $v;
-        }
 
         $autoCadastroAtivo = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -369,7 +306,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $destino = $config['destino'] ?? 'ignorar';
             if ($destino === 'ignorar') continue;
 
-            $valorPlanilha = trim((string) ($linhaFormatada[$colunaPlanilha] ?? ''));
+            $colunaLimpa = mb_convert_encoding(strtolower(trim($colunaPlanilha)), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+            $valorPlanilha = trim((string) ($linhaFormatada[$colunaLimpa] ?? ''));
+            
             if ($valorPlanilha === '') continue;
 
             $tipoMapeado = $config['tipo'] ?? 'texto';
@@ -377,9 +316,16 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data') || in_array($destino, ['created_at', 'updated_at'])) {
                 $precisaDeHora = in_array($destino, ['created_at', 'updated_at']) || $tipoMapeado === 'data_hora';
                 try {
-                    $parsed = \Carbon\Carbon::parse(str_replace('/', '-', $valorPlanilha));
+                    $valorLimpo = preg_replace('/\s*\([^)]*\)/', '', $valorPlanilha); 
+                    if (str_contains($valorLimpo, 'GMT')) {
+                        $valorLimpo = trim(substr($valorLimpo, 0, strpos($valorLimpo, 'GMT'))); 
+                    }
+                    
+                    $parsed = \Carbon\Carbon::parse(str_replace('/', '-', trim($valorLimpo)));
                     $valorPlanilha = $precisaDeHora ? $parsed->format('Y-m-d H:i:s') : $parsed->format('Y-m-d');
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                    continue; 
+                }
             }
 
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
@@ -467,7 +413,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
-        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
+        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
         $dadosFixos['criado_por'] = $this->importacao->user_id;
 

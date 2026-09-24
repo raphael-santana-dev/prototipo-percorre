@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use DateTime;
 
 class InscricoesSeeder extends Seeder
 {
@@ -183023,6 +183024,7 @@ class InscricoesSeeder extends Seeder
             $item['status_inscricao_id'] = $statusId;
             $item['created_at'] = $now;
             $item['updated_at'] = $now;
+            $item['data_inscricao'] = $this->randomDateTimeInRange()->format('Y-m-d H:i:s');
 
             $batch[] = $item;
 
@@ -183035,5 +183037,20 @@ class InscricoesSeeder extends Seeder
         if (!empty($batch)) {
             DB::table('inscricoes')->insert($batch);
         }
+    }
+
+    function randomDateTimeInRange(): DateTime {
+        $inicio = new DateTime('2026-06-29 00:00:00');
+        $fim    = new DateTime('2026-09-18 23:59:59');
+
+        $min = $inicio->getTimestamp();
+        $max = $fim->getTimestamp();
+
+        $randomTimestamp = mt_rand($min, $max);
+        
+        $randomDate = new DateTime();
+        $randomDate->setTimestamp($randomTimestamp);
+        
+        return $randomDate;
     }
 }

@@ -115,7 +115,9 @@ class Inscricao extends Component
 
                     // RECUPERA DADOS DE INTERESSE
                     $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id 
+                        ? $inscricaoRetomada->unidade_interesse_id 
+                        : null;
                     $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                     $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -184,9 +186,8 @@ class Inscricao extends Component
                 $this->curso = $inscricaoRetomada->curso_id;
                 $this->turno = $inscricaoRetomada->turno_id;
 
-                // RECUPERA DADOS DE INTERESSE
                 $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id ? $inscricaoRetomada->unidade_interesse_id : null;
                 $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                 $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -237,13 +238,11 @@ class Inscricao extends Component
     {
         $regras = [];
         if ($etapa === 1) {
-            if ($this->temVagasDisponiveis && $this->estado && $this->data_nascimento) {
+            if ($this->temVagasDisponiveis && $this->estado && ($this->data_nascimento < date('Y-m-d'))) {
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
                 $regras['curso'] = 'required';
             } elseif ($this->deseja_informar && !$this->temVagasDisponiveis) {
-                // Se não tem vaga mas ele deseja informar, força ele a escolher.
-                $regras['unidade_interesse'] = 'required';
                 $regras['curso_interesse'] = 'required';
                 $regras['turno_interesse'] = 'required';
             }
@@ -299,7 +298,6 @@ class Inscricao extends Component
         $this->validate($regrasFinais, [
             'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos.',
             'respostas.*.required' => 'Este campo é obrigatório.',
-            'unidade_interesse.required' => 'Obrigatório caso deseje informar.',
             'curso_interesse.required' => 'Obrigatório caso deseje informar.',
             'turno_interesse.required' => 'Obrigatório caso deseje informar.'
         ]);
@@ -318,7 +316,7 @@ class Inscricao extends Component
         }
 
         if ($this->etapaAtual === 1) {
-            if (!$this->temVagasDisponiveis && $this->data_nascimento && $this->estado) {
+            if (!$this->temVagasDisponiveis && ($this->data_nascimento < date('Y-m-d')) && $this->estado) {
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
                 
@@ -326,6 +324,7 @@ class Inscricao extends Component
                 if ($inscricaoDB) {
                     $inscricaoDB->update(['etapa_atual' => 100]);
                     $inscricaoDB->update(['data_inscricao' => date('Y-m-d H:i:s')]);
+                    
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -421,7 +420,7 @@ class Inscricao extends Component
             'slug' => Str::slug($this->nome),
             'data_inscricao' => date('Y-m-d H:i:s'),
             'deseja_informar' => $this->deseja_informar ? 1 : 0,
-            'unidade_interesse_id' => $this->unidade_interesse,
+            'unidade_interesse_id' => $this->unidade_interesse ? $this->unidade_interesse : null,
             'curso_interesse_id' => $this->curso_interesse,
             'turno_interesse_id' => $this->turno_interesse,
         ];
@@ -492,7 +491,14 @@ class Inscricao extends Component
         }
     }
 
-    public function updatedDataNascimento() { $this->atualizarDisponibilidade(); }
+    public function updatedDataNascimento() { 
+        if($this->data_nascimento < date('Y-m-d')){
+            $this->atualizarDisponibilidade(); 
+        } else {
+            $this->dispatch('erro', msg: 'A data de nascimento precisa ser menor do que a data atual.');
+        }
+        
+    }
 
     public function atualizarDisponibilidade()
     {
@@ -799,11 +805,9 @@ class Inscricao extends Component
 
     public function render()
     {
-        // VARIÁVEIS DO NOVO BLOCO (ENVIADAS PARA A VIEW)
         $unidadesInteresseDb = collect();
         if ($this->estado) {
-            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::where('estado', $this->estado)
-                                    ->whereIn('status', ['Ativa', '1', true])
+            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])
                                     ->get();
         }
         
