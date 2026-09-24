@@ -38,7 +38,7 @@ Route::get('/login', \App\Modules\Auth\UI\Livewire\Login::class)
     ->name('login')
     ->middleware(['guest:web,student,company', 'throttle:5,1']); // Ex: Máx 5 tentativas por minuto
 
-Route::prefix('portal')->name('portal.')->middleware('guest:student,company')->group(function () {
+Route::middleware('guest:student,company,web')->group(function () {
     Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
 });
 
