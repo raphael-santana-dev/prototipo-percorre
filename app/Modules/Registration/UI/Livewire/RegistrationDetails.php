@@ -28,7 +28,8 @@ class RegistrationDetails extends Component
     public function getDataInscricao()
     {
         $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);
-        $dataRaw = $dinamicos['Submission started'] ?? $dinamicos['submission started'] ?? $dinamicos['Submission Started'] ?? $this->inscricao->created_at;
+        
+        $dataRaw = $dinamicos['Submission started'] ?? $dinamicos['submission started'] ?? $dinamicos['Submission Started'] ?? $this->inscricao->data_inscricao ?? $this->inscricao->created_at;
         
         try {
             return \Carbon\Carbon::parse($dataRaw);

@@ -239,7 +239,7 @@
                                         @if($deseja_informar)
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 animate-fade-in-down">
                                                 <div>
-                                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Unidade de Interesse <span class="text-red-500">*</span></label>
+                                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Unidade de Interesse</label>
                                                     <select wire:model="unidade_interesse" class="{{ $inputClassBase }} @error('unidade_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
                                                         <option value="">Selecione a Unidade...</option>
                                                         @foreach($unidadesInteresseDb ?? [] as $u)
