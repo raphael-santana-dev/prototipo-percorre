@@ -29,7 +29,7 @@ class ImportacaoManager extends Component
     public $importacaoReprocessarId = null;
 
     public $arquivo;
-    public $tipoImportacao = 'inscricoes'; // Fixo para Inscrições
+    public $tipoImportacao = 'inscricoes';
     public $cicloSelecionadoId = null;
     public $ciclosDisponiveis = [];
 
@@ -80,9 +80,9 @@ class ImportacaoManager extends Component
         'posicao_ranking' => 'Posição no Ranking',
         'etapa_atual' => 'Progresso (Etapa Atual)',
         'regiao' => 'Região (Ex.: Norte, Sul, Leste, Oeste)',
-        'created_at' => 'Data da Criaçãpo',
+        'created_at' => 'Data da Criação (created_at)',
         'updated_at' => 'Última Atualização (updated_at)',
-        'data_inscricao' => 'Data da Inscrição',
+        'data_inscricao' => 'Data da Inscrição'
     ];
 
     public function mount()
@@ -125,12 +125,72 @@ class ImportacaoManager extends Component
         
         $callback = function() use ($cabecalho, $exemplo) {
             $file = fopen('php://output', 'w');
-            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // Força UTF-8 BOM para Excel
+            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); 
             fputcsv($file, $cabecalho, ';');
             fputcsv($file, $exemplo, ';');
             fclose($file);
         };
         return response()->streamDownload($callback, 'modelo_importacao_inscricoes.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    // ==============================================================================
+    // MOTOR INTELIGENTE DE REPARAÇÃO E LEITURA DE CSV
+    // ==============================================================================
+    private function detectarDelimitadorCsv($caminhoAbsoluto)
+    {
+        $handle = fopen($caminhoAbsoluto, 'r');
+        $primeiraLinha = fgets($handle);
+        fclose($handle);
+        
+        $virgulas = substr_count($primeiraLinha, ',');
+        $pontoVirgulas = substr_count($primeiraLinha, ';');
+        
+        return $pontoVirgulas > $virgulas ? ';' : ',';
+    }
+
+    private function repararCsvMalFormatado($caminhoAbsoluto)
+    {
+        $input = fopen($caminhoAbsoluto, 'r');
+        if (!$input) return;
+        
+        $primeiraLinha = fgets($input);
+        
+        $bom = pack('H*','EFBBBF');
+        $temBom = preg_match("/^$bom/", $primeiraLinha);
+        $primeiraLinhaLimpa = $temBom ? preg_replace("/^$bom/", '', $primeiraLinha) : $primeiraLinha;
+        $primeiraLinhaTrim = trim($primeiraLinhaLimpa);
+        
+        $envelopado = str_starts_with($primeiraLinhaTrim, '"') && str_ends_with($primeiraLinhaTrim, '"') && 
+                      !str_contains($primeiraLinhaTrim, '","') && !str_contains($primeiraLinhaTrim, '";"');
+
+        if ($temBom || $envelopado) {
+            $tempPath = $caminhoAbsoluto . '_cleaned.csv';
+            $output = fopen($tempPath, 'w');
+            
+            rewind($input);
+            $isFirstLine = true;
+            
+            while (($linha = fgets($input)) !== false) {
+                if ($isFirstLine && preg_match("/^$bom/", $linha)) {
+                    $linha = preg_replace("/^$bom/", '', $linha);
+                    $isFirstLine = false;
+                }
+                
+                $l = trim($linha);
+                if ($envelopado && str_starts_with($l, '"') && str_ends_with($l, '"')) {
+                    $l = substr($l, 1, -1);
+                    $l = str_replace('""', '"', $l);
+                }
+                if ($l !== '') {
+                    fwrite($output, $l . "\n");
+                }
+            }
+            fclose($input);
+            fclose($output);
+            rename($tempPath, $caminhoAbsoluto);
+        } else {
+            fclose($input);
+        }
     }
 
     public function abrirModalReprocessar($id)
@@ -191,22 +251,22 @@ class ImportacaoManager extends Component
         }
 
         if ($this->refazerMapeamento) {
-            $importacao->update([
-                'mapeamento' => $mapa,
-                'status' => 'mapeamento',
-            ]);
+            $importacao->update(['mapeamento' => $mapa, 'status' => 'mapeamento']);
 
             $caminhoAbsoluto = Storage::disk('local')->path($importacao->arquivo_caminho);
             $formato = $importacao->formato;
             
+            if ($formato === 'csv') {
+                $this->repararCsvMalFormatado($caminhoAbsoluto);
+            }
+
             $cabecalhosLidos = [];
             if (in_array(strtolower($formato), ['csv', 'xlsx', 'xls'])) {
+                $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
+                
                 if (strtolower($formato) === 'csv') {
-                    $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-                    $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
-                    $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
-                } else {
-                    $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
+                    $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
+                    $reader->useDelimiter($delimiter);
                 }
 
                 $headers = $reader->getHeaders() ?? [];
@@ -265,7 +325,6 @@ class ImportacaoManager extends Component
 
     public function processarUpload()
     {
-        // 1. SEGURANÇA MÁXIMA: Validação restrita de formato e tamanho
         $this->validate([
             'arquivo' => 'required|file|mimes:csv,xlsx,xls,txt|max:51200',
             'cicloSelecionadoId' => 'required|exists:ciclos,id'
@@ -281,21 +340,23 @@ class ImportacaoManager extends Component
         }
 
         $extensao = $this->arquivo->getClientOriginalExtension();
-        // Fallback: Laravel às vezes detecta CSV como txt. Forçamos o tratamento visual.
         $formatoFinal = in_array(strtolower($extensao), ['txt', 'csv']) ? 'csv' : strtolower($extensao);
 
         $caminho = $this->arquivo->store('importacoes', 'local'); 
         $caminhoAbsoluto = Storage::disk('local')->path($caminho);
         
+        if ($formatoFinal === 'csv') {
+            $this->repararCsvMalFormatado($caminhoAbsoluto);
+        }
+
         $totalLinhas = 0;
         $cabecalhosLidos = [];
         
+        $reader = SimpleExcelReader::create($caminhoAbsoluto);
+        
         if ($formatoFinal === 'csv') {
-            $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-            $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
-            $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
-        } else {
-            $reader = SimpleExcelReader::create($caminhoAbsoluto);
+            $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
+            $reader->useDelimiter($delimiter);
         }
 
         $headers = $reader->getHeaders() ?? [];
@@ -470,8 +531,8 @@ class ImportacaoManager extends Component
                 ->where('created_at', '>=', $importacao->created_at)
                 ->delete();
 
-            if ($importacao->arquivo_caminho && \Illuminate\Support\Facades\Storage::disk('local')->exists($importacao->arquivo_caminho)) {
-                \Illuminate\Support\Facades\Storage::disk('local')->delete($importacao->arquivo_caminho);
+            if ($importacao->arquivo_caminho && Storage::disk('local')->exists($importacao->arquivo_caminho)) {
+                Storage::disk('local')->delete($importacao->arquivo_caminho);
             }
 
             $this->dispatch('sucesso', msg: 'Importação interrompida e os dados foram revertidos com sucesso.');
@@ -519,8 +580,7 @@ class ImportacaoManager extends Component
                 try {
                     $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
                     if (strtolower($extensao) === 'csv') {
-                        $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-                        $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+                        $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
                         $reader->useDelimiter($delimiter);
                     }
                     
@@ -596,8 +656,7 @@ class ImportacaoManager extends Component
         
         $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
         if (strtolower($extensao) === 'csv') {
-            $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-            $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+            $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
             $reader->useDelimiter($delimiter);
         }
 
@@ -673,7 +732,7 @@ class ImportacaoManager extends Component
 
         dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($exportacao))->afterResponse();
 
-        $this->dispatch('sucesso', msg: 'Exportação da base completa de Inscrições solicitada! O sistema está processando em background.');
+        $this->dispatch('sucesso', msg: 'Exportação solicitada! O sistema está processando em background.');
     }
 
     public function baixarExportacao($id)

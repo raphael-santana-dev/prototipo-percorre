@@ -20,7 +20,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, FuzzyMatchingTrait;
 
-    public $timeout = 7200; // Alargado para ficheiros gigantes
+    public $timeout = 7200; 
     protected $importacao;
 
     protected $relatorioAutoCadastro = [
@@ -37,9 +37,65 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $this->importacao = $importacao;
     }
 
+    private function detectarDelimitadorCsv($caminhoAbsoluto)
+    {
+        $handle = fopen($caminhoAbsoluto, 'r');
+        $primeiraLinha = fgets($handle);
+        fclose($handle);
+        
+        $virgulas = substr_count($primeiraLinha, ',');
+        $pontoVirgulas = substr_count($primeiraLinha, ';');
+        
+        return $pontoVirgulas > $virgulas ? ';' : ',';
+    }
+
+    private function repararCsvMalFormatado($caminhoAbsoluto)
+    {
+        $input = fopen($caminhoAbsoluto, 'r');
+        if (!$input) return;
+        
+        $primeiraLinha = fgets($input);
+        
+        $bom = pack('H*','EFBBBF');
+        $temBom = preg_match("/^$bom/", $primeiraLinha);
+        $primeiraLinhaLimpa = $temBom ? preg_replace("/^$bom/", '', $primeiraLinha) : $primeiraLinha;
+        $primeiraLinhaTrim = trim($primeiraLinhaLimpa);
+        
+        $envelopado = str_starts_with($primeiraLinhaTrim, '"') && str_ends_with($primeiraLinhaTrim, '"') && 
+                      !str_contains($primeiraLinhaTrim, '","') && !str_contains($primeiraLinhaTrim, '";"');
+
+        if ($temBom || $envelopado) {
+            $tempPath = $caminhoAbsoluto . '_cleaned.csv';
+            $output = fopen($tempPath, 'w');
+            
+            rewind($input);
+            $isFirstLine = true;
+            
+            while (($linha = fgets($input)) !== false) {
+                if ($isFirstLine && preg_match("/^$bom/", $linha)) {
+                    $linha = preg_replace("/^$bom/", '', $linha);
+                    $isFirstLine = false;
+                }
+                
+                $l = trim($linha);
+                if ($envelopado && str_starts_with($l, '"') && str_ends_with($l, '"')) {
+                    $l = substr($l, 1, -1);
+                    $l = str_replace('""', '"', $l);
+                }
+                if ($l !== '') {
+                    fwrite($output, $l . "\n");
+                }
+            }
+            fclose($input);
+            fclose($output);
+            rename($tempPath, $caminhoAbsoluto);
+        } else {
+            fclose($input);
+        }
+    }
+
     public function handle(): void
     {
-        // 1. OTIMIZAÇÃO: Desativar Query Log previne fugas de memória (OOM) no Eloquent
         DB::disableQueryLog();
 
         $linhaAtual = 0;
@@ -51,24 +107,25 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $caminhoAbsoluto = Storage::disk('local')->path($this->importacao->arquivo_caminho);
             $formato = $this->importacao->formato;
             
-            // 2. SEGURANÇA: Restringe o Job a processar estritamente CSV e XLSX
             if (!in_array($formato, ['csv', 'xlsx', 'xls'])) {
                 throw new \Exception("Apenas arquivos CSV ou Excel são permitidos.");
+            }
+            
+            if ($formato === 'csv') {
+                $this->repararCsvMalFormatado($caminhoAbsoluto);
             }
 
             $reader = SimpleExcelReader::create($caminhoAbsoluto);
             if ($formato === 'csv') {
-                $cabecalhoRaw = file_get_contents($caminhoAbsoluto, false, null, 0, 250);
-                $reader->useDelimiter(strpos($cabecalhoRaw, ';') !== false ? ';' : ',');
+                $delimiter = $this->detectarDelimitadorCsv($caminhoAbsoluto);
+                $reader->useDelimiter($delimiter);
             }
 
             $mapeamento = $this->importacao->mapeamento ?? [];
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
-            // 3. CHUNKING ESTRUTURAL: Processa em blocos de 500 para libertar memória
             $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar) {
                 
-                // Se o usuário clicar em "Cancelar", o job reconhece na hora e aborta
                 if ($this->importacao->fresh()->status !== 'processando') {
                     return false; 
                 }
@@ -87,7 +144,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                             $dadosLimpos[$cleanKey] = $value;
                         }
 
-                        $this->processarInscricao($linhaOriginal, $mapeamento);
+                        $this->processarInscricao($dadosLimpos, $mapeamento);
 
                     } catch (\Illuminate\Database\QueryException $e) {
                         $isDuplicate = $e->getCode() === '23505'; 
@@ -115,25 +172,23 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         ];
                     }
                     
-                    unset($linhaOriginal, $dadosLimpos); // Liberta a variável
+                    unset($linhaOriginal, $dadosLimpos); 
                 }
 
                 if ($errosCriticos >= 1000) {
                     throw new \Exception("Excesso de falhas (1000+). Planilha fora do padrão. Operação abortada.");
                 }
 
-                // Atualiza o progresso no final de cada Chunk
                 $this->importacao->update([
                     'linhas_processadas' => $linhaAtual,
                     'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
                 ]);
 
-                // 4. GARBAGE COLLECTION: Força o PHP a descarregar memória inútil
                 if (function_exists('gc_collect_cycles')) gc_collect_cycles();
             });
 
             if ($this->importacao->fresh()->status !== 'processando') {
-                return; // Morre em caso de cancelamento
+                return; 
             }
 
             if (!empty($this->relatorioAutoCadastro['novos']) || !empty($this->relatorioAutoCadastro['50_porcento'])) {
@@ -144,7 +199,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 foreach ($this->relatorioAutoCadastro['novos'] ?? [] as $tipo => $itens) {
                     if (!empty($itens)) $msgRelatorio .= "- $tipo Criados: " . implode(' | ', array_unique($itens)) . " \n";
                 }
-                array_unshift($erros, ['linha' => 'INFO', 'tipo' => 'Log de IA', 'mensagem' => $msgRelatorio, 'amigavel' => $msgRelatorio]);
+                array_unshift($erros, ['linha' => 'INFO', 'tipo' => 'Log do Sistema', 'mensagem' => $msgRelatorio, 'amigavel' => $msgRelatorio]);
             }
 
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
@@ -155,7 +210,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
-            // Registo no Log de Auditoria
             if ($linhaAtual > 0) {
                 $usuario = $this->importacao->user; 
                 DB::table('auditoria_logs')->insert([
@@ -179,7 +233,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             array_unshift($erros, [
                 'linha' => 'Falha Crítica', 
                 'tipo' => 'Crash',
-                'mensagem' => $e->getMessage(),
+                'mensagem' => $e->getMessage() . ' no arquivo ' . basename($e->getFile()) . ':' . $e->getLine(),
                 'amigavel' => 'A importação caiu: ' . $e->getMessage()
             ]);
             $this->importacao->update([
@@ -238,17 +292,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         return null;
     }
 
-    private function processarInscricao(array $linhaOriginal, array $mapeamento)
+    private function processarInscricao(array $linhaFormatada, array $mapeamento)
     {
         $dadosFixos = [];
         $dadosDinamicos = [];
         $metadados = []; 
-
-        $linhaFormatada = [];
-        foreach ($linhaOriginal as $k => $v) {
-            $cleanKey = mb_convert_encoding(trim($k), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
-            $linhaFormatada[$cleanKey] = $v;
-        }
 
         $autoCadastroAtivo = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -258,7 +306,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $destino = $config['destino'] ?? 'ignorar';
             if ($destino === 'ignorar') continue;
 
-            $valorPlanilha = trim((string) ($linhaFormatada[$colunaPlanilha] ?? ''));
+            $colunaLimpa = mb_convert_encoding(strtolower(trim($colunaPlanilha)), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+            $valorPlanilha = trim((string) ($linhaFormatada[$colunaLimpa] ?? ''));
+            
             if ($valorPlanilha === '') continue;
 
             $tipoMapeado = $config['tipo'] ?? 'texto';
@@ -266,9 +316,16 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             if (in_array($tipoMapeado, ['data', 'data_hora']) || str_contains($destino, 'data') || in_array($destino, ['created_at', 'updated_at'])) {
                 $precisaDeHora = in_array($destino, ['created_at', 'updated_at']) || $tipoMapeado === 'data_hora';
                 try {
-                    $parsed = \Carbon\Carbon::parse(str_replace('/', '-', $valorPlanilha));
+                    $valorLimpo = preg_replace('/\s*\([^)]*\)/', '', $valorPlanilha); 
+                    if (str_contains($valorLimpo, 'GMT')) {
+                        $valorLimpo = trim(substr($valorLimpo, 0, strpos($valorLimpo, 'GMT'))); 
+                    }
+                    
+                    $parsed = \Carbon\Carbon::parse(str_replace('/', '-', trim($valorLimpo)));
                     $valorPlanilha = $precisaDeHora ? $parsed->format('Y-m-d H:i:s') : $parsed->format('Y-m-d');
-                } catch (\Exception $e) {}
+                } catch (\Exception $e) {
+                    continue; 
+                }
             }
 
             if ($tipoMapeado === 'monetario' || str_contains($destino, 'renda')) {
@@ -356,7 +413,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
-        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? $linhaOriginal['ciclo_id'] ?? null;
+        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
         $dadosFixos['criado_por'] = $this->importacao->user_id;
 
@@ -373,7 +430,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 
                 if ($inscricaoExistente) {
                     if (!$mesclarDuplicatas) {
-                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este Ciclo.", 23505);
+                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo.", 23505);
                     }
 
                     $dadosAtuais = $inscricaoExistente->toArray();
