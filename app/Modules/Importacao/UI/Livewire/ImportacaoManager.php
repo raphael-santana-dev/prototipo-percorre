@@ -29,7 +29,7 @@ class ImportacaoManager extends Component
     public $importacaoReprocessarId = null;
 
     public $arquivo;
-    public $tipoImportacao = '';
+    public $tipoImportacao = 'inscricoes'; // Fixo para Inscrições
     public $cicloSelecionadoId = null;
     public $ciclosDisponiveis = [];
 
@@ -44,14 +44,12 @@ class ImportacaoManager extends Component
     
     public $importacaoMonitoramento = null;
     
-    public $filtro_tipo = '';
     public $filtro_status = '';
     public $filtro_usuario = '';
     public $filtro_data_inicio = '';
     public $filtro_data_fim = '';
 
     public $camposDinamicosDisponiveis = [];
-
     public array $previewCabecalhos = [];
     public array $previewDados = [];
 
@@ -82,8 +80,9 @@ class ImportacaoManager extends Component
         'posicao_ranking' => 'Posição no Ranking',
         'etapa_atual' => 'Progresso (Etapa Atual)',
         'regiao' => 'Região (Ex.: Norte, Sul, Leste, Oeste)',
-        'created_at' => 'Data da Inscrição (created_at)',
+        'created_at' => 'Data da Criaçãpo',
         'updated_at' => 'Última Atualização (updated_at)',
+        'data_inscricao' => 'Data da Inscrição',
     ];
 
     public function mount()
@@ -97,14 +96,14 @@ class ImportacaoManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtro_tipo', 'filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim'])) {
+        if (in_array($nomePropriedade, ['filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim'])) {
             $this->resetPage();
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtro_tipo', 'filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim']);
+        $this->reset(['filtro_status', 'filtro_usuario', 'filtro_data_inicio', 'filtro_data_fim']);
         $this->resetPage();
     }
 
@@ -119,61 +118,19 @@ class ImportacaoManager extends Component
         ];
     }
 
-    public function baixarTemplate($tipo)
+    public function baixarTemplate()
     {
-        if ($tipo === 'inscricoes') {
-            $cabecalho = ['Nome', 'E-mail', 'CPF', 'Celular', 'Data de Nascimento', 'Estado', 'Unidade', 'Curso', 'Turno'];
-            $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
-            return $this->gerarCsv('modelo_importacao_inscricoes.csv', [$cabecalho, $exemplo]);
-        }
-        if ($tipo === 'usuarios') {
-            $cabecalho = ['Nome Completo', 'E-mail', 'CPF', 'Senha', 'Grupo de Acesso', 'Permissões Extras'];
-            $exemplo = ['João Silva', 'joao@email.com', '123.456.789-00', 'senha123', 'estudante', 'ver_aulas, editar_perfil'];
-            return $this->gerarCsv('modelo_importacao_usuarios.csv', [$cabecalho, $exemplo]);
-        }
-        if ($tipo === 'campos') {
-            $cabecalho = ['Etapa', 'Ordem', 'Nome do Campo', 'ID no Banco', 'Tipo', 'Subtipo', 'Largura', 'Obrigatório', 'Sempre Visível?', 'Regras de Exibição', 'Opções'];
-            $exemplo1 = ['1', '1', 'Unidade de Interesse', 'unidade_id', 'system', 'unidade', '12', 'Sim', 'Sim', '', ''];
-            $exemplo2 = ['1', '2', 'Como nos conheceu?', 'como_conheceu', 'select', '', '12', 'Não', 'Sim', '', 'Instagram, Facebook, Amigos'];
-            $exemplo3 = ['1', '3', 'Qual rede social?', 'qual_rede', 'text', 'text', '12', 'Sim', 'Não', 'como_conheceu=Instagram', ''];
-            return $this->gerarCsv('modelo_importacao_campos.csv', [$cabecalho, $exemplo1, $exemplo2, $exemplo3]);
-        }
-        if ($tipo === 'unidades') {
-            $cabecalho = ['Nome da Unidade', 'Estado', 'Cidade', 'Status'];
-            $exemplo = ['Unidade Paulista', 'SP', 'São Paulo', 'Ativa'];
-            return $this->gerarCsv('modelo_importacao_unidades.csv', [$cabecalho, $exemplo]);
-        }
-        if ($tipo === 'cursos') {
-            $cabecalho = ['Nome do Curso', 'Status', 'Idade Mínima', 'Idade Máxima', 'Permite Estado Diferente?'];
-            $exemplo = ['Design Gráfico', 'Ativo', '16', '99', 'Não'];
-            return $this->gerarCsv('modelo_importacao_cursos.csv', [$cabecalho, $exemplo]);
-        }
-    }
-
-    private function gerarCsv($nomeArquivo, $dados)
-    {
-        $callback = function() use ($dados) {
+        $cabecalho = ['Nome', 'E-mail', 'CPF', 'Celular', 'Data de Nascimento', 'Estado', 'Unidade', 'Curso', 'Turno'];
+        $exemplo = ['Maria Oliveira', 'maria@email.com', '123.456.789-00', '11999999999', '15/05/2000', 'SP', 'Unidade Paulista', 'Design Gráfico', 'Noturno'];
+        
+        $callback = function() use ($cabecalho, $exemplo) {
             $file = fopen('php://output', 'w');
-
-            foreach ($dados as $linha) {
-                $linhaSanitizada = array_map(function ($valor) {
-                    $valorStr = (string) $valor;
-                    if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
-                        return "'" . $valorStr;
-                    }
-                    return $valorStr;
-                }, $linha);
-
-                fputcsv($file, $linhaSanitizada, ';');
-            }
-
-            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
-            foreach ($dados as $linha) {
-                fputcsv($file, $linha, ';');
-            }
+            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // Força UTF-8 BOM para Excel
+            fputcsv($file, $cabecalho, ';');
+            fputcsv($file, $exemplo, ';');
             fclose($file);
         };
-        return response()->streamDownload($callback, $nomeArquivo, ['Content-Type' => 'text/csv']);
+        return response()->streamDownload($callback, 'modelo_importacao_inscricoes.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function abrirModalReprocessar($id)
@@ -226,7 +183,6 @@ class ImportacaoManager extends Component
                 $this->dispatch('erro', msg: 'Não encontramos linhas específicas com erro neste log para reprocessar de forma isolada.');
                 return;
             }
-            
             $mapa['linhas_reprocessar'] = array_values(array_unique($linhasComErro));
         } else {
             if (isset($mapa['linhas_reprocessar'])) {
@@ -257,8 +213,6 @@ class ImportacaoManager extends Component
                 foreach ($headers as $h) {
                     $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
                 }
-            } else {
-                $cabecalhosLidos = ['Dados Brutos'];
             }
             
             $this->cabecalhos = $cabecalhosLidos;
@@ -267,9 +221,7 @@ class ImportacaoManager extends Component
             $this->permitirAutoCadastro = filter_var($mapa['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $this->mesclarDuplicadas = filter_var($mapa['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-            if ($importacao->tipo === 'inscricoes') {
-                $this->carregarCamposDinamicos();
-            }
+            $this->carregarCamposDinamicos();
 
             $this->mapeamento = [];
             foreach ($this->cabecalhos as $index => $coluna) {
@@ -281,11 +233,7 @@ class ImportacaoManager extends Component
                     $tipo = $mapa[$coluna]['tipo'] ?? 'texto';
                 }
                 
-                $this->mapeamento[$index] = [
-                    'coluna_nome' => $coluna, 
-                    'destino' => $destino, 
-                    'tipo' => $tipo
-                ];
+                $this->mapeamento[$index] = ['coluna_nome' => $coluna, 'destino' => $destino, 'tipo' => $tipo];
             }
 
             $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
@@ -311,79 +259,72 @@ class ImportacaoManager extends Component
 
     public function abrirModalUpload()
     {
-        $this->reset(['arquivo', 'tipoImportacao', 'cicloSelecionadoId', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);
+        $this->reset(['arquivo', 'cicloSelecionadoId', 'camposDinamicosDisponiveis', 'permitirAutoCadastro', 'mesclarDuplicadas']);
         $this->modalUploadAberto = true;
     }
 
     public function processarUpload()
     {
-        if (!empty($this->tipoImportacao) || $this->tipoImportacao !== '') {
-            $regras = ['arquivo' => 'required|mimes:csv,xlsx,xls,json,xml|max:51200']; 
-            if ($this->tipoImportacao === 'campos' || $this->tipoImportacao === 'inscricoes') {
-                $regras['cicloSelecionadoId'] = 'required';
-            }
-            $this->validate($regras, ['cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo para este tipo de importação.']);
+        // 1. SEGURANÇA MÁXIMA: Validação restrita de formato e tamanho
+        $this->validate([
+            'arquivo' => 'required|file|mimes:csv,xlsx,xls,txt|max:51200',
+            'cicloSelecionadoId' => 'required|exists:ciclos,id'
+        ], [
+            'arquivo.mimes' => 'Apenas arquivos CSV ou Excel (.xlsx, .xls) são permitidos por segurança.',
+            'cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo de inscrição.'
+        ]);
 
-            $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
-            if ($ativos >= 5) {
-                $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
-                return;
-            }
-
-            $extensao = $this->arquivo->getClientOriginalExtension();
-            $caminho = $this->arquivo->store('importacoes', 'local'); 
-            $caminhoAbsoluto = Storage::disk('local')->path($caminho);
-            
-            $totalLinhas = 0;
-            $cabecalhosLidos = [];
-            
-            if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-                if (strtolower($extensao) === 'csv') {
-                    $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
-                    $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
-                    $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
-                } else {
-                    $reader = SimpleExcelReader::create($caminhoAbsoluto);
-                }
-
-                $headers = $reader->getHeaders() ?? [];
-                foreach ($headers as $h) {
-                    $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
-                }
-                $totalLinhas = $reader->getRows()->count();
-            } else {
-                $cabecalhosLidos = ['Dados Brutos'];
-                $totalLinhas = 1; 
-            }
-
-            $importacao = Importacao::create([
-                'user_id' => auth()->id(),
-                'tipo' => $this->tipoImportacao,
-                'operacao' => 'importacao',
-                'formato' => strtolower($extensao),
-                'arquivo_nome' => $this->arquivo->getClientOriginalName(),
-                'arquivo_caminho' => $caminho,
-                'total_linhas' => $totalLinhas,
-                'status' => 'mapeamento',
-                'mapeamento' => ['ciclo_id' => $this->cicloSelecionadoId]
-            ]);
-
-            $this->importacaoAtualId = $importacao->id;
-            $this->cabecalhos = $cabecalhosLidos;
-            
-            $this->reset('arquivo');
-            $this->modalUploadAberto = false;
-
-            if ($this->tipoImportacao === 'inscricoes' && in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
-                $this->carregarCamposDinamicos();
-                $this->inicializarMapeamentoManualmente();
-                $this->modalMapeamentoAberto = true;
-            } else {
-                $this->iniciarImportacao(); 
-            }
-        } else {
-            $this->dispatch('erro', msg: 'Necessário selecionar um tipo de importação');
+        $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
+        if ($ativos >= 5) {
+            $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
+            return;
         }
+
+        $extensao = $this->arquivo->getClientOriginalExtension();
+        // Fallback: Laravel às vezes detecta CSV como txt. Forçamos o tratamento visual.
+        $formatoFinal = in_array(strtolower($extensao), ['txt', 'csv']) ? 'csv' : strtolower($extensao);
+
+        $caminho = $this->arquivo->store('importacoes', 'local'); 
+        $caminhoAbsoluto = Storage::disk('local')->path($caminho);
+        
+        $totalLinhas = 0;
+        $cabecalhosLidos = [];
+        
+        if ($formatoFinal === 'csv') {
+            $primeiraLinha = fgets(fopen($caminhoAbsoluto, 'r'));
+            $delimiter = substr_count($primeiraLinha, ';') > substr_count($primeiraLinha, ',') ? ';' : ',';
+            $reader = SimpleExcelReader::create($caminhoAbsoluto)->useDelimiter($delimiter);
+        } else {
+            $reader = SimpleExcelReader::create($caminhoAbsoluto);
+        }
+
+        $headers = $reader->getHeaders() ?? [];
+        foreach ($headers as $h) {
+            $cabecalhosLidos[] = mb_convert_encoding(trim($h), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');
+        }
+        $totalLinhas = $reader->getRows()->count();
+
+        $importacao = Importacao::create([
+            'user_id' => auth()->id(),
+            'tipo' => 'inscricoes',
+            'operacao' => 'importacao',
+            'formato' => $formatoFinal,
+            'arquivo_nome' => $this->arquivo->getClientOriginalName(),
+            'arquivo_caminho' => $caminho,
+            'total_linhas' => $totalLinhas,
+            'status' => 'mapeamento',
+            'mapeamento' => ['ciclo_id' => $this->cicloSelecionadoId]
+        ]);
+
+        $this->importacaoAtualId = $importacao->id;
+        $this->cabecalhos = $cabecalhosLidos;
+        
+        $this->reset('arquivo');
+        $this->modalUploadAberto = false;
+
+        $this->carregarCamposDinamicos();
+        $this->inicializarMapeamentoManualmente();
+        $this->modalMapeamentoAberto = true;
     }
 
     private function inicializarMapeamentoManualmente()
@@ -417,10 +358,10 @@ class ImportacaoManager extends Component
 
             $colunaLower = strtolower($colunaPlanilha);
             
-            if (str_contains($colunaLower, 'submission started') || str_contains($colunaLower, 'created') || str_contains($colunaLower, 'criado em') || str_contains($colunaLower, 'data de criação')) {
-                $melhorDestino = 'created_at';
+            if (str_contains($colunaLower, 'submission started') || str_contains($colunaLower, 'created') || str_contains($colunaLower, 'criado em')) {
+                $melhorDestino = 'data_inscricao';
                 $tipoSugerido = 'data';
-            } elseif (str_contains($colunaLower, 'last updated') || str_contains($colunaLower, 'updated') || str_contains($colunaLower, 'atualizado em') || str_contains($colunaLower, 'modificado')) {
+            } elseif (str_contains($colunaLower, 'last updated') || str_contains($colunaLower, 'updated') || str_contains($colunaLower, 'atualizado em')) {
                 $melhorDestino = 'updated_at';
                 $tipoSugerido = 'data';
             } elseif (str_contains($colunaLower, 'data') || str_contains($colunaLower, 'nascimento')) {
@@ -451,19 +392,14 @@ class ImportacaoManager extends Component
             $mapaFinal['linhas_reprocessar'] = $importacao->mapeamento['linhas_reprocessar'];
         }
 
-        if (is_array($this->cabecalhos) && is_array($this->mapeamento)) {
-            foreach($this->cabecalhos as $index => $colunaNome) {
-                 if (isset($this->mapeamento[$index])) {
-                     $destino = $this->mapeamento[$index]['destino'] ?? 'ignorar';
-                     $tipo = $this->mapeamento[$index]['tipo'] ?? 'texto';
+        foreach($this->cabecalhos as $index => $colunaNome) {
+            if (isset($this->mapeamento[$index])) {
+                $destino = $this->mapeamento[$index]['destino'] ?? 'ignorar';
+                $tipo = $this->mapeamento[$index]['tipo'] ?? 'texto';
 
-                     if ($destino !== 'ignorar') {
-                         $mapaFinal[$colunaNome] = [
-                              'destino' => $destino,
-                              'tipo' => $tipo
-                         ];
-                     }
-                 }
+                if ($destino !== 'ignorar') {
+                    $mapaFinal[$colunaNome] = ['destino' => $destino, 'tipo' => $tipo];
+                }
             }
         }
         
@@ -530,15 +466,9 @@ class ImportacaoManager extends Component
         ]);
 
         if ($apagarDados) {
-            if ($importacao->tipo === 'inscricoes') {
-                \App\Models\Inscricao::where('criado_por', $importacao->user_id)
-                    ->where('created_at', '>=', $importacao->created_at)
-                    ->delete();
-            } elseif ($importacao->tipo === 'usuarios') {
-                \App\Models\User::where('created_at', '>=', $importacao->created_at)
-                    ->where('id', '!=', auth()->id()) 
-                    ->delete();
-            }
+            \App\Models\Inscricao::where('criado_por', $importacao->user_id)
+                ->where('created_at', '>=', $importacao->created_at)
+                ->delete();
 
             if ($importacao->arquivo_caminho && \Illuminate\Support\Facades\Storage::disk('local')->exists($importacao->arquivo_caminho)) {
                 \Illuminate\Support\Facades\Storage::disk('local')->delete($importacao->arquivo_caminho);
@@ -578,7 +508,6 @@ class ImportacaoManager extends Component
     public function verDetalhes($id)
     {
         $this->importacaoDetalhes = Importacao::findOrFail($id);
-        
         $this->previewCabecalhos = [];
         $this->previewDados = [];
         
@@ -694,22 +623,14 @@ class ImportacaoManager extends Component
         
         $callback = function() use ($linhasExportar) {
             $file = fopen('php://output', 'w');
-            
-            foreach ($dados as $linha) {
+            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); 
+            foreach ($linhasExportar as $linha) {
                 $linhaSanitizada = array_map(function ($valor) {
                     $valorStr = (string) $valor;
-                    if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) {
-                        return "'" . $valorStr;
-                    }
+                    if (preg_match('/^[\=\+\-\@\t\r]/', $valorStr)) { return "'" . $valorStr; }
                     return $valorStr;
                 }, $linha);
-
                 fputcsv($file, $linhaSanitizada, ';');
-            }
-
-            fputs($file, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); 
-            foreach ($linhasExportar as $linha) {
-                fputcsv($file, $linha, ';');
             }
             fclose($file);
         };
@@ -719,7 +640,6 @@ class ImportacaoManager extends Component
     public function baixarArquivoOriginal($id)
     {
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
-
         $importacao = Importacao::findOrFail($id);
 
         if ($importacao->arquivo_caminho && Storage::disk('local')->exists($importacao->arquivo_caminho)) {
@@ -727,10 +647,10 @@ class ImportacaoManager extends Component
             return Storage::disk('local')->download($importacao->arquivo_caminho, $nomeFinal);
         }
 
-        $this->dispatch('erro', msg: 'O arquivo original não foi encontrado ou já foi expurgado do servidor.');
+        $this->dispatch('erro', msg: 'O arquivo original não foi encontrado no servidor.');
     }
 
-    public function solicitarExportacao($tipoDado, $formato = 'xlsx')
+    public function solicitarExportacao()
     {
         abort_if(!feature('importacao.exportar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
@@ -743,17 +663,17 @@ class ImportacaoManager extends Component
 
         $exportacao = Importacao::create([
             'user_id' => auth()->id(),
-            'tipo' => $tipoDado,
+            'tipo' => 'inscricoes',
             'operacao' => 'exportacao',
-            'formato' => $formato,
-            'arquivo_nome' => "Exportacao_" . ucfirst($tipoDado) . ".{$formato}",
+            'formato' => 'xlsx',
+            'arquivo_nome' => "Exportacao_Inscricoes.xlsx",
             'status' => 'na_fila',
             'total_linhas' => 0, 
         ]);
 
         dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($exportacao))->afterResponse();
 
-        $this->dispatch('sucesso', msg: 'Exportação solicitada com sucesso! O sistema está processando em background.');
+        $this->dispatch('sucesso', msg: 'Exportação da base completa de Inscrições solicitada! O sistema está processando em background.');
     }
 
     public function baixarExportacao($id)
@@ -767,9 +687,8 @@ class ImportacaoManager extends Component
 
     public function render()
     {
-        $query = Importacao::with('user');
+        $query = Importacao::with('user')->where('tipo', 'inscricoes');
         
-        if (!empty($this->filtro_tipo)) $query->where('tipo', $this->filtro_tipo);
         if (!empty($this->filtro_status)) $query->where('status', $this->filtro_status);
         if (!empty($this->filtro_usuario)) $query->where('user_id', $this->filtro_usuario);
         
@@ -792,6 +711,6 @@ class ImportacaoManager extends Component
         return view('livewire.importacao.importacao-manager', [
             'registros' => $query->paginate($this->porPagina),
             'usuariosDisponiveis' => $usuariosDisponiveis
-        ])->layout('components.layouts.app', ['title' => 'Gestor de Integrações']);
+        ])->layout('components.layouts.app', ['title' => 'Gestor de Integrações (Inscrições)']);
     }
 }

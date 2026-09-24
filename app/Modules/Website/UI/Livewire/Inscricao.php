@@ -115,7 +115,9 @@ class Inscricao extends Component
 
                     // RECUPERA DADOS DE INTERESSE
                     $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id 
+                        ? $inscricaoRetomada->unidade_interesse_id 
+                        : null;
                     $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                     $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -184,9 +186,8 @@ class Inscricao extends Component
                 $this->curso = $inscricaoRetomada->curso_id;
                 $this->turno = $inscricaoRetomada->turno_id;
 
-                // RECUPERA DADOS DE INTERESSE
                 $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id;
+                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id ? $inscricaoRetomada->unidade_interesse_id : null;
                 $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                 $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -242,8 +243,6 @@ class Inscricao extends Component
                 $regras['turno'] = 'required';
                 $regras['curso'] = 'required';
             } elseif ($this->deseja_informar && !$this->temVagasDisponiveis) {
-                // Se não tem vaga mas ele deseja informar, força ele a escolher.
-                $regras['unidade_interesse'] = 'required';
                 $regras['curso_interesse'] = 'required';
                 $regras['turno_interesse'] = 'required';
             }
@@ -299,7 +298,6 @@ class Inscricao extends Component
         $this->validate($regrasFinais, [
             'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos.',
             'respostas.*.required' => 'Este campo é obrigatório.',
-            'unidade_interesse.required' => 'Obrigatório caso deseje informar.',
             'curso_interesse.required' => 'Obrigatório caso deseje informar.',
             'turno_interesse.required' => 'Obrigatório caso deseje informar.'
         ]);
@@ -421,7 +419,7 @@ class Inscricao extends Component
             'slug' => Str::slug($this->nome),
             'data_inscricao' => date('Y-m-d H:i:s'),
             'deseja_informar' => $this->deseja_informar ? 1 : 0,
-            'unidade_interesse_id' => $this->unidade_interesse,
+            'unidade_interesse_id' => $this->unidade_interesse ? $this->unidade_interesse : null,
             'curso_interesse_id' => $this->curso_interesse,
             'turno_interesse_id' => $this->turno_interesse,
         ];
@@ -799,11 +797,9 @@ class Inscricao extends Component
 
     public function render()
     {
-        // VARIÁVEIS DO NOVO BLOCO (ENVIADAS PARA A VIEW)
         $unidadesInteresseDb = collect();
         if ($this->estado) {
-            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::where('estado', $this->estado)
-                                    ->whereIn('status', ['Ativa', '1', true])
+            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])
                                     ->get();
         }
         
