@@ -524,14 +524,33 @@ class KanbanBoard extends Component
                     ->where('status_inscricao_id', $col->id)
                     ->with(['curso:id,nome', 'unidade:id,nome', 'turno:id,nome']) 
                     ->limit($limite);
-                    
-                if ($this->ordenacao === 'nome_asc') {
-                    $q->orderBy('nome', 'asc');
-                } elseif ($this->ordenacao === 'nome_desc') {
-                    $q->orderBy('nome', 'desc');
-                } else {
-                    $q->orderBy('updated_at', 'desc');
-                }
+                
+                switch($this->ordenacao):
+                    case 'nome_asc':
+                        $q->orderBy('nome', 'asc');
+                        break;
+                    case 'nome_desc':
+                        $q->orderBy('nome', 'desc');
+                        break;
+                    case 'posicao_ranking_geral_asc':
+                        $q->orderBy('posicao_ranking_geral', 'asc');
+                        break;
+                    case 'posicao_ranking_geral_desc':
+                        $q->orderBy('posicao_ranking_geral', 'desc');
+                        break;
+                    case 'pontuacao_asc':
+                        $q->orderBy('pontuacao_total', 'asc');
+                        break;
+                    case 'pontuacao_desc':
+                        $q->orderBy('pontuacao_total', 'desc');
+                        break;
+                    case 'posicao_ranking_unidade_asc':
+                        $q->orderBy('posicao_ranking_unidade', 'asc');
+                        break;
+                    case 'posicao_ranking_unidade_desc':
+                        $q->orderBy('posicao_ranking_unidade', 'desc');
+                        break;
+                    endswitch;
 
                 $inscricoesGrupadas[$col->id] = $q->get();
             } else {

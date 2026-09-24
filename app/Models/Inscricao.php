@@ -57,6 +57,7 @@ class Inscricao extends Model
         'unidade_interesse_id',
         'curso_interesse_id',
         'turno_interesse_id',
+        'data_inscricao',
     ];
 
     protected $casts = [
@@ -64,7 +65,8 @@ class Inscricao extends Model
         'metadados' => 'array', 
         'pontuacao_detalhes' => 'array',
         'data_nascimento' => 'date',
-        'status' => 'boolean'
+        'status' => 'boolean',
+        'data_inscricao' => 'datetime',
     ];
 
     public function student()

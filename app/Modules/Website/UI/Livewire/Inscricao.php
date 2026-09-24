@@ -325,6 +325,7 @@ class Inscricao extends Component
                 $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
                 if ($inscricaoDB) {
                     $inscricaoDB->update(['etapa_atual' => 100]);
+                    $inscricaoDB->update(['data_inscricao' => date('Y-m-d H:i:s')]);
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -418,8 +419,7 @@ class Inscricao extends Component
             'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
             'dados_dinamicos' => $this->respostas, 
             'slug' => Str::slug($this->nome),
-
-            // SALVA OS DADOS DE INTERESSE
+            'data_inscricao' => date('Y-m-d H:i:s'),
             'deseja_informar' => $this->deseja_informar ? 1 : 0,
             'unidade_interesse_id' => $this->unidade_interesse,
             'curso_interesse_id' => $this->curso_interesse,

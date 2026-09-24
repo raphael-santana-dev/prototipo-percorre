@@ -38,6 +38,14 @@
             
             <select wire:model.live="ordenacao" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 focus:border-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 bg-gray-50/50">
                 <option value="recentes">Mais Recentes</option>
+                <option value="pontuacao_asc">Pontuação (Ascendente)</option>
+                <option value="pontuacao_desc">Pontuação (Descendente)</option>
+                <option value="posicao_ranking_geral_asc">Posição Geral (Ascendente)</option>
+                <option value="posicao_ranking_geral_desc">Posição Geral (Descendente)</option>
+                @if($unidadesDb->count() === 1)
+                    <option value="posicao_ranking_unidade_asc">Posição Unidade (Ascendente)</option>
+                    <option value="posicao_ranking_unidade_desc">Posição Unidade (Descendente)</option>
+                @endif
                 <option value="nome_asc">Ordenar: Nome (A-Z)</option>
                 <option value="nome_desc">Ordenar: Nome (Z-A)</option>
             </select>
