@@ -1,6 +1,6 @@
 <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
-@foreach($camposDinamicos->where('etapa', $etapaAtual) as $campo)
+@foreach($camposVigentes as $campo)
     @php
         $isCondicional = !empty($campo->depende_de) && !empty($campo->depende_valor);
         
@@ -205,6 +205,7 @@
                 @endif
 
             @elseif($campo->tipo === 'rating')
+
                 <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name) }">
                     @for($i = 1; $i <= ($config['max_stars'] ?? 5); $i++)
                         <i class="cursor-pointer transition-colors" 
@@ -214,6 +215,29 @@
                            @click="rating = {{ $i }}">
                         </i>
                     @endfor
+                </div>
+
+            @elseif($campo->tipo === 'scale')
+                @php 
+                    $maxScale = $config['escala_maxima'] ?? 10;
+                @endphp
+                <div class="mt-2 w-full overflow-x-auto">
+                    <div class="flex w-full min-w-max border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
+                        @for($i = 0; $i <= $maxScale; $i++)
+                            <label class="flex-1 relative cursor-pointer border-r last:border-r-0 border-gray-200 hover:bg-gray-50 transition-colors">
+                                <!-- O input real fica invisível usando a classe 'sr-only' -->
+                                <input type="radio" wire:model.live="respostas.{{ $campo->name }}" value="{{ $i }}" class="peer sr-only" @if(isset($podeResponder) && !$podeResponder) disabled @endif>
+                                <!-- A div abaixo muda de cor quando o input oculto é selecionado via 'peer-checked' -->
+                                <div class="py-3 px-2 text-center text-gray-600 text-sm font-bold peer-checked:bg-purpura-600 peer-checked:text-white transition-colors {{ isset($podeResponder) && !$podeResponder ? 'opacity-60 cursor-not-allowed' : '' }}">
+                                    {{ $i }}
+                                </div>
+                            </label>
+                        @endfor
+                    </div>
+                    <div class="flex justify-between mt-1.5 text-xs text-gray-500 font-bold px-1">
+                        <span>{{ $config['label_min'] ?? '' }}</span>
+                        <span>{{ $config['label_max'] ?? '' }}</span>
+                    </div>
                 </div>
                 
             @elseif($campo->tipo === 'system')

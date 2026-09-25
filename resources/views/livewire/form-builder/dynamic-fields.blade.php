@@ -153,6 +153,23 @@
                                                     <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
                                                         <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
                                                     </div>
+                                                @elseif($c->tipo === 'scale')
+                                                    @php 
+                                                        $maxScale = $cfg['escala_maxima'] ?? 10;
+                                                    @endphp
+                                                    <div class="mt-2 pointer-events-none">
+                                                        <div class="flex w-full border border-gray-300 rounded-md overflow-hidden bg-white">
+                                                            @for($i = 0; $i <= $maxScale; $i++)
+                                                                <div class="flex-1 py-2 text-center border-r last:border-r-0 border-gray-200 text-gray-600 text-xs font-bold">
+                                                                    {{ $i }}
+                                                                </div>
+                                                            @endfor
+                                                        </div>
+                                                        <div class="flex justify-between mt-1.5 text-[10px] text-gray-500 font-bold px-1">
+                                                            <span>{{ $cfg['label_min'] ?? 'Mínimo' }}</span>
+                                                            <span>{{ $cfg['label_max'] ?? 'Máximo' }}</span>
+                                                        </div>
+                                                    </div>
                                                 
                                                 @elseif($c->tipo === 'radio' || $c->tipo === 'check')
                                                     <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
@@ -323,6 +340,17 @@
                                 </div>
                             </div>
                             @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+
+                            <!-- NOVO BLOCO: Checkbox para fixar no topo -->
+                            @if($etapa == 1 && $contextoTipo === 'ciclo')
+                                <label class="flex items-center gap-3 p-3 mt-3 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer transition hover:bg-indigo-100">
+                                    <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
+                                        <span class="text-[10px] text-indigo-700 mt-0.5">Renderizar este campo ANTES dos dados pessoais (Nome, CPF, etc).</span>
+                                    </div>
+                                </label>
+                            @endif
                         </div>
 
                         <hr class="border-gray-100">
@@ -349,6 +377,10 @@
                                 <div>
                                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Seleção e Escolhas</p>
                                     <div class="grid grid-cols-2 gap-2">
+                                        <button type="button" wire:click="setTipo('scale')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'scale' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                            <i class="ph ph-linear-scale text-xl {{ $tipo == 'scale' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                            <span class="text-xs font-bold">Escala Numérica</span>
+                                        </button>
                                         <button type="button" wire:click="setTipo('select')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'select' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-caret-circle-down text-xl {{ $tipo == 'select' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Dropdown</span>
@@ -577,6 +609,26 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1">Total de Estrelas</label>
                                 <input type="number" wire:model="configuracoes.max_stars" min="3" max="10" placeholder="5" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
+                            </div>
+                        @elseif($tipo === 'scale')
+                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">Escala de 0 a:</label>
+                                    <select wire:model="configuracoes.escala_maxima" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Rótulo Mínimo (0)</label>
+                                        <input type="text" wire:model="configuracoes.label_min" placeholder="Ex: Precisa Melhorar" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Rótulo Máximo</label>
+                                        <input type="text" wire:model="configuracoes.label_max" placeholder="Ex: Excelente" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
+                                    </div>
+                                </div>
                             </div>
                         @endif
 
