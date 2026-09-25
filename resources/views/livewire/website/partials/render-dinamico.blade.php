@@ -1,3 +1,18 @@
+@php
+    if (!function_exists('formatWppText')) {
+        function formatWppText($text) {
+            // Remove injeções maliciosas de código
+            $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
+            // Formata negrito, itálico e riscado
+            $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
+            $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
+            $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
+            // Preserva as quebras de linha
+            return nl2br($text);
+        }
+    }
+@endphp
+
 <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
 @foreach($camposVigentes as $campo)
@@ -82,7 +97,7 @@
         <div class="relative z-10">
             @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media']))
                 <label class="block text-sm font-semibold text-gray-800 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
-                    {{ $campo->label }} 
+                    {!! formatWppText($campo->label) !!} 
                     @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
                 </label>
             @endif
@@ -147,15 +162,15 @@
 
             @elseif($campo->tipo === 'html')
                 <div class="{{ isset($config['bg_image']) ? 'text-white' : 'text-gray-800' }}">
-                    @if($campo->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{{ $campo->label }}</h1>
-                    @elseif($campo->subtipo === 'h2') <h2 class="text-2xl font-bold">{{ $campo->label }}</h2>
-                    @elseif($campo->subtipo === 'h3') <h3 class="text-xl font-bold">{{ $campo->label }}</h3>
-                    @elseif($campo->subtipo === 'p') <p class="text-base leading-relaxed">{{ $campo->label }}</p>
-                    @elseif($campo->subtipo === 'link') <a href="{{ $config['url'] ?? '#' }}" target="_blank" class="text-purpura-600 font-bold hover:underline">{{ $campo->label }}</a>
+                    @if($campo->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{!! formatWppText($campo->label) !!}</h1>
+                    @elseif($campo->subtipo === 'h2') <h2 class="text-2xl font-bold">{!! formatWppText($campo->label) !!}</h2>
+                    @elseif($campo->subtipo === 'h3') <h3 class="text-xl font-bold">{!! formatWppText($campo->label) !!}</h3>
+                    @elseif($campo->subtipo === 'p') <p class="text-base leading-relaxed">{!! formatWppText($campo->label) !!}</p>
+                    @elseif($campo->subtipo === 'link') <a href="{{ $config['url'] ?? '#' }}" target="_blank" class="text-purpura-600 font-bold hover:underline">{!! formatWppText($campo->label) !!}</a>
                     @elseif($campo->subtipo === 'info_card') 
                         <div class="p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
-                            <p class="font-bold mb-1">{{ $campo->label }}</p>
-                            <p class="text-sm">{{ $config['descricao'] ?? '' }}</p>
+                            <p class="font-bold mb-1">{!! formatWppText($campo->label) !!}</p>
+                            <p class="text-sm">{!! formatWppText($config['descricao'] ?? '') !!}</p>
                         </div>
                     @endif
                 </div>
@@ -163,7 +178,7 @@
             @elseif($campo->tipo === 'media')
                 <div class="w-full flex justify-center mt-2 rounded-lg overflow-hidden border border-gray-100">
                     @if($campo->subtipo === 'image')
-                        <img src="{{ $config['url'] ?? '' }}" alt="{{ $campo->label }}" class="max-w-full h-auto bg-white">
+                        <img src="{{ $config['url'] ?? '' }}" alt="{!! formatWppText($campo->label) !!}" class="max-w-full h-auto bg-white">
                     @elseif($campo->subtipo === 'video')
                         <iframe class="w-full aspect-video bg-black" src="{{ $config['url'] ?? '' }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     @endif

@@ -104,184 +104,248 @@
                                     @php 
                                         $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
                                         $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                                        
+                                        // 1. Função de Customização de Texto (Clone para o Preview)
+                                        if (!function_exists('formatWppText')) {
+                                            function formatWppText($text) {
+                                                $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
+                                                $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
+                                                $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
+                                                $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
+                                                return nl2br($text);
+                                            }
+                                        }
+
+                                        // 2. Divisão Lógica para Renderização Correta do Preview na Etapa 1
+                                        $gruposRender = [];
+                                        if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
+                                            $camposTopo = $camposDaEtapa->filter(function($c) {
+                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                                return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
+                                            });
+                                            $camposRodape = $camposDaEtapa->filter(function($c) {
+                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                                return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
+                                            });
+                                            
+                                            // Grupo 1: Dinâmicos do Topo
+                                            if ($camposTopo->count() > 0) {
+                                                $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
+                                            }
+                                            // Grupo 2: O Card Fantasma Padrão
+                                            $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                                            // Grupo 3: Dinâmicos do Fundo
+                                            if ($camposRodape->count() > 0) {
+                                                $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                                            }
+                                        } else {
+                                            $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
+                                        }
                                     @endphp
                                     <h3 class="text-xl font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
                                     <div class="flex-1 h-px ml-4 bg-gray-200"></div>
                                 </div>
                                 
-                                <div class="grid grid-cols-12 gap-x-6 gap-y-4">
-                                    @foreach($camposDaEtapa as $c)
-                                        @php 
-                                            $isActive = $campoId == $c->id; 
-                                            $colSpan = "col-span-12 md:col-span-{$c->largura}";
-                                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                            $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
-                                        @endphp
-
-                                        <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-4 bg-white/95' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/50' }}" wire:click="editar({{ $c->id }})">
-                                            
-                                            <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
-                                                <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
-                                                <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
-                                            </div>
-
-                                            <div class="relative z-10">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social']))
-                                                        <label class="block text-sm font-bold text-gray-800">
-                                                            {{ $c->label }} @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
-                                                        </label>
-                                                    @else
-                                                        <span></span>
-                                                    @endif
-                                                    <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
+                                @foreach($gruposRender as $grupo)
+                                    @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                                        <!-- Representação Visual do Sistema -->
+                                        <div class="w-full my-8 pointer-events-none">
+                                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gray-50/50 opacity-70">
+                                                <h4 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                                    <i class="ph-fill ph-lock-key"></i> Dados Pessoais (Campos Padrões do Sistema)
+                                                </h4>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div class="h-10 bg-gray-200 rounded-md"></div>
+                                                    <div class="h-10 bg-gray-200 rounded-md"></div>
+                                                    <div class="h-10 bg-gray-200 rounded-md col-span-2"></div>
                                                 </div>
-                                                
-                                                @if($c->tipo === 'text')
-                                                    <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
-                                                        @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
-                                                        @elseif(in_array($c->subtipo, ['date', 'datetime-local', 'date_range'])) <i class="ph ph-calendar-blank text-lg"></i>
-                                                        @elseif($c->subtipo == 'time') <i class="ph ph-clock text-lg"></i>
-                                                        @elseif($c->subtipo == 'number') <i class="ph ph-hash text-lg"></i>
-                                                        @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-lg text-green-600"></i>
-                                                        @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-lg text-blue-500"></i>
-                                                        @else <i class="ph ph-text-t text-lg"></i> @endif
-                                                        <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
-                                                    </div>
-                                                
-                                                @elseif($c->tipo === 'select')
-                                                    <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
-                                                        <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
-                                                    </div>
-                                                @elseif($c->tipo === 'scale')
-                                                    @php 
-                                                        $maxScale = $cfg['escala_maxima'] ?? 10;
-                                                    @endphp
-                                                    <div class="mt-2 pointer-events-none">
-                                                        <div class="flex w-full border border-gray-300 rounded-md overflow-hidden bg-white">
-                                                            @for($i = 0; $i <= $maxScale; $i++)
-                                                                <div class="flex-1 py-2 text-center border-r last:border-r-0 border-gray-200 text-gray-600 text-xs font-bold">
-                                                                    {{ $i }}
-                                                                </div>
-                                                            @endfor
-                                                        </div>
-                                                        <div class="flex justify-between mt-1.5 text-[10px] text-gray-500 font-bold px-1">
-                                                            <span>{{ $cfg['label_min'] ?? 'Mínimo' }}</span>
-                                                            <span>{{ $cfg['label_max'] ?? 'Máximo' }}</span>
-                                                        </div>
-                                                    </div>
-                                                
-                                                @elseif($c->tipo === 'radio' || $c->tipo === 'check')
-                                                    <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
-                                                        <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                            <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
-                                                        </div>
-                                                        <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                            <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
-                                                        </div>
-                                                        @if($layoutOpcoes === 'vertical')
-                                                        <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                            <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 3
-                                                        </div>
-                                                        @endif
-                                                    </div>
-                                                    
-                                                @elseif($c->tipo === 'system')
-                                                    <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
-                                                        <span class="flex items-center gap-2"><i class="ph ph-database text-purpura-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
-                                                    </div>
-                                                    
-                                                @elseif($c->tipo === 'matriz')
-                                                    @php
-                                                        $linhasPv = [];
-                                                        $colunasPv = [];
-                                                        if ($isActive) {
-                                                            $linhasPv = array_filter(array_map('trim', explode("\n", $matriz_linhas ?? '')));
-                                                            $colunasPv = array_filter(array_map('trim', explode(',', $matriz_colunas ?? '')));
-                                                        }
-                                                        if (empty($linhasPv)) $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
-                                                        if (empty($colunasPv)) $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
-                                                    @endphp
-                                                    <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-2 shadow-sm">
-                                                        <table class="min-w-full text-xs text-left">
-                                                            <thead class="bg-gray-50 border-b border-gray-200">
-                                                                <tr>
-                                                                    <th class="p-2 w-1/3"></th>
-                                                                    @foreach($colunasPv as $col)
-                                                                        <th class="p-2 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
-                                                                    @endforeach
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody class="divide-y divide-gray-100">
-                                                                @foreach($linhasPv as $linha)
-                                                                    <tr>
-                                                                        <td class="p-2 font-medium text-gray-800">{{ $linha }}</td>
-                                                                        @foreach($colunasPv as $col)
-                                                                            <td class="p-2 text-center border-l border-gray-100">
-                                                                                <div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div>
-                                                                            </td>
-                                                                        @endforeach
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-
-                                                @elseif($c->tipo === 'html')
-                                                    <div class="text-gray-800">
-                                                        @if($c->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{{ $c->label }}</h1>
-                                                        @elseif($c->subtipo === 'h2') <h2 class="text-2xl font-bold">{{ $c->label }}</h2>
-                                                        @elseif($c->subtipo === 'h3') <h3 class="text-xl font-bold">{{ $c->label }}</h3>
-                                                        @elseif($c->subtipo === 'p') <p class="text-sm leading-relaxed">{{ $c->label }}</p>
-                                                        @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline">{{ $c->label }}</span>
-                                                        @elseif($c->subtipo === 'info_card') 
-                                                            <div class="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
-                                                                <p class="font-bold text-sm">{{ $c->label }}</p>
-                                                            </div>
-                                                        @endif
-                                                    </div>
-
-                                                @elseif($c->tipo === 'divider')
-                                                    <hr class="border-t-2 border-dashed border-gray-300 my-2">
-
-                                                @elseif($c->tipo === 'media')
-                                                    <div class="w-full bg-gray-50 rounded-md p-4 text-center border border-gray-200 pointer-events-none text-gray-500 shadow-sm">
-                                                        <i class="ph ph-{{ $c->subtipo == 'video' ? 'video-camera' : 'image' }} text-2xl mb-1"></i>
-                                                        <p class="text-xs font-bold">Mídia Visual ({{ ucfirst($c->subtipo) }})</p>
-                                                    </div>
-
-                                                @elseif($c->tipo === 'social')
-                                                    @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
-                                                    <div class="flex flex-col gap-2 mt-2 pointer-events-none">
-                                                        @foreach($redesPreview as $rede)
-                                                            <div class="flex items-center gap-2">
-                                                                <div class="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-lg ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
-                                                                <div class="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-md"></div>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                    
-                                                @elseif($c->tipo === 'rating')
-                                                    <div class="flex gap-1 text-2xl text-yellow-400 pointer-events-none drop-shadow-sm">
-                                                        <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph ph-star text-gray-300"></i><i class="ph ph-star text-gray-300"></i>
-                                                    </div>
-                                                @endif
-                                                
-                                                <div class="mt-2.5 flex flex-wrap gap-2 items-center">
-                                                    @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media']))
-                                                        <span class="text-[10px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
-                                                    @endif
-                                                    @if($c->depende_de)
-                                                        <span class="inline-flex items-center gap-1 bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-bold">
-                                                            <i class="ph-fill ph-warning-circle"></i> Condicional
-                                                        </span>
-                                                    @endif
-                                                </div>
-
+                                                <p class="text-xs text-gray-400 mt-4 text-center">
+                                                    Os campos fixos de perfil (Nome, E-mail, Nascimento, Localidade, etc) e escolhas académicas serão renderizados automaticamente pelo sistema aqui na visão pública.
+                                                </p>
                                             </div>
                                         </div>
-                                    @endforeach
-                                </div>
+                                    @else
+                                        @if($grupo['titulo'])
+                                            <div class="mb-4 mt-2 border-b border-gray-200 pb-2 w-full">
+                                                <h4 class="text-lg font-bold {{ $textoForm }}">{{ $grupo['titulo'] }}</h4>
+                                            </div>
+                                        @endif
+
+                                        <div class="grid grid-cols-12 gap-x-6 gap-y-4 w-full">
+                                            @foreach($grupo['campos'] as $c)
+                                                @php 
+                                                    $isActive = $campoId == $c->id; 
+                                                    $colSpan = "col-span-12 md:col-span-{$c->largura}";
+                                                    $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                                    $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
+                                                @endphp
+
+                                                <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-4 bg-white/95' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/50' }}" wire:click="editar({{ $c->id }})">
+                                                    
+                                                    <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
+                                                        <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
+                                                        <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
+                                                    </div>
+
+                                                    <div class="relative z-10">
+                                                        <div class="flex justify-between items-start mb-2">
+                                                            @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social']))
+                                                                <label class="block text-sm font-bold text-gray-800">
+                                                                    {!! formatWppText($c->label) !!} @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
+                                                                </label>
+                                                            @else
+                                                                <span></span>
+                                                            @endif
+                                                            <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
+                                                        </div>
+                                                        
+                                                        @if($c->tipo === 'text')
+                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
+                                                                @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
+                                                                @elseif(in_array($c->subtipo, ['date', 'datetime-local', 'date_range'])) <i class="ph ph-calendar-blank text-lg"></i>
+                                                                @elseif($c->subtipo == 'time') <i class="ph ph-clock text-lg"></i>
+                                                                @elseif($c->subtipo == 'number') <i class="ph ph-hash text-lg"></i>
+                                                                @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-lg text-green-600"></i>
+                                                                @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-lg text-blue-500"></i>
+                                                                @else <i class="ph ph-text-t text-lg"></i> @endif
+                                                                <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
+                                                            </div>
+                                                        
+                                                        @elseif($c->tipo === 'select')
+                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
+                                                                <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                            </div>
+                                                        @elseif($c->tipo === 'scale')
+                                                            @php 
+                                                                $maxScale = $cfg['escala_maxima'] ?? 10;
+                                                            @endphp
+                                                            <div class="mt-2 pointer-events-none">
+                                                                <div class="flex w-full border border-gray-300 rounded-md overflow-hidden bg-white">
+                                                                    @for($i = 0; $i <= $maxScale; $i++)
+                                                                        <div class="flex-1 py-2 text-center border-r last:border-r-0 border-gray-200 text-gray-600 text-xs font-bold">
+                                                                            {{ $i }}
+                                                                        </div>
+                                                                    @endfor
+                                                                </div>
+                                                                <div class="flex justify-between mt-1.5 text-[10px] text-gray-500 font-bold px-1">
+                                                                    <span>{{ $cfg['label_min'] ?? 'Mínimo' }}</span>
+                                                                    <span>{{ $cfg['label_max'] ?? 'Máximo' }}</span>
+                                                                </div>
+                                                            </div>
+                                                        
+                                                        @elseif($c->tipo === 'radio' || $c->tipo === 'check')
+                                                            <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
+                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
+                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
+                                                                </div>
+                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
+                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
+                                                                </div>
+                                                                @if($layoutOpcoes === 'vertical')
+                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
+                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 3
+                                                                </div>
+                                                                @endif
+                                                            </div>
+                                                            
+                                                        @elseif($c->tipo === 'system')
+                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
+                                                                <span class="flex items-center gap-2"><i class="ph ph-database text-purpura-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                            </div>
+                                                            
+                                                        @elseif($c->tipo === 'matriz')
+                                                            @php
+                                                                $linhasPv = [];
+                                                                $colunasPv = [];
+                                                                if ($isActive) {
+                                                                    $linhasPv = array_filter(array_map('trim', explode("\n", $matriz_linhas ?? '')));
+                                                                    $colunasPv = array_filter(array_map('trim', explode(',', $matriz_colunas ?? '')));
+                                                                }
+                                                                if (empty($linhasPv)) $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
+                                                                if (empty($colunasPv)) $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
+                                                            @endphp
+                                                            <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-2 shadow-sm">
+                                                                <table class="min-w-full text-xs text-left">
+                                                                    <thead class="bg-gray-50 border-b border-gray-200">
+                                                                        <tr>
+                                                                            <th class="p-2 w-1/3"></th>
+                                                                            @foreach($colunasPv as $col)
+                                                                                <th class="p-2 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
+                                                                            @endforeach
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="divide-y divide-gray-100">
+                                                                        @foreach($linhasPv as $linha)
+                                                                            <tr>
+                                                                                <td class="p-2 font-medium text-gray-800">{{ $linha }}</td>
+                                                                                @foreach($colunasPv as $col)
+                                                                                    <td class="p-2 text-center border-l border-gray-100">
+                                                                                        <div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div>
+                                                                                    </td>
+                                                                                @endforeach
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+
+                                                        @elseif($c->tipo === 'html')
+                                                            <div class="text-gray-800">
+                                                                @if($c->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{!! formatWppText($c->label) !!}</h1>
+                                                                @elseif($c->subtipo === 'h2') <h2 class="text-2xl font-bold">{!! formatWppText($c->label) !!}</h2>
+                                                                @elseif($c->subtipo === 'h3') <h3 class="text-xl font-bold">{!! formatWppText($c->label) !!}</h3>
+                                                                @elseif($c->subtipo === 'p') <div class="text-sm leading-relaxed">{!! formatWppText($c->label) !!}</div>
+                                                                @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline">{!! formatWppText($c->label) !!}</span>
+                                                                @elseif($c->subtipo === 'info_card') 
+                                                                    <div class="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
+                                                                        <p class="font-bold text-sm">{!! formatWppText($c->label) !!}</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+
+                                                        @elseif($c->tipo === 'divider')
+                                                            <hr class="border-t-2 border-dashed border-gray-300 my-2">
+
+                                                        @elseif($c->tipo === 'media')
+                                                            <div class="w-full bg-gray-50 rounded-md p-4 text-center border border-gray-200 pointer-events-none text-gray-500 shadow-sm">
+                                                                <i class="ph ph-{{ $c->subtipo == 'video' ? 'video-camera' : 'image' }} text-2xl mb-1"></i>
+                                                                <p class="text-xs font-bold">Mídia Visual ({{ ucfirst($c->subtipo) }})</p>
+                                                            </div>
+
+                                                        @elseif($c->tipo === 'social')
+                                                            @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
+                                                            <div class="flex flex-col gap-2 mt-2 pointer-events-none">
+                                                                @foreach($redesPreview as $rede)
+                                                                    <div class="flex items-center gap-2">
+                                                                        <div class="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-lg ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
+                                                                        <div class="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-md"></div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                            
+                                                        @elseif($c->tipo === 'rating')
+                                                            <div class="flex gap-1 text-2xl text-yellow-400 pointer-events-none drop-shadow-sm">
+                                                                <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph ph-star text-gray-300"></i><i class="ph ph-star text-gray-300"></i>
+                                                            </div>
+                                                        @endif
+                                                        
+                                                        <div class="mt-2.5 flex flex-wrap gap-2 items-center">
+                                                            @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media']))
+                                                                <span class="text-[10px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
+                                                            @endif
+                                                            @if($c->depende_de)
+                                                                <span class="inline-flex items-center gap-1 bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                                                    <i class="ph-fill ph-warning-circle"></i> Condicional
+                                                                </span>
+                                                            @endif
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                @endforeach
                             </div>
                         @empty
                             <div class="flex flex-col items-center justify-center py-20 text-center relative z-10">
