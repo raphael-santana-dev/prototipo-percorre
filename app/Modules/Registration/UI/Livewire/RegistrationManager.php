@@ -223,15 +223,19 @@ class RegistrationManager extends Component
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
         
         $statusDisponiveis = \App\Models\StatusInscricao::orderBy('nome')->get();
-        $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
+        
+        // Refatorado para um Dropdown (select) minimalista em vez de múltiplos botões
+        $botoesAcao = '<div class="mt-2 relative">';
+        $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
         
         foreach($statusDisponiveis as $st) {
-            $corClass = $st->id == $inscricao->status_inscricao_id 
-                        ? 'bg-purpura-500 text-white border-purpura-500' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
-                        
-            $botoesAcao .= '<button @click="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: '.$st->id.' })" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors '.$corClass.'">'.$st->nome.'</button>';
+            $selected = $st->id == $inscricao->status_inscricao_id ? 'selected' : '';
+            $prefix = $selected ? '✓ ATUAL: ' : '';
+            $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
         }
+        
+        $botoesAcao .= '</select>';
+        $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
         $botoesAcao .= '</div>';
 
         $detalhesDinamicos = '';
@@ -243,7 +247,7 @@ class RegistrationManager extends Component
             }
             $detalhesDinamicos .= '</div>';
         } else {
-            $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registrado.</span>';
+            $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registado.</span>';
         }
 
         $this->dispatch('load-quick-view', [
