@@ -75,8 +75,8 @@ class IaConfigManager extends Component
             'ai_model_id' => $this->ai_model_id,
             'prompt_documentos' => $this->prompt_documentos,
             'is_ativa' => $this->is_ativa,
-            'provedor' => 'dinamico', 
-            'api_key' => 'dinamico'
+            // CORREÇÃO: Os campos antigos 'provedor' e 'api_key' foram removidos 
+            // pois toda essa lógica foi migrada para as tabelas 'ai_providers' e 'ai_models'
         ]);
 
         $this->dispatch('sucesso', msg: 'Motor de Inteligência Artificial configurado com segurança!');

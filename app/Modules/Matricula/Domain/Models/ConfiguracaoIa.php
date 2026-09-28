@@ -8,6 +8,6 @@ use App\Traits\RegistraAuditoria;
 class ConfiguracaoIa extends Model
 {
     use RegistraAuditoria;
-    protected $table = 'configuracoes_ia';
+    protected $table = 'configuracao_ias';
     protected $guarded = ['id'];
 }
