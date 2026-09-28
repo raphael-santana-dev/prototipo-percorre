@@ -32,7 +32,7 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
         try {
             $this->exportacao->update([
                 'status' => 'processando',
-                'started_at' => now()
+                'started_at' => now() // <-- GRAVA O INÍCIO
             ]);
             
             $nomeArquivo = "Exportacao_" . ucfirst($this->exportacao->tipo) . "_" . now()->format('Ymd_His') . "." . $this->exportacao->formato;
@@ -44,9 +44,9 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
             }
 
             $query = match ($this->exportacao->tipo) {
-                'inscricoes' => Inscricao::query(),
-                'usuarios' => User::query(),
-                'campos' => CampoFormulario::query(),
+                'inscricoes' => \App\Models\Inscricao::query(),
+                'usuarios' => \App\Models\User::query(),
+                'campos' => \App\Models\CampoFormulario::query(),
                 default => throw new \Exception("Tipo de exportação '{$this->exportacao->tipo}' não implementado."),
             };
 
@@ -57,7 +57,7 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
                 throw new \Exception("Não há registros no banco de dados para exportar.");
             }
 
-            $writer = SimpleExcelWriter::create($caminhoAbsoluto);
+            $writer = \Spatie\SimpleExcel\SimpleExcelWriter::create($caminhoAbsoluto);
 
             $linhaAtual = 0;
             foreach ($query->cursor() as $registro) {
@@ -82,14 +82,14 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
                 'status' => 'concluido',
                 'linhas_processadas' => $linhaAtual,
                 'arquivo_gerado_caminho' => $caminhoRelativo,
-                'finished_at' => now()
+                'finished_at' => now() // <-- GRAVA O FIM COM SUCESSO
             ]);
 
         } catch (\Throwable $e) {
             $this->exportacao->update([
                 'status' => 'erro', 
                 'erro_mensagem' => json_encode([['linha' => 'Geração', 'mensagem' => $e->getMessage()]], JSON_UNESCAPED_UNICODE),
-                'finished_at' => now()
+                'finished_at' => now() // <-- GRAVA O FIM COM ERRO
             ]);
         }
     }

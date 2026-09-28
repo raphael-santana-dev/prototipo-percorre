@@ -31,7 +31,7 @@ class GerarRankingGlobalJob implements ShouldQueue
         if ($tracking) {
             $tracking->update([
                 'status' => 'processando',
-                'started_at' => now()
+                'started_at' => now() // <-- AGORA GRAVA O INÍCIO
             ]);
         }
 
@@ -92,7 +92,7 @@ class GerarRankingGlobalJob implements ShouldQueue
                 $tracking->update([
                     'status' => 'concluido',
                     'linhas_processadas' => $totalInscricoes,
-                    'finished_at' => now()
+                    'finished_at' => now() // <-- AGORA GRAVA O FIM COM SUCESSO
                 ]);
             }
 
@@ -101,7 +101,7 @@ class GerarRankingGlobalJob implements ShouldQueue
                 $tracking->update([
                     'status' => 'erro',
                     'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]]),
-                    'finished_at' => now()
+                    'finished_at' => now() // <-- AGORA GRAVA O FIM COM ERRO
                 ]);
             }
         }

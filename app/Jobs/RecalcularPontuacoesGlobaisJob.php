@@ -26,9 +26,13 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
     public function handle(): void
     {
-        // CORREÇÃO: Utilizando o novo Model SystemTask
         $tracking = SystemTask::find($this->trackingId);
-        if ($tracking) $tracking->update(['status' => 'processando']);
+        if ($tracking) {
+            $tracking->update([
+                'status' => 'processando',
+                'started_at' => now() // <-- GRAVA O INÍCIO
+            ]);
+        }
 
         $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
         if ($this->cicloId) {
@@ -57,7 +61,6 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $ciclo->inscricoes()->with(['curso', 'turno', 'unidade'])->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
-                        // Garante a integridade referencial
                         if (!$inscricao->unidade_id || !$inscricao->curso_id || !$inscricao->turno_id) {
                             if ($inscricao->pontuacao_total !== 0) {
                                 $inscricao->update([
@@ -208,13 +211,20 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 });
             }
 
-            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $totalInscricoes]);
+            if ($tracking) {
+                $tracking->update([
+                    'status' => 'concluido', 
+                    'linhas_processadas' => $totalInscricoes,
+                    'finished_at' => now() // <-- GRAVA O FIM COM SUCESSO
+                ]);
+            }
 
         } catch (\Throwable $e) {
             if ($tracking) {
                 $tracking->update([
                     'status' => 'erro',
-                    'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]])
+                    'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]]),
+                    'finished_at' => now() // <-- GRAVA O FIM COM ERRO
                 ]);
             }
         }

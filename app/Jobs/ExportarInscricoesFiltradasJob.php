@@ -32,7 +32,10 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
         if (!$tracking) return;
 
         try {
-            $tracking->update(['status' => 'processando']);
+            $tracking->update([
+                'status' => 'processando',
+                'started_at' => now() // <-- GRAVA O INÍCIO
+            ]);
 
             $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
             
@@ -195,13 +198,15 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             $tracking->update([
                 'status' => 'concluido',
                 'linhas_processadas' => $linhasProcessadas,
-                'arquivo_gerado_caminho' => $caminhoRelativo
+                'arquivo_gerado_caminho' => $caminhoRelativo,
+                'finished_at' => now() // <-- GRAVA O FIM COM SUCESSO
             ]);
 
         } catch (\Throwable $e) {
             $tracking->update([
                 'status' => 'erro',
-                'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Interno', 'mensagem' => $e->getMessage()]])
+                'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Interno', 'mensagem' => $e->getMessage()]]),
+                'finished_at' => now() // <-- GRAVA O FIM COM ERRO
             ]);
         }
     }
