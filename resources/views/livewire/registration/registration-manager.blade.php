@@ -236,45 +236,6 @@
                         <span class="text-gray-300 dark:text-gray-600">-</span>
                     @endif
                 </td>
-
-                <td class="px-4 py-2.5 text-center whitespace-nowrap">
-                    @if($inscricao->posicao_ranking_unidade)
-                        <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 text-[11px] font-bold">
-                            {{ $inscricao->posicao_ranking_unidade }}º
-                        </span>
-                    @else
-                        <span class="text-gray-300 dark:text-gray-600">-</span>
-                    @endif
-                </td>
-
-                <td class="px-4 py-2.5 text-center whitespace-nowrap">
-                    @if($inscricao->posicao_ranking_curso)
-                        <span class="bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 text-[11px] font-bold">
-                            {{ $inscricao->posicao_ranking_curso }}º
-                        </span>
-                    @else
-                        <span class="text-gray-300 dark:text-gray-600">-</span>
-                    @endif
-                </td>
-                
-                <td class="px-4 py-2.5 text-center whitespace-nowrap">
-                    @if($inscricao->posicao_ranking)
-                        @php
-                            $corRanking = match($inscricao->posicao_ranking) {
-                                1 => 'bg-yellow-100 text-yellow-800 border-yellow-300', 
-                                2 => 'bg-gray-200 text-gray-700 border-gray-300',      
-                                3 => 'bg-orange-100 text-orange-800 border-orange-300', 
-                                default => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800',
-                            };
-                        @endphp
-                        <span class="{{ $corRanking }} px-2 py-1 rounded border shadow-sm inline-flex items-center justify-center gap-1 text-[11px] font-bold">
-                            @if($inscricao->posicao_ranking <= 3) <i class="ph-fill ph-medal"></i> @endif
-                            {{ $inscricao->posicao_ranking }}º
-                        </span>
-                    @else
-                        <span class="text-gray-300 dark:text-gray-600">-</span>
-                    @endif
-                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
@@ -384,15 +345,6 @@
                         <div class="flex flex-wrap justify-end gap-1 mt-1">
                             @if($inscricao->posicao_ranking_geral)
                                 <span class="text-[9px] font-bold bg-gray-100 px-1.5 py-0.5 rounded border" title="Geral">G: {{ $inscricao->posicao_ranking_geral }}º</span>
-                            @endif
-                            @if($inscricao->posicao_ranking_unidade)
-                                <span class="text-[9px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200" title="Unidade">U: {{ $inscricao->posicao_ranking_unidade }}º</span>
-                            @endif
-                            @if($inscricao->posicao_ranking_curso)
-                                <span class="text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200" title="Curso">C: {{ $inscricao->posicao_ranking_curso }}º</span>
-                            @endif
-                            @if($inscricao->posicao_ranking)
-                                <span class="text-[9px] font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-300 flex items-center gap-0.5" title="Turma"><i class="ph-fill ph-medal"></i> {{ $inscricao->posicao_ranking }}º</span>
                             @endif
                         </div>
                     </div>

@@ -28,7 +28,7 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
 
     public function handle(): void
     {
-        $tracking = Importacao::find($this->trackingId);
+        $tracking = SystemTask::find($this->trackingId);
         if (!$tracking) return;
 
         try {

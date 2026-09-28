@@ -28,7 +28,7 @@ class AvancarStatusNoFunilJob implements ShouldQueue
 
     public function handle(): void
     {
-        $tracking = Importacao::find($this->trackingId);
+        $tracking = SystemTask::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
         $inscricoes = Inscricao::whereIn('id', $this->inscricoesIds)->get();

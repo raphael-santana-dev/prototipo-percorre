@@ -27,7 +27,7 @@ class GerarRankingGlobalJob implements ShouldQueue
 
     public function handle(): void
     {
-        $tracking = Importacao::find($this->trackingId);
+        $tracking = SystemTask::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
         $queryCiclos = Ciclo::query();

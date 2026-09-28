@@ -754,9 +754,6 @@ class RegistrationManager extends Component
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
             ['key' => 'pontuacao_total', 'label' => 'Pontuação', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'posicao_ranking_geral', 'label' => 'R. Geral', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'posicao_ranking_unidade', 'label' => 'R. Unidade', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'posicao_ranking_curso', 'label' => 'R. Curso', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'posicao_ranking', 'label' => 'R. Turma', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];

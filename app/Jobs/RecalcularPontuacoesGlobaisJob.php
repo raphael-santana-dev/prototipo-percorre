@@ -26,7 +26,8 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 
     public function handle(): void
     {
-        $tracking = Importacao::find($this->trackingId);
+        // CORREÇÃO: Utilizando o novo Model SystemTask
+        $tracking = SystemTask::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
         $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');
@@ -56,7 +57,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
                 $ciclo->inscricoes()->with(['curso', 'turno', 'unidade'])->orderBy('id')->chunkById(100, function ($inscricoes) use ($regras, &$atualizados, $tracking) {
                     foreach ($inscricoes as $inscricao) {
                         
-                        // CORREÇÃO: Insere 0 em vez de null para respeitar a restrição NOT NULL do banco
+                        // Garante a integridade referencial
                         if (!$inscricao->unidade_id || !$inscricao->curso_id || !$inscricao->turno_id) {
                             if ($inscricao->pontuacao_total !== 0) {
                                 $inscricao->update([
