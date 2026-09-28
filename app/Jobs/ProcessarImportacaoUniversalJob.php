@@ -124,8 +124,11 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $mapeamento = $this->task->mapeamento ?? [];
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
+            // [NOVO] Descobre a Etapa 1 do CRM configurada para o Ciclo alvo
             $cicloId = $mapeamento['ciclo_id'] ?? null;
             $ciclo = $cicloId ? \App\Models\Ciclo::find($cicloId) : null;
+            
+            // Busca o primeiro status no funil usando a ordem (fallback para 1 se nulo)
             $primeiroStatus = $ciclo ? $ciclo->statusPipeline()->orderBy('pivot_ordem', 'asc')->first() : null;
             $statusInicialId = $primeiroStatus ? $primeiroStatus->id : 1;
 
@@ -149,6 +152,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                             $dadosLimpos[$cleanKey] = $value;
                         }
 
+                        // Passa a inteligência do funil para o método
                         $this->processarInscricao($dadosLimpos, $mapeamento, $statusInicialId);
 
                     } catch (\Illuminate\Database\QueryException $e) {
@@ -412,10 +416,13 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
 
         if (empty($dadosFixos['status_inscricao_id'])) {
+            // [NOVO] Aplica a regra de negócio do Ciclo (1º status do funil) passado do Job
             $dadosFixos['status_inscricao_id'] = $statusInicialId; 
         }
 
+        // [NOVO] Garante que toda inscrição importada já entra como finalizada estruturalmente
         $dadosFixos['etapa_atual'] = 99;
+
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? null;

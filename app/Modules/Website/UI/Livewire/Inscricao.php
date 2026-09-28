@@ -84,8 +84,10 @@ class Inscricao extends Component
                     $this->inscricaoId = $inscricaoRetomada->id;
                     $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                     
-                    if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado'])) {
-                        $this->etapaAtual = 99;
+                    // Lógica de Retoma: Bloqueia se a inscrição já estiver concluída (99) ou na Lista de Espera (100)
+                    if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
+                        // Lança para o ecrã final correspondente
+                        $this->etapaAtual = $inscricaoRetomada->etapa_atual; 
                         session()->forget('inscricao_retomada_id');
                         return;
                     }
@@ -159,11 +161,14 @@ class Inscricao extends Component
                 ->first();
 
             if ($inscricaoRetomada) {
-                if (in_array(strtolower(trim($inscricaoRetomada->statusInscricao->nome ?? '')), ['aprovado', 'reprovado', 'selecionado', 'cancelado', 'pendente'])) {
-                    $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada neste ciclo.');
+                // Lógica de Retoma: Bloqueia se a inscrição já estiver concluída (99 = Sucesso) ou na Lista de Espera (100)
+                if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
+                    $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada ou em lista de espera neste ciclo.');
                     return;
                 }
 
+                // Se passou da verificação acima, significa que está numa etapa incompleta (< totalEtapas)
+                // O sistema prossegue e pré-preenche os dados...
                 $this->inscricaoId = $inscricaoRetomada->id;
                 $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                 $this->nome = $inscricaoRetomada->nome;
@@ -392,7 +397,6 @@ class Inscricao extends Component
 
     private function salvarProgresso($statusForcado = null)
     {
-        $nomeStatus = 'Incompleto'; 
         $dados = [
             'ciclo_id' => $this->cicloAtivoId,
             'etapa_atual' => $this->etapaAtual,
@@ -425,10 +429,21 @@ class Inscricao extends Component
             'turno_interesse_id' => $this->turno_interesse,
         ];
 
+        // NOVA LÓGICA DE DISTRIBUIÇÃO DE STATUS:
         if ($statusForcado) {
-            $nomeStatus = ucfirst($statusForcado); 
+            // Mantém a possibilidade de forçar um status externo (ex: 'Lead' para lista de espera)
+            $statusDb = \App\Models\StatusInscricao::where('nome', ucfirst($statusForcado))->first();
+            $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
+            
         } elseif ($this->etapaAtual === $this->totalEtapas) {
-            $nomeStatus = 'Pendente'; 
+            // Inscrição Finalizada: Procura no funil do Ciclo qual é a porta de entrada (Etapa 1 do CRM)
+            $ciclo = Ciclo::find($this->cicloAtivoId);
+            $dados['status_inscricao_id'] = $ciclo ? $ciclo->getStatusInicialId() : 1;
+            
+        } else {
+            // Inscrição em Andamento: Marca com o novo status criado no Seeder
+            $statusIncompleto = \App\Models\StatusInscricao::where('nome', 'Inscrição Incompleta')->first();
+            $dados['status_inscricao_id'] = $statusIncompleto ? $statusIncompleto->id : 1;
         }
 
         if ($this->etapaAtual === $this->totalEtapas || $statusForcado === 'Lead') {
@@ -437,10 +452,8 @@ class Inscricao extends Component
             $dados['pontuacao_detalhes'] = $pontuacao['detalhes']; 
         }
 
-        $statusDb = \App\Models\StatusInscricao::where('nome', $nomeStatus)->first();
-        $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
-
         $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
+        
         if (!$this->inscricaoId) {
             $this->inscricaoId = $inscricao->id;
         }
