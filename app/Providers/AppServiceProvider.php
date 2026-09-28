@@ -128,6 +128,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('comunicacao.automacao-form', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoForm::class);
         Livewire::component('comunicacao.automacao-manager', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoManager::class);
         Livewire::component('comunicacao.automacao-details', \App\Modules\Comunicacao\UI\Livewire\Automacao\AutomacaoDetails::class);
+        
+        Livewire::component('system.errors.index', \App\Modules\Auditoria\UI\Livewire\ErrorLogManager::class);
 
         Livewire::component('comunicacao.email-log-manager', \App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::class);
 
