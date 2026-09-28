@@ -124,7 +124,15 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $mapeamento = $this->importacao->mapeamento ?? [];
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
-            $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar) {
+            // [NOVO] Descobre a Etapa 1 do CRM configurada para o Ciclo alvo
+            $cicloId = $mapeamento['ciclo_id'] ?? null;
+            $ciclo = $cicloId ? \App\Models\Ciclo::find($cicloId) : null;
+            
+            // Busca o primeiro status no funil usando a ordem (fallback para 1 se nulo)
+            $primeiroStatus = $ciclo ? $ciclo->statusPipeline()->orderBy('pivot_ordem', 'asc')->first() : null;
+            $statusInicialId = $primeiroStatus ? $primeiroStatus->id : 1;
+
+            $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar, $statusInicialId) {
                 
                 if ($this->importacao->fresh()->status !== 'processando') {
                     return false; 
@@ -144,7 +152,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                             $dadosLimpos[$cleanKey] = $value;
                         }
 
-                        $this->processarInscricao($dadosLimpos, $mapeamento);
+                        // Passa a inteligência do funil para o método
+                        $this->processarInscricao($dadosLimpos, $mapeamento, $statusInicialId);
 
                     } catch (\Illuminate\Database\QueryException $e) {
                         $isDuplicate = $e->getCode() === '23505'; 
@@ -292,7 +301,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         return null;
     }
 
-    private function processarInscricao(array $linhaFormatada, array $mapeamento)
+    private function processarInscricao(array $linhaFormatada, array $mapeamento, int $statusInicialId = 1)
     {
         $dadosFixos = [];
         $dadosDinamicos = [];
@@ -408,8 +417,12 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
 
         if (empty($dadosFixos['status_inscricao_id'])) {
-            $dadosFixos['status_inscricao_id'] = 1; 
+            // [NOVO] Aplica a regra de negócio do Ciclo (1º status do funil) passado do Job
+            $dadosFixos['status_inscricao_id'] = $statusInicialId; 
         }
+
+        // [NOVO] Garante que toda inscrição importada já entra como finalizada estruturalmente
+        $dadosFixos['etapa_atual'] = 99;
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
