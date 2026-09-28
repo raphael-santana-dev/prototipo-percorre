@@ -96,6 +96,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
     public function handle(): void
     {
+        
         DB::disableQueryLog();
 
         $linhaAtual = 0;
@@ -103,7 +104,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $errosCriticos = 0;
 
         try {
-            $this->task->update(['status' => 'processando']);
+            $this->task->update([
+                'status' => 'processando',
+                'started_at' => now()
+            ]);
             $caminhoAbsoluto = Storage::disk('local')->path($this->task->arquivo_caminho);
             $formato = $this->task->formato;
             
@@ -216,7 +220,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             $this->task->update([
                 'status' => $statusFinal,
                 'linhas_processadas' => $linhaAtual,
-                'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
+                'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null,
+                'finished_at' => now()
             ]);
 
             if ($linhaAtual > 0) {
@@ -247,7 +252,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
             ]);
             $this->task->update([
                 'status' => 'erro', 
-                'erro_mensagem' => json_encode($erros, JSON_UNESCAPED_UNICODE)
+                'erro_mensagem' => json_encode($erros, JSON_UNESCAPED_UNICODE),
+                'finished_at' => now()
             ]);
         }
     }

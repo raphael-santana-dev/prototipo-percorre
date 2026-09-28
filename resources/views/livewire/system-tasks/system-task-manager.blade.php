@@ -112,6 +112,11 @@
                                 <div class="h-1.5 rounded-full transition-all duration-500 bg-purpura-500" style="width: {{ $task->progresso }}%"></div>
                             </div>
                             <span class="text-[10px] text-gray-400 font-medium">{{ number_format($task->linhas_processadas, 0, ',', '.') }} de {{ number_format($task->total_linhas, 0, ',', '.') }} ciclos processados</span>
+
+                            <!-- Exibição do Tempo de Execução -->
+                            <div class="text-[10px] text-gray-500 font-medium mt-1">
+                                ⏱️ Duração: <span class="font-bold text-gray-700 dark:text-gray-300">{{ $task->tempo_execucao }}</span>
+                            </div>
                         </div>
                     </td>
                     <td class="px-4 py-2.5 whitespace-nowrap">
@@ -138,12 +143,19 @@
                                 </div>
                             @endif
                             
+                            <!-- Botão de Reprocessar / Tentar Novamente para tarefas com erro ou presas -->
+                            @if(in_array($task->status, ['erro', 'erro_parcial', 'na_fila', 'processando']))
+                                <button wire:click="reentrarNaFila({{ $task->id }})" class="p-1.5 text-blue-500 transition-colors rounded hover:bg-blue-50 dark:hover:bg-gray-700" title="Tentar Novamente / Reprocessar">
+                                    <i class="text-lg ph-bold ph-arrow-clockwise"></i>
+                                </button>
+                            @endif
+
                             <button wire:click="verDetalhes({{ $task->id }})" class="p-1.5 text-gray-500 transition-colors rounded hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700" title="Ver Relatório">
                                 <i class="text-lg ph-fill ph-info"></i>
                             </button>
 
                             @if(in_array($task->status, ['erro', 'erro_parcial']) && $task->operacao === 'importacao')
-                                <button wire:click="abrirModalReprocessar({{ $task->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700" title="Reprocessar Tarefa">
+                                <button wire:click="abrirModalReprocessar({{ $task->id }})" class="p-1.5 text-orange-500 transition-colors rounded hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700" title="Reprocessar Tarefa (Mapeamento)">
                                     <i class="text-lg ph-bold ph-arrows-clockwise"></i>
                                 </button>
                             @endif
@@ -393,6 +405,10 @@
                             <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Data / Hora</span>
                             <span class="text-sm font-bold text-gray-900">{{ $taskDetalhes->created_at->format('d/m/Y H:i') }}</span>
                         </div>
+                        <div class="text-[10px] text-gray-500 font-medium mt-1">
+                            Duração: <span class="font-bold text-gray-700 dark:text-gray-300">{{ $task->tempo_execucao }}</span>
+                        </div>
+
                     </div>
 
                     <div class="flex items-center gap-6 mb-2 border-b border-gray-100 shrink-0">

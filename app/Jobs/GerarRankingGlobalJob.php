@@ -28,10 +28,14 @@ class GerarRankingGlobalJob implements ShouldQueue
     public function handle(): void
     {
         $tracking = SystemTask::find($this->trackingId);
-        if ($tracking) $tracking->update(['status' => 'processando']);
+        if ($tracking) {
+            $tracking->update([
+                'status' => 'processando',
+                'started_at' => now()
+            ]);
+        }
 
         $queryCiclos = Ciclo::query();
-        
         if ($this->cicloId) {
             $queryCiclos->where('id', $this->cicloId);
         } else {
@@ -48,7 +52,6 @@ class GerarRankingGlobalJob implements ShouldQueue
 
         try {
             foreach ($ciclos as $ciclo) {
-                
                 DB::table('inscricoes')
                     ->where('ciclo_id', $ciclo->id)
                     ->whereNotNull('posicao_ranking_geral')
@@ -59,8 +62,6 @@ class GerarRankingGlobalJob implements ShouldQueue
                         'posicao_ranking_curso' => null,
                     ]);
 
-                // CORREÇÃO: ROW_NUMBER evita qualquer empate (usa created_at e ID como critério)
-                // O filtro IS NOT NULL garante que incompletos sejam ignorados no ranking
                 $query = "
                     WITH RankedData AS (
                         SELECT id,
@@ -87,13 +88,20 @@ class GerarRankingGlobalJob implements ShouldQueue
                 DB::statement($query, ['ciclo_id' => $ciclo->id]);
             }
 
-            if ($tracking) $tracking->update(['status' => 'concluido', 'linhas_processadas' => $totalInscricoes]);
+            if ($tracking) {
+                $tracking->update([
+                    'status' => 'concluido',
+                    'linhas_processadas' => $totalInscricoes,
+                    'finished_at' => now()
+                ]);
+            }
 
         } catch (\Throwable $e) {
             if ($tracking) {
                 $tracking->update([
                     'status' => 'erro',
-                    'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]])
+                    'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Fatal', 'mensagem' => $e->getMessage()]]),
+                    'finished_at' => now()
                 ]);
             }
         }

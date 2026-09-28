@@ -13,13 +13,39 @@ class SystemTask extends Model
 
     protected $casts = [
         'mapeamento' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
+        'resolvido' => 'boolean',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getTempoExecucaoAttribute()
+    {
+        if (!$this->started_at) {
+            return 'A aguardar na fila...';
+        }
+        
+        $fim = $this->finished_at ?? now();
+        $segundos = $this->started_at->diffInSeconds($fim);
+
+        if ($segundos < 60) {
+            return "{$segundos}s";
+        }
+        
+        $minutos = floor($segundos / 60);
+        $segundosRestantes = $segundos % 60;
+        
+        if ($minutos < 60) {
+            return "{$minutos}m {$segundosRestantes}s";
+        }
+        
+        $horas = floor($minutos / 60);
+        $minutosRestantes = $minutos % 60;
+        return "{$horas}h {$minutosRestantes}m";
     }
     
     public function getProgressoAttribute()

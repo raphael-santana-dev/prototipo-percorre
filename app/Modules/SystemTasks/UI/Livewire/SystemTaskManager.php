@@ -741,6 +741,50 @@ class SystemTaskManager extends Component
         $this->dispatch('sucesso', msg: 'Arquivo não encontrado ou geração não concluída.');
     }
 
+    public function reentrarNaFila($id)
+    {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+
+        $task = SystemTask::findOrFail($id);
+
+        // Reseta o estado para reprocessamento limpo e limpa as datas de execução anteriores
+        $task->update([
+            'status' => 'na_fila',
+            'linhas_processadas' => 0,
+            'erro_mensagem' => null,
+            'started_at' => null,
+            'finished_at' => null,
+        ]);
+
+        // Despacha novamente para a fila de acordo com a operação exata da tarefa
+        switch ($task->operacao) {
+            case 'importacao':
+                dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task));
+                break;
+            case 'exportacao':
+                if (str_contains($task->arquivo_nome ?? '', 'Inscrições')) {
+                    dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($task->id, $task->mapeamento['filtros'] ?? []));
+                } else {
+                    dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($task));
+                }
+                break;
+            case 'recalculo':
+                $cicloId = $task->mapeamento['ciclo_id'] ?? null;
+                dispatch(new \App\Jobs\RecalcularPontuacoesGlobaisJob($task->id, $cicloId));
+                break;
+            case 'ranking':
+                $cicloId = $task->mapeamento['ciclo_id'] ?? null;
+                dispatch(new \App\Jobs\GerarRankingGlobalJob($task->id, $cicloId));
+                break;
+            default:
+                // Fallback geral para importação caso o tipo não mapeado
+                dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task));
+                break;
+        }
+
+        $this->dispatch('sucesso', msg: 'Tarefa reenviada para a fila de processamento!');
+    }
+
     public function render()
     {
         $query = SystemTask::with('user')->where('tipo', 'inscricoes');

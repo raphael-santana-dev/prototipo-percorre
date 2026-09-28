@@ -17,7 +17,7 @@ class ErrorLogManager extends Component
     public $filtroTipo = '';
     public $filtroCodigo = '';
     public $filtroBusca = '';
-    public $filtroResolvido = '0'; // Por defeito mostra os não resolvidos
+    public $filtroResolvido = '0';
 
     public $errorDetalhes = null;
     public $modalDetalhesAberto = false;

@@ -30,7 +30,10 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            $this->exportacao->update(['status' => 'processando']);
+            $this->exportacao->update([
+                'status' => 'processando',
+                'started_at' => now()
+            ]);
             
             $nomeArquivo = "Exportacao_" . ucfirst($this->exportacao->tipo) . "_" . now()->format('Ymd_His') . "." . $this->exportacao->formato;
             $caminhoRelativo = "exportacoes/{$nomeArquivo}";
@@ -78,13 +81,15 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
             $this->exportacao->update([
                 'status' => 'concluido',
                 'linhas_processadas' => $linhaAtual,
-                'arquivo_gerado_caminho' => $caminhoRelativo
+                'arquivo_gerado_caminho' => $caminhoRelativo,
+                'finished_at' => now()
             ]);
 
         } catch (\Throwable $e) {
             $this->exportacao->update([
                 'status' => 'erro', 
-                'erro_mensagem' => json_encode([['linha' => 'Geração', 'mensagem' => $e->getMessage()]], JSON_UNESCAPED_UNICODE)
+                'erro_mensagem' => json_encode([['linha' => 'Geração', 'mensagem' => $e->getMessage()]], JSON_UNESCAPED_UNICODE),
+                'finished_at' => now()
             ]);
         }
     }
