@@ -122,29 +122,36 @@
                     
                     <form wire:submit.prevent="salvar" class="space-y-4">
                         <div class="hidden md:grid md:grid-cols-12 md:gap-4 mb-2">
-                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Módulo <span class="text-red-500">*</span></div>
-                            <div class="col-span-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Ação <span class="text-red-500">*</span></div>
-                            <div class="col-span-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição <span class="text-red-500">*</span></div>
+                            <div class="col-span-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Módulo <span class="text-red-500">*</span></div>
+                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Submódulo</div>
+                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Ação <span class="text-red-500">*</span></div>
+                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição <span class="text-red-500">*</span></div>
                             <div class="col-span-1"></div>
                         </div>
 
                         @foreach($items as $index => $item)
                             <div class="grid grid-cols-1 gap-4 p-4 mb-4 border border-gray-200 rounded-lg md:p-0 md:border-none md:grid-cols-12 dark:border-gray-700 bg-gray-50/50 md:bg-transparent dark:bg-gray-800/50 items-start">
                                 
-                                <div class="md:col-span-3">
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Módulo</label>
-                                    <input type="text" wire:model="items.{{ $index }}.module" class="w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="ex: turno">
+                                <div class="md:col-span-2">
+                                    <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Módulo *</label>
+                                    <input type="text" wire:model="items.{{ $index }}.module" class="w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="ex: acl">
                                     @error("items.{$index}.module") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                 </div>
+
+                                <div class="md:col-span-3">
+                                    <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Submódulo</label>
+                                    <input type="text" wire:model="items.{{ $index }}.submodule" class="w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="ex: permissao">
+                                    @error("items.{$index}.submodule") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                </div>
                                 
-                                <div class="md:col-span-4">
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Ação</label>
+                                <div class="md:col-span-3">
+                                    <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Ação *</label>
                                     <input type="text" wire:model="items.{{ $index }}.action" class="w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="ex: criar">
-                                    <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">Chave: <strong x-text="$wire.items[{{ $index }}].module && $wire.items[{{ $index }}].action ? $wire.items[{{ $index }}].module.toLowerCase() + '.' + $wire.items[{{ $index }}].action.toLowerCase() : 'modulo.acao'"></strong></p>
+                                    <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">Chave: <strong x-text="[$wire.items[{{ $index }}].module, $wire.items[{{ $index }}].submodule, $wire.items[{{ $index }}].action].filter(Boolean).map(s => String(s).toLowerCase().trim()).join('.') || 'modulo.submodulo.acao'"></strong></p>
                                     @error("items.{$index}.action") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                 </div>
                                 
-                                <div class="md:col-span-4">
+                                <div class="md:col-span-3">
                                     <label class="block mb-1 text-sm font-semibold text-gray-700 md:hidden dark:text-gray-300">Descrição</label>
                                     <textarea wire:model="items.{{ $index }}.description" rows="2" class="w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="O que esta permissão libera?"></textarea>
                                     @error("items.{$index}.description") <span class="text-xs text-red-500">{{ $message }}</span> @enderror

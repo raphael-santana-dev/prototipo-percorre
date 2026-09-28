@@ -71,14 +71,19 @@ class PermissionManager extends Component
             $permission = Permission::findOrFail($id);
             $this->permissionId = $permission->id;
             
-            $nameParts = explode('.', $permission->name, 2);
+            $parts = explode('.', $permission->name);
+            $action = array_pop($parts); 
+            $module = array_shift($parts); 
+            $submodule = implode('.', $parts); 
+
             $this->items[0] = [
-                'module' => $permission->module,
-                'action' => $nameParts[1] ?? $permission->name,
+                'module' => $module ?: $permission->module,
+                'submodule' => $submodule,
+                'action' => $action,
                 'description' => $permission->description
             ];
         } else {
-            $this->items = [['module' => '', 'action' => '', 'description' => '']];
+            $this->items = [['module' => '', 'submodule' => '', 'action' => '', 'description' => '']];
         }
 
         $this->modalAberto = true;
@@ -86,7 +91,7 @@ class PermissionManager extends Component
 
     public function addItem()
     {
-        $this->items[] = ['module' => '', 'action' => '', 'description' => ''];
+        $this->items[] = ['module' => '', 'submodule' => '', 'action' => '', 'description' => ''];
     }
 
     public function removeItem(int $index)
@@ -113,19 +118,19 @@ class PermissionManager extends Component
 
         $this->validate([
             'items.*.module' => 'required|string|min:2',
+            'items.*.submodule' => 'nullable|string',
             'items.*.action' => 'required|string|min:2',
-            'items.*.description' => 'required|string|max:255',
         ], [
             'items.*.module.required' => 'O módulo é obrigatório.',
             'items.*.action.required' => 'A ação é obrigatória.',
-            'items.*.description.required' => 'A descrição é obrigatória.',
         ]);
 
         $this->pendenciasReplicacao = [];
 
         if ($this->replicar_para_features) {
             foreach ($this->items as $item) {
-                $fullName = strtolower(trim($item['module'])) . '.' . strtolower(trim($item['action']));
+                $nameParts = array_filter([trim($item['module']), trim($item['submodule'] ?? ''), trim($item['action'])]);
+                $fullName = strtolower(implode('.', $nameParts));
                 $correspondenciaEncontrada = false;
 
                 if ($this->permissionId) {
@@ -170,8 +175,15 @@ class PermissionManager extends Component
 
         foreach ($this->items as $index => $item) {
             $moduleFinal = strtolower(trim($item['module']));
+            $submoduleFinal = strtolower(trim($item['submodule'] ?? ''));
             $actionFinal = strtolower(trim($item['action']));
-            $fullName = $moduleFinal . '.' . $actionFinal;
+
+            $nameParts = array_filter([$moduleFinal, $submoduleFinal, $actionFinal]);
+            $fullName = implode('.', $nameParts);
+
+            $moduleColumnParts = array_filter([$moduleFinal, $submoduleFinal]);
+            $moduleColumn = implode('.', $moduleColumnParts);
+
             $nomeAntigo = null;
 
             if ($this->permissionId) {
@@ -184,7 +196,7 @@ class PermissionManager extends Component
                 $nomeAntigo = $permission->getOriginal('name');
 
                 $permission->update([
-                    'module' => $moduleFinal,
+                    'module' => $moduleColumn,
                     'name' => $fullName,
                     'description' => $item['description']
                 ]);
@@ -195,7 +207,7 @@ class PermissionManager extends Component
                 }
 
                 Permission::create([
-                    'module' => $moduleFinal,
+                    'module' => $moduleColumn,
                     'name' => $fullName,
                     'description' => $item['description'],
                     'guard_name' => 'web'
@@ -218,14 +230,14 @@ class PermissionManager extends Component
 
                     $featureTarget->update([
                         'name' => $fullName,
-                        'module' => $moduleFinal,
+                        'module' => $moduleColumn,
                         'description' => $item['description']
                     ]);
 
                     Cache::forget("feature_status_{$nomeFeatureVelha}");
                     Cache::forget("feature_status_{$fullName}");
                 } elseif ($criarAusentes) {
-                    $featureService->create($moduleFinal, $fullName, $item['description']);
+                    $featureService->create($moduleColumn, $fullName, $item['description']);
                 }
             }
         }
