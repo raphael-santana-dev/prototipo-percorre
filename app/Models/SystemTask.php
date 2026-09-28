@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\RegistraAuditoria;
 
-class Importacao extends Model
+class SystemTask extends Model
 {
     use RegistraAuditoria;
-    protected $table = 'importacoes';
+    protected $table = 'system_tasks';
     protected $guarded = [];
 
     protected $casts = [

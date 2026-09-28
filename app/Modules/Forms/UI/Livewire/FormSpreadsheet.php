@@ -114,7 +114,7 @@ class FormSpreadsheet extends Component
             return;
         }
 
-        $tracking = \App\Models\Importacao::create([
+        $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'respostas_formulario',
             'operacao' => 'exportacao',

@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Modules\Importacao\UI\Livewire;
+namespace App\Modules\SystemTasks\UI\Livewire;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 use App\Models\Ciclo;
 use App\Models\User;
 use Spatie\SimpleExcel\SimpleExcelReader;
@@ -15,7 +15,7 @@ use App\Traits\ComPadraoListagem;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\FuzzyMatchingTrait;
 
-class ImportacaoManager extends Component
+class SystemTaskManager extends Component
 {
     use WithFileUploads, WithPagination, ComPadraoListagem, FuzzyMatchingTrait;
 
@@ -26,15 +26,15 @@ class ImportacaoManager extends Component
     public $modalDetalhesAberto = false;
     public $modalReprocessarAberto = false;
     public $modalMonitoramentoAberto = false;
-    public $importacaoReprocessarId = null;
+    public $taskReprocessarId = null;
 
     public $arquivo;
-    public $tipoImportacao = 'inscricoes';
+    public $tipoOperacao = 'inscricoes';
     public $cicloSelecionadoId = null;
     public $ciclosDisponiveis = [];
 
-    public $importacaoAtualId = null;
-    public $importacaoDetalhes = null;
+    public $taskAtualId = null;
+    public $taskDetalhes = null;
     public $permitirAutoCadastro = false;
     public $mesclarDuplicadas = false;
     public $refazerMapeamento = false;
@@ -42,7 +42,7 @@ class ImportacaoManager extends Component
     public $cabecalhos = [];
     public $mapeamento = [];
     
-    public $importacaoMonitoramento = null;
+    public $taskMonitoramento = null;
     
     public $filtro_status = '';
     public $filtro_usuario = '';
@@ -87,8 +87,8 @@ class ImportacaoManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('importacao.acessar'), 403, 'Módulo de integrações desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403, 'Acesso restrito.');
+        abort_if(!feature('tarefas.acessar'), 403, 'Módulo de tarefas desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
@@ -111,9 +111,9 @@ class ImportacaoManager extends Component
     {
         return [
             ['key' => 'id', 'label' => '#', 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'arquivo', 'label' => 'Arquivo / Tipo', 'sortable' => false],
+            ['key' => 'arquivo', 'label' => 'Identificação / Tipo', 'sortable' => false],
             ['key' => 'progresso', 'label' => 'Status e Progresso', 'sortable' => false, 'class' => 'w-64'],
-            ['key' => 'data', 'label' => 'Data de Envio', 'sortable' => false],
+            ['key' => 'data', 'label' => 'Data de Criação', 'sortable' => false],
             ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'w-32 text-right'],
         ];
     }
@@ -133,9 +133,6 @@ class ImportacaoManager extends Component
         return response()->streamDownload($callback, 'modelo_importacao_inscricoes.csv', ['Content-Type' => 'text/csv']);
     }
 
-    // ==============================================================================
-    // MOTOR INTELIGENTE DE REPARAÇÃO E LEITURA DE CSV
-    // ==============================================================================
     private function detectarDelimitadorCsv($caminhoAbsoluto)
     {
         $handle = fopen($caminhoAbsoluto, 'r');
@@ -196,7 +193,7 @@ class ImportacaoManager extends Component
     public function abrirModalReprocessar($id)
     {
         $this->reset('refazerMapeamento');
-        $this->importacaoReprocessarId = $id;
+        $this->taskReprocessarId = $id;
         $this->modalReprocessarAberto = true;
     }
 
@@ -224,13 +221,13 @@ class ImportacaoManager extends Component
 
     public function reprocessar($modo)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
 
-        $importacao = Importacao::findOrFail($this->importacaoReprocessarId);
-        $mapa = $importacao->mapeamento;
+        $task = SystemTask::findOrFail($this->taskReprocessarId);
+        $mapa = $task->mapeamento;
 
         if ($modo === 'falhas') {
-            $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+            $erros = json_decode($task->erro_mensagem, true) ?? [];
             $linhasComErro = [];
             
             foreach ($erros as $erro) {
@@ -240,7 +237,7 @@ class ImportacaoManager extends Component
             }
 
             if (empty($linhasComErro)) {
-                $this->dispatch('erro', msg: 'Não encontramos linhas específicas com erro neste log para reprocessar de forma isolada.');
+                $this->dispatch('erro', msg: 'Não encontramos linhas com erro neste log para reprocessar de forma isolada.');
                 return;
             }
             $mapa['linhas_reprocessar'] = array_values(array_unique($linhasComErro));
@@ -251,10 +248,10 @@ class ImportacaoManager extends Component
         }
 
         if ($this->refazerMapeamento) {
-            $importacao->update(['mapeamento' => $mapa, 'status' => 'mapeamento']);
+            $task->update(['mapeamento' => $mapa, 'status' => 'mapeamento']);
 
-            $caminhoAbsoluto = Storage::disk('local')->path($importacao->arquivo_caminho);
-            $formato = $importacao->formato;
+            $caminhoAbsoluto = Storage::disk('local')->path($task->arquivo_caminho);
+            $formato = $task->formato;
             
             if ($formato === 'csv') {
                 $this->repararCsvMalFormatado($caminhoAbsoluto);
@@ -276,7 +273,7 @@ class ImportacaoManager extends Component
             }
             
             $this->cabecalhos = $cabecalhosLidos;
-            $this->importacaoAtualId = $importacao->id;
+            $this->taskAtualId = $task->id;
             $this->cicloSelecionadoId = $mapa['ciclo_id'] ?? null;
             $this->permitirAutoCadastro = filter_var($mapa['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $this->mesclarDuplicadas = filter_var($mapa['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -296,24 +293,24 @@ class ImportacaoManager extends Component
                 $this->mapeamento[$index] = ['coluna_nome' => $coluna, 'destino' => $destino, 'tipo' => $tipo];
             }
 
-            $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
+            $this->reset(['modalReprocessarAberto', 'taskReprocessarId', 'modalDetalhesAberto', 'taskDetalhes', 'refazerMapeamento']);
             $this->modalMapeamentoAberto = true;
 
         } else {
-            $importacao->update([
+            $task->update([
                 'status' => 'na_fila',
                 'linhas_processadas' => 0,
                 'erro_mensagem' => null,
                 'mapeamento' => $mapa
             ]);
 
-            $this->reset(['modalReprocessarAberto', 'importacaoReprocessarId', 'modalDetalhesAberto', 'importacaoDetalhes', 'refazerMapeamento']);
+            $this->reset(['modalReprocessarAberto', 'taskReprocessarId', 'modalDetalhesAberto', 'taskDetalhes', 'refazerMapeamento']);
             
-            $this->importacaoAtualId = $importacao->id;
+            $this->taskAtualId = $task->id;
             $this->modalMonitoramentoAberto = true;
-            $this->dispatch('sucesso', msg: 'A importação foi enviada para processamento!');
+            $this->dispatch('sucesso', msg: 'A tarefa foi enviada para processamento!');
 
-            dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao))->afterResponse();
+            dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task))->afterResponse();
         }
     }
 
@@ -329,13 +326,13 @@ class ImportacaoManager extends Component
             'arquivo' => 'required|file|mimes:csv,xlsx,xls,txt|max:51200',
             'cicloSelecionadoId' => 'required|exists:ciclos,id'
         ], [
-            'arquivo.mimes' => 'Apenas arquivos CSV ou Excel (.xlsx, .xls) são permitidos por segurança.',
+            'arquivo.mimes' => 'Apenas arquivos CSV ou Excel (.xlsx, .xls) são permitidos.',
             'cicloSelecionadoId.required' => 'Obrigatório selecionar o ciclo de inscrição.'
         ]);
 
-        $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
+        $ativos = SystemTask::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
-            $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das importações anteriores.');
+            $this->addError('arquivo', 'Fila cheia! Aguarde a conclusão das tarefas anteriores.');
             return;
         }
 
@@ -365,7 +362,7 @@ class ImportacaoManager extends Component
         }
         $totalLinhas = $reader->getRows()->count();
 
-        $importacao = Importacao::create([
+        $task = SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'importacao',
@@ -377,7 +374,7 @@ class ImportacaoManager extends Component
             'mapeamento' => ['ciclo_id' => $this->cicloSelecionadoId]
         ]);
 
-        $this->importacaoAtualId = $importacao->id;
+        $this->taskAtualId = $task->id;
         $this->cabecalhos = $cabecalhosLidos;
         
         $this->reset('arquivo');
@@ -443,14 +440,14 @@ class ImportacaoManager extends Component
 
     public function iniciarImportacao()
     {
-        $importacao = Importacao::findOrFail($this->importacaoAtualId);
+        $task = SystemTask::findOrFail($this->taskAtualId);
         
         $mapaFinal = [];
         $mapaFinal['config_auto_cadastro'] = (bool) $this->permitirAutoCadastro;
         $mapaFinal['config_mesclar_duplicadas'] = (bool) $this->mesclarDuplicadas;
 
-        if (isset($importacao->mapeamento['linhas_reprocessar'])) {
-            $mapaFinal['linhas_reprocessar'] = $importacao->mapeamento['linhas_reprocessar'];
+        if (isset($task->mapeamento['linhas_reprocessar'])) {
+            $mapaFinal['linhas_reprocessar'] = $task->mapeamento['linhas_reprocessar'];
         }
 
         foreach($this->cabecalhos as $index => $colunaNome) {
@@ -468,7 +465,7 @@ class ImportacaoManager extends Component
             $mapaFinal['ciclo_id'] = $this->cicloSelecionadoId; 
         }
 
-        $importacao->update([
+        $task->update([
             'mapeamento' => $mapaFinal,
             'status' => 'na_fila'
         ]);
@@ -478,17 +475,17 @@ class ImportacaoManager extends Component
 
         $this->reset(['camposDinamicosDisponiveis', 'mapeamento', 'cabecalhos', 'arquivo']);
         
-        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($importacao));
+        dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task));
     }
 
     public function monitorarProgresso()
     {
-        if ($this->importacaoAtualId) {
-            $this->importacaoMonitoramento = Importacao::find($this->importacaoAtualId);
+        if ($this->taskAtualId) {
+            $this->taskMonitoramento = SystemTask::find($this->taskAtualId);
             
-            if ($this->importacaoMonitoramento && in_array($this->importacaoMonitoramento->status, ['concluido', 'erro', 'erro_parcial'])) {
+            if ($this->taskMonitoramento && in_array($this->taskMonitoramento->status, ['concluido', 'erro', 'erro_parcial'])) {
                 $this->modalMonitoramentoAberto = false;
-                $this->verDetalhes($this->importacaoAtualId); 
+                $this->verDetalhes($this->taskAtualId); 
             }
         }
     }
@@ -496,48 +493,48 @@ class ImportacaoManager extends Component
     public function fecharMonitoramento()
     {
         $this->modalMonitoramentoAberto = false;
-        $this->importacaoMonitoramento = null;
-        $this->importacaoAtualId = null;
+        $this->taskMonitoramento = null;
+        $this->taskAtualId = null;
     }
 
     public function cancelarImportacaoListagem($id, $apagarDados = false)
     {
-        $this->importacaoAtualId = $id;
+        $this->taskAtualId = $id;
         $this->cancelarImportacao($apagarDados);
     }
 
     public function cancelarImportacao($apagarDados = false)
     {
-        if (!$this->importacaoAtualId) return;
+        if (!$this->taskAtualId) return;
 
-        $importacao = Importacao::find($this->importacaoAtualId);
-        if (!$importacao) return;
+        $task = SystemTask::find($this->taskAtualId);
+        if (!$task) return;
 
-        $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+        $erros = json_decode($task->erro_mensagem, true) ?? [];
         $erros[] = [
             'linha' => '-',
             'tipo' => 'Cancelamento Manual',
-            'mensagem' => 'A importação foi cancelada pelo usuário através do painel.',
+            'mensagem' => 'A tarefa foi cancelada pelo usuário através do painel.',
             'amigavel' => 'Cancelado pelo usuário.'
         ];
 
-        $importacao->update([
+        $task->update([
             'status' => 'erro', 
             'erro_mensagem' => json_encode($erros)
         ]);
 
-        if ($apagarDados) {
-            \App\Models\Inscricao::where('criado_por', $importacao->user_id)
-                ->where('created_at', '>=', $importacao->created_at)
+        if ($apagarDados && $task->operacao === 'importacao') {
+            \App\Models\Inscricao::where('criado_por', $task->user_id)
+                ->where('created_at', '>=', $task->created_at)
                 ->delete();
 
-            if ($importacao->arquivo_caminho && Storage::disk('local')->exists($importacao->arquivo_caminho)) {
-                Storage::disk('local')->delete($importacao->arquivo_caminho);
+            if ($task->arquivo_caminho && Storage::disk('local')->exists($task->arquivo_caminho)) {
+                Storage::disk('local')->delete($task->arquivo_caminho);
             }
 
-            $this->dispatch('sucesso', msg: 'Importação interrompida e os dados foram revertidos com sucesso.');
+            $this->dispatch('sucesso', msg: 'Tarefa interrompida e dados revertidos com sucesso.');
         } else {
-            $this->dispatch('sucesso', msg: 'Sinal de cancelamento enviado! O processamento parará no lote atual.');
+            $this->dispatch('sucesso', msg: 'Sinal de cancelamento enviado! O processamento irá parar.');
         }
 
         $this->fecharMonitoramento();
@@ -546,34 +543,34 @@ class ImportacaoManager extends Component
 
     public function excluirImportacao($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
         
-        $importacao = Importacao::find($id);
+        $task = SystemTask::find($id);
         
-        if ($importacao) {
-            if ($importacao->arquivo_caminho) Storage::disk('local')->delete($importacao->arquivo_caminho);
-            if ($importacao->arquivo_gerado_caminho) Storage::disk('local')->delete($importacao->arquivo_gerado_caminho);
-            $importacao->delete();
+        if ($task) {
+            if ($task->arquivo_caminho) Storage::disk('local')->delete($task->arquivo_caminho);
+            if ($task->arquivo_gerado_caminho) Storage::disk('local')->delete($task->arquivo_gerado_caminho);
+            $task->delete();
         }
 
-        if ($this->importacaoAtualId == $id) {
-            $this->reset(['modalMapeamentoAberto', 'importacaoAtualId', 'cabecalhos', 'mapeamento', 'modalMonitoramentoAberto']);
+        if ($this->taskAtualId == $id) {
+            $this->reset(['modalMapeamentoAberto', 'taskAtualId', 'cabecalhos', 'mapeamento', 'modalMonitoramentoAberto']);
         }
-        if ($this->importacaoDetalhes && $this->importacaoDetalhes->id == $id) {
-            $this->reset(['modalDetalhesAberto', 'importacaoDetalhes']);
+        if ($this->taskDetalhes && $this->taskDetalhes->id == $id) {
+            $this->reset(['modalDetalhesAberto', 'taskDetalhes']);
         }
 
-        $this->dispatch('sucesso', msg: 'Registro e arquivos cancelados/removidos do servidor.');
+        $this->dispatch('sucesso', msg: 'Registro e arquivos removidos do servidor.');
     }
 
     public function verDetalhes($id)
     {
-        $this->importacaoDetalhes = Importacao::findOrFail($id);
+        $this->taskDetalhes = SystemTask::findOrFail($id);
         $this->previewCabecalhos = [];
         $this->previewDados = [];
         
-        if ($this->importacaoDetalhes->arquivo_caminho && Storage::disk('local')->exists($this->importacaoDetalhes->arquivo_caminho)) {
-            $caminhoAbsoluto = Storage::disk('local')->path($this->importacaoDetalhes->arquivo_caminho);
+        if ($this->taskDetalhes->arquivo_caminho && Storage::disk('local')->exists($this->taskDetalhes->arquivo_caminho)) {
+            $caminhoAbsoluto = Storage::disk('local')->path($this->taskDetalhes->arquivo_caminho);
             $extensao = pathinfo($caminhoAbsoluto, PATHINFO_EXTENSION);
             
             if (in_array(strtolower($extensao), ['csv', 'xlsx', 'xls'])) {
@@ -586,7 +583,7 @@ class ImportacaoManager extends Component
                     
                     $this->previewCabecalhos = $reader->getHeaders() ?? [];
                     
-                    $erros = json_decode($this->importacaoDetalhes->erro_mensagem, true) ?? [];
+                    $erros = json_decode($this->taskDetalhes->erro_mensagem, true) ?? [];
                     $linhasComErro = array_column($erros, 'linha');
                     $mensagensErro = [];
                     $isDev = auth()->user()->hasRole('dev');
@@ -631,12 +628,12 @@ class ImportacaoManager extends Component
 
     public function baixarErros($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
 
-        $importacao = Importacao::findOrFail($id);
-        $erros = json_decode($importacao->erro_mensagem, true) ?? [];
+        $task = SystemTask::findOrFail($id);
+        $erros = json_decode($task->erro_mensagem, true) ?? [];
 
-        if (empty($erros) || !$importacao->arquivo_caminho || !Storage::disk('local')->exists($importacao->arquivo_caminho)) {
+        if (empty($erros) || !$task->arquivo_caminho || !Storage::disk('local')->exists($task->arquivo_caminho)) {
             $this->dispatch('erro', msg: 'Não há erros para baixar ou o arquivo original não está mais no servidor.');
             return;
         }
@@ -651,7 +648,7 @@ class ImportacaoManager extends Component
             }
         }
 
-        $caminhoAbsoluto = Storage::disk('local')->path($importacao->arquivo_caminho);
+        $caminhoAbsoluto = Storage::disk('local')->path($task->arquivo_caminho);
         $extensao = pathinfo($caminhoAbsoluto, PATHINFO_EXTENSION);
         
         $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($caminhoAbsoluto);
@@ -678,7 +675,7 @@ class ImportacaoManager extends Component
             }
         });
 
-        $nomeArquivo = 'Relatorio_Erros_Importacao_' . $importacao->id . '.csv';
+        $nomeArquivo = 'Relatorio_Erros_Tarefa_' . $task->id . '.csv';
         
         $callback = function() use ($linhasExportar) {
             $file = fopen('php://output', 'w');
@@ -698,12 +695,12 @@ class ImportacaoManager extends Component
 
     public function baixarArquivoOriginal($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'), 403);
-        $importacao = Importacao::findOrFail($id);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        $task = SystemTask::findOrFail($id);
 
-        if ($importacao->arquivo_caminho && Storage::disk('local')->exists($importacao->arquivo_caminho)) {
-            $nomeFinal = 'Original_' . ($importacao->arquivo_nome ?? 'planilha.csv');
-            return Storage::disk('local')->download($importacao->arquivo_caminho, $nomeFinal);
+        if ($task->arquivo_caminho && Storage::disk('local')->exists($task->arquivo_caminho)) {
+            $nomeFinal = 'Original_' . ($task->arquivo_nome ?? 'arquivo_tarefa.csv');
+            return Storage::disk('local')->download($task->arquivo_caminho, $nomeFinal);
         }
 
         $this->dispatch('erro', msg: 'O arquivo original não foi encontrado no servidor.');
@@ -711,21 +708,21 @@ class ImportacaoManager extends Component
 
     public function solicitarExportacao()
     {
-        abort_if(!feature('importacao.exportar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.exportar'), 403);
+        abort_if(!feature('tarefas.exportar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.exportar'), 403);
 
-        $ativos = Importacao::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
+        $ativos = SystemTask::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
-            $this->dispatch('sucesso', msg: 'Sua fila está cheia. Aguarde as gerações atuais terminarem.');
+            $this->dispatch('sucesso', msg: 'Sua fila está cheia. Aguarde as tarefas atuais terminarem.');
             return;
         }
 
-        $exportacao = Importacao::create([
+        $exportacao = SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'exportacao',
             'formato' => 'xlsx',
-            'arquivo_nome' => "Exportacao_Inscricoes.xlsx",
+            'arquivo_nome' => "Exportacao_Sistema.xlsx",
             'status' => 'na_fila',
             'total_linhas' => 0, 
         ]);
@@ -737,7 +734,7 @@ class ImportacaoManager extends Component
 
     public function baixarExportacao($id)
     {
-        $log = Importacao::findOrFail($id);
+        $log = SystemTask::findOrFail($id);
         if ($log->operacao === 'exportacao' && $log->status === 'concluido' && $log->arquivo_gerado_caminho) {
             return Storage::disk('public')->download($log->arquivo_gerado_caminho);
         }
@@ -746,7 +743,7 @@ class ImportacaoManager extends Component
 
     public function render()
     {
-        $query = Importacao::with('user')->where('tipo', 'inscricoes');
+        $query = SystemTask::with('user')->where('tipo', 'inscricoes');
         
         if (!empty($this->filtro_status)) $query->where('status', $this->filtro_status);
         if (!empty($this->filtro_usuario)) $query->where('user_id', $this->filtro_usuario);
@@ -764,12 +761,12 @@ class ImportacaoManager extends Component
         if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         else $query->orderBy('id', 'desc');
 
-        $usuariosDisponiveis = User::whereIn('id', Importacao::select('user_id')->distinct())
+        $usuariosDisponiveis = User::whereIn('id', SystemTask::select('user_id')->distinct())
             ->orderBy('name')->pluck('name', 'id');
 
-        return view('livewire.importacao.importacao-manager', [
+        return view('livewire.system-tasks.system-task-manager', [
             'registros' => $query->paginate($this->porPagina),
             'usuariosDisponiveis' => $usuariosDisponiveis
-        ])->layout('components.layouts.app', ['title' => 'Gestor de Integrações (Inscrições)']);
+        ])->layout('components.layouts.app', ['title' => 'Gestor de Processamento (Background)']);
     }
 }

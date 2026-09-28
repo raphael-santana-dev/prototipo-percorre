@@ -8,7 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 use App\Models\CampoFormulario;

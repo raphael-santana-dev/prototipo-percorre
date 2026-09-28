@@ -8,7 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Ciclo;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 
 class RecalcularPontuacoesGlobaisJob implements ShouldQueue
 {

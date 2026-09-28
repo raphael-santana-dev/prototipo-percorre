@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\SimpleExcel\SimpleExcelReader;
-use App\Models\Importacao;
+use App\Models\SystemTask;
+use App\Models\SystemTaskConfig;
 use App\Models\Inscricao;
-
 use App\Traits\FuzzyMatchingTrait;
 
 class ProcessarImportacaoUniversalJob implements ShouldQueue
@@ -21,7 +21,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, FuzzyMatchingTrait;
 
     public $timeout = 7200; 
-    protected $importacao;
+    protected $task;
 
     protected $relatorioAutoCadastro = [
         '100_porcento' => [],
@@ -32,9 +32,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
     protected $cacheVinculos = [];
     protected $configsRelacionamentoCache = null;
 
-    public function __construct(Importacao $importacao)
+    public function __construct(SystemTask $task)
     {
-        $this->importacao = $importacao;
+        $this->task = $task;
     }
 
     private function detectarDelimitadorCsv($caminhoAbsoluto)
@@ -103,9 +103,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         $errosCriticos = 0;
 
         try {
-            $this->importacao->update(['status' => 'processando']);
-            $caminhoAbsoluto = Storage::disk('local')->path($this->importacao->arquivo_caminho);
-            $formato = $this->importacao->formato;
+            $this->task->update(['status' => 'processando']);
+            $caminhoAbsoluto = Storage::disk('local')->path($this->task->arquivo_caminho);
+            $formato = $this->task->formato;
             
             if (!in_array($formato, ['csv', 'xlsx', 'xls'])) {
                 throw new \Exception("Apenas arquivos CSV ou Excel são permitidos.");
@@ -121,12 +121,17 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 $reader->useDelimiter($delimiter);
             }
 
-            $mapeamento = $this->importacao->mapeamento ?? [];
+            $mapeamento = $this->task->mapeamento ?? [];
             $linhasParaReprocessar = $mapeamento['linhas_reprocessar'] ?? null;
 
-            $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar) {
+            $cicloId = $mapeamento['ciclo_id'] ?? null;
+            $ciclo = $cicloId ? \App\Models\Ciclo::find($cicloId) : null;
+            $primeiroStatus = $ciclo ? $ciclo->statusPipeline()->orderBy('pivot_ordem', 'asc')->first() : null;
+            $statusInicialId = $primeiroStatus ? $primeiroStatus->id : 1;
+
+            $reader->getRows()->chunk(500)->each(function ($chunk) use (&$linhaAtual, &$erros, &$errosCriticos, $mapeamento, $linhasParaReprocessar, $statusInicialId) {
                 
-                if ($this->importacao->fresh()->status !== 'processando') {
+                if ($this->task->fresh()->status !== 'processando') {
                     return false; 
                 }
 
@@ -144,7 +149,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                             $dadosLimpos[$cleanKey] = $value;
                         }
 
-                        $this->processarInscricao($dadosLimpos, $mapeamento);
+                        $this->processarInscricao($dadosLimpos, $mapeamento, $statusInicialId);
 
                     } catch (\Illuminate\Database\QueryException $e) {
                         $isDuplicate = $e->getCode() === '23505'; 
@@ -153,8 +158,8 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                         if (!$isDuplicate) $errosCriticos++;
 
                         $amigavel = 'Falha técnica ao salvar no banco de dados.';
-                        if ($isDuplicate) $amigavel = 'Candidato ignorado: O registro já existe (Desative a Mesclagem ou corrija o CPF).';
-                        if ($isNotNull) $amigavel = 'Falha ao vincular: Faltam dados na tabela destino.';
+                        if ($isDuplicate) $amigavel = 'Ignorado: O registro já existe (Desative a Mesclagem ou corrija o CPF).';
+                        if ($isNotNull) $amigavel = 'Falha ao vincular: Faltam dados obrigatórios.';
 
                         $erros[] = [
                             'linha' => $linhaAtual, 
@@ -176,10 +181,10 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 }
 
                 if ($errosCriticos >= 1000) {
-                    throw new \Exception("Excesso de falhas (1000+). Planilha fora do padrão. Operação abortada.");
+                    throw new \Exception("Excesso de falhas críticas (1000+). Planilha fora do padrão. Operação abortada.");
                 }
 
-                $this->importacao->update([
+                $this->task->update([
                     'linhas_processadas' => $linhaAtual,
                     'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
                 ]);
@@ -187,7 +192,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 if (function_exists('gc_collect_cycles')) gc_collect_cycles();
             });
 
-            if ($this->importacao->fresh()->status !== 'processando') {
+            if ($this->task->fresh()->status !== 'processando') {
                 return; 
             }
 
@@ -204,18 +209,18 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
             $statusFinal = count($erros) > 0 ? (count($erros) >= $linhaAtual ? 'erro' : 'erro_parcial') : 'concluido';
             
-            $this->importacao->update([
+            $this->task->update([
                 'status' => $statusFinal,
                 'linhas_processadas' => $linhaAtual,
                 'erro_mensagem' => count($erros) > 0 ? json_encode($erros, JSON_UNESCAPED_UNICODE) : null
             ]);
 
             if ($linhaAtual > 0) {
-                $usuario = $this->importacao->user; 
+                $usuario = $this->task->user; 
                 DB::table('auditoria_logs')->insert([
                     'tabela_alterada' => 'inscricoes',
                     'registro_id' => null,
-                    'acao' => 'importacao_lote',
+                    'acao' => 'processamento_lote',
                     'informacao_anterior' => null,
                     'nova_informacao' => json_encode(['total_linhas_lidas' => $linhaAtual, 'falhas' => count($erros)], JSON_UNESCAPED_UNICODE),
                     'usuario_id' => $usuario->id ?? null,
@@ -234,9 +239,9 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 'linha' => 'Falha Crítica', 
                 'tipo' => 'Crash',
                 'mensagem' => $e->getMessage() . ' no arquivo ' . basename($e->getFile()) . ':' . $e->getLine(),
-                'amigavel' => 'A importação caiu: ' . $e->getMessage()
+                'amigavel' => 'A execução falhou: ' . $e->getMessage()
             ]);
-            $this->importacao->update([
+            $this->task->update([
                 'status' => 'erro', 
                 'erro_mensagem' => json_encode($erros, JSON_UNESCAPED_UNICODE)
             ]);
@@ -292,7 +297,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         return null;
     }
 
-    private function processarInscricao(array $linhaFormatada, array $mapeamento)
+    private function processarInscricao(array $linhaFormatada, array $mapeamento, int $statusInicialId = 1)
     {
         $dadosFixos = [];
         $dadosDinamicos = [];
@@ -320,7 +325,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                     if (str_contains($valorLimpo, 'GMT')) {
                         $valorLimpo = trim(substr($valorLimpo, 0, strpos($valorLimpo, 'GMT'))); 
                     }
-                    
                     $parsed = \Carbon\Carbon::parse(str_replace('/', '-', trim($valorLimpo)));
                     $valorPlanilha = $precisaDeHora ? $parsed->format('Y-m-d H:i:s') : $parsed->format('Y-m-d');
                 } catch (\Exception $e) {
@@ -347,7 +351,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 if ($idVinculo) {
                     $dadosFixos[$destino] = $idVinculo;
                 } else {
-                    throw new \Exception("{$tipoLabel}: O nome '{$valorPlanilha}' não atingiu 50% de similaridade com o banco e o auto-cadastro está desativado.");
+                    throw new \Exception("{$tipoLabel}: O nome '{$valorPlanilha}' não atingiu 50% de similaridade com a base e o auto-cadastro está desativado.");
                 }
                 continue; 
             }
@@ -370,7 +374,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         if (empty($dadosFixos['email'])) $dadosFixos['email'] = null;
 
         if ($this->configsRelacionamentoCache === null) {
-            $this->configsRelacionamentoCache = \App\Models\ImportacaoConfig::all();
+            $this->configsRelacionamentoCache = SystemTaskConfig::all();
         }
         $configsRelacionamento = $this->configsRelacionamentoCache;
         $permiteAutoCadastro = filter_var($mapeamento['config_auto_cadastro'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -408,14 +412,15 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
         }
 
         if (empty($dadosFixos['status_inscricao_id'])) {
-            $dadosFixos['status_inscricao_id'] = 1; 
+            $dadosFixos['status_inscricao_id'] = $statusInicialId; 
         }
 
+        $dadosFixos['etapa_atual'] = 99;
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
         $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
-        $dadosFixos['criado_por'] = $this->importacao->user_id;
+        $dadosFixos['criado_por'] = $this->task->user_id;
 
         $mesclarDuplicatas = filter_var($mapeamento['config_mesclar_duplicadas'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -430,7 +435,7 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
                 
                 if ($inscricaoExistente) {
                     if (!$mesclarDuplicatas) {
-                        throw new \Exception("Candidato ignorado: CPF '{$dadosFixos['cpf']}' já cadastrado para este mesmo Ciclo.", 23505);
+                        throw new \Exception("CPF '{$dadosFixos['cpf']}' já cadastrado para este Ciclo.", 23505);
                     }
 
                     $dadosAtuais = $inscricaoExistente->toArray();

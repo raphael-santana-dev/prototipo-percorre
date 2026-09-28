@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 
 class AvancarStatusNoFunilJob implements ShouldQueue
 {

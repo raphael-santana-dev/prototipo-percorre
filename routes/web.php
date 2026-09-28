@@ -134,9 +134,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/pre-inscricao/{slug}', PreInscricao::class);
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
-    Route::get('/importacoes', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class)->name('importacoes.index');
-
-    Route::get('/importacoes/hub', \App\Modules\Importacao\UI\Livewire\ImportacaoConfigManager::class)->name('importacoes.hub');
+    
+    Route::get('/sistema/tarefas', \App\Modules\SystemTasks\UI\Livewire\SystemTaskManager::class)->name('system_tasks.index');
+    Route::get('/sistema/hub', \App\Modules\SystemTasks\UI\Livewire\SystemTaskConfigManager::class)->name('system_tasks.hub');
 
     Route::get('/configuracoes', \App\Modules\Admin\UI\Livewire\ConfiguracoesGeraisManager::class)->name('configuracoes.index');
     Route::get('/solicitacoes', \App\Modules\Admin\UI\Livewire\SolicitacoesManager::class)->name('solicitacoes.index');

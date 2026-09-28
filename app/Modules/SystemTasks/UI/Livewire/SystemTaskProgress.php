@@ -1,25 +1,25 @@
 <?php
 
-namespace App\Modules\Importacao\UI\Livewire;
+namespace App\Modules\SystemTasks\UI\Livewire;
 
 use Livewire\Component;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 
-class ImportProgress extends Component
+class SystemTaskProgress extends Component
 {
     public function render()
     {
-        if (!feature('importacao.acessar') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('importacao.acessar'))) {
+        if (!feature('tarefas.acessar') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'))) {
             return <<<'HTML'
             <div></div>
             HTML;
         }
-        $ativas = Importacao::where('user_id', auth()->id())
+        $ativas = SystemTask::where('user_id', auth()->id())
             ->whereIn('status', ['mapeamento', 'na_fila', 'processando'])
             ->orderBy('id', 'desc')
             ->get();
 
-        return view('livewire.importacao.import-progress', [
+        return view('livewire.system-tasks.system-task-progress', [
             'ativas' => $ativas,
             'totalAtivas' => $ativas->count()
         ]);
