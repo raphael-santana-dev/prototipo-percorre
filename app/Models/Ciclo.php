@@ -50,4 +50,24 @@ class Ciclo extends Model
             ->withPivot('ordem')
             ->orderBy('pivot_ordem', 'asc');
     }
+
+    /**
+     * Retorna o ID do primeiro Status (Etapa 1 do funil) configurado para este ciclo.
+     * Caso o administrador não tenha configurado o funil, retorna um fallback seguro.
+     */
+    public function getStatusInicialId(): int
+    {
+        // Tenta buscar a primeira etapa configurada no funil (menor ordem)
+        $primeiroStatus = $this->statusPipeline()->orderBy('pivot_ordem', 'asc')->first();
+
+        if ($primeiroStatus) {
+            return $primeiroStatus->id;
+        }
+
+        // Fallback: Se o ciclo estiver sem funil configurado, tenta pegar o status padrão de sucesso
+        $statusFallback = \App\Models\StatusInscricao::where('nome', 'Inscrição Finalizada')->first();
+
+        // Se nem o fallback existir, devolve o ID 1 por extrema segurança
+        return $statusFallback ? $statusFallback->id : 1;
+    }
 }
