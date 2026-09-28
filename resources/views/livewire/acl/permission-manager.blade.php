@@ -125,7 +125,7 @@
                             <div class="col-span-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Módulo <span class="text-red-500">*</span></div>
                             <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Submódulo</div>
                             <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Ação <span class="text-red-500">*</span></div>
-                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição <span class="text-red-500">*</span></div>
+                            <div class="col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</div>
                             <div class="col-span-1"></div>
                         </div>
 

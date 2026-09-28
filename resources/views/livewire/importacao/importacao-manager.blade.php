@@ -3,7 +3,6 @@
     <x-page-header 
         title="Gestor de Importação (Inscrições)" 
         icon="ph ph-files"
-        badge="Base de Candidatos"
         :breadcrumbs="$breadcrumbs ?? []">
 
         <x-slot name="filters">
