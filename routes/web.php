@@ -11,7 +11,6 @@ use App\Modules\ACL\UI\Livewire\RolePermissionManager;
 use App\Modules\Corporate\UI\Livewire\UserManager;
 use App\Modules\Corporate\UI\Livewire\UserExtraPermissionManager;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
-use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 use App\Modules\Turno\UI\Livewire\TurnoManager;
 use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
@@ -159,7 +158,7 @@ Route::prefix('empresa')->name('company.')->middleware('auth:company')->group(fu
 });
 
 Route::prefix('alunos')->name('student.')->middleware('auth:student')->group(function () {
+    Route::get('/solicitacoes', \App\Modules\Student\UI\Livewire\MinhasSolicitacoes::class)->name('solicitacoes');
     Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Student\UI\Livewire\ProfileManager::class)->name('profile');
-    Route::get('/biblioteca', StudentLibrary::class)->name('library')->middleware('feature:alunos.biblioteca');
 });

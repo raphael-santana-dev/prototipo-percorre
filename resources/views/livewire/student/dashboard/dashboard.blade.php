@@ -121,7 +121,10 @@
 
     @if(isset($minhasSolicitacoes) && count($minhasSolicitacoes) > 0)
     <div class="mt-8">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Minhas Solicitações Registradas</h3>
+        <div class="flex justify-between items-end mb-4">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Últimas Solicitações</h3>
+            <a href="{{ route('student.solicitacoes') }}" class="text-sm font-bold text-purpura-600 hover:text-purpura-700 flex items-center gap-1 transition">Ver histórico completo <i class="ph-bold ph-arrow-right"></i></a>
+        </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
             <table class="w-full text-left text-sm whitespace-nowrap">
                 <thead class="bg-slate-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
@@ -129,14 +132,13 @@
                         <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Data</th>
                         <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Tipo</th>
                         <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Status</th>
-                        <th class="px-4 py-3 font-bold text-[10px] text-gray-500 uppercase">Resposta do Polo</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach($minhasSolicitacoes as $solic)
+                    @foreach($minhasSolicitacoes->take(3) as $solic)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ $solic->created_at->format('d/m/Y H:i') }}</td>
-                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ $solic->tema === 'alteracao_academica' ? 'Troca de Curso/Turno' : str_replace('_', ' ', $solic->tema) }}</td>
+                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300 font-medium">{{ $solic->created_at->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">{{ $solic->tema === 'alteracao_academica' ? 'Troca de Curso/Turno' : str_replace('_', ' ', $solic->tema) }}</td>
                         <td class="px-4 py-3">
                             @if($solic->status === 'aprovada')
                                 <span class="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Aprovada</span>
@@ -145,9 +147,6 @@
                             @else
                                 <span class="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold uppercase rounded-md">Em Análise</span>
                             @endif
-                        </td>
-                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400 truncate max-w-xs" title="{{ $solic->resposta_admin }}">
-                            {{ $solic->resposta_admin ?: '-' }}
                         </td>
                     </tr>
                     @endforeach
