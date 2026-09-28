@@ -10,7 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\SimpleExcel\SimpleExcelWriter;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 use App\Models\User;
 use App\Models\Inscricao;
 use App\Models\CampoFormulario;
@@ -22,7 +22,7 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
     public $timeout = 3600;
     protected $exportacao;
 
-    public function __construct(Importacao $exportacao)
+    public function __construct(SystemTask $exportacao)
     {
         $this->exportacao = $exportacao;
     }

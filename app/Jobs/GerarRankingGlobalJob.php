@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use App\Models\Ciclo;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 
 class GerarRankingGlobalJob implements ShouldQueue
 {

@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Modules\Importacao\UI\Livewire;
+namespace App\Modules\SystemTasks\UI\Livewire;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use App\Models\ImportacaoConfig;
+use App\Models\SystemTaskConfig;
 
 #[Layout('components.layouts.app')]
 #[Title('Configurações de Integração - DEV')]
-class ImportacaoConfigManager extends Component
+class SystemTaskConfigManager extends Component
 {
     public $configs;
     public $modalAberto = false;
@@ -24,7 +24,7 @@ class ImportacaoConfigManager extends Component
 
     public function carregarConfigs()
     {
-        $this->configs = ImportacaoConfig::all();
+        $this->configs = SystemTaskConfig::all();
     }
 
     public function abrirModalNovo()
@@ -35,7 +35,7 @@ class ImportacaoConfigManager extends Component
 
     public function editar($id)
     {
-        $config = ImportacaoConfig::findOrFail($id);
+        $config = SystemTaskConfig::findOrFail($id);
         $this->configId = $config->id;
         $this->coluna = $config->coluna;
         $this->model_class = $config->model_class;
@@ -62,7 +62,7 @@ class ImportacaoConfigManager extends Component
             }
         }
 
-        ImportacaoConfig::updateOrCreate(
+        SystemTaskConfig::updateOrCreate(
             ['id' => $this->configId],
             [
                 'coluna' => $this->coluna,
@@ -80,13 +80,13 @@ class ImportacaoConfigManager extends Component
 
     public function excluir($id)
     {
-        ImportacaoConfig::findOrFail($id)->delete();
+        SystemTaskConfig::findOrFail($id)->delete();
         $this->carregarConfigs();
         $this->dispatch('sucesso', msg: 'Configuração removida.');
     }
 
     public function render()
     {
-        return view('livewire.importacao.importacao-config-manager');
+        return view('livewire.system-tasks.system-task-config-manager');
     }
 }

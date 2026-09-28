@@ -30,8 +30,8 @@
             </div>
         </a>
     @else
-        <a href="{{ route('system_tasks.index') }}" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 transition-colors rounded-full" title="Gerenciador de Integrações">
-            <i class="ph ph-arrows-left-right text-xl"></i>
+        <a href="{{ route('system_tasks.index') }}" class="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 transition-colors rounded-full" title="Gestor de Processamento">
+            <i class="ph ph-cpu text-xl"></i>
         </a>
     @endif
 

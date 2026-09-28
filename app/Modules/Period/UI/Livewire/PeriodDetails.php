@@ -229,12 +229,12 @@ class PeriodDetails extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
-        $trackingScore = \App\Models\Importacao::create([
+        $trackingScore = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
             'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        $trackingRank = \App\Models\Importacao::create([
+        $trackingRank = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
@@ -252,7 +252,7 @@ class PeriodDetails extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        $tracking = \App\Models\Importacao::create([
+        $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);

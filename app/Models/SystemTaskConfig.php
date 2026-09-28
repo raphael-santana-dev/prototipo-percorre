@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\RegistraAuditoria;
 
-class ImportacaoConfig extends Model
+class SystemTaskConfig extends Model
 {
     use RegistraAuditoria;
     protected $fillable = ['coluna', 'model_class', 'campo_busca', 'auto_cadastro', 'payload_padrao'];

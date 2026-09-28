@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
-use App\Models\Importacao;
+use App\Models\SystemTask;
 use Illuminate\Support\Str;
 
 class ProcessarStatusEmLoteJob implements ShouldQueue

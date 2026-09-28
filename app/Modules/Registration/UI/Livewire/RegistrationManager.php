@@ -590,7 +590,7 @@ class RegistrationManager extends Component
                 $this->showQuickView($ids[0]);
             }
         } else {
-            $tracking = \App\Models\Importacao::create([
+            $tracking = \App\Models\SystemTask::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
             ]);
@@ -631,7 +631,7 @@ class RegistrationManager extends Component
             return;
         }
 
-        $tracking = \App\Models\Importacao::create([
+        $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'exportacao',
@@ -660,12 +660,12 @@ class RegistrationManager extends Component
         $ciclo = Ciclo::find($this->filtroCiclo);
         $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
 
-        $trackingScore = \App\Models\Importacao::create([
+        $trackingScore = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
             'arquivo_nome' => '1/2: Recálculo de Pontuação (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        $trackingRank = \App\Models\Importacao::create([
+        $trackingRank = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => '2/2: Geração de Ranking (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
@@ -691,7 +691,7 @@ class RegistrationManager extends Component
         $ciclo = Ciclo::find($this->filtroCiclo);
         $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
 
-        $tracking = \App\Models\Importacao::create([
+        $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => 'Geração de Ranking: ' . $nomeCiclo, 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
@@ -770,7 +770,7 @@ class RegistrationManager extends Component
         
         $qtd = count($this->selecionadas);
 
-        $tracking = \App\Models\Importacao::create([
+        $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'atualizacao_lote',

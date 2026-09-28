@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\ImportacaoConfig;
+use App\Models\SystemTaskConfig;
 
 class ImportacaoConfigSeeder extends Seeder
 {

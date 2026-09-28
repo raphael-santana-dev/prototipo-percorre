@@ -464,7 +464,7 @@ class KanbanBoard extends Component
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
         } 
         else {
-            $tracking = \App\Models\Importacao::create([
+            $tracking = \App\Models\SystemTask::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status via Fluxo: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
             ]);

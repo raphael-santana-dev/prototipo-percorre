@@ -226,7 +226,7 @@
                         @endcanany
 
                         {{-- Administração --}}
-                        @canany(['usuario.listar', 'acl.role.listar', 'acl.permissao.listar', 'auditoria.listar', 'importacao.acessar'])
+                        @canany(['usuario.listar', 'acl.role.listar', 'acl.permissao.listar', 'auditoria.listar', 'tarefas.acessar'])
                         <div x-data="{ open: false }" @click.away="open = false" class="relative ml-auto">
                             <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">
                                 <i class="text-base ph ph-gear"></i> Administração <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
@@ -239,7 +239,7 @@
                                 @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Usuários</a> @endcan
                                 @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a> @endcan
                                 @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Auditoria</a> @endcan
-                                @can('importacao.acessar') <a href="{{ route('importacoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Importações</a> @endcan
+                                @can('tarefas.acessar') <a href="{{ route('system_tasks.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Importações</a> @endcan
                                 @can('form.builder')
                                 <a href="{{ route('formbuilder.hub') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                     Form Builder
@@ -255,7 +255,7 @@
                         </div>
                         @endcanany
 
-                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
+                        @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
                     </div>
                 </div>
             </nav>
@@ -407,7 +407,7 @@
                     </div>
                     @endcanany
 
-                    @canany(['usuario.listar', 'acl.role.listar', 'acl.permissao.listar', 'auditoria.listar', 'importacao.acessar'])
+                    @canany(['usuario.listar', 'acl.role.listar', 'acl.permissao.listar', 'auditoria.listar', 'tarefas.acessar'])
                     <div x-data="{ open: false }" class="space-y-1">
                         <button @click="open = !open" class="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                             <span class="flex items-center gap-3"><i class="text-lg ph ph-gear"></i> Administração</span>
@@ -417,7 +417,7 @@
                             @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Gestão de Usuários</a> @endcan
                             @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Perfis (Roles)</a> @endcan
                             @can('acl.permissao.listar') <a href="{{ route('permissions.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Permissões</a> @endcan
-                            @can('importacao.acessar') <a href="{{ route('importacoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Importações</a> @endcan
+                            @can('tarefas.acessar') <a href="{{ route('system_tasks.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Importações</a> @endcan
                             @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar'))
                                 <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                 <a href="{{ route('configuracoes.index') }}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg dark:text-gray-300 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">Configurações</a>
@@ -431,7 +431,7 @@
                     @endcanany
 
                     <div class="px-3 py-2">
-                        @livewire(\App\Modules\Importacao\UI\Livewire\ImportProgress::class)
+                        @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
                     </div>
                 </div>
 

@@ -115,10 +115,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('forms.form-edit', \App\Modules\Forms\UI\Livewire\FormEdit::class);
         Livewire::component('forms.form-spreadsheet', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class);
 
-        Livewire::component('importacao.importacao-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoManager::class);
-        Livewire::component('importacao.import-progress', \App\Modules\Importacao\UI\Livewire\ImportProgress::class);
-        Livewire::component('importacao.importacao-config-manager', \App\Modules\Importacao\UI\Livewire\ImportacaoConfigManager::class);
-
+        Livewire::component('system-tasks.system-task-manager', \App\Modules\SystemTasks\UI\Livewire\SystemTaskManager::class);
+        Livewire::component('system-tasks.system-task-progress', \App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class);
+        Livewire::component('system-tasks.system-task-config-manager', \App\Modules\SystemTasks\UI\Livewire\SystemTaskConfigManager::class);
 
         Livewire::component('comunicacao.template-form', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::class);
         Livewire::component('comunicacao.template-manager', \App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::class);
