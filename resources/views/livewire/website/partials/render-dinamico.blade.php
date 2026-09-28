@@ -1,6 +1,21 @@
+@php
+    if (!function_exists('formatWppText')) {
+        function formatWppText($text) {
+            // Remove injeções maliciosas de código
+            $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
+            // Formata negrito, itálico e riscado
+            $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
+            $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
+            $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
+            // Preserva as quebras de linha
+            return nl2br($text);
+        }
+    }
+@endphp
+
 <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
 
-@foreach($camposDinamicos->where('etapa', $etapaAtual) as $campo)
+@foreach($camposVigentes as $campo)
     @php
         $isCondicional = !empty($campo->depende_de) && !empty($campo->depende_valor);
         
@@ -82,7 +97,7 @@
         <div class="relative z-10">
             @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media']))
                 <label class="block text-sm font-semibold text-gray-800 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
-                    {{ $campo->label }} 
+                    {!! formatWppText($campo->label) !!} 
                     @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
                 </label>
             @endif
@@ -147,15 +162,15 @@
 
             @elseif($campo->tipo === 'html')
                 <div class="{{ isset($config['bg_image']) ? 'text-white' : 'text-gray-800' }}">
-                    @if($campo->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{{ $campo->label }}</h1>
-                    @elseif($campo->subtipo === 'h2') <h2 class="text-2xl font-bold">{{ $campo->label }}</h2>
-                    @elseif($campo->subtipo === 'h3') <h3 class="text-xl font-bold">{{ $campo->label }}</h3>
-                    @elseif($campo->subtipo === 'p') <p class="text-base leading-relaxed">{{ $campo->label }}</p>
-                    @elseif($campo->subtipo === 'link') <a href="{{ $config['url'] ?? '#' }}" target="_blank" class="text-purpura-600 font-bold hover:underline">{{ $campo->label }}</a>
+                    @if($campo->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{!! formatWppText($campo->label) !!}</h1>
+                    @elseif($campo->subtipo === 'h2') <h2 class="text-2xl font-bold">{!! formatWppText($campo->label) !!}</h2>
+                    @elseif($campo->subtipo === 'h3') <h3 class="text-xl font-bold">{!! formatWppText($campo->label) !!}</h3>
+                    @elseif($campo->subtipo === 'p') <p class="text-base leading-relaxed">{!! formatWppText($campo->label) !!}</p>
+                    @elseif($campo->subtipo === 'link') <a href="{{ $config['url'] ?? '#' }}" target="_blank" class="text-purpura-600 font-bold hover:underline">{!! formatWppText($campo->label) !!}</a>
                     @elseif($campo->subtipo === 'info_card') 
                         <div class="p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
-                            <p class="font-bold mb-1">{{ $campo->label }}</p>
-                            <p class="text-sm">{{ $config['descricao'] ?? '' }}</p>
+                            <p class="font-bold mb-1">{!! formatWppText($campo->label) !!}</p>
+                            <p class="text-sm">{!! formatWppText($config['descricao'] ?? '') !!}</p>
                         </div>
                     @endif
                 </div>
@@ -163,7 +178,7 @@
             @elseif($campo->tipo === 'media')
                 <div class="w-full flex justify-center mt-2 rounded-lg overflow-hidden border border-gray-100">
                     @if($campo->subtipo === 'image')
-                        <img src="{{ $config['url'] ?? '' }}" alt="{{ $campo->label }}" class="max-w-full h-auto bg-white">
+                        <img src="{{ $config['url'] ?? '' }}" alt="{!! formatWppText($campo->label) !!}" class="max-w-full h-auto bg-white">
                     @elseif($campo->subtipo === 'video')
                         <iframe class="w-full aspect-video bg-black" src="{{ $config['url'] ?? '' }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     @endif
@@ -205,6 +220,7 @@
                 @endif
 
             @elseif($campo->tipo === 'rating')
+
                 <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name) }">
                     @for($i = 1; $i <= ($config['max_stars'] ?? 5); $i++)
                         <i class="cursor-pointer transition-colors" 
@@ -214,6 +230,29 @@
                            @click="rating = {{ $i }}">
                         </i>
                     @endfor
+                </div>
+
+            @elseif($campo->tipo === 'scale')
+                @php 
+                    $maxScale = $config['escala_maxima'] ?? 10;
+                @endphp
+                <div class="mt-2 w-full overflow-x-auto">
+                    <div class="flex w-full min-w-max border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
+                        @for($i = 0; $i <= $maxScale; $i++)
+                            <label class="flex-1 relative cursor-pointer border-r last:border-r-0 border-gray-200 hover:bg-gray-50 transition-colors">
+                                <!-- O input real fica invisível usando a classe 'sr-only' -->
+                                <input type="radio" wire:model.live="respostas.{{ $campo->name }}" value="{{ $i }}" class="peer sr-only" @if(isset($podeResponder) && !$podeResponder) disabled @endif>
+                                <!-- A div abaixo muda de cor quando o input oculto é selecionado via 'peer-checked' -->
+                                <div class="py-3 px-2 text-center text-gray-600 text-sm font-bold peer-checked:bg-purpura-600 peer-checked:text-white transition-colors {{ isset($podeResponder) && !$podeResponder ? 'opacity-60 cursor-not-allowed' : '' }}">
+                                    {{ $i }}
+                                </div>
+                            </label>
+                        @endfor
+                    </div>
+                    <div class="flex justify-between mt-1.5 text-xs text-gray-500 font-bold px-1">
+                        <span>{{ $config['label_min'] ?? '' }}</span>
+                        <span>{{ $config['label_max'] ?? '' }}</span>
+                    </div>
                 </div>
                 
             @elseif($campo->tipo === 'system')

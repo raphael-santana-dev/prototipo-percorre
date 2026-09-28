@@ -45,9 +45,33 @@
                     <div class="{{ $cardClass }} rounded-xl p-6 md:p-10 card-form transition-all duration-300">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                             @if($etapaAtual === 1)
-                                <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
-                                    <h4 class="text-xl font-bold {{ $textoForm }}">Dados Pessoais</h4>
-                                </div>
+                                @php
+                                    $camposTopo = $camposDinamicos->where('etapa', 1)->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
+                                    });
+                                    $camposRodape = $camposDinamicos->where('etapa', 1)->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
+                                    });
+                                @endphp
+
+                                @if($camposTopo->count() > 0)
+                                    <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+                                        <h4 class="text-xl font-bold {{ $textoForm }}">Informações Preliminares</h4>
+                                    </div>
+                                    
+                                    <!-- Renderiza os campos marcados para o topo -->
+                                    @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposTopo])
+                                    
+                                    <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
+                                        <h4 class="text-xl font-bold {{ $textoForm }}">Dados Pessoais</h4>
+                                    </div>
+                                @else
+                                    <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+                                        <h4 class="text-xl font-bold {{ $textoForm }}">Dados Pessoais</h4>
+                                    </div>
+                                @endif
                             
                                 <div class="col-span-12">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Nome Completo <span class="text-red-500">*</span></label>
@@ -274,13 +298,19 @@
                                 @endif
                             @endif
 
-                            @if($camposDinamicos && $camposDinamicos->where('etapa', $etapaAtual)->count() > 0)
+                            @if($etapaAtual === 1 && isset($camposRodape) && $camposRodape->count() > 0)
                                 <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
-                                    <h4 class="text-xl font-bold {{ $textoForm }}">
-                                        {{ $etapaAtual === 1 ? 'Informações Adicionais' : 'Informações Complementares' }}
-                                    </h4>
+                                    <h4 class="text-xl font-bold {{ $textoForm }}">Informações Adicionais</h4>
                                 </div>
-                                @include('livewire.website.partials.render-dinamico', ['etapa' => $etapaAtual])
+                                <!-- Renderiza os campos dinâmicos que sobraram na etapa 1 (após os fixos) -->
+                                @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposRodape])
+                                
+                            @elseif($etapaAtual > 1 && $camposDinamicos && $camposDinamicos->where('etapa', $etapaAtual)->count() > 0)
+                                <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
+                                    <h4 class="text-xl font-bold {{ $textoForm }}">Informações Complementares</h4>
+                                </div>
+                                <!-- Renderiza as etapas 2 em diante normalmente -->
+                                @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDinamicos->where('etapa', $etapaAtual)])
                             @endif
                             
                             @if($etapaAtual === $totalEtapas)
