@@ -172,7 +172,7 @@
                         
                         <!-- PASSO 1: DADOS BÁSICOS -->
                         @if($passoAtual === 1)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Passo 1: Informações Básicas</h3>
                                     <p class="text-xs text-gray-500 mt-1">Defina o nome de exibição, ano, semestre e as datas de abertura e encerramento das inscrições.</p>
@@ -219,7 +219,7 @@
 
                         <!-- PASSO 2: UNIDADE / CURSO / TURNO (ESTILO MAC OS EXPLORER) -->
                         @if($passoAtual === 2)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-tree-structure text-purpura-600"></i> Passo 2: Estrutura Académica</h3>
                                     <p class="text-xs text-gray-500 mt-1">Selecione as Unidades, Cursos e Turnos disponíveis neste processo seletivo.</p>
@@ -286,7 +286,7 @@
 
                         <!-- PASSO 3: DISTRIBUIÇÃO DE VAGAS -->
                         @if($passoAtual === 3)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
                                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <div>
                                         <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-users-three text-purpura-600"></i> Passo 3: Distribuição de Vagas</h3>
@@ -333,7 +333,7 @@
 
                         <!-- PASSO 4: ETAPAS DO CICLO (PIPELINE) -->
                         @if($passoAtual === 4)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-funnel text-purpura-600"></i> Passo 4: Etapas do Ciclo (Pipeline / Kanban)</h3>
                                     <p class="text-xs text-gray-500 mt-1">Organize as colunas de status pelas quais os candidatos passarão no funil seletivo.</p>
@@ -385,7 +385,7 @@
 
                         <!-- PASSO 5: DOCUMENTOS EXIGIDOS -->
                         @if($passoAtual === 5)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
                                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <div>
                                         <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-files text-purpura-600"></i> Passo 5: Documentos Exigidos</h3>
@@ -424,7 +424,7 @@
 
                         <!-- PASSO 6: SUCESSO E FORM BUILDER -->
                         @if($passoAtual === 6)
-                            <div class="bg-white dark:bg-gray-800 p-10 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 text-center space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-10 rounded-2xl  text-center space-y-6">
                                 <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 text-green-600 rounded-full dark:bg-green-900/30 dark:text-green-400 mx-auto text-4xl shadow-inner">
                                     <i class="ph-bold ph-check"></i>
                                 </div>

@@ -27,7 +27,7 @@ class RecalcularPontuacoesGlobaisJob implements ShouldQueue
     public function handle(): void
     {
         // CORREÇÃO: Utilizando o novo Model SystemTask
-        $tracking = SystemTask::find($this->trackingId);
+        $tracking = Importacao::find($this->trackingId);
         if ($tracking) $tracking->update(['status' => 'processando']);
 
         $queryCiclos = Ciclo::whereNotNull('regras_pontuacao');

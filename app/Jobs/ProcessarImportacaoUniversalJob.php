@@ -425,7 +425,6 @@ class ProcessarImportacaoUniversalJob implements ShouldQueue
 
         $dadosFixos['dados_dinamicos'] = $dadosDinamicos;
         $dadosFixos['metadados'] = $metadados;
-        $dadosFixos['ciclo_id'] = $mapeamento['ciclo_id'] ?? null;
         $dadosFixos['origem'] = 'importacao';
         $dadosFixos['criado_por'] = $this->task->user_id;
 
