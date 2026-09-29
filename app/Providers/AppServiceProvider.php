@@ -37,7 +37,6 @@ use App\Modules\Curso\Infrastructure\Persistence\EloquentCursoRepository;
 
 use App\Modules\Portal\UI\Livewire\Auth\LogoutButton as PortalLogout;
 use App\Modules\Student\UI\Livewire\Dashboard\Dashboard as StudentDashboard;
-use App\Modules\Student\UI\Livewire\Dashboard\Library as StudentLibrary;
 
 use App\Models\AuditoriaLog;
 use Illuminate\Auth\Events\Logout;
@@ -105,7 +104,6 @@ class AppServiceProvider extends ServiceProvider
 
         Livewire::component('portal.auth.logout-button', PortalLogout::class);
         Livewire::component('student.dashboard', StudentDashboard::class);
-        Livewire::component('student.library', StudentLibrary::class);
         Livewire::component('student.profile-manager', \App\Modules\Student\UI\Livewire\ProfileManager::class);
 
         Livewire::component('forms.form-manager', \App\Modules\Forms\UI\Livewire\FormManager::class);

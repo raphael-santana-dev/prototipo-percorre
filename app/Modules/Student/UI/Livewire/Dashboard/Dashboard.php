@@ -35,17 +35,11 @@ class Dashboard extends Component
             'novoCursoId' => 'required',
             'novoTurnoId' => 'required',
             'motivoSolicitacao' => 'required|string|min:10',
-        ], [
-            'novaUnidadeId.required' => 'A unidade desejada é obrigatória.',
-            'novoCursoId.required' => 'O curso desejado é obrigatório.',
-            'novoTurnoId.required' => 'O turno desejado é obrigatório.',
-            'motivoSolicitacao.required' => 'Explique o motivo da sua solicitação.',
-            'motivoSolicitacao.min' => 'Forneça uma explicação mais detalhada (mín. 10 caracteres).'
         ]);
 
         $student = auth('student')->user();
 
-        Solicitacao::create([
+        $solicitacao = Solicitacao::create([
             'tema' => 'alteracao_academica',
             'solicitante_type' => get_class($student),
             'solicitante_id' => $student->id,
@@ -57,6 +51,14 @@ class Dashboard extends Component
                 'novo_turno_id' => $this->novoTurnoId,
             ]
         ]);
+
+        // GATILHO: Dispara o e-mail confirmando o recebimento da solicitação
+        try {
+            \App\Modules\Comunicacao\Services\AutomacaoService::disparar('solicitacao.criada', $student->email, [
+                'aluno_nome' => $student->name ?? 'Estudante',
+                'justificativa' => $this->motivoSolicitacao
+            ]);
+        } catch (\Exception $e) {}
 
         $this->modalSolicitacaoAberto = false;
         $this->dispatch('sucesso', msg: 'Sua solicitação de alteração foi enviada e será analisada!');

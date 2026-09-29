@@ -21,17 +21,76 @@ class SolicitacoesManager extends Component
     public $textoResposta = '';
     public $acaoResposta = '';
 
+    public $detalhesEstudante = [];
+    public $detalhesVaga = '';
+    public $alertaUF = false;
+    public $alertaVagas = false;
+
     public function mount()
     {
         abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403, 'Acesso restrito.');
     }
 
-    public function abrirResposta($id, $acao)
+    public function abrirResposta($id, $acao = 'visualizar')
     {
-        $this->reset(['textoResposta']);
-        $this->solicitacaoAtiva = Solicitacao::findOrFail($id);
+        $this->reset(['textoResposta', 'alertaUF', 'alertaVagas', 'detalhesEstudante', 'detalhesVaga']);
+        $this->solicitacaoAtiva = Solicitacao::with(['solicitante', 'responsavel'])->findOrFail($id);
         $this->acaoResposta = $acao; 
         $this->modalResposta = true;
+
+        if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
+            $estudante = $this->solicitacaoAtiva->solicitante;
+            $inscricao = \App\Models\Inscricao::where('student_id', $estudante->id ?? 0)->latest()->first();
+            $payload = $this->solicitacaoAtiva->payload ?? [];
+
+            if ($inscricao && isset($payload['nova_unidade_id'])) {
+                $novaUnidade = \App\Modules\Unidade\Domain\Models\Unidade::find($payload['nova_unidade_id']);
+                $novoCurso = \App\Models\Curso::find($payload['novo_curso_id']);
+                $novoTurno = \App\Modules\Turno\Domain\Models\Turno::find($payload['novo_turno_id']);
+
+                $this->detalhesEstudante = [
+                    'nome' => $estudante->name ?? $estudante->nome ?? 'Candidato',
+                    'email' => $estudante->email ?? 'N/A',
+                    'estado_atual' => $inscricao->estado ?? 'Não Informado',
+                    'nova_unidade' => $novaUnidade->nome ?? '-',
+                    'estado_unidade' => $novaUnidade->estado ?? 'Não Informado',
+                    'novo_curso' => $novoCurso->nome ?? '-',
+                    'novo_turno' => $novoTurno->nome ?? '-',
+                ];
+
+                // ALERTA 1: Divergência de Estado (UF)
+                if (!empty($inscricao->estado) && !empty($novaUnidade->estado) && strtolower($inscricao->estado) !== strtolower($novaUnidade->estado)) {
+                    $this->alertaUF = true;
+                }
+
+                // ALERTA 2: Verificação de Vagas
+                $oferta = \App\Models\OfertaVaga::where('ciclo_id', $inscricao->ciclo_id)
+                    ->where('unidade_id', $payload['nova_unidade_id'])
+                    ->where('curso_id', $payload['novo_curso_id'])
+                    ->where('turno_id', $payload['novo_turno_id'])
+                    ->first();
+
+                if ($oferta) {
+                    $ocupadas = \App\Models\Inscricao::where('ciclo_id', $inscricao->ciclo_id)
+                        ->where('unidade_id', $payload['nova_unidade_id'])
+                        ->where('curso_id', $payload['novo_curso_id'])
+                        ->where('turno_id', $payload['novo_turno_id'])
+                        ->whereIn('status_inscricao_id', [2, 3, 4]) // Aprovados / Matriculados
+                        ->count();
+
+                    $vagasRestantes = $oferta->vagas - $ocupadas;
+                    if ($vagasRestantes <= 0) {
+                        $this->alertaVagas = true;
+                        $this->detalhesVaga = "Vagas Esgotadas (0 disponíveis).";
+                    } else {
+                        $this->detalhesVaga = "{$vagasRestantes} vaga(s) disponível(eis).";
+                    }
+                } else {
+                    $this->alertaVagas = true;
+                    $this->detalhesVaga = "Não há oferta configurada para esta turma.";
+                }
+            }
+        }
     }
 
     public function confirmarResposta()
@@ -71,12 +130,13 @@ class SolicitacoesManager extends Component
             }
         }
 
+        // GATILHO: Dispara o e-mail de Aprovação ou Reprovação
         if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
             $estudante = $this->solicitacaoAtiva->solicitante;
             if ($estudante && $estudante->email) {
-                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('solicitacao.alteracao_academica', $estudante->email, [
+                $gatilho = $statusFinal === 'aprovada' ? 'solicitacao.aprovada' : 'solicitacao.rejeitada';
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar($gatilho, $estudante->email, [
                     'aluno_nome' => $estudante->name ?? $estudante->nome ?? 'Estudante',
-                    'status_solicitacao' => ucfirst($statusFinal),
                     'resposta_admin' => $this->textoResposta
                 ]);
             }
