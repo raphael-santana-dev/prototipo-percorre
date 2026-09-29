@@ -22,6 +22,10 @@ class Dashboard extends Component
     public $novoTurnoId = '';
     public $motivoSolicitacao = '';
 
+    // Novos atributos para o Modal da Ficha de Inscrição Completa
+    public $modalInscricaoAberto = false;
+    public $inscricaoDetalhe = null;
+
     public function abrirModalSolicitacao()
     {
         $this->reset(['novaUnidadeId', 'novoCursoId', 'novoTurnoId', 'motivoSolicitacao']);
@@ -35,11 +39,17 @@ class Dashboard extends Component
             'novoCursoId' => 'required',
             'novoTurnoId' => 'required',
             'motivoSolicitacao' => 'required|string|min:10',
+        ], [
+            'novaUnidadeId.required' => 'A unidade desejada é obrigatória.',
+            'novoCursoId.required' => 'O curso desejado é obrigatório.',
+            'novoTurnoId.required' => 'O turno desejado é obrigatório.',
+            'motivoSolicitacao.required' => 'Explique o motivo da sua solicitação.',
+            'motivoSolicitacao.min' => 'Forneça uma explicação mais detalhada (mín. 10 caracteres).'
         ]);
 
         $student = auth('student')->user();
 
-        $solicitacao = Solicitacao::create([
+        Solicitacao::create([
             'tema' => 'alteracao_academica',
             'solicitante_type' => get_class($student),
             'solicitante_id' => $student->id,
@@ -52,7 +62,6 @@ class Dashboard extends Component
             ]
         ]);
 
-        // GATILHO: Dispara o e-mail confirmando o recebimento da solicitação
         try {
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('solicitacao.criada', $student->email, [
                 'aluno_nome' => $student->name ?? 'Estudante',
@@ -64,21 +73,35 @@ class Dashboard extends Component
         $this->dispatch('sucesso', msg: 'Sua solicitação de alteração foi enviada e será analisada!');
     }
 
+    // Função para carregar os detalhes ocultos de uma inscrição e exibir o Modal
+    public function abrirDetalhesInscricao($id)
+    {
+        $this->inscricaoDetalhe = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
+            ->where('student_id', auth('student')->id())
+            ->findOrFail($id);
+            
+        $this->modalInscricaoAberto = true;
+    }
+
     public function render()
     {
         $student = auth('student')->user();
-        $inscricao = null;
         $formulariosPendentes = [];
 
-        if (!$student->matriculado) {
-            $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
-                ->where('student_id', $student->id)
-                ->latest()
-                ->first();
-        } else {
+        // Carrega o histórico completo de inscrições, ordenado pela mais recente
+        $historicoInscricoes = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])
+            ->where('student_id', $student->id)
+            ->latest()
+            ->get();
+            
+        // A inscrição atual/principal será sempre a primeira do histórico
+        $inscricaoAtual = $historicoInscricoes->first();
+
+        // Regra de formulários pendentes (se matriculado)
+        if ($student->matriculado) {
             $avaliacoes = AlunoCicloAprendizagem::with(['faseAtual.formularios', 'ciclo'])
                 ->where('student_id', $student->id)
-                ->where('status', '2') // 2 = Pendente
+                ->where('status', '2') 
                 ->get();
 
             foreach ($avaliacoes as $av) {
@@ -89,6 +112,7 @@ class Dashboard extends Component
             }
         }
 
+        // Histórico de solicitações do Helpdesk
         $minhasSolicitacoes = Solicitacao::where('solicitante_type', get_class($student))
             ->where('solicitante_id', $student->id)
             ->latest()
@@ -96,7 +120,8 @@ class Dashboard extends Component
 
         return view('livewire.student.dashboard.dashboard', [
             'student' => $student,
-            'inscricao' => $inscricao,
+            'inscricao' => $inscricaoAtual,
+            'historicoInscricoes' => $historicoInscricoes,
             'formulariosPendentes' => $formulariosPendentes,
             'minhasSolicitacoes' => $minhasSolicitacoes,
             'unidadesDb' => Unidade::whereIn('status', ['Ativa', '1', true])->get(),

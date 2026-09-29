@@ -43,7 +43,6 @@ use Illuminate\Auth\Events\Logout;
 
 class AppServiceProvider extends ServiceProvider
 {
-    
     public function register(): void
     {
         $this->app->bind(TurnoRepositoryInterface::class, EloquentTurnoRepository::class);
@@ -53,11 +52,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-
-//        if ($this->app->environment('production')) {
-  //          \Illuminate\Support\Facades\URL::forceScheme('https');
-    //    }
-
         Gate::before(function ($user, $ability) {
             return $user->hasRole('dev') ? true : null;
         });
@@ -67,7 +61,6 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('dashboard.dashboard', Dashboard::class);
         Livewire::component('auth.profile-manager', \App\Modules\Auth\UI\Livewire\ProfileManager::class);
         
-
         Blade::if('feature', function (string $name) {
             return app(FeatureService::class)->isActive($name);
         });
@@ -106,10 +99,20 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('student.dashboard', StudentDashboard::class);
         Livewire::component('student.profile-manager', \App\Modules\Student\UI\Livewire\ProfileManager::class);
 
+        // COMPONENTES QUE ESTAVAM EM FALTA (MAPEADOS COM BASE NO WEB.PHP)
+        Livewire::component('conteudo.portal-noticias', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class);
+        Livewire::component('conteudo.conteudo-publico', \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class);
+        Livewire::component('conteudo.categoria-manager', \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class);
+        Livewire::component('conteudo.conteudo-manager', \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class);
+        Livewire::component('conteudo.conteudo-form', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class);
+        
+        Livewire::component('forms.response-details', \App\Modules\Forms\UI\Livewire\ResponseDetails::class);
+        Livewire::component('student.minhas-solicitacoes', \App\Modules\Student\UI\Livewire\MinhasSolicitacoes::class);
+        Livewire::component('admin.notification-badge', \App\Modules\Admin\UI\Livewire\NotificationBadge::class);
+
         Livewire::component('forms.form-manager', \App\Modules\Forms\UI\Livewire\FormManager::class);
         Livewire::component('forms.formulario', \App\Modules\Website\UI\Livewire\FormularioPublico::class);
         Livewire::component('forms.form-details', \App\Modules\Forms\UI\Livewire\FormDetails::class);
-        Livewire::component('registration.kanban-board', \App\Modules\Registration\UI\Livewire\KanbanBoard::class);
         Livewire::component('forms.form-edit', \App\Modules\Forms\UI\Livewire\FormEdit::class);
         Livewire::component('forms.form-spreadsheet', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class);
 
