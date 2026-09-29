@@ -6,15 +6,13 @@
         badge="Módulo Financeiro"
         :breadcrumbs="$breadcrumbs">
 
-        @if(feature('financeiro.orcamentos.atualizar.api') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.atualizar.api')))
         <x-slot name="actions">
-            <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-5 py-2.5 text-xs font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition flex items-center gap-2">
-                <i class="ph-bold ph-arrows-clockwise text-base" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
+            <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="btn btn--primary btn--small">
+                <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
                 <span wire:loading.remove wire:target="sincronizarProtheus">Atualizar via API</span>
                 <span wire:loading wire:target="sincronizarProtheus">Sincronizando...</span>
             </button>
         </x-slot>
-        @endif
     </x-page-header>
 
     @if(isset($metricas))
@@ -27,25 +25,17 @@
         
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar por Ano (Ex: 2026)" class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Buscar por Filial..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <input type="text" wire:model.live.debounce.500ms="filtroNatureza" placeholder="Buscar por Natureza..." class="rounded-lg border-gray-300 shadow-sm text-xs focus:ring-purpura-500 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar por Ano (Ex: 2026)" class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
+                <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Buscar por Filial..." class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
+                <input type="text" wire:model.live.debounce.500ms="filtroNatureza" placeholder="Buscar por Natureza..." class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
                 
-                <button wire:click="limparFiltros" class="w-full flex items-center justify-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 text-xs py-2">
+                <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full h-[36px] bg-white">
                     <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
                 </button>
             </div>
         </div>
 
         <div class="relative z-0 bg-white dark:bg-gray-900">
-            
-            <style>
-                .tabela-orcamento .bg-white.border.rounded-xl { border: none !important; border-radius: 0 !important; box-shadow: none !important; }
-                .dark .tabela-orcamento .dark\:bg-gray-800.dark\:border-gray-700 { border: none !important; background: transparent !important; }
-                .tabela-orcamento .custom-scrollbar table thead tr th { border-top: 1px solid #f3f4f6; }
-                .dark .tabela-orcamento .custom-scrollbar table thead tr th { border-top-color: #374151; }
-            </style>
-
             <div class="tabela-orcamento">
                 <x-table 
                     :headers="$this->headers" 
@@ -57,21 +47,21 @@
 
                     @forelse($registros as $orcamento)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-                            <td class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">#{{ $orcamento->id }}</td>
-                            <td class="px-4 py-3 text-sm font-black text-center text-gray-900 dark:text-white">{{ $orcamento->ano }}</td>
-                            <td class="px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300">{{ $orcamento->filial ?: '-' }}</td>
+                            <td class="px-4 py-3 t-label-12 text-gray-500 dark:text-gray-400">#{{ $orcamento->id }}</td>
+                            <td class="px-4 py-3 t-body-14-semibold text-center text-gray-900 dark:text-white">{{ $orcamento->ano }}</td>
+                            <td class="px-4 py-3 t-label-12-semibold text-gray-700 dark:text-gray-300">{{ $orcamento->filial ?: '-' }}</td>
                             <td class="px-4 py-3">
-                                <span class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-gray-100 text-gray-600 border border-gray-200 rounded dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
+                                <span class="tag tag--small tag--filled tag--neutral uppercase border-0">
                                     {{ $orcamento->natureza ?: 'S/ NATUREZA' }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-xs font-mono text-gray-500 dark:text-gray-400">{{ $orcamento->ccusto ?: '-' }}</td>
-                            <td class="px-4 py-3 text-sm font-black text-right text-emerald-600 dark:text-emerald-400">
+                            <td class="px-4 py-3 t-body-14-semibold text-right text-pistache-700 dark:text-pistache-400">
                                 R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}
                             </td>
                             <td class="px-4 py-3 text-right">
                                 @if(feature('financeiro.orcamentos.detalhes') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.detalhes')))
-                                    <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:text-purpura-400 rounded-lg shadow-sm transition" title="Ver Distribuição Mensal">
+                                    <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 rounded-lg shadow-sm transition" title="Ver Distribuição Mensal">
                                         <i class="text-base ph-bold ph-arrows-out-simple"></i>
                                     </button>
                                 @endif
