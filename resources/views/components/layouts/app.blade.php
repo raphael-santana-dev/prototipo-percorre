@@ -254,7 +254,8 @@
                             </div>
                         </div>
                         @endcanany
-
+                        
+                        @livewire(\App\Modules\Admin\UI\Livewire\NotificationBadge::class)
                         @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
                     </div>
                 </div>

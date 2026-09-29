@@ -86,17 +86,16 @@
                 </div>
                 
                 <div class="p-6 space-y-6">
-                    <!-- Resumo do Solicitante -->
                     @if(!empty($detalhesEstudante))
                         <div class="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800 flex flex-col sm:flex-row gap-4">
-                            <div class="flex-1">
+                            <div class="flex-1 min-w-0">
                                 <span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Candidato</span>
-                                <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $detalhesEstudante['nome'] }}</span>
-                                <span class="text-xs text-gray-500">{{ $detalhesEstudante['email'] }}</span>
+                                <span class="text-sm font-bold text-gray-900 dark:text-white block truncate">{{ $detalhesEstudante['nome'] }}</span>
+                                <span class="text-xs text-gray-500 truncate block">{{ $detalhesEstudante['email'] }}</span>
                             </div>
-                            <div class="flex-1 border-t sm:border-t-0 sm:border-l border-blue-200 dark:border-blue-700 pt-3 sm:pt-0 sm:pl-4">
+                            <div class="flex-1 min-w-0 border-t sm:border-t-0 sm:border-l border-blue-200 dark:border-blue-700 pt-3 sm:pt-0 sm:pl-4">
                                 <span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Combinação Solicitada</span>
-                                <span class="text-sm font-bold text-gray-900 dark:text-white block truncate" title="{{ $detalhesEstudante['novo_curso'] }}">{{ $detalhesEstudante['novo_curso'] }}</span>
+                                <span class="text-sm font-bold text-gray-900 dark:text-white block whitespace-normal break-words leading-tight mb-1">{{ $detalhesEstudante['novo_curso'] }}</span>
                                 <span class="text-xs text-gray-500 truncate block">{{ $detalhesEstudante['nova_unidade'] }} • {{ $detalhesEstudante['novo_turno'] }}</span>
                             </div>
                         </div>

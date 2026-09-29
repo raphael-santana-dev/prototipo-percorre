@@ -14,6 +14,18 @@ class MinhasSolicitacoes extends Component
 {
     use WithPagination;
 
+    public $modalDetalhes = false;
+    public $solicitacaoAtiva = null;
+
+    public function abrirDetalhes($id)
+    {
+        $this->solicitacaoAtiva = Solicitacao::with('responsavel')
+            ->where('solicitante_id', auth('student')->id())
+            ->findOrFail($id);
+            
+        $this->modalDetalhes = true;
+    }
+
     public function render()
     {
         $student = auth('student')->user();
