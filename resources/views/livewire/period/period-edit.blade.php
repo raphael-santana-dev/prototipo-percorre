@@ -6,132 +6,83 @@
         
         <x-slot name="actions">
             <div class="flex items-center gap-2 flex-wrap justify-end">
-                <a href="{{ route('ciclos.show', $cicloId) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-purpura-700 bg-purpura-50 border-purpura-200 hover:bg-purpura-100 transition shadow-sm dark:bg-purpura-900/30 dark:border-purpura-700 dark:text-purpura-400 flex items-center gap-1.5">
+                <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
                     <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
                 </a>
 
-                <a href="{{ route('ciclos.regras', $cicloId) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100 transition shadow-sm dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 flex items-center gap-1.5">
+                <a href="{{ route('ciclos.regras', $cicloId) }}" class="btn btn--secondary btn--small !bg-ponkan-50 !border-ponkan-200 !text-ponkan-700">
                     <i class="ph-bold ph-star text-sm"></i> Editar Regras
                 </a>
 
-                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="px-3 py-2 text-xs font-bold border rounded-lg text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 transition shadow-sm dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="btn btn--secondary btn--small">
                     <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
                 </a>
                 
-                <a href="{{ route('ciclos.index') }}" wire:navigate class="px-3 py-2 text-xs font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-1.5 ml-2">
+                <a href="{{ route('ciclos.index') }}" wire:navigate class="btn btn--secondary btn--small ml-2">
                     <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
                 </a>
             </div>
         </x-slot>
     </x-page-header>
 
-
     <div class="relative z-10 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm border border-b-0 border-gray-200 dark:border-gray-700">
         <nav class="flex flex-wrap gap-2 -mb-px" aria-label="Abas">
-
-        <button type="button" 
-                    @click="abaAtiva = 'geral'" 
-                    :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-sliders text-base"></i>
-                <span>Config. Geral</span>
+            <button type="button" @click="abaAtiva = 'geral'" :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-sliders text-base"></i><span>Config. Geral</span>
             </button>
-
-            <button type="button" 
-                    @click="abaAtiva = 'estrutura'" 
-                    :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-tree-structure text-base"></i>
-                <span>Unidades/Curso/Turno</span>
-                @if(count($cursosSelecionados) > 0)
-                    <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-purpura-100 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300 font-bold">
-                        {{ count($cursosSelecionados) }}
-                    </span>
-                @endif
+            <button type="button" @click="abaAtiva = 'estrutura'" :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-tree-structure text-base"></i><span>Unidades/Curso/Turno</span>
+                @if(count($cursosSelecionados) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($cursosSelecionados) }}</span>@endif
             </button>
-
-            <button type="button" 
-                    @click="abaAtiva = 'vagas'" 
-                    :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-users-three text-base"></i>
-                <span>Distribuição de Vagas</span>
-                @if(count($ofertasVagas) > 0)
-                    <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-bold">
-                        {{ count($ofertasVagas) }}
-                    </span>
-                @endif
+            <button type="button" @click="abaAtiva = 'vagas'" :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-users-three text-base"></i><span>Distribuição de Vagas</span>
+                @if(count($ofertasVagas) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($ofertasVagas) }}</span>@endif
             </button>
-
-            <button type="button" 
-                    @click="abaAtiva = 'crm'" 
-                    :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-funnel text-base"></i>
-                <span>Etapas do Ciclo</span>
-                @if(count($statusSelecionados) > 0)
-                    <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-bold">
-                        {{ count($statusSelecionados) }}
-                    </span>
-                @endif
+            <button type="button" @click="abaAtiva = 'crm'" :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-funnel text-base"></i><span>Etapas do Ciclo</span>
+                @if(count($statusSelecionados) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($statusSelecionados) }}</span>@endif
             </button>
-
-            <button type="button" 
-                    @click="abaAtiva = 'documentos'" 
-                    :class="abaAtiva === 'documentos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="py-3 px-4 border-b-2 font-bold text-xs flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-files text-base"></i>
-                <span>Documentos Exigidos</span>
-                @if(count($documentosExigidos) > 0)
-                    <span class="px-1.5 py-0.5 text-[9px] rounded-full bg-purpura-100 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300 font-bold">
-                        {{ count($documentosExigidos) }}
-                    </span>
-                @endif
+            <button type="button" @click="abaAtiva = 'documentos'" :class="abaAtiva === 'documentos' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                <i class="ph-bold ph-files text-base"></i><span>Documentos Exigidos</span>
+                @if(count($documentosExigidos) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($documentosExigidos) }}</span>@endif
             </button>
         </nav>
     </div>
 
     <form id="formCicloPrincipal" wire:submit.prevent="salvar">
-
         <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
             <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
-                <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                    <i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais
-                </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, os semestres e a janela de tempo em que as inscrições ficarão ativas.</p>
+                <h3 class="t-body-16-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, os semestres e a janela de tempo.</p>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="md:col-span-2">
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome de Exibição</label>
-                    <input type="text" wire:model="nome" placeholder="Ex: 2º Semestre 2026" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm text-sm font-bold">
-                    @error('nome') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Nome de Exibição</label>
+                    <input type="text" wire:model="nome" placeholder="Ex: 2º Semestre 2026" class="w-full">
+                    @error('nome') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Ano <span class="text-red-500">*</span></label>
-                    <input type="number" wire:model="ano" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm text-sm font-bold">
-                    @error('ano') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Ano *</label>
+                    <input type="number" wire:model="ano" class="w-full">
+                    @error('ano') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Semestre <span class="text-red-500">*</span></label>
-                    <select wire:model="semestre" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm text-sm font-bold">
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Semestre *</label>
+                    <select wire:model="semestre" class="w-full">
                         <option value="1">1º Semestre</option>
                         <option value="2">2º Semestre</option>
                     </select>
-                    @error('semestre') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    @error('semestre') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Data e Hora de Abertura <span class="text-red-500">*</span></label>
-                    <input type="datetime-local" wire:model="data_inicio" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm text-sm">
-                    @error('data_inicio') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Abertura *</label>
+                    <input type="datetime-local" wire:model="data_inicio" class="w-full">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Data e Hora de Encerramento <span class="text-red-500">*</span></label>
-                    <input type="datetime-local" wire:model="data_fim" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 shadow-sm text-sm">
-                    @error('data_fim') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Encerramento *</label>
+                    <input type="datetime-local" wire:model="data_fim" class="w-full">
                 </div>
             </div>
             
@@ -439,9 +390,8 @@
         </div>
 
         <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
-            <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-            </span>
-            <button type="submit" class="px-6 py-2.5 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 hover:-translate-y-0.5">
+            <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
+            <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">
                 <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
             </button>
         </div>
