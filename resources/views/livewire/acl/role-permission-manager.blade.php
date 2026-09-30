@@ -54,4 +54,8 @@
             </div>
         </form>
     </div>
+
+    <x-fab :actions="$this->fabActions"
+    main-color="bg-purpura-600 hover:bg-purpura-800"
+    mainIcon="ph ph-plus" />
 </div>

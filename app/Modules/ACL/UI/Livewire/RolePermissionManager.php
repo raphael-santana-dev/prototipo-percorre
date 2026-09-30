@@ -38,6 +38,20 @@ class RolePermissionManager extends Component
         $this->dispatch('sucesso', msg: 'Permissões atualizadas com sucesso!');
     }
 
+    public function getFabActionsProperty()
+    {
+        return [
+            [
+                'label' => 'Salvar',
+                'icon' => 'ph-bold ph-floppy-disk',
+                'wire_click' => 'submit',
+                'always_show_label' => true,
+                'bg_color' => 'bg-ponkan-500 hover:bg-ponkan-600',
+                'icon_color' => 'text-white'
+            ]
+        ];
+    }
+
     public function render()
     {
         $permissionsByModule = Permission::orderBy('module')->orderBy('name')->get()->groupBy('module');

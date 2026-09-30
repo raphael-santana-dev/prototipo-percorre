@@ -4,19 +4,20 @@
     'badge' => null,
     'breadcrumbs' => null,
     'metricas' => null,
+    'subtitle' => null
 ])
 
-<div class="relative mb-6">
+<div class="relative mb-6 flex flex-col gap-4">
     
     @if (session()->has('sucesso') || session()->has('success'))
-        <div class="flex items-center gap-2 p-4 mb-4 font-bold rounded-lg shadow-sm text-pistache-100 bg-pistache-500">
-            <i class="text-lg ph ph-check-circle"></i> {{ session('sucesso') ?? session('success') }}
+        <div class="flex items-center gap-2 p-3 text-sm font-medium rounded-lg shadow-sm text-emerald-800 bg-emerald-50 border border-emerald-200">
+            <i class="text-lg ph-fill ph-check-circle"></i> {{ session('sucesso') ?? session('success') }}
         </div>
     @endif
     
     @if (session()->has('error'))
-        <div class="flex items-center gap-2 p-4 mb-4 font-bold text-red-100 bg-red-500 rounded-lg shadow-sm">
-            <i class="text-lg ph ph-warning"></i> {{ session('error') }}
+        <div class="flex items-center gap-2 p-3 text-sm font-medium rounded-lg shadow-sm text-red-800 bg-red-50 border border-red-200">
+            <i class="text-lg ph-fill ph-warning-circle"></i> {{ session('error') }}
         </div>
     @endif
 
@@ -24,33 +25,42 @@
         <x-breadcrumb :items="$breadcrumbs" />
     @endif
 
-    <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-        <div class="flex items-center gap-3">
-            <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-                @if($icon) <i class="{{ $icon }} text-purpura-500"></i> @endif
-                {{ $title }}
-            </h2>
-
-            @if($badge)
-                <span class="hidden px-4 py-1.5 text-sm font-semibold border rounded-full md:inline-block bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
-                    {{ $badge }}
-                </span>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {{-- Título, Subtítulo e Barra de Pesquisa Integrada --}}
+        <div class="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6 flex-1 min-w-0">
+            <div class="shrink-0">
+                <h2 class="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                    {{ $title }}
+                </h2>
+                @if($subtitle)
+                    <p class="text-sm text-gray-500 mt-0.5">{{ $subtitle }}</p>
+                @endif
+            </div>
+            
+            @if(isset($search))
+                <div class="flex-1 max-w-md">
+                    {{ $search }}
+                </div>
             @endif
         </div>
 
+        {{-- Botões de Ação --}}
         @if(isset($actions))
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
                 {{ $actions }}
             </div>
         @endif
     </div>
 
     @if($metricas)
-        <x-summary-cards :metricas="$metricas" />
+        <div class="mt-2">
+            <x-summary-cards :metricas="$metricas" />
+        </div>
     @endif
 
+    {{-- Filtros (Estilo Chips Inline) --}}
     @if(isset($filters))
-        <div {{ $filters->attributes->merge(['class' => 'py-4 mb-4 border-b border-gray-200 dark:border-gray-700']) }}>
+        <div {{ $filters->attributes->merge(['class' => 'flex flex-wrap items-center gap-2 pt-2']) }}>
             {{ $filters }}
         </div>
     @endif
