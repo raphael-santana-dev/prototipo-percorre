@@ -8,29 +8,38 @@
 ])
 
 <div class="w-full">
-    {{-- Controles Superiores: Linhas por página e Toggle de View --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
-        <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <span>Linhas por página</span>
-            <select wire:model.live="porPagina" class="py-1 px-2.5 text-sm border-gray-300 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700 focus:ring-gray-900 focus:border-gray-900 dark:focus:ring-white h-8 cursor-pointer font-medium">
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
+    {{-- BARRA DE FERRAMENTAS SUPERIOR (Filtros, Busca, Linhas/Pág e Modo de Exibição) --}}
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4">
+        
+        {{-- Slot para os Filtros e Busca --}}
+        <div class="flex flex-wrap items-center gap-2 flex-1 w-full">
+            {{ $filters ?? '' }}
         </div>
 
-        @if($permiteGrid)
-            <div class="inline-flex items-center p-1 bg-gray-100 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <button wire:click="alternarModoExibicao('grid')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'grid' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
-                    <i class="text-base ph ph-squares-four"></i> Grid
-                </button>
-                <button wire:click="alternarModoExibicao('lista')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all {{ $modoExibicao === 'lista' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
-                    <i class="text-base ph ph-list-dashes"></i> Lista
-                </button>
+        {{-- Controles da Tabela --}}
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <span class="hidden sm:inline">Linhas por página</span>
+                <select wire:model.live="porPagina" class="py-1 px-2.5 text-sm border-gray-300 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 focus:ring-gray-900 focus:border-gray-900 dark:focus:ring-white h-9 cursor-pointer font-medium">
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
             </div>
-        @endif
+
+            @if($permiteGrid)
+                <div class="inline-flex items-center p-1 bg-gray-100 rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700 h-9">
+                    <button wire:click="alternarModoExibicao('grid')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all h-full {{ $modoExibicao === 'grid' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
+                        <i class="text-base ph ph-squares-four"></i> <span class="hidden sm:inline">Grid</span>
+                    </button>
+                    <button wire:click="alternarModoExibicao('lista')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all h-full {{ $modoExibicao === 'lista' ? 'bg-white text-gray-900 shadow-sm border border-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/70 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700' }}">
+                        <i class="text-base ph ph-list-dashes"></i> <span class="hidden sm:inline">Lista</span>
+                    </button>
+                </div>
+            @endif
+        </div>
     </div>
 
     @if($modoExibicao === 'lista')

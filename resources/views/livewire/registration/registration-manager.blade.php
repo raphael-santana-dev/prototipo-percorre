@@ -3,29 +3,20 @@
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
     
     @php
-        // Conta os filtros ativos
         $activeFilterCount = collect([$filtroStatus, $filtroCiclo, $filtroUnidade, $filtroTurno, $filtroCurso, $filtroEtapa])
             ->filter(fn($f) => $f !== '')->count();
     @endphp
 
     <x-page-header 
-        title="{{ $registros->total() }} Usuários" 
+        title="{{ $registros->total() }} Inscrições" 
         subtitle="Baseado em {{ $activeFilterCount }} filtro(s)"
         :breadcrumbs="null" 
         :metricas="$metricas ?? null">
 
-        {{-- Busca Integrada ao Header (Ao lado do Título) --}}
-        <x-slot name="search">
-            <div class="relative w-full max-w-sm flex items-center border-l border-gray-200 dark:border-gray-700 pl-4 ml-2">
-                <i class="ph ph-magnifying-glass absolute left-7 text-gray-400 text-lg"></i>
-                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Search Name / E-mail / ID" class="w-full pl-10 h-10 bg-transparent border-transparent text-sm rounded-lg focus:ring-0 focus:border-transparent shadow-none transition-colors dark:text-white placeholder-gray-400">
-            </div>
-        </x-slot>
-
         <x-slot name="actions">
             <div x-data="{ openExport: false }" class="relative inline-block text-left">
                 <button @click="openExport = !openExport" @click.away="openExport = false" class="btn btn--secondary btn--medium bg-white">
-                    Export as CSV
+                    Exportar CSV
                 </button>
                 <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700 dark:divide-gray-700">
                     <div class="py-1">
@@ -41,111 +32,15 @@
 
             @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar')))
                 <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none shadow-none">
-                    Save / New
+                    <i class="ph-bold ph-plus text-lg"></i> Novo
                 </button>
             @endif
-        </x-slot>
-
-        {{-- Filtros Dinâmicos Estilo Dropdown + Chips --}}
-        <x-slot name="filters">
-            <div x-data="{
-                visible: ['status', 'ciclo'],
-                init() {
-                    if ($wire.filtroEtapa) this.visible.push('etapa');
-                    if ($wire.filtroUnidade) this.visible.push('unidade');
-                    if ($wire.filtroCurso) this.visible.push('curso');
-                },
-                add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
-                remove(f) {
-                    $wire.set('filtro' + f.charAt(0).toUpperCase() + f.slice(1), '');
-                    if(!['status', 'ciclo'].includes(f)) {
-                        this.visible = this.visible.filter(i => i !== f);
-                    }
-                }
-            }" class="flex flex-wrap items-center gap-2 pt-2 pb-2">
-                
-                <!-- Chip: Status -->
-                <div x-show="visible.includes('status')" class="flex items-center h-9 px-3 rounded border transition-colors bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700" :class="{ 'bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800': $wire.filtroStatus }">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500" :class="{ 'text-indigo-600 dark:text-indigo-400': $wire.filtroStatus }">Status</span>
-                    <select wire:model.live="filtroStatus" class="h-full border-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-6 cursor-pointer font-medium text-gray-700 dark:text-gray-300">
-                        <option value="">Any</option>
-                        @foreach($statusInscricoesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach                
-                    </select>
-                    <button x-show="$wire.filtroStatus" @click="remove('status')" class="text-indigo-400 hover:text-indigo-600 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                </div>
-
-                <!-- Chip: Ciclo -->
-                <div x-show="visible.includes('ciclo')" class="flex items-center h-9 px-3 rounded border transition-colors bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700" :class="{ 'bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800': $wire.filtroCiclo }">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500" :class="{ 'text-indigo-600 dark:text-indigo-400': $wire.filtroCiclo }">Ciclo</span>
-                    <select wire:model.live="filtroCiclo" class="h-full border-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-6 cursor-pointer font-medium text-gray-700 dark:text-gray-300 max-w-[150px]">
-                        <option value="">Any</option>
-                        @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                    </select>
-                    <button x-show="$wire.filtroCiclo" @click="remove('ciclo')" class="text-indigo-400 hover:text-indigo-600 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                </div>
-
-                <!-- Chip: Etapa -->
-                <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-3 rounded border transition-colors bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700" :class="{ 'bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800': $wire.filtroEtapa }">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500" :class="{ 'text-indigo-600 dark:text-indigo-400': $wire.filtroEtapa }">Etapa</span>
-                    <select wire:model.live="filtroEtapa" class="h-full border-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-6 cursor-pointer font-medium text-gray-700 dark:text-gray-300 max-w-[150px]">
-                        <option value="">Any</option>
-                        @if(!empty($etapasDb))
-                            @foreach($etapasDb as $numero => $nome) <option value="{{ $numero }}">Passo {{ $numero }}</option> @endforeach
-                        @endif
-                        <option value="Finalizado">Finalizado</option>
-                    </select>
-                    <button @click="remove('etapa')" class="text-gray-400 hover:text-red-500 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                </div>
-
-                <!-- Chip: Unidade -->
-                <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-3 rounded border transition-colors bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700" :class="{ 'bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800': $wire.filtroUnidade }">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500" :class="{ 'text-indigo-600 dark:text-indigo-400': $wire.filtroUnidade }">Unidade</span>
-                    <select wire:model.live="filtroUnidade" class="h-full border-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-6 cursor-pointer font-medium text-gray-700 dark:text-gray-300 max-w-[150px]">
-                        <option value="">Any</option>
-                        @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                    </select>
-                    <button @click="remove('unidade')" class="text-gray-400 hover:text-red-500 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                </div>
-
-                <!-- Chip: Curso -->
-                <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-3 rounded border transition-colors bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700" :class="{ 'bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800': $wire.filtroCurso }">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500" :class="{ 'text-indigo-600 dark:text-indigo-400': $wire.filtroCurso }">Curso</span>
-                    <select wire:model.live="filtroCurso" class="h-full border-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-6 cursor-pointer font-medium text-gray-700 dark:text-gray-300 max-w-[150px]">
-                        <option value="">Any</option>
-                        @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                    </select>
-                    <button @click="remove('curso')" class="text-gray-400 hover:text-red-500 ml-1"><i class="ph-bold ph-x text-xs"></i></button>
-                </div>
-
-                <!-- Botão + Add Filter Dropdown -->
-                <div x-data="{ open: false }" class="relative ml-2">
-                    <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9">
-                        + Add Filter
-                    </button>
-                    <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-2" x-cloak>
-                        <div class="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
-                            Search filters <i class="ph-bold ph-magnifying-glass"></i>
-                        </div>
-                        <div class="h-px bg-gray-100 dark:bg-gray-700 my-1 w-full"></div>
-                        <button x-show="!visible.includes('etapa')" @click="add('etapa'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                            <i class="ph-bold ph-steps text-gray-400 text-lg"></i> Etapa do Funil
-                        </button>
-                        <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                            <i class="ph-bold ph-buildings text-gray-400 text-lg"></i> Unidade Presencial
-                        </button>
-                        <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                            <i class="ph-bold ph-graduation-cap text-gray-400 text-lg"></i> Curso de Interesse
-                        </button>
-                    </div>
-                </div>
-
-            </div>
         </x-slot>
     </x-page-header>
 
     @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
         @if(count($selecionadas) > 0)
-        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
+        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-xl mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
             <div class="flex items-center shrink-0">
                 <span class="font-medium text-white text-sm">{{ count($selecionadas) }} selecionadas</span>
                 <button wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white font-medium transition">Limpar</button>
@@ -153,7 +48,7 @@
             
             <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white">
+                    <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
                         <option value="">Alterar status para...</option>
                         @foreach($statusInscricoesDb as $id => $nome)
                             <option value="{{ $id }}">{{ $nome }}</option>
@@ -184,8 +79,121 @@
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
 
+        {{-- FILTROS DA TABELA E CAMPO DE BUSCA INLINE --}}
+        <x-slot name="filters">
+            <!-- Search Input -->
+            <div class="relative shrink-0 w-full sm:w-64">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome, E-mail ou CPF" class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
+            </div>
+
+            <!-- Chips Logic -->
+            <div x-data="{
+                visible: ['status', 'ciclo'],
+                init() {
+                    if ($wire.filtroEtapa) this.visible.push('etapa');
+                    if ($wire.filtroUnidade) this.visible.push('unidade');
+                    if ($wire.filtroCurso) this.visible.push('curso');
+                },
+                add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
+                remove(f) {
+                    $wire.set('filtro' + f.charAt(0).toUpperCase() + f.slice(1), '');
+                    this.visible = this.visible.filter(i => i !== f);
+                }
+            }" class="flex flex-wrap items-center gap-2">
+                
+                <!-- Chip: Status -->
+                <div x-show="visible.includes('status')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Status</span>
+                    <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium">
+                        <option value="">Qualquer</option>
+                        @foreach($statusInscricoesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                    <button @click="remove('status')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Chip: Ciclo -->
+                <div x-show="visible.includes('ciclo')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
+                    <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                        <option value="">Qualquer</option>
+                        @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                    <button @click="remove('ciclo')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Chip: Etapa -->
+                <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Etapa</span>
+                    <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                        <option value="">Qualquer</option>
+                        @if(!empty($etapasDb))
+                            @foreach($etapasDb as $numero => $nome) <option value="{{ $numero }}">Passo {{ $numero }}</option> @endforeach
+                        @endif
+                        <option value="Finalizado">Finalizado</option>
+                    </select>
+                    <button @click="remove('etapa')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Chip: Unidade -->
+                <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Unidade</span>
+                    <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                        <option value="">Qualquer</option>
+                        @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                    <button @click="remove('unidade')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Chip: Curso -->
+                <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
+                    <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                        <option value="">Qualquer</option>
+                        @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                    <button @click="remove('curso')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
+                        <i class="ph-bold ph-x text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Add Filter Dropdown -->
+                <div x-data="{ open: false }" class="relative ml-1 shrink-0">
+                    <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
+                        + Adicionar Filtro
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 py-2" x-cloak>
+                        <button x-show="!visible.includes('status')" @click="add('status'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                            <i class="ph-bold ph-tag text-gray-400 text-lg"></i> Status
+                        </button>
+                        <button x-show="!visible.includes('ciclo')" @click="add('ciclo'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                            <i class="ph-bold ph-calendar-check text-gray-400 text-lg"></i> Ciclo
+                        </button>
+                        <button x-show="!visible.includes('etapa')" @click="add('etapa'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                            <i class="ph-bold ph-steps text-gray-400 text-lg"></i> Etapa do Funil
+                        </button>
+                        <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                            <i class="ph-bold ph-buildings text-gray-400 text-lg"></i> Unidade Presencial
+                        </button>
+                        <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                            <i class="ph-bold ph-graduation-cap text-gray-400 text-lg"></i> Curso de Interesse
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </x-slot>
+
         @forelse($registros as $inscricao)
-            <!-- Espaçamentos super compactos (py-1.5) estilo minimalist datatable -->
+            <!-- Padronizando espaçamentos py-1.5 para visual minimalista comprimido -->
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
@@ -281,7 +289,6 @@
 
         <x-slot name="gridSlot">
             @foreach($registros as $inscricao)
-                <!-- Grid Cards inalterados, apenas herdam a mesma formatação limpa -->
                 <div wire:key="card-inscricao-{{ $inscricao->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                     
                     <div class="flex items-center justify-between mb-4 w-full">
@@ -341,7 +348,7 @@
 
     </x-table>
 
-    {{-- MODAL DE LOTE --}}
+    {{-- MODAL DE LOTE E OUTROS MANTIDOS IGUAIS --}}
     @if($modalLoteAberto)
         <div class="fixed inset-0 z-[100] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 lg:px-8 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
@@ -365,7 +372,7 @@
                             <option value="{{ $id }}">{{ $nome }}</option>
                         @endforeach
                     </select>
-                    <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--medium whitespace-nowrap">
+                    <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--medium whitespace-nowrap bg-blue-600 hover:bg-blue-700 border-none">
                         Confirmar Ação
                     </button>
                 </div>
@@ -472,7 +479,7 @@
                 
                 <div class="flex justify-end gap-3 p-5 border-t bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 w-full">
                     <button wire:click="$set('modalSelecaoAvancadaAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="executarSelecaoAvancada" class="btn btn--primary btn--medium">
+                    <button wire:click="executarSelecaoAvancada" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none">
                         <i class="ph-bold ph-magic-wand"></i> Executar Filtro
                     </button>
                 </div>
@@ -538,7 +545,7 @@
                     
                     <div class="flex justify-end gap-3 pt-5 mt-2 border-t border-gray-200 dark:border-gray-800">
                         <button type="button" wire:click="fecharModal" class="btn btn--secondary btn--medium">Cancelar</button>
-                        <button type="submit" wire:loading.attr="disabled" class="btn btn--primary btn--medium">
+                        <button type="submit" wire:loading.attr="disabled" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none">
                             <span wire:loading.remove>Salvar e Processar</span>
                             <span wire:loading>Aguarde...</span>
                         </button>
@@ -597,7 +604,7 @@
                     <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium w-full sm:w-auto">
                         Cancelar
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-red-600 hover:!bg-red-700 focus:!ring-red-500 w-full sm:w-auto">
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-red-600 hover:!bg-red-700 focus:!ring-red-500 w-full sm:w-auto border-none">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
                     </button>
                 </div>
