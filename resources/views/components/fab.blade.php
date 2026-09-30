@@ -4,57 +4,76 @@
     'mainColor' => 'bg-purpura-500 hover:bg-purpura-600',
     'iconColor' => 'text-white',
     'subBtnBg' => 'bg-white hover:bg-gray-50',
-    'subBtnIcon' => 'text-gray-600 hover:text-purpura-600'
+    'subBtnIcon' => 'text-gray-600 hover:text-purpura-600',
+    'mainWireClick' => null,
+    'mainHref' => null,
 ])
 
 <div x-data="{ open: false }" class="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3" @click.outside="open = false">
     
-    <div x-show="open"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 translate-y-4 scale-95"
-         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-         x-transition:leave-end="opacity-0 translate-y-4 scale-95"
-         class="flex flex-col items-end gap-3 mb-2" x-cloak>
+    {{-- Renderiza as sub-ações apenas se não houver uma ação direta no botão principal --}}
+    @if(!$mainWireClick && !$mainHref && count($actions) > 0)
+        <div x-show="open"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+             class="flex flex-col items-end gap-3 mb-2" x-cloak>
 
-        @foreach($actions as $action)
-            @php
-                $bgClass = $action['bg_color'] ?? $subBtnBg;
-                $iconClass = $action['icon_color'] ?? $subBtnIcon;
-                
-                $labelVisibility = !empty($action['always_show_label']) 
-                                    ? 'opacity-100' 
-                                    : 'opacity-0 group-hover:opacity-100 transition-opacity duration-200';
-            @endphp
+            @foreach($actions as $action)
+                @php
+                    $bgClass = $action['bg_color'] ?? $subBtnBg;
+                    $iconClass = $action['icon_color'] ?? $subBtnIcon;
+                    
+                    $labelVisibility = !empty($action['always_show_label']) 
+                                        ? 'opacity-100' 
+                                        : 'opacity-0 group-hover:opacity-100 transition-opacity duration-200';
+                @endphp
 
-            <div class="flex items-center gap-3 group">
-                <span class="bg-gray-800 text-white text-[11px] uppercase font-bold px-3 py-1.5 rounded-lg shadow-sm pointer-events-none {{ $labelVisibility }}">
-                    {{ $action['label'] }}
-                </span>
+                <div class="flex items-center gap-3 group">
+                    <span class="bg-gray-800 text-white text-[11px] uppercase font-bold px-3 py-1.5 rounded-lg shadow-sm pointer-events-none {{ $labelVisibility }}">
+                        {{ $action['label'] }}
+                    </span>
 
-                @if(isset($action['href']))
-                    <a href="{{ $action['href'] }}" 
-                       class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
-                        <i class="{{ $action['icon'] }} text-lg"></i>
-                    </a>
-                @elseif(isset($action['wire_click']))
-                    <button type="button" 
-                            wire:click="{{ $action['wire_click'] }}" 
-                            @if(!empty($action['confirm'])) wire:confirm="{{ $action['confirm'] }}" @endif
-                            @click="open = false" 
-                            class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
-                        <i class="{{ $action['icon'] }} text-lg"></i>
-                    </button>
-                @endif
-            </div>
-        @endforeach
-    </div>
+                    @if(isset($action['href']))
+                        <a href="{{ $action['href'] }}" 
+                           class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
+                            <i class="{{ $action['icon'] }} text-lg"></i>
+                        </a>
+                    @elseif(isset($action['wire_click']))
+                        <button type="button" 
+                                wire:click="{{ $action['wire_click'] }}" 
+                                @if(!empty($action['confirm'])) wire:confirm="{{ $action['confirm'] }}" @endif
+                                @click="open = false" 
+                                class="flex items-center justify-center w-11 h-11 border border-gray-200 rounded-full shadow-sm transition-colors {{ $bgClass }} {{ $iconClass }}">
+                            <i class="{{ $action['icon'] }} text-lg"></i>
+                        </button>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
 
-    <button type="button" 
-            @click="open = !open" 
-            class="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform focus:outline-none {{ $mainColor }} {{ $iconColor }}" 
-            :class="open ? 'rotate-45 !bg-gray-800 !text-white' : ''">
-        <i class="{{ $mainIcon }} text-2xl font-bold"></i>
-    </button>
+    {{-- Botão Principal com lógica condicional --}}
+    @if($mainHref)
+        <a href="{{ $mainHref }}" 
+           class="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform focus:outline-none {{ $mainColor }} {{ $iconColor }}">
+            <i class="{{ $mainIcon }} text-2xl font-bold"></i>
+        </a>
+    @elseif($mainWireClick)
+        <button type="button" 
+                wire:click="{{ $mainWireClick }}" 
+                class="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform focus:outline-none {{ $mainColor }} {{ $iconColor }}">
+            <i class="{{ $mainIcon }} text-2xl font-bold"></i>
+        </button>
+    @else
+        <button type="button" 
+                @click="open = !open" 
+                class="flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform focus:outline-none {{ $mainColor }} {{ $iconColor }}" 
+                :class="open ? 'rotate-45 !bg-gray-800 !text-white' : ''">
+            <i class="{{ $mainIcon }} text-2xl font-bold"></i>
+        </button>
+    @endif
 </div>

@@ -55,7 +55,11 @@
         </form>
     </div>
 
-    <x-fab :actions="$this->fabActions"
-    main-color="bg-purpura-600 hover:bg-purpura-800"
-    mainIcon="ph ph-plus" />
+    {{-- Passando a ação direta para o botão principal do FAB --}}
+    @if(feature('acl.role.permissoes') && (auth()->user()->hasRole('dev') || auth()->user()->can('acl.role.permissoes')))
+        <x-fab 
+            main-wire-click="save"
+            main-color="bg-ponkan-500 hover:bg-ponkan-600"
+            main-icon="ph-bold ph-floppy-disk" />
+    @endif
 </div>
