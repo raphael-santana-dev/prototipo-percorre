@@ -1,10 +1,9 @@
-<!-- Baseado no arquivo original[cite: 2] -->
 <div class="px-2 md:px-6 py-4 h-[calc(100vh-60px)] flex flex-col font-sans relative w-full overflow-hidden">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-    <div class="mb-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-            <h2 class="t-heading-small text-gray-900 dark:text-white flex items-center gap-2">
+    <div class="mb-4 card !p-4 !gap-4 shrink-0 shadow-sm flex flex-col md:flex-row md:items-center">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center w-full">
+            <h2 class="t-heading-small text-gray-900 dark:text-white flex items-center gap-2 mb-4 md:mb-0">
                 <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo de Inscrição: {{ $ciclo->nome ?? 'Nenhum Ciclo Ativo' }}
             </h2>
 
@@ -13,7 +12,7 @@
                     <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
                         <span x-text="count.length"></span> selecionados
                     </span>
-                    <select wire:model="statusDestinoLote" class="text-xs font-bold !bg-white dark:!bg-gray-800 !py-1">
+                    <select wire:model="statusDestinoLote" class="text-xs font-bold !bg-white dark:!bg-gray-800 !py-2">
                         <option value="">Mover para coluna...</option>
                         @foreach($colunas as $col)
                             <option value="{{ $col->id }}">{{ $col->nome }}</option>
@@ -26,7 +25,7 @@
             @endif
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 w-full">
             <input type="text" wire:model.live.debounce.500ms="filtroBusca" placeholder="Nome ou CPF..." class="w-full !text-xs">
             
             <select wire:model.live="ordenacao" class="w-full !text-xs !bg-gray-50/50">
@@ -49,8 +48,8 @@
             </select>
             
             @if($unidadesDb->count() === 1)
-                <div class="rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 shadow-sm text-xs w-full flex items-center px-3 text-purpura-600 dark:text-purpura-400 font-bold uppercase tracking-wider h-9">
-                    <i class="ph-fill ph-map-pin mr-2 text-purpura-400"></i> {{ $unidadesDb->first()->nome }}
+                <div class="rounded-lg border border-gray-400 bg-gray-50 dark:bg-gray-800 dark:border-gray-600 shadow-sm text-xs w-full flex items-center px-3 text-purpura-700 dark:text-purpura-400 font-bold uppercase tracking-wider h-11">
+                    <i class="ph-fill ph-map-pin mr-2 text-purpura-500"></i> {{ $unidadesDb->first()->nome }}
                 </div>
             @else
                 <select wire:model.live="filtroUnidade" class="w-full !text-xs">
@@ -64,7 +63,7 @@
                 <input type="datetime-local" wire:model.live="filtroDataFim" class="w-full !text-xs">
             </div>
 
-            <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full justify-center">
+            <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full justify-center !h-[44px]">
                 <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
             </button>
         </div>
@@ -97,7 +96,7 @@
                     @foreach($colunas as $coluna)
                         <div class="w-80 flex flex-col max-h-full bg-gray-100/50 border border-gray-200 rounded-xl overflow-hidden shrink-0">
                             
-                            <div class="p-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center shrink-0">
+                            <div class="p-4 bg-gray-100 border-b border-gray-200 flex justify-between items-center shrink-0">
                                 <h3 class="font-bold text-gray-700 text-xs uppercase tracking-wide">{{ $coluna->nome }}</h3>
                                 <span class="tag tag--small tag--outline tag--neutral shadow-sm">
                                     {{ isset($resumo[$coluna->id]['total']) ? $resumo[$coluna->id]['total'] : 0 }}
@@ -111,11 +110,11 @@
                                 @if(isset($inscricoesGrupadas[$coluna->id]))
                                     @foreach($inscricoesGrupadas[$coluna->id] as $inscricao)
                                         
-                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
+                                        <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
                                             
                                             <div class="flex justify-between items-start">
                                                 <div class="flex items-center gap-2">
-                                                    <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-3 h-3 cursor-pointer" onmousedown="event.stopPropagation()">
+                                                    <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" onmousedown="event.stopPropagation()">
                                                     <span class="text-[10px] font-bold text-gray-400 font-mono">#{{ str_pad($inscricao->id, 4, '0', STR_PAD_LEFT) }}</span>
                                                 </div>
                                                 
@@ -126,9 +125,9 @@
 
                                             <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</h4>
                                             
-                                            <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/80 rounded border border-gray-100 dark:border-gray-700 p-1.5">
+                                            <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/80 rounded border border-gray-100 dark:border-gray-700 p-2">
                                                 <div class="flex items-center gap-1" title="Ranking Geral">
-                                                    <i class="ph-fill ph-trophy text-yellow-500 text-[11px]"></i>
+                                                    <i class="ph-fill ph-trophy text-ponkan-500 text-[11px]"></i>
                                                     <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? $inscricao->posicao_ranking_geral ?? '-' }}º</span>
                                                 </div>
                                                 <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
@@ -143,7 +142,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-2 space-y-1.5 border border-gray-100 dark:border-gray-700 mt-0.5">
+                                            <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-2 space-y-2 border border-gray-100 dark:border-gray-700 mt-1">
                                                 <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 leading-none">
                                                     <i class="ph-fill ph-map-pin text-purpura-400 shrink-0"></i> <span class="truncate">{{ $inscricao->unidade->nome ?? 'Unidade não inf.' }}</span>
                                                 </div>
@@ -155,24 +154,24 @@
                                                 </div>
                                             </div>
 
-                                            <div class="flex justify-between items-center mt-1 pt-2 border-t border-gray-100 dark:border-gray-700" onmousedown="event.stopPropagation()">
+                                            <div class="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 dark:border-gray-700" onmousedown="event.stopPropagation()">
                                                 
                                                 <span class="text-[9px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide">
                                                     <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at->diffForHumans(null, true, true) }}
                                                 </span>
                                                 
                                                 <div class="flex items-center gap-0.5">
-                                                    <button type="button" wire:click="showContactInfo({{ $inscricao->id }})" class="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded transition" title="Ver Contatos e Endereço">
-                                                        <i class="ph-bold ph-address-book text-[15px]"></i>
+                                                    <button type="button" wire:click="showContactInfo({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Contatos e Endereço">
+                                                        <i class="ph-bold ph-address-book text-[16px]"></i>
                                                     </button>
-                                                    <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-gray-700 rounded transition" title="Ver Acertos e Pontos">
-                                                        <i class="ph-bold ph-list-numbers text-[15px]"></i>
+                                                    <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1.5 text-gray-400 hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Acertos e Pontos">
+                                                        <i class="ph-bold ph-list-numbers text-[16px]"></i>
                                                     </button>
-                                                    <button type="button" wire:click="showQuickView({{ $inscricao->id }})" class="p-1 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded transition" title="Ações Rápidas">
-                                                        <i class="ph-bold ph-eye text-[15px]"></i>
+                                                    <button type="button" wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ações Rápidas">
+                                                        <i class="ph-bold ph-eye text-[16px]"></i>
                                                     </button>
-                                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1 text-gray-400 hover:text-ponkan-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded transition" title="Ficha Completa da Inscrição">
-                                                        <i class="ph-bold ph-arrow-square-out text-[15px]"></i>
+                                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1.5 text-gray-400 hover:text-pistache-600 hover:bg-pistache-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ficha Completa da Inscrição">
+                                                        <i class="ph-bold ph-arrow-square-out text-[16px]"></i>
                                                     </a>
                                                 </div>
                                             </div>
@@ -181,8 +180,8 @@
                                 @endif
 
                                 @if(isset($resumo[$coluna->id]) && $resumo[$coluna->id]['total'] > count($inscricoesGrupadas[$coluna->id] ?? []))
-                                    <div class="py-3 flex flex-col items-center justify-center text-purpura-400 opacity-60">
-                                        <i class="ph-bold ph-spinner animate-spin text-xl mb-1"></i>
+                                    <div class="py-4 flex flex-col items-center justify-center text-purpura-400 opacity-60">
+                                        <i class="ph-bold ph-spinner animate-spin text-2xl mb-2"></i>
                                         <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Carregando Mais...</span>
                                     </div>
                                 @endif
@@ -201,7 +200,7 @@
             <div class="w-56 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
                 
                 <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 mb-4 text-center">
-                    <span class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total</span>
+                    <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total</span>
                     <span class="text-3xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
                 </div>
                 
@@ -220,15 +219,15 @@
 
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-pitaya-50 dark:bg-pitaya-900/20">
+            <div class="card !w-full !max-w-2xl !p-0">
+                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-pitaya-50 dark:bg-pitaya-900/20 w-full">
                     <h3 class="text-lg font-bold text-pitaya-700 dark:text-pitaya-400 flex items-center gap-2">
                         <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
                     </h3>
                     <button wire:click="cancelarAntiSpam" class="text-gray-400 hover:text-pitaya-600 transition"><i class="ph-bold ph-x text-xl"></i></button>
                 </div>
                 
-                <div class="p-6 overflow-y-auto custom-scrollbar">
+                <div class="p-6 overflow-y-auto custom-scrollbar w-full">
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium">
                         O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
@@ -249,7 +248,7 @@
                                             <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
                                         </td>
                                         <td class="px-4 py-3 text-right">
-                                            <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="text-xs font-bold text-pitaya-500 hover:text-pitaya-700 border border-pitaya-200 hover:bg-pitaya-50 px-2 py-1 rounded transition shadow-sm">
+                                            <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="btn btn--secondary btn--small !text-pitaya-600 !border-pitaya-200 hover:!bg-pitaya-50">
                                                 Tirar da Lista
                                             </button>
                                         </td>
@@ -260,12 +259,12 @@
                     </div>
                 </div>
 
-                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center gap-4">
+                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center gap-4 w-full">
                     <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium">
                         Cancelar Tudo
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn bg-pitaya-600 text-white hover:bg-pitaya-700 btn--medium flex items-center gap-2">
-                        <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar E-mail
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 hover:!bg-pitaya-700">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
                     </button>
                 </div>
             </div>

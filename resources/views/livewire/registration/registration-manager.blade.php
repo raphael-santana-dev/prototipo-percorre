@@ -1,4 +1,3 @@
-<!-- Baseado no arquivo original[cite: 4] -->
 <div class="w-full font-sans relative" 
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
@@ -52,14 +51,14 @@
         <x-slot name="filters">
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 w-full">
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-magnifying-glass text-purpura-500"></i> Buscar
                     </label>
                     <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome ou CPF..." class="w-full">
                 </div>
 
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-tag text-purpura-500"></i> Status
                     </label>
                     <select wire:model.live="filtroStatus" class="w-full">
@@ -71,7 +70,7 @@
                 </div>
 
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-calendar-check text-purpura-500"></i> Ciclo
                     </label>
                     <select wire:model.live="filtroCiclo" class="w-full">
@@ -81,7 +80,7 @@
                 </div>
 
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-steps text-purpura-500"></i> Etapa
                     </label>
                     <select wire:model.live="filtroEtapa" class="w-full">
@@ -96,7 +95,7 @@
                 </div>
 
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-buildings text-purpura-500"></i> Unidade
                     </label>
                     <select wire:model.live="filtroUnidade" class="w-full">
@@ -106,7 +105,7 @@
                 </div>
 
                 <div class="w-full">
-                    <label class="flex items-center gap-1 mb-1 text-xs font-bold text-gray-500 uppercase dark:text-gray-400">
+                    <label class="flex items-center gap-1 mb-1 t-label-12-semibold text-gray-500 uppercase dark:text-gray-400">
                         <i class="ph ph-graduation-cap text-purpura-500"></i> Curso
                     </label>
                     <select wire:model.live="filtroCurso" class="w-full">
@@ -128,14 +127,14 @@
 
     @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
         <div class="flex flex-wrap items-center justify-end gap-2 mb-4 w-full">
-            <span class="text-xs font-bold text-gray-500 uppercase dark:text-gray-400 w-full sm:w-auto text-right">Selecionar rápido:</span>
-            <button wire:click="selecionarQuantidade(10)" class="tag tag--medium tag--outline tag--neutral cursor-pointer hover:bg-gray-100">Top 10</button>
-            <button wire:click="selecionarQuantidade(50)" class="tag tag--medium tag--outline tag--neutral cursor-pointer hover:bg-gray-100">Top 50</button>
+            <span class="t-label-12-semibold text-gray-500 uppercase dark:text-gray-400 w-full sm:w-auto text-right">Selecionar rápido:</span>
+            <button wire:click="selecionarQuantidade(10)" class="tag tag--medium tag--outline tag--neutral cursor-pointer hover:bg-gray-100 transition-colors">Top 10</button>
+            <button wire:click="selecionarQuantidade(50)" class="tag tag--medium tag--outline tag--neutral cursor-pointer hover:bg-gray-100 transition-colors">Top 50</button>
             <button wire:click="abrirModalSelecaoAvancada" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700 hover:!bg-purpura-100"><i class="ph-bold ph-faders"></i> Avançado</button>
         </div>
 
         @if(count($selecionadas) > 0)
-        <div class="bg-purpura-50 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 p-4 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full">
+        <div class="bg-purpura-50 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 p-4 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
             <div class="flex items-center shrink-0">
                 <span class="font-bold text-purpura-800 dark:text-purpura-300 text-lg">{{ count($selecionadas) }} selecionadas</span>
                 <button wire:click="desmarcarTodas" class="ml-4 text-sm text-purpura-600 dark:text-purpura-400 hover:text-purpura-900 hover:underline font-medium">Limpar seleção</button>
@@ -143,8 +142,8 @@
             
             <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <span class="text-xs font-bold text-purpura-800 dark:text-purpura-300 uppercase hidden sm:block">Alterar para:</span>
-                    <select wire:model="novoStatusId" class="w-full sm:w-auto !py-1.5 !px-3 !text-xs font-bold">
+                    <span class="t-label-12-semibold text-purpura-800 dark:text-purpura-300 uppercase hidden sm:block">Alterar para:</span>
+                    <select wire:model="novoStatusId" class="w-full sm:w-auto">
                         <option value="">Selecione o status...</option>
                         @foreach($statusInscricoesDb as $id => $nome)
                             <option value="{{ $id }}">{{ $nome }}</option>
@@ -183,7 +182,7 @@
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                 
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
-                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
                 </td>
 
                 <td class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
@@ -197,11 +196,11 @@
 
                 <td class="px-4 py-2.5 text-center whitespace-nowrap">
                     @if($inscricao->origem === 'importacao')
-                        <span class="tag tag--small tag--filled tag--purpura inline-flex items-center gap-1"><i class="ph-bold ph-upload-simple"></i> Importação</span>
+                        <span class="tag tag--small tag--filled tag--purpura"><i class="ph-bold ph-upload-simple"></i> Importação</span>
                     @elseif($inscricao->origem === 'manual')
-                        <span class="tag tag--small tag--filled tag--ponkan inline-flex items-center gap-1"><i class="ph-bold ph-hand-pointing"></i> Manual</span>
+                        <span class="tag tag--small tag--filled tag--ponkan"><i class="ph-bold ph-hand-pointing"></i> Manual</span>
                     @else
-                        <span class="tag tag--small tag--filled tag--petunia inline-flex items-center gap-1"><i class="ph-bold ph-globe"></i> Formulário</span>
+                        <span class="tag tag--small tag--filled tag--petunia"><i class="ph-bold ph-globe"></i> Formulário</span>
                     @endif
                 </td>
                 
@@ -264,7 +263,7 @@
                         </button>
 
                         @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
-                            <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-pitaya-500 hover:bg-pitaya-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-pitaya-500 hover:bg-pitaya-50 dark:hover:bg-gray-600" title="Excluir Aluno" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
                                 <i class="text-xl ph ph-trash"></i>
                             </button>
                         @endif
@@ -291,7 +290,7 @@
                         </span>
                         
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
                         </div>
                     </div>
 
@@ -357,8 +356,8 @@
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-3 w-full md:w-auto bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase hidden lg:block ml-2">Mover para:</span>
+                <div class="flex items-center gap-3 w-full md:w-auto bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <span class="t-label-12-semibold text-gray-600 dark:text-gray-400 uppercase hidden lg:block ml-2">Mover para:</span>
                     <select wire:model="novoStatusId" class="w-full md:w-56 font-bold">
                         <option value="">Selecione o novo status...</option>
                         @foreach($statusInscricoesDb as $id => $nome)
@@ -372,8 +371,8 @@
             </div>
             
             <div class="flex-1 overflow-auto p-4 md:p-6 custom-scrollbar">
-                <div class="max-w-7xl mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
+                <div class="max-w-7xl mx-auto card !p-0">
+                    <div class="overflow-x-auto w-full">
                         <table class="w-full text-left border-collapse whitespace-nowrap">
                             <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
@@ -423,9 +422,9 @@
 
     @if($modalSelecaoAvancadaAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-md px-4">
-            <div class="flex flex-col w-full max-w-2xl overflow-hidden bg-white shadow-2xl dark:bg-gray-800 rounded-xl">
+            <div class="card !w-full !max-w-2xl !p-0">
                 
-                <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700 w-full">
                     <div>
                         <h3 class="t-heading-x-small text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-faders text-purpura-500"></i> Seleção Inteligente</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina os parâmetros para capturar candidatos em lote.</p>
@@ -433,9 +432,9 @@
                     <button wire:click="$set('modalSelecaoAvancadaAberto', false)" class="text-gray-400 transition hover:text-pitaya-500"><i class="text-2xl ph ph-x"></i></button>
                 </div>
                 
-                <div class="p-6 space-y-5 overflow-y-auto max-h-[60vh]">
-                    <label class="flex items-start gap-3 p-3 transition border rounded-lg cursor-pointer hover:bg-purpura-50 dark:hover:bg-gray-700 {{ $selecaoPreencherVagas ? 'border-purpura-500 bg-purpura-50/50 dark:bg-purpura-900/30' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900' }}">
-                        <input type="checkbox" wire:model.live="selecaoPreencherVagas" class="w-5 h-5 mt-0.5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                <div class="p-6 space-y-5 overflow-y-auto max-h-[60vh] w-full">
+                    <label class="flex items-start gap-3 p-4 transition border rounded-lg cursor-pointer hover:bg-purpura-50 dark:hover:bg-gray-700 {{ $selecaoPreencherVagas ? 'border-purpura-500 bg-purpura-50/50 dark:bg-purpura-900/30' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900' }}">
+                        <input type="checkbox" wire:model.live="selecaoPreencherVagas">
                         <div class="flex flex-col">
                             <span class="font-bold text-gray-900 text-md dark:text-white">Preencher Vagas Automaticamente</span>
                             <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">O sistema lerá as matrizes de ofertas do semestre e selecionará o Top X de cada turma exatamente até o limite configurado de vagas de cada uma.</span>
@@ -468,9 +467,9 @@
                     @endif
                 </div>
                 
-                <div class="flex justify-end gap-3 p-5 border-t bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700">
+                <div class="flex justify-end gap-3 p-5 border-t bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 w-full">
                     <button wire:click="$set('modalSelecaoAvancadaAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="executarSelecaoAvancada" class="btn btn--primary btn--medium flex items-center gap-2">
+                    <button wire:click="executarSelecaoAvancada" class="btn btn--primary btn--medium">
                         <i class="ph-bold ph-magic-wand"></i> Executar Filtro
                     </button>
                 </div>
@@ -486,7 +485,7 @@
         <x-modal title="Cadastrar Nova Inscrição" max-width="md" close-method="fecharModal">
             <form wire:submit.prevent="salvarNovaInscricao" class="space-y-4">
                 
-                <div class="bg-purpura-50 border border-purpura-200 p-3 rounded-lg text-xs text-purpura-700 font-medium mb-3">
+                <div class="bg-purpura-50 border border-purpura-200 p-4 rounded-lg text-xs text-purpura-700 font-medium mb-3 shadow-sm">
                     <i class="ph-fill ph-info"></i> O candidato receberá o link seguro de retomada no e-mail para concluir as demais etapas acadêmicas após a efetivação deste cadastro.
                 </div>
 
@@ -539,15 +538,15 @@
 
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-pitaya-50">
+            <div class="card !w-full !max-w-2xl !p-0">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-pitaya-50 w-full">
                     <h3 class="text-lg font-bold text-pitaya-700 flex items-center gap-2">
                         <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
                     </h3>
                     <button wire:click="cancelarAntiSpam" class="text-gray-400 hover:text-pitaya-600 transition"><i class="ph-bold ph-x text-xl"></i></button>
                 </div>
                 
-                <div class="p-6 overflow-y-auto custom-scrollbar">
+                <div class="p-6 overflow-y-auto custom-scrollbar w-full">
                     <p class="text-sm text-gray-700 mb-4 font-medium">
                         O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
@@ -569,7 +568,7 @@
                                                 <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="btn btn--small bg-white border border-pitaya-200 text-pitaya-600 hover:bg-pitaya-50">
+                                                <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="btn btn--secondary btn--small !text-pitaya-600 !border-pitaya-200 hover:!bg-pitaya-50">
                                                     Tirar da Lista
                                                 </button>
                                             </td>
@@ -581,11 +580,11 @@
                     </div>
                 </div>
 
-                <div class="p-5 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-center items-center gap-4">
-                    <button wire:click="cancelarAntiSpam" class="btn btn--secondary w-full sm:w-auto btn--medium">
+                <div class="p-5 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-center items-center gap-4 w-full">
+                    <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium w-full sm:w-auto">
                         Cancelar Tudo
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn bg-pitaya-600 text-white hover:bg-pitaya-700 w-full sm:w-auto btn--medium flex items-center justify-center gap-2">
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 w-full sm:w-auto hover:!bg-pitaya-700">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
                     </button>
                 </div>

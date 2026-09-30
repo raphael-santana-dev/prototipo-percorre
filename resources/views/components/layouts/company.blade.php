@@ -18,7 +18,7 @@
     
     <div x-data="{ drawerOpen: false }">
         
-        <div class="bg-petunia-900 border-b border-white/10 relative z-40 dark:bg-petunia-1000 transition-colors duration-300">
+        <div class="bg-petunia-900 border-b border-white/10 relative z-30 dark:bg-petunia-1000 transition-colors duration-300">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     
@@ -48,7 +48,7 @@
             </div>
         </div>
 
-        <nav class="hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-30 transition-colors duration-300">
+        <nav class="hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-20 transition-colors duration-300">
             <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="flex items-center h-12 gap-1 lg:gap-2">
                     <a href="{{ route('company.dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-purpura-400">

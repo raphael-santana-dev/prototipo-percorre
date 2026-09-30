@@ -20,25 +20,25 @@
                 @php
                     $nomeStatusAtual = strtolower(\App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Pendente');
                     $corBg = match($nomeStatusAtual) {
-                        'aprovado' => 'bg-green-100 text-green-800 border-green-200',
-                        'reprovado' => 'bg-red-100 text-red-800 border-red-200',
-                        'lead' => 'bg-blue-100 text-blue-800 border-blue-200',
-                        'incompleto' => 'bg-gray-100 text-gray-800 border-gray-200',
-                        default => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        'aprovado' => 'tag--filled tag--pistache',
+                        'reprovado' => 'tag--filled tag--pitaya',
+                        'lead' => 'tag--filled tag--purpura',
+                        'incompleto' => 'tag--filled tag--neutral',
+                        default => 'tag--filled tag--ponkan',
                     };
                 @endphp
-                <span class="{{ $corBg }} border text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                <span class="tag tag--small {{ $corBg }} border-0 uppercase">
                     {{ \App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Sem Status' }}
                 </span>
 
                 @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg">
-                        <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                        <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors shadow-none">
                             @foreach($todosStatus as $status)
                                 <option value="{{ $status->id }}">{{ $status->nome }}</option>
                             @endforeach
                         </select>
-                        <button wire:click="atualizarStatus" class="px-2.5 py-1 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-[10px] uppercase tracking-wider rounded transition-colors shadow-sm">
+                        <button wire:click="atualizarStatus" class="btn btn--primary btn--small !h-[28px] !px-3 !text-[10px] uppercase">
                             Mover
                         </button>
                     </div>
@@ -47,7 +47,7 @@
         </x-slot>
 
         <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nascimento (Idade)</span>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Nascimento (Idade)</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">
                 {{ $inscricao->data_nascimento ? \Carbon\Carbon::parse($inscricao->data_nascimento)->format('d/m/Y') : 'Não informada' }} 
                 @if($inscricao->data_nascimento)
@@ -56,21 +56,21 @@
             </span>
         </div>
         <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Celular / Telefone</span>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Celular / Telefone</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">{{ $inscricao->celular ?? 'Não informado' }}</span>
         </div>
         <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Oferta / Situação</span>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Oferta / Situação</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">
                 @if($inscricao->deseja_informar)
-                    <span class="text-yellow-600 font-bold"><i class="ph-fill ph-clock"></i> Lista de Espera</span>
+                    <span class="text-ponkan-600 font-bold"><i class="ph-fill ph-clock"></i> Lista de Espera</span>
                 @else
                     {{ $inscricao->unidade->nome ?? 'Não informada' }}
                 @endif
             </span>
         </div>
         <div>
-            <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Última Atualização</span>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Última Atualização</span>
             <span class="block text-sm font-bold text-gray-900 mt-1">{{ $this->getDataAtualizacao()->format('d/m/Y \à\s H:i') }}</span>
         </div>
     </x-details-card>
@@ -78,110 +78,110 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         
         <div class="lg:col-span-2">
-            <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 space-y-10">
+            <div class="card p-6 md:p-8 space-y-10">
                 <section>
                     <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-2">
-                        <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2">
+                        <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
                             <i class="ph-fill ph-student text-lg text-purpura-500"></i> Dados da Inscrição
                         </h3>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase bg-gray-50 border border-gray-200 px-2 py-1 rounded">Origem: {{ ucfirst($inscricao->origem ?? 'Não informada') }}</span>
+                        <span class="tag tag--small tag--outline tag--neutral">Origem: {{ ucfirst($inscricao->origem ?? 'Não informada') }}</span>
                     </div>
                     
                     <dl class="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
                         @if($inscricao->deseja_informar)
                             <div class="md:col-span-3">
-                                <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg flex items-start gap-3">
-                                    <i class="ph-fill ph-warning-circle text-xl text-yellow-600 mt-0.5"></i>
+                                <div class="bg-ponkan-50 border border-ponkan-200 text-ponkan-900 p-4 rounded-lg flex items-start gap-3 shadow-sm">
+                                    <i class="ph-fill ph-warning-circle text-2xl text-ponkan-500 mt-0.5"></i>
                                     <div>
                                         <h4 class="font-bold text-sm">Lista de Espera (Interesse Registrado)</h4>
-                                        <p class="text-xs mt-1">Este candidato não encontrou vagas no momento da inscrição e registrou interesse para ser avisado futuramente.</p>
+                                        <p class="text-xs mt-1 text-ponkan-800">Este candidato não encontrou vagas no momento da inscrição e registrou interesse para ser avisado futuramente.</p>
                                     </div>
                                 </div>
                             </div>
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Unidade de Interesse</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Unidade de Interesse</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->unidade_interesse_id ? (\App\Modules\Unidade\Domain\Models\Unidade::find($inscricao->unidade_interesse_id)?->nome ?? 'N/A') : 'Não informada' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Curso de Interesse</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Curso de Interesse</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->curso_interesse_id ? (\App\Models\Curso::find($inscricao->curso_interesse_id)?->nome ?? 'N/A') : 'Não informado' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Turno de Interesse</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Turno de Interesse</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->turno_interesse_id ? (\App\Modules\Turno\Domain\Models\Turno::find($inscricao->turno_interesse_id)?->nome ?? 'N/A') : 'Não informado' }}</dd>
                             </div>
                         @else
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Unidade Selecionada</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Unidade Selecionada</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->unidade->nome ?? 'Não informada' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Curso Selecionado</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Curso Selecionado</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->curso->nome ?? 'Não informado' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Turno Selecionado</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Turno Selecionado</dt>
                                 <dd class="text-sm font-bold text-gray-900">{{ $inscricao->turno->nome ?? 'Não informado' }}</dd>
                             </div>
                         @endif
                     </dl>
                 </section>
                 <section>
-                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                         <i class="ph-fill ph-map-pin text-lg text-purpura-500"></i> Endereço Completo
                     </h3>
                     
                     <dl class="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
                         <div class="md:col-span-3">
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Logradouro</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Logradouro</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->logradouro ?? '-' }}, {{ $inscricao->numero ?? 'S/N' }} {{ $inscricao->complemento ? ' - ' . $inscricao->complemento : '' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bairro</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Bairro</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->bairro ?? '-' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cidade / UF</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Cidade / UF</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->cidade ?? '-' }} / {{ $inscricao->estado ?? '-' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CEP & Região</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">CEP & Região</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->cep ?? '-' }} {{ $inscricao->regiao ? '(' . ucfirst($inscricao->regiao) . ')' : '' }}</dd>
                         </div>
                     </dl>
                 </section>
 
                 <section>
-                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                         <i class="ph-fill ph-identification-card text-lg text-purpura-500"></i> Informações Adicionais
                     </h3>
                     
                     <dl class="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nome Social</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Nome Social</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->nome_social ?: 'Não possui' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">PcD (Deficiência)</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">PcD (Deficiência)</dt>
                             <dd class="text-sm font-bold text-gray-900">
                                 @if(strtolower($inscricao->possui_deficiencia ?? 'nao') === 'sim')
-                                    <span class="inline-block mt-0.5 px-2 py-0.5 bg-red-50 text-red-700 font-bold text-xs rounded border border-red-200">Sim - {{ $inscricao->natureza_deficiencia }}</span>
+                                    <span class="tag tag--small tag--filled tag--pitaya mt-1">Sim - {{ $inscricao->natureza_deficiencia }}</span>
                                 @else
                                     Não declarada
                                 @endif
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Autoriza Uso de Imagem/Dados</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Autoriza Uso de Imagem/Dados</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->autorizacao_uso_infos ? 'Sim' : 'Não' }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Deseja Receber Informações</dt>
+                            <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Deseja Receber Informações</dt>
                             <dd class="text-sm font-bold text-gray-900">{{ $inscricao->receber_informacoes ? 'Sim' : 'Não' }}</dd>
                         </div>
                         @if($inscricao->token_matricula)
                             <div class="md:col-span-2">
-                                <dt class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Token de Matrícula</dt>
+                                <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Token de Matrícula</dt>
                                 <dd class="text-sm font-bold text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded inline-block">{{ $inscricao->token_matricula }}</dd>
                             </div>
                         @endif
@@ -189,7 +189,7 @@
                 </section>
                 
                 <section>
-                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                         <i class="ph-fill ph-list-dashes text-lg text-purpura-500"></i> Questionário Complementar
                     </h3>
                     
@@ -221,14 +221,14 @@
                                                 @endif
                                             </div>
                                             <div class="overflow-hidden">
-                                                <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5 truncate">Rede Social ({{ ucfirst($rede) }})</dt>
+                                                <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-0.5 truncate">Rede Social ({{ ucfirst($rede) }})</dt>
                                                 <dd class="block text-sm font-bold text-gray-900 truncate" title="{{ $usuario }}">{{ $usuario }}</dd>
                                             </div>
                                         </div>
                                     @endforeach
                                 @else
                                     <div>
-                                        <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</dt>
+                                        <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</dt>
                                         <dd class="block text-sm font-bold text-gray-900 break-words">
                                             {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
                                         </dd>
@@ -242,7 +242,7 @@
                 </section>
 
                 <section class="mt-10">
-                    <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                         <i class="ph-fill ph-code text-lg text-purpura-500"></i> Metadados Ocultos (Importação)
                     </h3>
                     
@@ -254,7 +254,7 @@
                         <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                             @foreach($metaArr as $chave => $valor)
                                 <div>
-                                    <dt class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">{{ $chave }}</dt>
+                                    <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">{{ $chave }}</dt>
                                     <dd class="block text-sm font-bold text-gray-900 break-words">{{ is_array($valor) ? json_encode($valor) : $valor }}</dd>
                                 </div>
                             @endforeach
@@ -268,16 +268,16 @@
         </div>
 
         <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-400 rounded-bl-full -z-0 opacity-10"></div>
+            <div class="card !p-0 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-ponkan-400 rounded-bl-full -z-0 opacity-10"></div>
                 
-                <div class="p-6 relative z-10">
+                <div class="p-6 relative z-10 w-full">
                     <div class="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
-                        <h3 class="text-xs font-bold tracking-wider text-gray-500 uppercase flex items-center gap-2">
-                            <i class="ph-fill ph-calculator text-lg text-yellow-500"></i> Pontuação
+                        <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
+                            <i class="ph-fill ph-calculator text-lg text-ponkan-500"></i> Pontuação
                         </h3>
                         <div class="text-center">
-                            <span class="bg-gray-900 text-yellow-400 font-extrabold text-xl px-3 py-1 rounded-lg shadow-sm border border-gray-800">
+                            <span class="bg-gray-900 text-ponkan-400 font-extrabold text-xl px-3 py-1 rounded-lg shadow-sm border border-gray-800">
                                 {{ $inscricao->pontuacao_total ?? 0 }} <span class="text-[10px] text-gray-400">pts</span>
                             </span>
                         </div>
@@ -290,12 +290,12 @@
                         
                         @if(isset($detalhes['auditoria_detalhada']) && count($detalhes['auditoria_detalhada']) > 0)
                             <div class="space-y-3 mb-4">
-                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
+                                <p class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
                                 @foreach($detalhes['auditoria_detalhada'] as $info)
                                     @php
                                         $isPadrao = ($info['tipo_regra'] ?? 'padrao') === 'padrao';
                                     @endphp
-                                    <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center group hover:border-yellow-400 transition-colors shadow-sm">
+                                    <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center group hover:border-ponkan-400 transition-colors shadow-sm">
                                         <div class="flex-1 pr-3">
                                             <span class="text-[10px] font-bold text-gray-900 uppercase block mb-1">
                                                 {{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}
@@ -309,20 +309,20 @@
                                                     <i class="ph-fill ph-info"></i> Condição atendida: {{ str_replace('Exigência: ', '', $info['condicao'] ?? '') }}
                                                 </p>
                                             @else
-                                                <p class="text-[10px] text-indigo-600 font-bold mt-1 leading-tight">
+                                                <p class="text-[10px] text-petunia-600 font-bold mt-1 leading-tight">
                                                     <i class="ph-fill ph-info"></i> {{ str_replace('Exigência: ', '', $info['condicao'] ?? 'Bônus/Multiplicador aplicado') }}
                                                 </p>
                                             @endif
                                         </div>
-                                        <span class="text-green-700 font-extrabold bg-green-50 px-2 py-1 rounded-md text-[11px] border border-green-200 shrink-0">
+                                        <span class="text-pistache-700 font-extrabold bg-pistache-50 px-2 py-1 rounded-md text-[11px] border border-pistache-200 shrink-0">
                                             +{{ $info['pontos_ganhos'] ?? 0 }}
                                         </span>
                                     </div>
                                 @endforeach
                             </div>
                             <div class="mt-3 text-right">
-                                <button wire:click="abrirRegras" class="text-[10px] font-bold text-purpura-600 hover:text-purpura-800 bg-purpura-50 hover:bg-purpura-100 border border-purpura-200 px-3 py-1.5 rounded transition-colors uppercase tracking-wider inline-flex items-center gap-1.5">
-                                    <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo de regras
+                                <button wire:click="abrirRegras" class="btn btn--secondary btn--small w-full">
+                                    <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo
                                 </button>
                             </div>
                         @endif
@@ -335,22 +335,22 @@
                 
                     @if($inscricao->posicao_ranking_geral || $inscricao->posicao_ranking)
                         <div class="mt-6 border-t border-gray-100 pt-5">
-                            <h4 class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-3">Classificação (Ranking)</h4>
+                            <h4 class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-3">Classificação (Ranking)</h4>
                             <div class="grid grid-cols-2 gap-3">
                                 @if($inscricao->posicao_ranking_geral)
-                                    <div class="bg-gray-50 border border-gray-100 p-2 rounded-lg text-center">
+                                    <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
                                         <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_geral }}º</span>
                                         <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Geral</span>
                                     </div>
                                 @endif
                                 @if($inscricao->posicao_ranking_unidade)
-                                    <div class="bg-gray-50 border border-gray-100 p-2 rounded-lg text-center">
+                                    <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
                                         <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_unidade }}º</span>
                                         <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Unidade</span>
                                     </div>
                                 @endif
                                 @if($inscricao->posicao_ranking_curso)
-                                    <div class="bg-gray-50 border border-gray-100 p-2 rounded-lg text-center">
+                                    <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
                                         <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_curso }}º</span>
                                         <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Curso</span>
                                     </div>
@@ -361,9 +361,9 @@
                 </div>
             </div>
             
-            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 shadow-sm text-center">
-                <span class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Ciclo Operacional</span>
-                <span class="block text-sm font-bold text-indigo-900">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>
+            <div class="card !p-5 bg-purpura-50/50 border-purpura-100 text-center">
+                <span class="block t-label-12-semibold text-purpura-400 uppercase tracking-wider mb-1 w-full">Ciclo Operacional</span>
+                <span class="block text-sm font-bold text-purpura-900 w-full">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>
             </div>
 
         </div>
@@ -371,25 +371,25 @@
 
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
-                    <h3 class="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+            <div class="card !w-full !max-w-md !p-0">
+                <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-pitaya-50 dark:bg-pitaya-900/20 w-full">
+                    <h3 class="text-lg font-bold text-pitaya-700 dark:text-pitaya-400 flex items-center gap-2">
                         <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta Anti-Spam
                     </h3>
                 </div>
                 
-                <div class="p-6">
+                <div class="p-6 w-full">
                     <p class="text-sm text-gray-700 dark:text-gray-300 font-medium text-center">
                         Este candidato <strong>já recebeu</strong> o e-mail automático configurado para esta etapa anteriormente.
                     </p>
                     <p class="text-xs text-gray-500 text-center mt-2">Deseja alterar o status e disparar o e-mail novamente?</p>
                 </div>
 
-                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row justify-center gap-3">
-                    <button wire:click="cancelarAntiSpam" class="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row justify-center gap-3 w-full">
+                    <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium">
                         Cancelar Alteração
                     </button>
-                    <button wire:click="executarMudancaStatusFinal" class="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition flex items-center justify-center gap-2">
+                    <button wire:click="executarMudancaStatusFinal" class="btn btn--primary btn--medium !bg-pitaya-600 !text-white hover:!bg-pitaya-700">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Sim, Reenviar E-mail
                     </button>
                 </div>

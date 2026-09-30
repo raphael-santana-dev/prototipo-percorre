@@ -141,6 +141,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/solicitacoes', \App\Modules\Admin\UI\Livewire\SolicitacoesManager::class)->name('solicitacoes.index');
 
     Route::get('/teste/rd-crm', \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class)->name('teste.rdcrm');
+    Route::get('/teste/design', \App\Modules\Teste\RDCrm\UI\Livewire\DesignSystemViewer::class)->name('teste.design');
     Route::get('/sistema/erros', \App\Modules\Auditoria\UI\Livewire\ErrorLogManager::class)->name('system.errors.index');
     Route::get('/financeiro/orcamentos', \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class)->name('financeiro.orcamentos');
 });

@@ -48,7 +48,7 @@
     }" class="flex h-screen w-full overflow-hidden">
         
         {{-- DESKTOP: SIDEBAR VERTICAL --}}
-        <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-50 shrink-0 shadow-lg overflow-x-hidden" 
+        <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden" 
                :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
             
             <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
@@ -98,7 +98,7 @@
         {{-- ÁREA PRINCIPAL --}}
         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
             
-            <header class="bg-petunia-900 border-b border-white/10 relative z-40 dark:bg-petunia-1000 transition-colors duration-300 shrink-0 h-16 w-full">
+            <header class="bg-petunia-900 border-b border-white/10 relative z-30 dark:bg-petunia-1000 transition-colors duration-300 shrink-0 h-16 w-full">
                 <div class="px-4 mx-auto w-full h-full">
                     <div class="flex items-center justify-between h-full w-full">
                         
@@ -136,7 +136,7 @@
                 </div>
             </header>
 
-            <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-30 shrink-0 origin-top"
+            <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-20 shrink-0 origin-top"
                  :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
                 <div class="px-4 mx-auto w-full">
                     <div class="flex items-center h-12 gap-1 lg:gap-2">
@@ -165,7 +165,7 @@
                 </div>
             </nav>
 
-            <main class="flex-1 w-full overflow-y-auto bg-slate-50 dark:bg-gray-900 custom-scrollbar relative z-10">
+            <main class="flex-1 w-full overflow-y-auto bg-slate-50 dark:bg-gray-900 custom-scrollbar">
                 <div class="w-full h-full py-6">
                     <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
                         {{ $slot }}

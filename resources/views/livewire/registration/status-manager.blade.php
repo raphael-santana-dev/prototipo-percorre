@@ -8,7 +8,7 @@
         :metricas="$metricas ?? null">
         @if(feature('status.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('status.criar')))
             <x-slot name="actions">
-                <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
+                <button wire:click="openModal" class="btn btn--primary btn--medium">
                     <i class="ph ph-plus text-lg"></i> Novo Status
                 </button>
             </x-slot>
@@ -31,7 +31,7 @@
                 </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap">
-                    <span class="inline-flex px-3 py-1 text-[10px] font-bold rounded-full bg-purpura-100 text-purpura-700 uppercase tracking-wider">
+                    <span class="tag tag--small tag--filled tag--purpura">
                         {{ $status->nome }}
                     </span>
                 </td>
@@ -84,35 +84,35 @@
                     
                     <form wire:submit="save" class="space-y-4">
                         <div>
-                            <label class="block mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">Nome do Status <span class="text-red-500">*</span></label>
+                            <label class="block mb-2 t-label-12-semibold text-gray-700 dark:text-gray-300">Nome do Status <span class="text-pitaya-500">*</span></label>
                             <input type="text" wire:model="nome" placeholder="Ex: Aprovado" 
-                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purpura-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white {{ $isInUse ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                class="w-full {{ $isInUse ? 'opacity-50 cursor-not-allowed' : '' }}"
                                 {{ $isInUse ? 'readonly' : '' }}>
                             @if($isInUse)
-                                <span class="block mt-1 text-xs text-amber-600 font-bold"><i class="ph-fill ph-warning-circle"></i> O nome não pode ser alterado pois já existem inscrições usando este status.</span>
+                                <span class="block mt-1 text-xs text-ponkan-600 font-bold"><i class="ph-fill ph-warning-circle"></i> O nome não pode ser alterado pois já existem inscrições usando este status.</span>
                             @endif
-                            @error('nome') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                            @error('nome') <span class="block mt-1 text-xs text-pitaya-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Descrição (Opcional)</label>
-                            <textarea wire:model="descricao" rows="3" class="w-full mt-1 text-sm border-gray-300 rounded-md shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
-                            @error('descricao') <span class="block mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                            <label class="block mb-1 t-label-12-semibold text-gray-700 dark:text-gray-300">Descrição (Opcional)</label>
+                            <textarea wire:model="descricao" rows="3" class="w-full mt-1"></textarea>
+                            @error('descricao') <span class="block mt-1 text-xs text-pitaya-500">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-sm font-bold text-gray-700 dark:text-gray-300">Cor da Tag</label>
+                            <label class="block mb-1 t-label-12-semibold text-gray-700 dark:text-gray-300">Cor da Tag</label>
                             <div class="flex items-center gap-4 mt-1">
-                                <input type="color" wire:model="cor" class="w-10 h-10 p-0.5 bg-white border border-gray-300 rounded-md cursor-pointer shadow-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="color" wire:model="cor" class="w-12 h-12 p-1 bg-white border border-gray-300 rounded-md cursor-pointer shadow-sm dark:bg-gray-700 dark:border-gray-600">
                                 <span class="text-sm text-gray-500 font-mono">{{ $cor ?? '#9CA3AF' }}</span>
                             </div>
                         </div>
 
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
-                            <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-purpura-500 border-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-700">
+                            <button type="button" wire:click="$set('showModal', false)" class="btn btn--secondary btn--medium">
                                 Cancelar
                             </button>
-                            <button type="submit" class="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm bg-ponkan-500 hover:bg-ponkan-600">
+                            <button type="submit" class="btn btn--primary btn--medium">
                                 Salvar Status
                             </button>
                         </div>
