@@ -86,15 +86,21 @@
         <x-slot name="filters">
             <div x-data="{
                 visible: ['status', 'ciclo'],
+                allFilters: ['status', 'ciclo', 'etapa', 'unidade', 'curso'],
                 init() {
-                    if ($wire.filtroEtapa) this.visible.push('etapa');
-                    if ($wire.filtroUnidade) this.visible.push('unidade');
-                    if ($wire.filtroCurso) this.visible.push('curso');
+                    if ($wire.filtroEtapa && !this.visible.includes('etapa')) this.visible.push('etapa');
+                    if ($wire.filtroUnidade && !this.visible.includes('unidade')) this.visible.push('unidade');
+                    if ($wire.filtroCurso && !this.visible.includes('curso')) this.visible.push('curso');
                 },
-                add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
+                add(f) { 
+                    if(!this.visible.includes(f)) this.visible.push(f); 
+                },
                 remove(f) {
                     $wire.set('filtro' + f.charAt(0).toUpperCase() + f.slice(1), '');
                     this.visible = this.visible.filter(i => i !== f);
+                },
+                get canAddMore() {
+                    return this.visible.length < this.allFilters.length;
                 }
             }" class="flex flex-wrap items-center gap-2">
                 
@@ -162,7 +168,7 @@
                 </div>
 
                 <!-- Botão Add Filter Dropdown -->
-                <div x-data="{ open: false }" class="relative ml-1 shrink-0">
+                <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
                     <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
                         + Adicionar Filtro
                     </button>
@@ -185,11 +191,16 @@
                     </div>
                 </div>
 
+                {{-- Botão rápido para resetar se houver sujeira --}}
+                @if($filtroStatus !== '' || $filtroCiclo !== '' || $filtroUnidade !== '' || $filtroCurso !== '' || $filtroEtapa !== '')
+                    <button wire:click="limparFiltros" class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
+                        Limpar Todos
+                    </button>
+                @endif
             </div>
         </x-slot>
 
         @forelse($registros as $inscricao)
-            <!-- Padronizando espaçamentos py-1.5 para visual minimalista comprimido -->
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
@@ -344,7 +355,7 @@
 
     </x-table>
 
-    {{-- MODAL DE LOTE E OUTROS MANTIDOS IGUAIS --}}
+    {{-- MODAL DE LOTE --}}
     @if($modalLoteAberto)
         <div class="fixed inset-0 z-[100] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 lg:px-8 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">

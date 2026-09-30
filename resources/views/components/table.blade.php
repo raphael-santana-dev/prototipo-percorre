@@ -8,24 +8,18 @@
 ])
 
 <div class="w-full">
-    {{-- BARRA DE FERRAMENTAS SUPERIOR (Busca, Filtros, Linhas/Pág e Modo de Exibição) --}}
-    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4">
+    {{-- LINHA 1: BUSCA DE TEXTO E CONTROLES DA TABELA --}}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
         
-        {{-- Slot para os Filtros e Campo de Busca (Renderizados Juntos) --}}
-        <div class="flex flex-wrap items-center gap-2 flex-1 w-full min-w-0">
-            @if(isset($search))
-                <div class="shrink-0 w-full sm:w-64 mr-2">
-                    {{ $search }}
-                </div>
-            @endif
-            
-            {{ $filters ?? '' }}
+        {{-- Slot da Busca (Esquerda) --}}
+        <div class="w-full md:flex-1 max-w-md shrink-0">
+            {{ $search ?? '' }}
         </div>
 
-        {{-- Controles da Tabela --}}
-        <div class="flex items-center gap-3 shrink-0">
+        {{-- Controles da Tabela (Direita) --}}
+        <div class="flex items-center justify-between md:justify-end gap-3 shrink-0">
             <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <span class="hidden sm:inline">Linhas por página</span>
+                <span>Linhas por página</span>
                 <select wire:model.live="porPagina" class="py-1 px-2.5 text-sm border-gray-300 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 focus:ring-gray-900 focus:border-gray-900 dark:focus:ring-white h-9 cursor-pointer font-medium">
                     <option value="10">10</option>
                     <option value="15">15</option>
@@ -48,6 +42,14 @@
         </div>
     </div>
 
+    {{-- LINHA 2: FILTROS DINÂMICOS (CHIPS) --}}
+    @if(isset($filters))
+        <div class="mb-4">
+            {{ $filters }}
+        </div>
+    @endif
+
+    {{-- CONTEÚDO DA TABELA --}}
     @if($modoExibicao === 'lista')
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
             
