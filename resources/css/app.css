@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@import "@phosphor-icons/web/regular/style.css";
+@import "@phosphor-icons/web/fill/style.css";
+@import "@phosphor-icons/web/bold/style.css";
+
 @source "../../app/Modules";
 @source "../../resources/views";
 
@@ -299,6 +303,20 @@
     .divider { @apply bg-gray-200 border-0 m-0; }
     .divider--horizontal { @apply w-full h-[1px]; }
     .divider--vertical { @apply w-[1px] h-full self-stretch; }
+
+    /* ============================================================================
+       4. ANTI-FLICKER LAYOUT (ESTADOS INICIAIS)
+       ============================================================================ */
+    /* Estado do layout aplicado antes do Alpine renderizar */
+    .js-sidebar { width: 16rem; }
+    html[data-sidebar="min"] .js-sidebar { width: 72px; }
+    html[data-layout="top"]  .js-sidebar { width: 0; opacity: 0; }
+
+    .js-topnav { height: 0; opacity: 0; overflow: hidden; border-color: transparent; }
+    html[data-layout="top"] .js-topnav { height: 3rem; opacity: 1; overflow: visible; border-color: revert-layer; }
+
+    .js-topcontrols { width: 0; opacity: 0; overflow: hidden; }
+    html[data-layout="top"] .js-topcontrols { width: auto; opacity: 1; overflow: visible; }
 }
 
 [x-cloak] { display: none !important; }

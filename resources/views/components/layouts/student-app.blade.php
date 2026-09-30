@@ -14,11 +14,15 @@
         if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         }
+        (function () {
+            var d = document.documentElement;
+            d.dataset.layout  = localStorage.getItem('layoutMode') || 'top';
+            d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
+        })();
     </script>
 
     @livewireStyles
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
 <body class="h-full antialiased text-gray-900 bg-slate-50 dark:bg-gray-900 dark:text-gray-100 overflow-hidden">
@@ -27,19 +31,25 @@
         drawerOpen: false, 
         layoutMode: localStorage.getItem('layoutMode') || 'top',
         sidebarMinimized: localStorage.getItem('sidebarMinimized') === 'true',
+        loaded: false,
+        init() {
+            setTimeout(() => this.loaded = true, 50);
+        },
         toggleLayout() {
             this.layoutMode = this.layoutMode === 'top' ? 'left' : 'top';
             localStorage.setItem('layoutMode', this.layoutMode);
+            document.documentElement.dataset.layout = this.layoutMode;
         },
         toggleMinimize() {
             this.sidebarMinimized = !this.sidebarMinimized;
             localStorage.setItem('sidebarMinimized', this.sidebarMinimized);
+            document.documentElement.dataset.sidebar = this.sidebarMinimized ? 'min' : 'full';
         }
-    }" class="flex h-screen w-full overflow-hidden transition-all duration-300">
+    }" class="flex h-screen w-full overflow-hidden">
         
-        {{-- DESKTOP: SIDEBAR VERTICAL (Transição de Largura) --}}
-        <aside class="hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 transition-all duration-300 ease-in-out z-50 shrink-0 shadow-lg overflow-x-hidden" 
-               :class="layoutMode === 'left' ? (sidebarMinimized ? 'w-[72px]' : 'w-64') : 'w-0 opacity-0'">
+        {{-- DESKTOP: SIDEBAR VERTICAL --}}
+        <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-50 shrink-0 shadow-lg overflow-x-hidden" 
+               :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
             
             <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
                 <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
@@ -76,6 +86,12 @@
                     <span x-show="!sidebarMinimized" x-transition.opacity>Portal Editorial</span>
                     <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Portal Editorial</div>
                 </a>
+
+                <a href="{{ route('student.profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                    <i class="text-xl ph ph-user-circle shrink-0"></i>
+                    <span x-show="!sidebarMinimized" x-transition.opacity>Meu Perfil</span>
+                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Meu Perfil</div>
+                </a>
             </div>
         </aside>
 
@@ -91,7 +107,7 @@
                                 <i class="text-2xl ph ph-list"></i>
                             </button>
                             
-                            <div class="flex-shrink-0 items-center gap-4 hidden md:flex transition-all duration-300" :class="layoutMode === 'left' ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'">
+                            <div class="js-topcontrols flex-shrink-0 items-center gap-4 hidden md:flex" :class="loaded ? 'transition-all duration-300' : ''">
                                 <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
                             </div>
                         </div>
@@ -120,8 +136,8 @@
                 </div>
             </header>
 
-            <nav class="hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-30 shrink-0 transition-all duration-300 ease-in-out origin-top"
-                 :class="layoutMode === 'top' ? 'h-12 opacity-100' : 'h-0 opacity-0 overflow-hidden border-transparent'">
+            <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-30 shrink-0 origin-top"
+                 :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
                 <div class="px-4 mx-auto w-full">
                     <div class="flex items-center h-12 gap-1 lg:gap-2">
                         <a href="{{ route('student.dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-600 transition-colors rounded-md hover:text-ponkan-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-ponkan-400">
@@ -160,7 +176,6 @@
 
         {{-- MENU MOBILE (DRAWER) --}}
         <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
-
         <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
             <div class="relative flex-shrink-0 h-40 overflow-hidden bg-petunia-900">
                 <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
