@@ -14,30 +14,34 @@ class StatusInscricaoBaseSeeder extends Seeder
     public function run(): void
     {
         StatusInscricao::firstOrCreate(
+            ['nome' => 'Pendente'],
             [
-                'nome' => 'Pendente',
                 'descricao' => 'Etapa padrão e obrigatória do sistema.',
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
 
         StatusInscricao::firstOrCreate(
+            ['nome' => 'Em Análise'],
             [
-                'nome' => 'Em Análise',
                 'descricao' => 'Etapa padrão e obrigatória do sistema.',
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
 
         StatusInscricao::firstOrCreate(
+            ['nome' => 'Aprovado'],
             [
-                'nome' => 'Aprovado',
                 'descricao' => 'Etapa padrão e obrigatória do sistema.',
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
 
         StatusInscricao::firstOrCreate(
+            ['nome' => 'Reprovado'],
             [
-                'nome' => 'Reprovado',
                 'descricao' => 'Etapa padrão e obrigatória do sistema.',
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
     }

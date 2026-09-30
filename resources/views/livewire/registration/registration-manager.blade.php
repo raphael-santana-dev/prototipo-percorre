@@ -84,10 +84,11 @@
 
         {{-- CHIPS DE FILTRO NO CABEÇALHO DA TABELA --}}
         <x-slot name="filters">
-            <div x-data="{
-                visible: ['status', 'ciclo'],
-                allFilters: ['status', 'ciclo', 'etapa', 'unidade', 'curso'],
+            <div wire:ignore.self x-data="{
+                visible: [],
+                allFilters: ['status', 'etapa', 'unidade', 'curso'],
                 init() {
+                    if ($wire.filtroStatus && !this.visible.includes('status')) this.visible.push('status');
                     if ($wire.filtroEtapa && !this.visible.includes('etapa')) this.visible.push('etapa');
                     if ($wire.filtroUnidade && !this.visible.includes('unidade')) this.visible.push('unidade');
                     if ($wire.filtroCurso && !this.visible.includes('curso')) this.visible.push('curso');
@@ -104,8 +105,17 @@
                 }
             }" class="flex flex-wrap items-center gap-2">
                 
-                <!-- Chip: Status -->
-                <div x-show="visible.includes('status')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                <!-- Chip: Ciclo (FIXO - Não é escondido nem tem botão de remover) -->
+                <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
+                    <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
+                        <option value="">Qualquer</option>
+                        @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                    </select>
+                </div>
+
+                <!-- Chip: Status (Dinâmico) -->
+                <div x-show="visible.includes('status')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Status</span>
                     <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
@@ -116,19 +126,7 @@
                     </button>
                 </div>
 
-                <!-- Chip: Ciclo -->
-                <div x-show="visible.includes('ciclo')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
-                    <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
-                    <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
-                        <option value="">Qualquer</option>
-                        @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                    </select>
-                    <button @click="remove('ciclo')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors">
-                        <i class="ph-bold ph-x text-sm"></i>
-                    </button>
-                </div>
-
-                <!-- Chip: Etapa -->
+                <!-- Chip: Etapa (Dinâmico) -->
                 <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Etapa</span>
                     <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
@@ -143,7 +141,7 @@
                     </button>
                 </div>
 
-                <!-- Chip: Unidade -->
+                <!-- Chip: Unidade (Dinâmico) -->
                 <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Unidade</span>
                     <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
@@ -155,7 +153,7 @@
                     </button>
                 </div>
 
-                <!-- Chip: Curso -->
+                <!-- Chip: Curso (Dinâmico) -->
                 <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
                     <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
@@ -167,7 +165,7 @@
                     </button>
                 </div>
 
-                <!-- Botão Add Filter Dropdown -->
+                <!-- Add Filter Dropdown (Some automaticamente se todos os filtros estiverem ativos) -->
                 <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
                     <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
                         + Adicionar Filtro
@@ -175,9 +173,6 @@
                     <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 py-2" x-cloak>
                         <button x-show="!visible.includes('status')" @click="add('status'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
                             <i class="ph-bold ph-tag text-gray-400 text-lg"></i> Status
-                        </button>
-                        <button x-show="!visible.includes('ciclo')" @click="add('ciclo'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                            <i class="ph-bold ph-calendar-check text-gray-400 text-lg"></i> Ciclo
                         </button>
                         <button x-show="!visible.includes('etapa')" @click="add('etapa'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
                             <i class="ph-bold ph-steps text-gray-400 text-lg"></i> Etapa do Funil
@@ -192,15 +187,18 @@
                 </div>
 
                 {{-- Botão rápido para resetar se houver sujeira --}}
-                @if($filtroStatus !== '' || $filtroCiclo !== '' || $filtroUnidade !== '' || $filtroCurso !== '' || $filtroEtapa !== '')
-                    <button wire:click="limparFiltros" class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
-                        Limpar Todos
-                    </button>
-                @endif
+                <button x-show="$wire.filtroStatus || $wire.filtroUnidade || $wire.filtroCurso || $wire.filtroEtapa || $wire.filtroNome" 
+                        x-cloak 
+                        wire:click="limparFiltros" 
+                        @click="visible = []" 
+                        class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
+                    Limpar Todos
+                </button>
             </div>
         </x-slot>
 
         @forelse($registros as $inscricao)
+            <!-- Padronizando espaçamentos py-1.5 para visual minimalista comprimido -->
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
@@ -355,7 +353,7 @@
 
     </x-table>
 
-    {{-- MODAL DE LOTE --}}
+    {{-- MODAL DE LOTE E OUTROS --}}
     @if($modalLoteAberto)
         <div class="fixed inset-0 z-[100] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 lg:px-8 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0">

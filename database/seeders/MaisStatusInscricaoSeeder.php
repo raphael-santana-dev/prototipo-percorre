@@ -38,7 +38,10 @@ class MaisStatusInscricaoSeeder extends Seeder
                 
                 $status = StatusInscricao::firstOrCreate(
                     ['nome' => $nomeStatus],
-                    ['descricao' => 'Status estrutural do Funil (CRM).']
+                    [
+                        'descricao' => 'Status estrutural do Funil (CRM).',
+                        'cor' => StatusInscricao::gerarCorSegura()
+                    ]
                 );
 
                 DB::table('ciclo_status_inscricao')->updateOrInsert(

@@ -739,7 +739,16 @@ class RegistrationManager extends Component
 
     public function limparFiltros()
     {
-        $this->reset(['filtroNome', 'filtroStatus', 'filtroCiclo', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
+        $this->reset(['filtroNome', 'filtroStatus', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
+        
+        // Mantém o Ciclo sempre fixado no ativo mais recente, ao invés de resetar para nulo
+        $cicloAtivo = Ciclo::where('status', true)->latest()->first();
+        if ($cicloAtivo) {
+            $this->filtroCiclo = $cicloAtivo->id;
+        } else {
+            $this->filtroCiclo = '';
+        }
+
         $this->resetPage();
     }
 

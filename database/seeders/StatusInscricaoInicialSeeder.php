@@ -14,7 +14,7 @@ class StatusInscricaoInicialSeeder extends Seeder
             ['nome' => 'Inscrição Incompleta'],
             [
                 'descricao' => 'O candidato iniciou o preenchimento, mas não concluiu a última etapa.',
-                'cor' => 'gray', // ou a padronização de cores que você utiliza
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
 
@@ -24,7 +24,7 @@ class StatusInscricaoInicialSeeder extends Seeder
             ['nome' => 'Inscrição Finalizada'],
             [
                 'descricao' => 'Inscrição concluída com sucesso (Status padrão de segurança).',
-                'cor' => 'blue'
+                'cor' => StatusInscricao::gerarCorSegura()
             ]
         );
     }

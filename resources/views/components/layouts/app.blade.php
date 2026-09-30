@@ -256,7 +256,7 @@
                 
                 {{-- TOP HEADER --}}
                 <header class="bg-petunia-900 border-b border-white/10 relative z-30 dark:bg-petunia-1000 transition-colors duration-300 shrink-0 h-16 w-full">
-                    <div class="px-4 mx-auto w-full h-full">
+                    <div class="h-full w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center justify-between h-full w-full">
                             
                             <div class="flex items-center gap-5">
@@ -275,15 +275,21 @@
                                     <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
                                 </a>
 
+                                {{-- Troca de tema protegida por feature e permissão --}}
+                                @if(feature('tema.alterar') && auth()->user()->can('tema.alterar'))
                                 <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
                                     <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
                                     <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
                                 </button>
+                                @endif
                                 
                                 <button @click="toggleLayout()" class="hidden md:flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alterar Posição do Menu">
                                     <i class="text-lg ph ph-layout" x-show="layoutMode === 'top'"></i>
                                     <i class="text-lg ph ph-sidebar-simple" x-show="layoutMode === 'left'" x-cloak></i>
                                 </button>
+                                
+                                {{-- Componente System Task Progress adicionado aqui --}}
+                                @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
                                 
                                 @livewire(\App\Modules\Admin\UI\Livewire\NotificationBadge::class)
                                 
@@ -297,10 +303,10 @@
                 </header>
 
                 {{-- NAVBAR HORIZONTAL --}}
-                <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-20 shrink-0 origin-top"
+                <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-40 shrink-0 origin-top"
                      :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
-                    <div class="px-4 mx-auto w-full">
-                        <div class="flex flex-wrap items-center min-h-[3rem] py-1.5 gap-x-1 gap-y-1 lg:gap-x-2">
+                    <div class="w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div class="flex flex-wrap items-center min-h-[3rem] py-1 gap-x-2 gap-y-1">
                             <a href="{{ route('dashboard') }}" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
                             </a>
@@ -324,6 +330,7 @@
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
                                     @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Inscrição</a> @endcan
                                     @can('inscricao.listar') <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Inscrições</a> @endcan
+                                    @can('inscricao.listar') <a href="{{ route('ciclos.crm') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Kanban (CRM)</a> @endcan
                                 </div>
                             </div>
                             @endcanany
@@ -388,12 +395,13 @@
                                     @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Matrículas</a> @endcan
                                     @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Turmas</a> @endcan
                                     <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Portal IA</a>
+                                    @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Aprendizagem</a> @endcan
                                 </div>
                             </div>
                             @endcanany
 
                             @canany(['usuario.listar', 'acl.role.listar', 'auditoria.listar', 'tarefas.acessar'])
-                            <div x-data="{ open: false }" @click.away="open = false" class="relative ml-auto">
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
                                 <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                     <i class="text-base ph ph-gear"></i> Administração <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
                                 </button>
@@ -408,6 +416,9 @@
                                     @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Auditoria Geral</a> @endcan
                                     @can('tarefas.acessar') <a href="{{ route('system_tasks.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Motor de Importações</a> @endcan
                                     <a href="{{ route('system.errors.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Central de Erros</a>
+                                    @can('feature.listar') <a href="{{ route('features.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Feature Toggles</a> @endcan
+                                    @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Permissões</a> @endcan
+                                    @can('tarefas.acessar') <a href="{{ route('system_tasks.hub') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Hub de Tarefas</a> @endcan
                                 </div>
                             </div>
                             @endcanany

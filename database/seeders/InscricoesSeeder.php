@@ -183007,13 +183007,28 @@ class InscricoesSeeder extends Seeder
             ]
         ];
 
+        // 1. Busque os IDs dos status vinculados ao ciclo ANTES do loop (alta performance)
+        $statusIds = DB::table('ciclo_status_inscricao')
+            ->where('ciclo_id', $cicloId)
+            ->pluck('status_inscricao_id')
+            ->toArray();
+
+        // Fallback de segurança caso o ciclo ainda não tenha status vinculados na pivot
+        if (empty($statusIds)) {
+            // Pega o ID inicial usando o método do seu model Ciclo, ou fixa um fallback
+            $statusIds = [1]; 
+        }
+
         $now = now();
         $batch = [];
+
         foreach ($inscricoes as $item) {
             $unidadeId = $resolveUnidade($item['_unidade_raw']);
             $cursoId = $resolveCurso($item['_curso_raw']);
             $turnoId = $resolveTurno($item['_turno_raw']);
-            $statusId = $resolveStatus($item['_status_raw']);
+            
+            // 2. Removemos a resolução estática ($resolveStatus) e pegamos um ID aleatório do array
+            $statusId = $statusIds[array_rand($statusIds)];
 
             unset($item['_unidade_raw'], $item['_curso_raw'], $item['_turno_raw'], $item['_status_raw']);
 
