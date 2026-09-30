@@ -199,7 +199,8 @@ class RegistrationManager extends Component
         if (!empty($this->filtroNome)) {
             $query->where(function($q) {
                 $q->where('inscricoes.nome', 'ilike', '%' . $this->filtroNome . '%')
-                  ->orWhere('inscricoes.cpf', 'like', '%' . $this->filtroNome . '%');
+                  ->orWhere('inscricoes.cpf', 'like', '%' . $this->filtroNome . '%')
+                  ->orWhere('inscricoes.email', 'like', '%' . $this->filtroNome . '%');
             });
         }
         if (!empty($this->filtroStatus)) $query->where('inscricoes.status_inscricao_id', $this->filtroStatus);
@@ -224,7 +225,6 @@ class RegistrationManager extends Component
         
         $statusDisponiveis = \App\Models\StatusInscricao::orderBy('nome')->get();
         
-        // Refatorado para um Dropdown (select) minimalista em vez de múltiplos botões
         $botoesAcao = '<div class="mt-2 relative">';
         $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
         
@@ -747,9 +747,8 @@ class RegistrationManager extends Component
     {
         return [
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
-            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
-            ['key' => 'origem', 'label' => 'Origem', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'origem', 'label' => 'Origem', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
             ['key' => 'pontuacao_total', 'label' => 'Pontuação', 'sortable' => true, 'class' => 'text-center'],
@@ -792,6 +791,7 @@ class RegistrationManager extends Component
     {
         $queryBase = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
         
+        // 1. Levantamento de dados para o Card Visual de Progresso
         $statusCounts = (clone $queryBase)
             ->join('status_inscricoes', 'inscricoes.status_inscricao_id', '=', 'status_inscricoes.id')
             ->selectRaw('status_inscricoes.nome as status_nome, count(inscricoes.id) as total')
@@ -800,17 +800,53 @@ class RegistrationManager extends Component
             ->toArray();
 
         $totalGeral = (clone $queryBase)->count();
-        $totalAprovados = $statusCounts['Aprovado'] ?? 0;
-        $totalReprovados = $statusCounts['Reprovado'] ?? 0;
-        $totalPendentes = $totalGeral - ($totalAprovados + $totalReprovados);
+
+        // 2. Busca do total de vagas da OfertaVaga baseada nos filtros
+        $totalVagasQuery = \App\Models\OfertaVaga::query();
+        if (!empty($this->filtroCiclo)) $totalVagasQuery->where('ciclo_id', $this->filtroCiclo);
+        if (!empty($this->filtroUnidade)) $totalVagasQuery->where('unidade_id', $this->filtroUnidade);
+        if (!empty($this->filtroTurno)) $totalVagasQuery->where('turno_id', $this->filtroTurno);
+        if (!empty($this->filtroCurso)) $totalVagasQuery->where('curso_id', $this->filtroCurso);
+        $totalVagas = $totalVagasQuery->sum('vagas') ?? 0;
+
+        // 3. Busca dos status que deverão ser desenhados (relacionados ao ciclo ou gerais se nenhum filtrado)
+        $statusQuery = \App\Models\StatusInscricao::query();
+        if (!empty($this->filtroCiclo)) {
+            $statusQuery->join('ciclo_status_inscricao', 'status_inscricoes.id', '=', 'ciclo_status_inscricao.status_inscricao_id')
+                        ->where('ciclo_status_inscricao.ciclo_id', $this->filtroCiclo)
+                        ->orderBy('ciclo_status_inscricao.ordem')
+                        ->select('status_inscricoes.*');
+        } else {
+            $statusQuery->orderBy('nome');
+        }
+        
+        $statusesDb = $statusQuery->get();
+        if ($statusesDb->isEmpty()) {
+            $statusesDb = \App\Models\StatusInscricao::orderBy('nome')->get();
+        }
+
+        // 4. Monta o Array detalhado para o Componente de Progresso Customizado
+        $statusesArray = [];
+        foreach($statusesDb as $st) {
+            $total = $statusCounts[$st->nome] ?? 0;
+            $percent = $totalVagas > 0 ? round(($total / $totalVagas) * 100, 1) : 0;
+            $statusesArray[] = [
+                'id' => $st->id,
+                'nome' => $st->nome,
+                'cor' => $st->cor ?? '#9CA3AF',
+                'total' => $total,
+                'percent' => $percent
+            ];
+        }
 
         $metricas = [
-            ['label' => 'Total', 'value' => $totalGeral, 'color_text' => 'text-blue-600 dark:text-blue-400', 'color_bg' => 'bg-blue-100 dark:bg-blue-900/30'],
-            ['label' => 'Aprovados', 'value' => $totalAprovados, 'color_text' => 'text-green-600 dark:text-green-400', 'color_bg' => 'bg-green-100 dark:bg-green-900/30'],
-            ['label' => 'Reprovados', 'value' => $totalReprovados, 'color_text' => 'text-red-600 dark:text-red-400', 'color_bg' => 'bg-red-100 dark:bg-red-900/30'],
-            ['label' => 'Pendentes', 'value' => $totalPendentes, 'color_text' => 'text-yellow-600 dark:text-yellow-400', 'color_bg' => 'bg-yellow-100 dark:bg-yellow-900/30'],
+            'is_progress_view' => true,
+            'total_inscritos' => $totalGeral,
+            'total_vagas' => $totalVagas,
+            'statuses' => $statusesArray
         ];
 
+        // Processa as regras de ordenação para a tabela
         if ($this->ordenacaoCampo) {
             if (in_array($this->ordenacaoCampo, ['posicao_ranking_geral', 'posicao_ranking_unidade', 'posicao_ranking_curso', 'posicao_ranking'])) {
                 $queryBase->orderByRaw("{$this->ordenacaoCampo} {$this->ordenacaoDirecao} NULLS LAST");

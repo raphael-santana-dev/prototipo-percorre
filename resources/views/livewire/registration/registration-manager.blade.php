@@ -2,21 +2,16 @@
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
     
-    @php
-        $activeFilterCount = collect([$filtroStatus, $filtroCiclo, $filtroUnidade, $filtroTurno, $filtroCurso, $filtroEtapa])
-            ->filter(fn($f) => $f !== '')->count();
-    @endphp
-
     <x-page-header 
-        title="{{ $registros->total() }} Inscrições" 
-        subtitle="Baseado em {{ $activeFilterCount }} filtro(s)"
+        title="Gestão de Inscrições" 
+        subtitle="Controle e Triagem de Candidatos"
         :breadcrumbs="null" 
         :metricas="$metricas ?? null">
 
         <x-slot name="actions">
             <div x-data="{ openExport: false }" class="relative inline-block text-left">
                 <button @click="openExport = !openExport" @click.away="openExport = false" class="btn btn--secondary btn--medium bg-white">
-                    Exportar CSV
+                    Exportar
                 </button>
                 <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700 dark:divide-gray-700">
                     <div class="py-1">
@@ -32,7 +27,7 @@
 
             @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar')))
                 <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none shadow-none">
-                    <i class="ph-bold ph-plus text-lg"></i> Novo
+                    Novo Registro
                 </button>
             @endif
         </x-slot>
@@ -40,7 +35,7 @@
 
     @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
         @if(count($selecionadas) > 0)
-        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-xl mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
+        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
             <div class="flex items-center shrink-0">
                 <span class="font-medium text-white text-sm">{{ count($selecionadas) }} selecionadas</span>
                 <button wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white font-medium transition">Limpar</button>
@@ -79,15 +74,16 @@
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
 
-        {{-- FILTROS DA TABELA E CAMPO DE BUSCA INLINE --}}
-        <x-slot name="filters">
-            <!-- Search Input -->
-            <div class="relative shrink-0 w-full sm:w-64">
+        {{-- CAMPO DE BUSCA INLINE NA TABELA --}}
+        <x-slot name="search">
+            <div class="relative w-full">
                 <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
                 <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome, E-mail ou CPF" class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
             </div>
+        </x-slot>
 
-            <!-- Chips Logic -->
+        {{-- CHIPS DE FILTRO NO CABEÇALHO DA TABELA --}}
+        <x-slot name="filters">
             <div x-data="{
                 visible: ['status', 'ciclo'],
                 init() {
@@ -105,7 +101,7 @@
                 <!-- Chip: Status -->
                 <div x-show="visible.includes('status')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Status</span>
-                    <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium">
+                    <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
                         @foreach($statusInscricoesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                     </select>
@@ -117,7 +113,7 @@
                 <!-- Chip: Ciclo -->
                 <div x-show="visible.includes('ciclo')" class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
-                    <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                    <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
                         @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                     </select>
@@ -129,7 +125,7 @@
                 <!-- Chip: Etapa -->
                 <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Etapa</span>
-                    <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                    <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
                         @if(!empty($etapasDb))
                             @foreach($etapasDb as $numero => $nome) <option value="{{ $numero }}">Passo {{ $numero }}</option> @endforeach
@@ -144,7 +140,7 @@
                 <!-- Chip: Unidade -->
                 <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Unidade</span>
-                    <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                    <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
                         @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                     </select>
@@ -156,7 +152,7 @@
                 <!-- Chip: Curso -->
                 <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                     <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
-                    <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px]">
+                    <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
                         <option value="">Qualquer</option>
                         @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
                     </select>
@@ -165,7 +161,7 @@
                     </button>
                 </div>
 
-                <!-- Add Filter Dropdown -->
+                <!-- Botão Add Filter Dropdown -->
                 <div x-data="{ open: false }" class="relative ml-1 shrink-0">
                     <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
                         + Adicionar Filtro

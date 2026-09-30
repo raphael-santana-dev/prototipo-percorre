@@ -8,11 +8,17 @@
 ])
 
 <div class="w-full">
-    {{-- BARRA DE FERRAMENTAS SUPERIOR (Filtros, Busca, Linhas/Pág e Modo de Exibição) --}}
+    {{-- BARRA DE FERRAMENTAS SUPERIOR (Busca, Filtros, Linhas/Pág e Modo de Exibição) --}}
     <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4">
         
-        {{-- Slot para os Filtros e Busca --}}
-        <div class="flex flex-wrap items-center gap-2 flex-1 w-full">
+        {{-- Slot para os Filtros e Campo de Busca (Renderizados Juntos) --}}
+        <div class="flex flex-wrap items-center gap-2 flex-1 w-full min-w-0">
+            @if(isset($search))
+                <div class="shrink-0 w-full sm:w-64 mr-2">
+                    {{ $search }}
+                </div>
+            @endif
+            
             {{ $filters ?? '' }}
         </div>
 
