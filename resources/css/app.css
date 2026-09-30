@@ -1,56 +1,328 @@
 @import "tailwindcss";
 
-@source "../../app/Modules";
+@import "@phosphor-icons/web/regular/style.css";
+@import "@phosphor-icons/web/fill/style.css";
+@import "@phosphor-icons/web/bold/style.css";
 
-/* Ensina o Tailwind v4 a ativar as classes dark: apenas quando a tag html tiver a classe .dark */
+@source "../../app/Modules";
+@source "../../resources/views";
+
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   1. TOKENS PRIMITIVOS (Tailwind Theme)
+   ============================================================================ */
 @theme {
-    --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-poppins: 'Poppins', system-ui, sans-serif;
 
-  /* Cores Primitivas e Semânticas do Design System Percorre */
-  --color-purpura-100: #F4E8FF;
-  --color-purpura-500: #9B26B6;
-  --color-purpura-600: #7E1FA2; /* Hover aproximado */
-  --color-purpura-700: #6A1B9A;
-  
-  --color-ponkan-100: #FFF3E0;
-  --color-ponkan-500: #FF9800;
-  --color-ponkan-600: #F57C00; /* Hover aproximado */
-  --color-ponkan-700: #E65100;
-  
-  --color-pitaya-100: #FCE4EC;
-  --color-pitaya-500: #E91E63;
-  
-  --color-pistache-100: #E8F5E9;
-  --color-pistache-500: #4CAF50;
-  
-  --color-petunia-100: #EDE7F6;
-  --color-petunia-500: #673AB7;
+  /* Purpura (Primary) */
+  --color-purpura-50: #FCF5FF;
+  --color-purpura-100: #F9EDFD;
+  --color-purpura-200: #EFD1FA;
+  --color-purpura-300: #E39AFE;
+  --color-purpura-400: #D25EFD;
+  --color-purpura-500: #BF17FC;
+  --color-purpura-600: #9C02D4;
+  --color-purpura-700: #7D02AA;
+  --color-purpura-800: #590179;
+  --color-purpura-900: #38014C;
+  --color-purpura-1000: #1D0227;
 
-  /* Neutros */
-  --color-gray-100: #F5F5F5;
-  --color-gray-200: #EEEEEE;
-  --color-gray-500: #9E9E9E;
-  --color-gray-800: #424242;
-  --color-gray-1000: #121212;
+  /* Ponkan (Secondary / CTA) */
+  --color-ponkan-50: #FFFBF2;
+  --color-ponkan-100: #FFF6E5;
+  --color-ponkan-200: #FFE9C2;
+  --color-ponkan-300: #FFD68F;
+  --color-ponkan-400: #FFC052;
+  --color-ponkan-500: #FFA301;
+  --color-ponkan-600: #D68900;
+  --color-ponkan-700: #A86B00;
+  --color-ponkan-800: #7A4E00;
+  --color-ponkan-900: #4C3100;
+  --color-ponkan-1000: #291A00;
+
+  /* Pitaya */
+  --color-pitaya-50: #FEF6F9;
+  --color-pitaya-100: #FDECF4;
+  --color-pitaya-200: #FBD0E3;
+  --color-pitaya-300: #F7ABCD;
+  --color-pitaya-400: #F062A2;
+  --color-pitaya-500: #EB2980;
+  --color-pitaya-600: #C41362;
+  --color-pitaya-700: #9A0F4D;
+  --color-pitaya-800: #700B38;
+  --color-pitaya-900: #460723;
+  --color-pitaya-1000: #250413;
+
+  /* Pistache */
+  --color-pistache-50: #F5FEFA;
+  --color-pistache-100: #EEFCF8;
+  --color-pistache-200: #D4F7EE;
+  --color-pistache-300: #AAEEDE;
+  --color-pistache-400: #6EE2C6;
+  --color-pistache-500: #3AD8B2;
+  --color-pistache-600: #23B390;
+  --color-pistache-700: #1C8C71;
+  --color-pistache-800: #146652;
+  --color-pistache-900: #0D4034;
+  --color-pistache-1000: #07221B;
+
+  /* Petunia */
+  --color-petunia-50: #FCFAFE;
+  --color-petunia-100: #F7EDFC;
+  --color-petunia-200: #EAD3F8;
+  --color-petunia-300: #D6A7F1;
+  --color-petunia-400: #B969E8;
+  --color-petunia-500: #A134E0;
+  --color-petunia-600: #801DB9;
+  --color-petunia-700: #651792;
+  --color-petunia-800: #49106A;
+  --color-petunia-900: #310B47;
+  --color-petunia-1000: #180523;
+
+  /* Gray (Neutros) */
+  --color-gray-50: #FAFAFA;
+  --color-gray-100: #F8F7F8;
+  --color-gray-200: #EEECEE;
+  --color-gray-300: #DCD9DD;
+  --color-gray-400: #B5AEB7;
+  --color-gray-500: #8F8593;
+  --color-gray-600: #6E6572;
+  --color-gray-700: #564F59;
+  --color-gray-800: #3A353B;
+  --color-gray-900: #221F23;
+  --color-gray-1000: #121113;
 }
 
-body {
-    font-family: 'Inter', sans-serif;
-}
-
+/* ============================================================================
+   2. VARIÁVEIS SEMÂNTICAS (Base Root)
+   ============================================================================ */
 @layer base {
-    /* Inputs padronizados da etapa anterior... */
-    input[type="text"], input[type="email"], input[type="password"], input[type="time"], input[type="date"], input[type="number"], textarea, select {
-        @apply px-3 py-2 rounded-lg border border-gray-300 shadow-sm transition-shadow duration-200 outline-none;
+  :root {
+    /* Dimensões & Espaçamentos */
+    --semantics-spacing-hairline: 1px;
+    --semantics-spacing-micro: 2px;
+    --semantics-spacing-tiny: 4px;
+    --semantics-spacing-small: 8px;
+    --semantics-spacing-medium: 12px;
+    --semantics-spacing-large: 16px;
+    --semantics-spacing-larger: 20px;
+    --semantics-spacing-bigger: 24px;
+    --semantics-spacing-big: 32px;
+    --semantics-spacing-wide: 40px;
+    --semantics-spacing-wider: 48px;
+    --semantics-spacing-broad: 64px;
+
+    /* Radius & Borders */
+    --semantics-radius-small: 4px;
+    --semantics-radius-medium: 8px;
+    --semantics-radius-large: 12px;
+    --semantics-radius-larger: 16px;
+    --semantics-radius-bigger: 20px;
+    --semantics-radius-big: 24px;
+    --semantics-radius-full: 9999px;
+    --semantics-stroke-thin: 1px;
+    --semantics-stroke-default: 2px;
+
+    /* Cores de Fundo (Semânticas) */
+    --semantics-colors-fill-background-primary: var(--color-white, #fff);
+    --semantics-colors-fill-background-secondary: var(--color-gray-100);
+    --semantics-colors-fill-primary: var(--color-purpura-700);
+    --semantics-colors-fill-primary-subtle: var(--color-purpura-100);
+    --semantics-colors-fill-secondary: var(--color-ponkan-500);
+    --semantics-colors-fill-secondary-subtle: var(--color-ponkan-100);
+    --semantics-colors-fill-neutral: var(--color-white, #fff);
+    --semantics-colors-fill-neutral-subtle: var(--color-gray-100);
+
+    /* Acentos */
+    --semantics-colors-fill-accent-purpura: var(--color-purpura-700);
+    --semantics-colors-fill-accent-ponkan: var(--color-ponkan-500);
+    --semantics-colors-fill-accent-pitaya: var(--color-pitaya-600);
+    --semantics-colors-fill-accent-pistache: var(--color-pistache-600);
+    --semantics-colors-fill-accent-petunia: var(--color-petunia-900);
+    
+    --semantics-colors-fill-interactive-primary-hover: var(--color-purpura-800);
+    --semantics-colors-fill-interactive-primary-pressed: var(--color-purpura-900);
+    --semantics-colors-fill-interactive-disabled: var(--color-gray-100);
+
+    /* Tipografia (Variáveis) */
+    --semantics-typography-family-poppins: 'Poppins', sans-serif;
+    --semantics-typography-family-inter: 'Inter', sans-serif;
+    
+    /* Textos */
+    --semantics-colors-text-primary: var(--color-gray-900);
+    --semantics-colors-text-secondary: var(--color-gray-600);
+    --semantics-colors-text-on-dark: var(--color-white, #fff);
+    --semantics-colors-text-heading-default: var(--color-gray-1000);
+    --semantics-colors-text-accent-purpura: var(--color-purpura-700);
+    --semantics-colors-text-accent-petunia: var(--color-petunia-900);
+    --semantics-colors-text-interactive-link-default: var(--color-purpura-700);
+    --semantics-colors-text-interactive-link-hover: var(--color-purpura-600);
+    
+    /* Sombras */
+    --semantics-shadow-gray-2: 0 1px 2px rgba(34, 31, 35, 0.07), 0 2px 4px rgba(34, 31, 35, 0.07), 0 4px 8px rgba(34, 31, 35, 0.07);
+    --semantics-shadow-petunia-4: 0 1px 2px rgba(49, 11, 71, 0.07), 0 2px 4px rgba(49, 11, 71, 0.07), 0 4px 8px rgba(49, 11, 71, 0.07), 0 8px 16px rgba(49, 11, 71, 0.07), 0 16px 32px rgba(49, 11, 71, 0.07);
+  }
+
+  body {
+    font-family: var(--semantics-typography-family-inter);
+    color: var(--semantics-colors-text-primary);
+    background-color: var(--semantics-colors-fill-background-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Estilização nativa de formulários do sistema administrativo */
+  input[type="text"], input[type="email"], input[type="password"], input[type="time"], input[type="date"], input[type="number"], textarea, select {
+      @apply px-4 py-2.5 rounded-lg border border-gray-200 shadow-sm transition-all duration-200 outline-none text-sm text-gray-800 bg-white;
+  }
+  .dark input[type="text"], .dark input[type="email"], .dark input[type="password"], .dark input[type="time"], .dark input[type="date"], .dark input[type="number"], .dark textarea, .dark select {
+      @apply border-gray-800 bg-gray-900 text-gray-100;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+      @apply outline-none border-purpura-500 ring-2 ring-purpura-500/20;
+  }
+  input[type="checkbox"] {
+      @apply w-5 h-5 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 transition-colors cursor-pointer;
+  }
+}
+
+/* ============================================================================
+   3. CLASSES DE COMPONENTES DO DESIGN SYSTEM
+   ============================================================================ */
+@layer components {
+    /* --- Tipografia --- */
+    .t-display-48 { @apply font-poppins font-bold text-[48px] leading-[1.2] tracking-[-1px]; }
+    .t-heading-xx-large { @apply font-poppins font-bold text-[40px] leading-[1.2] tracking-[-1px]; }
+    .t-heading-x-large { @apply font-poppins font-bold text-[36px] leading-[1.2] tracking-[-1px]; }
+    .t-heading-large { @apply font-poppins font-bold text-[32px] leading-[1.2] tracking-[-0.5px]; }
+    .t-heading-medium { @apply font-poppins font-bold text-[28px] leading-[1.2] tracking-[-0.5px]; }
+    .t-heading-small { @apply font-poppins font-bold text-[24px] leading-[1.2] tracking-[-0.5px]; }
+    .t-heading-x-small { @apply font-poppins font-bold text-[20px] leading-[1.2] tracking-[-0.5px]; }
+    
+    .t-body-18 { @apply font-sans font-normal text-[18px] leading-[1.5]; }
+    .t-body-16 { @apply font-sans font-normal text-[16px] leading-[1.5]; }
+    .t-body-16-bold { @apply font-sans font-bold text-[16px] leading-[1.5]; }
+    .t-body-14 { @apply font-sans font-normal text-[14px] leading-[1.5]; }
+    .t-label-14-semibold { @apply font-sans font-semibold text-[14px] leading-[1.5]; }
+    .t-label-12-semibold { @apply font-sans font-semibold text-[12px] leading-[1.5]; }
+
+    /* --- Botões (.btn) --- */
+    .btn {
+        @apply inline-flex items-center justify-center font-bold transition-all duration-150 rounded-full cursor-pointer whitespace-nowrap gap-2;
     }
-    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
-        @apply outline-none border-purpura-500 ring-2 ring-purpura-500/40;
+    .btn--small { @apply h-[36px] px-5 text-[14px]; }
+    .btn--medium { @apply h-[44px] px-6 text-[14px]; }
+    .btn--large { @apply h-[52px] px-8 text-[15px]; }
+    
+    .btn--primary { @apply bg-purpura-700 text-white shadow-sm border border-transparent hover:bg-purpura-800 hover:-translate-y-0.5 active:bg-purpura-900; }
+    .btn--secondary { @apply bg-transparent text-purpura-700 border-2 border-purpura-700 hover:border-gray-400 hover:text-purpura-600 active:border-gray-500; }
+    .btn--cta { @apply bg-ponkan-500 text-petunia-900 shadow-sm border border-transparent hover:bg-ponkan-600 hover:-translate-y-0.5 active:bg-ponkan-700; }
+    .btn--ondark { @apply border-white text-white hover:bg-white/10 active:bg-white/20; }
+    .btn:disabled, .btn[disabled] { @apply bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed hover:transform-none shadow-none; }
+
+    /* --- Tags e Badges (.tag) --- */
+    .tag { @apply inline-flex items-center justify-center font-bold tracking-wider rounded-full gap-1.5 whitespace-nowrap; }
+    .tag--small { @apply px-2 py-0.5 text-[10px]; }
+    .tag--medium { @apply px-3 py-1 text-[12px]; }
+    .tag--large { @apply px-4 py-1.5 text-[14px]; }
+    
+    .tag--filled.tag--purpura { @apply bg-purpura-100 text-purpura-700; }
+    .tag--filled.tag--ponkan { @apply bg-ponkan-100 text-gray-900; }
+    .tag--filled.tag--pitaya { @apply bg-pitaya-600 text-white; }
+    .tag--filled.tag--pistache { @apply bg-pistache-600 text-gray-900; }
+    .tag--filled.tag--petunia { @apply bg-petunia-900 text-white; }
+    .tag--filled.tag--neutral { @apply bg-gray-100 text-gray-900; }
+
+    .tag--outline { @apply bg-transparent border; }
+    .tag--outline.tag--purpura { @apply text-purpura-700 border-purpura-700; }
+    .tag--outline.tag--neutral { @apply text-gray-900 border-gray-200; }
+
+    /* --- Cards (.card & .curso-card) --- */
+    .card {
+        @apply bg-white border border-gray-200 rounded-[16px] p-8 w-full flex flex-col items-start gap-5 overflow-hidden;
     }
-    input[type="checkbox"]:focus {
-        @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    .card__icon {
+        @apply w-[52px] h-[52px] inline-flex items-center justify-center bg-ponkan-100 rounded-full text-ponkan-500 shrink-0 text-[20px];
     }
+    .card__title { @apply font-poppins font-bold text-[20px] leading-tight text-gray-900 m-0; }
+    .card__text { @apply font-sans font-normal text-[16px] text-gray-600 m-0; }
+    .card__divider { @apply w-full h-[1px] bg-gray-200 border-0 m-0; }
+
+    .curso-card {
+        @apply flex flex-col bg-white rounded-[16px] overflow-hidden;
+        box-shadow: var(--semantics-shadow-petunia-4);
+    }
+    .curso-card__media { @apply relative w-full bg-ponkan-100 shrink-0; }
+    .curso-card__img { @apply block w-full h-[180px] object-cover; }
+    .curso-card__tags { @apply absolute left-0 bottom-0 flex items-center gap-2 p-4 px-6; }
+    .curso-card__body { @apply flex-1 flex flex-col gap-4 p-6; }
+    .curso-card__title { @apply font-poppins font-bold text-[20px] leading-tight text-petunia-900 m-0; }
+    .curso-card__info { @apply flex flex-col gap-2 m-0 p-0 list-none; }
+    .curso-card__info-row { @apply flex items-center gap-2 font-sans text-[14px] text-gray-600; }
+    .curso-card__footer { @apply flex flex-col items-stretch gap-3 px-6 pb-6; }
+
+    /* --- Accordion --- */
+    .accordion { @apply flex flex-col gap-4 w-full; }
+    .accordion-item {
+        @apply bg-white border border-gray-200 rounded-[12px] overflow-hidden transition-all duration-150;
+    }
+    .accordion-item[open] {
+        @apply border-2 border-purpura-700;
+        box-shadow: 0 4px 16px 0 rgba(125, 2, 170, 0.08);
+    }
+    .accordion-item__summary { @apply flex items-center gap-5 p-6 cursor-pointer select-none list-none outline-none; }
+    .accordion-item__summary::-webkit-details-marker { display: none; }
+    .accordion-item__title { @apply flex-1 font-sans font-semibold text-[18px] text-petunia-900 m-0; }
+    .accordion-item__icon {
+        @apply shrink-0 w-[32px] h-[32px] inline-flex items-center justify-center rounded-full text-[16px] bg-purpura-100 text-purpura-700 transition-colors;
+    }
+    .accordion-item[open] .accordion-item__icon { @apply bg-purpura-700 text-white; }
+    .accordion-item__icon-minus { display: none; }
+    .accordion-item[open] .accordion-item__icon-plus { display: none; }
+    .accordion-item[open] .accordion-item__icon-minus { display: inline-block; }
+    .accordion-item__divider { @apply h-[1px] bg-purpura-100 border-0 m-0 hidden; }
+    .accordion-item[open] .accordion-item__divider { @apply block; }
+    .accordion-item__content { @apply p-6 pt-4; }
+    .accordion-item__text { @apply font-sans text-[16px] text-gray-600 m-0; }
+
+    /* --- Testimonial --- */
+    .testimonial {
+        @apply flex flex-col items-start gap-5 w-full max-w-[550px] p-10 rounded-[24px] overflow-hidden;
+        background-color: rgba(255, 255, 255, 0.07);
+    }
+    .testimonial__quote { @apply font-sans text-[16px] text-white w-full m-0; }
+    .testimonial__author { @apply flex items-center gap-3 w-full; }
+    .testimonial__avatar { @apply shrink-0 w-[44px] h-[44px] rounded-full bg-purpura-100 inline-flex items-center justify-center font-sans font-bold text-[14px] text-gray-1000; }
+    .testimonial__avatar img { @apply w-full h-full rounded-full object-cover; }
+    .testimonial__info { @apply flex flex-col gap-1 flex-1 min-w-0 text-white; }
+    .testimonial__name { @apply font-sans font-bold text-[14px] m-0; }
+    .testimonial__role { @apply font-sans text-[12px] m-0 opacity-80; }
+
+    /* --- Dividers --- */
+    .divider { @apply bg-gray-200 border-0 m-0; }
+    .divider--horizontal { @apply w-full h-[1px]; }
+    .divider--vertical { @apply w-[1px] h-full self-stretch; }
+
+    /* ============================================================================
+       4. ANTI-FLICKER LAYOUT (ESTADOS INICIAIS)
+       ============================================================================ */
+    /* Estado do layout aplicado antes do Alpine renderizar */
+    .js-sidebar { width: 16rem; }
+    html[data-sidebar="min"] .js-sidebar { width: 72px; }
+    html[data-layout="top"]  .js-sidebar { width: 0; opacity: 0; }
+
+    .js-topnav { height: 0; opacity: 0; overflow: hidden; border-color: transparent; }
+    html[data-layout="top"] .js-topnav { height: 3rem; opacity: 1; overflow: visible; border-color: revert-layer; }
+
+    .js-topcontrols { width: 0; opacity: 0; overflow: hidden; }
+    html[data-layout="top"] .js-topcontrols { width: auto; opacity: 1; overflow: visible; }
 }
 
 [x-cloak] { display: none !important; }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #334155; }
