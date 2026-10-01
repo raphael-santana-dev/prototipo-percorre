@@ -883,6 +883,23 @@ class RegistrationManager extends Component
         ];
     }
 
+    public function selecionarTop($quantidade)
+    {
+        // Certifique-se de pegar a mesma base query que render() utiliza
+        $query = Inscricao::query();
+        
+        // Exemplo simplificado (aplique os seus if's de filtro $this->filtro... aqui)
+        if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
+        
+        $ids = $query->orderByRaw('posicao_ranking_geral NULLS LAST')
+                     ->orderBy('pontuacao_total', 'desc')
+                     ->limit($quantidade)
+                     ->pluck('id')
+                     ->toArray();
+                     
+        $this->selecionadas = array_map('strval', $ids);
+    }
+
     public function avancarSelecionadas()
     {
         abort_if(!feature('inscricao.editar'), 403);
