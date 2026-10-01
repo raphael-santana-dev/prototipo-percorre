@@ -33,7 +33,38 @@
         </x-slot>
     </x-page-header>
 
-   
+    @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+        @if(count($selecionadas) > 0)
+        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
+            <div class="flex items-center shrink-0">
+                <span class="font-medium text-white text-sm">{{ count($selecionadas) }} selecionadas</span>
+                <button wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white font-medium transition">Limpar</button>
+            </div>
+            
+            <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
+                        <option value="">Alterar status para...</option>
+                        @foreach($statusInscricoesDb as $id => $nome)
+                            <option value="{{ $id }}">{{ $nome }}</option>
+                        @endforeach
+                    </select>
+                    <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">
+                        Aplicar
+                    </button>
+                </div>
+                
+                <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
+                    Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
+                </button>
+                
+                <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
+                    <i class="ph-bold ph-list-dashes text-lg"></i>
+                </button>
+            </div>
+        </div>
+        @endif
+    @endif
 
     <x-table
         :headers="$this->headers"
@@ -166,42 +197,9 @@
             </div>
         </x-slot>
 
-        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-        @if(count($selecionadas) > 0)
-        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg mb-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
-            <div class="flex items-center shrink-0">
-                <span class="font-medium text-white text-sm">{{ count($selecionadas) }} selecionadas</span>
-                <button wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white font-medium transition">Limpar</button>
-            </div>
-            
-            <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
-                        <option value="">Alterar status para...</option>
-                        @foreach($statusInscricoesDb as $id => $nome)
-                            <option value="{{ $id }}">{{ $nome }}</option>
-                        @endforeach
-                    </select>
-                    <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">
-                        Aplicar
-                    </button>
-                </div>
-                
-                <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
-                    Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
-                </button>
-                
-                <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
-                    <i class="ph-bold ph-list-dashes text-lg"></i>
-                </button>
-            </div>
-        </div>
-        @endif
-    @endif
-
         @forelse($registros as $inscricao)
             <!-- Padronizando espaçamentos py-1.5 para visual minimalista comprimido -->
-            <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="mt-4 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
+            <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
                     <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
@@ -271,6 +269,7 @@
                         <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         
                         <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-star"></i></button>
+                                                <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-star"></i></a>
 
                         @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
                             <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400 title="Ver Perfil Completo">
