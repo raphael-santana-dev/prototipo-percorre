@@ -92,7 +92,7 @@
                         </div>
                     @endif
 
-                    @include('livewire.website.partials.render-dinamico', ['etapa' => $etapaAtual])
+                    @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDinamicos->where('etapa', $etapaAtual)])
                 </div>
 
                 <div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">

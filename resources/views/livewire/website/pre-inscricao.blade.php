@@ -26,7 +26,7 @@
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
-                    @include('livewire.website.partials.render-dinamico', ['etapa' => $etapaAtual])
+                    @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDinamicos->where('etapa', $etapaAtual)])
 
                     @if($etapaAtual == 1)
                         <div class="col-span-12 mt-4 p-5 bg-gray-50 border border-gray-200 rounded-md">
