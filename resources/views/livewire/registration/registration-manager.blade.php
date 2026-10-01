@@ -258,7 +258,6 @@
                         <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         
                         <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-star"></i></button>
-                                                <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-star"></i></a>
 
                         @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
                             <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400 title="Ver Perfil Completo">
