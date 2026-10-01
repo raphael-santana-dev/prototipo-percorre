@@ -46,9 +46,15 @@ class PeriodManager extends Component
     public $modelClass = Ciclo::class;
     public array $breadcrumbs = [];
 
+    // Novos Filtros Padronizados
+    public $filtroNome = '';
     public $filtro_ano = '';
     public $filtro_semestre = '';
     public $filtro_status = '';
+    public $ordenacao = 'recentes';
+
+    // Variável para a seleção em massa (visual/ações em lote se necessário futuramente)
+    public array $selecionadas = [];
 
     public bool $unicoAtivo = true;
 
@@ -62,15 +68,22 @@ class PeriodManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtro_ano', 'filtro_semestre', 'filtro_status'])) {
+        if (in_array($nomePropriedade, ['filtroNome', 'filtro_ano', 'filtro_semestre', 'filtro_status', 'ordenacao'])) {
             $this->resetPage();
+            $this->desmarcarTodas();
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtro_ano', 'filtro_semestre', 'filtro_status']);
+        $this->reset(['filtroNome', 'filtro_ano', 'filtro_semestre', 'filtro_status', 'ordenacao']);
         $this->resetPage();
+        $this->desmarcarTodas();
+    }
+
+    public function desmarcarTodas() 
+    { 
+        $this->selecionadas = []; 
     }
 
     public function abrirModal()
@@ -299,6 +312,12 @@ class PeriodManager extends Component
         abort_if(!feature('ciclo.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
         Ciclo::findOrFail($id)->delete();
+        
+        if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
+            unset($this->selecionadas[$key]);
+            $this->selecionadas = array_values($this->selecionadas);
+        }
+        
         $this->dispatch('sucesso', msg: 'Ciclo eliminado com sucesso!');
     }
 
@@ -364,6 +383,7 @@ class PeriodManager extends Component
     public function getHeadersProperty()
     {
         return [
+            ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
@@ -375,7 +395,7 @@ class PeriodManager extends Component
         ];
     }
 
-    public function render()
+    protected function obterQueryFiltrada()
     {
         $query = Ciclo::query()->withCount('inscricoes');
         
@@ -386,11 +406,32 @@ class PeriodManager extends Component
                 ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'Selecionado']))
         ]);
         
+        if (!empty($this->filtroNome)) {
+            $query->where('nome', 'ilike', '%' . $this->filtroNome . '%');
+        }
+
         $query->when($this->filtro_ano, fn($q) => $q->where('ano', $this->filtro_ano))
               ->when($this->filtro_semestre, fn($q) => $q->where('semestre', $this->filtro_semestre))
               ->when($this->filtro_status !== '', fn($q) => $q->where('status', $this->filtro_status));
-        
-        if ($this->ordenacaoCampo && $this->ordenacaoCampo !== 'ocupacao') {
+
+        return $query;
+    }
+
+    public function render()
+    {
+        $query = $this->obterQueryFiltrada();
+
+        if ($this->ordenacao === 'recentes') {
+            $query->orderBy('id', 'desc');
+        } elseif ($this->ordenacao === 'nome_asc') {
+            $query->orderBy('nome', 'asc');
+        } elseif ($this->ordenacao === 'nome_desc') {
+            $query->orderBy('nome', 'desc');
+        } elseif ($this->ordenacao === 'mais_inscritos') {
+            $query->orderBy('inscricoes_count', 'desc');
+        } elseif ($this->ordenacao === 'menos_inscritos') {
+            $query->orderBy('inscricoes_count', 'asc');
+        } elseif ($this->ordenacaoCampo && $this->ordenacaoCampo !== 'ocupacao') {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         } else {
             $query->orderBy('id', 'desc');

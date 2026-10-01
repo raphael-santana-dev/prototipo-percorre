@@ -1,7 +1,8 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full font-sans relative" x-data="{ modalAberto: @entangle('modalAberto') }" x-effect="document.body.classList.toggle('overflow-hidden', modalAberto)">
 
     <x-page-header 
         title="Ciclos de Inscrições" 
+        subtitle="Gerenciamento de Semestres e Vagas"
         icon="ph ph-calendar-check"
         badge=""
         :breadcrumbs="$breadcrumbs" 
@@ -9,41 +10,10 @@
         
         <x-slot name="actions">
             @if(feature('ciclo.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.criar')))
-                <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-                    <i class="ph ph-plus text-lg"></i> Novo Ciclo
+                <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-none">
+                    <i class="ph-bold ph-plus"></i> Novo Ciclo
                 </button>
             @endif
-        </x-slot>
-
-        <x-slot name="filters">
-            <div class="flex gap-2">
-                <select wire:model.live="filtro_ano" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Todos os Anos</option>
-                    @if(isset($anosDisponiveis))
-                        @foreach($anosDisponiveis as $ano)
-                            <option value="{{ $ano }}">{{ $ano }}</option>
-                        @endforeach
-                    @endif
-                </select>
-                
-                <select wire:model.live="filtro_semestre" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Semestre...</option>
-                    <option value="1">1º Semestre</option>
-                    <option value="2">2º Semestre</option>
-                </select>
-
-                <select wire:model.live="filtro_status" class="rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <option value="">Todos os Status</option>
-                    <option value="1">Ativos</option>
-                    <option value="0">Inativos</option>
-                </select>
-
-                @if($filtro_ano !== '' || $filtro_semestre !== '' || $filtro_status !== '')
-                    <button wire:click="limparFiltros" class="px-3 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1 dark:bg-gray-800 dark:text-gray-300">
-                        <i class="ph-bold ph-x"></i> Limpar
-                    </button>
-                @endif
-            </div>
         </x-slot>
     </x-page-header>
 
@@ -55,21 +25,146 @@
         :permiteGrid="$permiteGrid"
         :modoExibicao="$modoExibicao">
 
+        {{-- CAMPO DE BUSCA INLINE NA TABELA (Ficará na mesma linha da paginação/grid) --}}
+        <x-slot name="search">
+            <div class="relative w-full sm:w-72 shrink-0">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Pesquisar por nome do ciclo..." class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
+            </div>
+        </x-slot>
+
+        {{-- FILTROS EM LINHA SEPARADA E AÇÕES EM LOTE --}}
+        <x-slot name="filters">
+            <div class="w-full flex flex-col gap-4 mt-2">
+                
+                {{-- Linha de Chips e Ordenação --}}
+                <div class="flex flex-wrap items-center gap-2 w-full">
+                    
+                    {{-- Ordenação Movida para junto dos Chips --}}
+                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 mr-1">
+                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ordenar</span>
+                        <select wire:model.live="ordenacao" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[170px] truncate">
+                            <option value="recentes">Mais Recentes</option>
+                            <option value="mais_inscritos">Mais Inscritos</option>
+                            <option value="menos_inscritos">Menos Inscritos</option>
+                            <option value="nome_asc">Nome (A-Z)</option>
+                            <option value="nome_desc">Nome (Z-A)</option>
+                        </select>
+                    </div>
+
+                    <div wire:ignore.self x-data="{
+                        visible: [],
+                        allFilters: ['ano', 'semestre', 'status'],
+                        init() {
+                            if ($wire.filtro_ano && !this.visible.includes('ano')) this.visible.push('ano');
+                            if ($wire.filtro_semestre && !this.visible.includes('semestre')) this.visible.push('semestre');
+                            if ($wire.filtro_status !== '' && !this.visible.includes('status')) this.visible.push('status');
+                        },
+                        add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
+                        remove(f) {
+                            $wire.set('filtro_' + f, '');
+                            this.visible = this.visible.filter(i => i !== f);
+                        },
+                        get canAddMore() { return this.visible.length < this.allFilters.length; }
+                    }" class="flex flex-wrap items-center gap-2">
+                        
+                        <!-- Chip: Ano -->
+                        <div x-show="visible.includes('ano')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                            <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Ano</span>
+                            <select wire:model.live="filtro_ano" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
+                                <option value="">Todos</option>
+                                @if(isset($anosDisponiveis))
+                                    @foreach($anosDisponiveis as $ano) <option value="{{ $ano }}">{{ $ano }}</option> @endforeach
+                                @endif
+                            </select>
+                            <button @click="remove('ano')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                        </div>
+
+                        <!-- Chip: Semestre -->
+                        <div x-show="visible.includes('semestre')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                            <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Semestre</span>
+                            <select wire:model.live="filtro_semestre" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
+                                <option value="">Todos</option>
+                                <option value="1">1º Semestre</option>
+                                <option value="2">2º Semestre</option>
+                            </select>
+                            <button @click="remove('semestre')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                        </div>
+
+                        <!-- Chip: Status -->
+                        <div x-show="visible.includes('status')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                            <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Status</span>
+                            <select wire:model.live="filtro_status" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
+                                <option value="">Todos</option>
+                                <option value="1">Ativos</option>
+                                <option value="0">Inativos</option>
+                            </select>
+                            <button @click="remove('status')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                        </div>
+
+                        <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
+                            <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
+                                + Adicionar Filtro
+                            </button>
+                            <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-2">
+                                <button x-show="!visible.includes('ano')" @click="add('ano'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-calendar-blank text-gray-400 text-lg"></i> Ano</button>
+                                <button x-show="!visible.includes('semestre')" @click="add('semestre'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-list-numbers text-gray-400 text-lg"></i> Semestre</button>
+                                <button x-show="!visible.includes('status')" @click="add('status'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-toggle-left text-gray-400 text-lg"></i> Status Ativo/Inativo</button>
+                            </div>
+                        </div>
+
+                        <button x-show="$wire.filtro_ano || $wire.filtro_semestre || $wire.filtro_status !== '' || $wire.filtroNome" x-cloak wire:click="limparFiltros" @click="visible = []" class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
+                            Limpar Todos
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Barra Escura de Ações em Lote --}}
+                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                    @if(count($selecionadas) > 0)
+                        <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all mt-2">
+                            <div class="flex items-center shrink-0">
+                                <span class="font-medium text-white text-sm">{{ count($selecionadas) }} ciclos selecionados</span>
+                                <button wire:click="desmarcarTodas" class="ml-4 text-xs text-gray-400 hover:text-white font-medium transition">Limpar Seleção</button>
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
+                                <button class="btn btn--secondary btn--small !text-red-500 !border-red-500 hover:!bg-red-500 hover:!text-white" onclick="confirm('Não implementado')">Deletar Selecionados</button>
+                            </div>
+                        </div>
+                    @endif
+                @endif
+            </div>
+        </x-slot>
+
         @forelse ($registros as $ciclo)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">#{{ $ciclo->id }}</td>
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="font-bold text-gray-900 dark:text-white">{{ $ciclo->nome }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $ciclo->ano }}.{{ $ciclo->semestre }}</div>
+            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50" wire:key="linha-ciclo-{{ $ciclo->id }}">
+                
+                <td class="px-4 py-1.5 text-center whitespace-nowrap w-10">
+                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" wire:key="checkbox-lista-{{ $ciclo->id }}">
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_inicio->format('d/m/Y H:i') }}</td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ $ciclo->data_fim->format('d/m/Y H:i') }}</td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-center">
-                    <span class="px-3 py-1 text-[10px] font-bold text-purpura-700 bg-purpura-100 rounded-full dark:bg-purpura-900/30 dark:text-purpura-400 uppercase tracking-wider border border-purpura-200">
-                        {{ $ciclo->inscricoes_count ?? 0 }} INSCRIÇÕES
+                
+                <td class="px-4 py-1.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">#{{ str_pad($ciclo->id, 3, '0', STR_PAD_LEFT) }}</td>
+                
+                <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
+                    <div class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white">{{ $ciclo->nome }}</div>
+                    <div class="text-xs text-gray-500 leading-tight">Ano {{ $ciclo->ano }} • {{ $ciclo->semestre }}º Sem.</div>
+                </td>
+                
+                <td class="px-4 py-1.5 whitespace-nowrap text-[13px] text-gray-600 dark:text-gray-300">
+                    <i class="ph-fill ph-calendar text-gray-400"></i> {{ $ciclo->data_inicio->format('d/m/Y H:i') }}
+                </td>
+                <td class="px-4 py-1.5 whitespace-nowrap text-[13px] text-gray-600 dark:text-gray-300">
+                    <i class="ph-fill ph-calendar text-gray-400"></i> {{ $ciclo->data_fim->format('d/m/Y H:i') }}
+                </td>
+                
+                <td class="px-4 py-1.5 whitespace-nowrap text-center">
+                    <span class="px-2.5 py-1 text-[11px] font-bold text-purpura-700 bg-purpura-100 rounded border border-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-400 uppercase tracking-wider">
+                        {{ $ciclo->inscricoes_count ?? 0 }} Registros
                     </span>
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap">
+                
+                <td class="px-4 py-1.5 whitespace-nowrap">
                     @php
                         $totalVagas = $ciclo->total_vagas ?? 0;
                         $preenchidas = $ciclo->vagas_preenchidas ?? 0;
@@ -86,34 +181,109 @@
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap">
+                
+                <td class="px-4 py-1.5 whitespace-nowrap">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <div class="flex items-center gap-2">
                             <x-toggle :status="$ciclo->status" action="toggleStatus({{ $ciclo->id }})" />
                             <span class="text-[10px] font-bold {{ $ciclo->status ? 'text-green-600' : 'text-gray-400' }}">{{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}</span>
                         </div>
                     @else
-                        <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">{{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}</span>
+                        <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">{{ $ciclo->status ? 'ATIVO' : 'INATIVO' }}</span>
                     @endif
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                
+                <td class="px-4 py-1.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver CRM"><i class="text-lg ph-fill ph-kanban"></i></a>
+                        <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver CRM"><i class="text-lg ph-fill ph-kanban"></i></a>
                         <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
-                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver Detalhes"><i class="text-lg ph ph-eye"></i></a>
-                        <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar"><i class="text-lg ph ph-copy"></i></button>
-                        <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Completo"><i class="text-lg ph ph-pencil-simple"></i></a>
-                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor"><i class="text-lg ph ph-list-dashes"></i></a>
-                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-600"><i class="text-lg ph ph-star"></i></a>
-                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir permanentemente?')"><i class="text-lg ph ph-trash"></i></button>
+                        <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Detalhes"><i class="text-lg ph ph-eye"></i></a>
+                        <button wire:click="duplicar({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar"><i class="text-lg ph ph-copy"></i></button>
+                        <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Completo"><i class="text-lg ph ph-pencil-simple"></i></a>
+                        <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor Formulário Público"><i class="text-lg ph ph-list-dashes"></i></a>
+                        <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600" title="Regras de Pontuação"><i class="text-lg ph ph-star"></i></a>
+                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir permanentemente?')"><i class="text-lg ph ph-trash"></i></button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-sm">Nenhum ciclo encontrado.</td>
+                <td colspan="9" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <div class="flex flex-col items-center justify-center">
+                        <i class="ph ph-magnifying-glass text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                        <p class="font-medium text-gray-600 dark:text-gray-300">Nenhum ciclo encontrado.</p>
+                        <p class="text-xs mt-1">Tente ajustar ou limpar os filtros de busca.</p>
+                    </div>
+                </td>
             </tr>
         @endforelse
+
+        <x-slot name="gridSlot">
+            @foreach($registros as $ciclo)
+                <div wire:key="card-ciclo-{{ $ciclo->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                    
+                    <div class="flex items-center justify-between mb-4 w-full">
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $ciclo->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                            {{ $ciclo->status ? 'Ativo' : 'Inativo' }}
+                        </span>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" wire:key="checkbox-card-{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 mb-4 w-full">
+                        <div class="w-10 h-10 rounded-lg bg-purpura-50 text-purpura-600 flex items-center justify-center shrink-0 border border-purpura-100">
+                            <i class="ph-bold ph-calendar text-xl"></i>
+                        </div>
+                        <div class="overflow-hidden w-full">
+                            <h4 class="text-sm font-bold text-gray-900 truncate dark:text-white" title="{{ $ciclo->nome }}">{{ $ciclo->nome }}</h4>
+                            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-widest mt-0.5">Semestre {{ $ciclo->ano }}.{{ $ciclo->semestre }}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-2 space-y-2 border border-gray-100 dark:border-gray-700 mb-3">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span>Abertura</span>
+                            <span class="text-gray-900">{{ $ciclo->data_inicio->format('d/m/Y') }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span>Encerramento</span>
+                            <span class="text-gray-900">{{ $ciclo->data_fim->format('d/m/Y') }}</span>
+                        </div>
+                    </div>
+
+                    @php
+                        $totalVagas = $ciclo->total_vagas ?? 0;
+                        $preenchidas = $ciclo->vagas_preenchidas ?? 0;
+                        $percentual = $totalVagas > 0 ? round(($preenchidas / $totalVagas) * 100, 1) : 0;
+                        $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                    @endphp
+                    <div class="flex flex-col items-center justify-center w-full mb-3 px-1">
+                        <div class="flex justify-between w-full text-[10px] font-bold mb-1">
+                            <span class="text-gray-500 uppercase tracking-wider">Ocupação</span>
+                            <span class="text-gray-700">{{ $preenchidas }} / {{ $totalVagas }} vagas</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                            <div class="{{ $corBarra }} h-1.5 rounded-full transition-all" style="width: {{ min($percentual, 100) }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 w-full">
+                        <span class="text-xs font-bold text-purpura-600">{{ $ciclo->inscricoes_count ?? 0 }} inscritos</span>
+                        
+                        <div class="flex items-center gap-1">
+                            <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="CRM Kanban"><i class="text-lg ph-bold ph-kanban"></i></a>
+                            <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="Info"><i class="text-lg ph-bold ph-info"></i></button>
+                            <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition"><i class="text-lg ph-bold ph-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                </div>
+            @endforeach
+        </x-slot>
+
     </x-table>
     
     <!-- MODAL DE CADASTRO EM TELA CHEIA (STEPPER WIZARD) -->

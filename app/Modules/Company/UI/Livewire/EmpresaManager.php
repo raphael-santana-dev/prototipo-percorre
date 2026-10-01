@@ -24,6 +24,9 @@ class EmpresaManager extends Component
 
     public function mount()
     {
+        abort_if(!feature('empresas.listar'), 403, 'O módulo de empresas parceiras está desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('empresas.listar'), 403, 'Acesso restrito.');
+
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
             ['label' => 'Secretaria'],

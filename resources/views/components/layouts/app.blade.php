@@ -68,24 +68,27 @@
                         <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Dashboard</div>
                     </a>
 
-                    @canany(['financeiro.orcamentos.listagem'])
-                    <div x-data="{ open: false }" class="relative group whitespace-nowrap">
-                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                            <div class="flex items-center gap-3">
-                                <i class="text-xl ph ph-receipt shrink-0"></i>
-                                <span x-show="!sidebarMinimized">Financeiro</span>
+                    @if(feature('financeiro.orcamentos.listagem') && auth()->user()->can('financeiro.orcamentos.listagem'))
+                        @canany(['financeiro.orcamentos.listagem'])
+                        <div x-data="{ open: false }" class="relative group whitespace-nowrap">
+                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                                <div class="flex items-center gap-3">
+                                    <i class="text-xl ph ph-receipt shrink-0"></i>
+                                    <span x-show="!sidebarMinimized">Financeiro</span>
+                                </div>
+                                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a> @endcan
                             </div>
-                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-                        </button>
-                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                            @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a> @endcan
+                            <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                                @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a> @endcan
+                            </div>
                         </div>
-                        <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                            <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
-                            @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a> @endcan
-                        </div>
-                    </div>
-                    @endcanany
+                        @endcanany
+                    @endif
+
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                     <div x-data="{ open: false }" class="relative group whitespace-nowrap">
@@ -120,14 +123,18 @@
                         <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
                             @can('estudante.listar') <a href="{{ route('students.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Base de Alunos</a> @endcan
                             @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Tags de Status</a> @endcan
-                            @role('dev') <a href="{{ route('empresas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Empresas Parceiras</a> @endrole
+                            
+                            @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))
+                                @role('dev') <a href="{{ route('empresas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Empresas Parceiras</a> @endrole
+                            @endif
+
                             <a href="{{ route('solicitacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Solicitações</a>
                         </div>
                         <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">
                             <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Secretaria</div>
                             @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Base de Alunos</a> @endcan
                             @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Tags de Status</a> @endcan
-                            @role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Empresas Parceiras</a> @endrole
+                            @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))@role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Empresas Parceiras</a> @endrole@endif
                             <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Solicitações</a>
                         </div>
                     </div>
@@ -167,10 +174,12 @@
                             <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
                         </button>
                         <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                            <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
-                            <a href="{{ route('conteudo.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Publicações</a>
-                            <a href="{{ route('conteudo.categorias') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Categorias</a>
-                            <a href="{{ route('portal.index') }}" target="_blank" class="block py-1.5 text-xs text-purpura-400 hover:text-purpura-300">Ver Portal ↗</a>
+                            @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
+                                <a href="{{ route('conteudo.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Publicações</a>
+                                <a href="{{ route('conteudo.categorias') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Categorias</a>
+                                <a href="{{ route('portal.index') }}" target="_blank" class="block py-1.5 text-xs text-purpura-400 hover:text-purpura-300">Ver Portal ↗</a>
+                            @endif
                             <div class="py-1 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
                             @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Comunicados</a> @endcan
                             @can('template.listar') <a href="{{ route('templates.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Templates</a> @endcan
@@ -345,7 +354,10 @@
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
                                     @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Base de Alunos</a> @endcan
                                     @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tags de Status</a> @endcan
+                                    
+                                    @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))
                                     @role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Empresas Parceiras</a> @endrole
+                                    @endif
                                     <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Solicitações</a>
                                 </div>
                             </div>
@@ -370,10 +382,12 @@
                                     <i class="text-base ph ph-paper-plane-tilt"></i> Comunicação <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
                                 </button>
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-52 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
-                                    <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
-                                    <a href="{{ route('conteudo.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Publicações</a>
-                                    <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Categorias</a>
-                                    <a href="{{ route('portal.index') }}" target="_blank" class="block px-4 py-1.5 text-xs font-medium text-purpura-600 hover:bg-purpura-50 dark:text-purpura-400 dark:hover:bg-gray-700">Ver Portal ↗</a>
+                                    
+                                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))<div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
+                                        <a href="{{ route('conteudo.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Publicações</a>
+                                        <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Categorias</a>
+                                        <a href="{{ route('portal.index') }}" target="_blank" class="block px-4 py-1.5 text-xs font-medium text-purpura-600 hover:bg-purpura-50 dark:text-purpura-400 dark:hover:bg-gray-700">Ver Portal ↗</a>
+                                    @endif
                                     <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
                                     @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Comunicados</a> @endcan
                                     @can('template.listar') <a href="{{ route('templates.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Templates</a> @endcan
@@ -388,16 +402,26 @@
                                     <i class="text-base ph ph-graduation-cap"></i> Educacional <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
                                 </button>
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
-                                    <div class="px-4 py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
+                                    @if(feature('ferramenta.mock') && auth()->user()->can('relatorio.acessar'))
+                                <div class="px-4 py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
                                     @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Relatórios</a> @endcan
-                                    @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Listar Períodos</a> @endcan
-                                    @can('ferramenta.mock') <a href="{{ route('avaliacoes.gerador') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gerador Mock</a> @endcan
+                                    @endif
+                                    @if(feature('ferramenta.mock') && auth()->user()->can('periodo_avaliacao.listar'))
+                                        @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Listar Períodos</a> @endcan
+                                    @endif
+                                    @if(feature('ferramenta.mock') && auth()->user()->can('ferramenta.mock'))
+                                        @can('ferramenta.mock') <a href="{{ route('avaliacoes.gerador') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gerador Mock</a> @endcan
+                                    @endif
                                     <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                     <div class="px-4 py-1 text-[9px] font-bold text-gray-500 uppercase">Matrículas e Turmas</div>
                                     @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Matrículas</a> @endcan
-                                    @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Turmas</a> @endcan
+                                    @if(feature('turma.listar') && auth()->user()->can('turma.listar'))
+                                        @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ver Turmas</a> @endcan
+                                    @endif
                                     <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Portal IA</a>
-                                    @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Aprendizagem</a> @endcan
+                                    @if(feature('aprendizagem.listar') && auth()->user()->can('aprendizagem.listar'))
+                                        @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Ciclos de Aprendizagem</a> @endcan
+                                    @endif
                                 </div>
                             </div>
                             @endcanany
