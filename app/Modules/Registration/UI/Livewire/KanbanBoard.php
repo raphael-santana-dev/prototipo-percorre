@@ -36,6 +36,8 @@ class KanbanBoard extends Component
 
     public $limitesPorColuna = [];
 
+    public $filtroDataInicio = '';
+
     public function mount($id = null)
     {
         abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');
@@ -51,14 +53,58 @@ class KanbanBoard extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao'])) {
+        if (in_array($nomePropriedade, ['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'filtroDataInicio'])) {
             $this->limitesPorColuna = [];
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna']);
+        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna', 'filtroDataInicio']);
+    }
+
+    private function buildBaseQuery()
+    {
+        $queryBase = Inscricao::where('ciclo_id', $this->cicloId)->apenasVinculosPermitidos();
+
+        if (!empty($this->filtroBusca)) {
+            $queryBase->where(function($q) {
+                $q->where('nome', 'ilike', '%' . $this->filtroBusca . '%')
+                  ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%')
+                  ->orWhere('email', 'like', '%' . $this->filtroBusca . '%');
+            });
+        }
+        if (!empty($this->filtroCurso)) $queryBase->where('curso_id', $this->filtroCurso);
+        if (!empty($this->filtroUnidade)) $queryBase->where('unidade_id', $this->filtroUnidade);
+        
+        if (!empty($this->filtroDataInicio)) {
+            $dataInicio = str_replace('T', ' ', $this->filtroDataInicio);
+            if (strlen($dataInicio) === 10) $dataInicio .= ' 00:00:00';
+            $queryBase->where('created_at', '>=', $dataInicio);
+        }
+        
+        if (!empty($this->filtroDataFim)) {
+            $dataFim = str_replace('T', ' ', $this->filtroDataFim);
+            if (strlen($dataFim) === 10) $dataFim .= ' 23:59:59';
+            elseif (strlen($dataFim) === 16) $dataFim .= ':59';
+            $queryBase->where('created_at', '<=', $dataFim);
+        }
+
+        return $queryBase;
+    }
+
+    public function selecionarTop($quantidade)
+    {
+        $query = $this->buildBaseQuery();
+        
+        // Pega os IDs respeitando os filtros atuais e a ordenação do ranking geral / pontuação
+        $ids = $query->orderByRaw('posicao_ranking_geral NULLS LAST')
+                     ->orderBy('pontuacao_total', 'desc')
+                     ->limit($quantidade)
+                     ->pluck('id')
+                     ->toArray();
+                     
+        $this->selecionados = array_map('strval', $ids); // Transforma em strings para o checkbox HTML
     }
 
     public function carregarMais($statusId)
@@ -481,23 +527,7 @@ class KanbanBoard extends Component
         $ciclo = Ciclo::with('statusPipeline')->find($this->cicloId);
         $colunas = $ciclo ? $ciclo->statusPipeline : collect();
 
-        $queryBase = Inscricao::where('ciclo_id', $this->cicloId)->apenasVinculosPermitidos();
-
-        if (!empty($this->filtroBusca)) {
-            $queryBase->where(function($q) {
-                $q->where('nome', 'ilike', '%' . $this->filtroBusca . '%')
-                  ->orWhere('cpf', 'like', '%' . $this->filtroBusca . '%');
-            });
-        }
-        if (!empty($this->filtroCurso)) $queryBase->where('curso_id', $this->filtroCurso);
-        if (!empty($this->filtroUnidade)) $queryBase->where('unidade_id', $this->filtroUnidade);
-        
-        if (!empty($this->filtroDataFim)) {
-            $dataFim = str_replace('T', ' ', $this->filtroDataFim);
-            if (strlen($dataFim) === 10) $dataFim .= ' 23:59:59';
-            elseif (strlen($dataFim) === 16) $dataFim .= ':59';
-            $queryBase->where('created_at', '<=', $dataFim);
-        }
+        $queryBase = $this->buildBaseQuery();
 
         $totaisRaw = (clone $queryBase)
             ->selectRaw('status_inscricao_id, count(*) as total')
