@@ -127,7 +127,7 @@ class CursoManager extends Component
 
     public function showQuickView(CursoService $service, int $id)
     {
-        abort_if(!feature('curso.visualizar'), 403, 'A visualização de detalhes está desativada.');
+        abort_if(!feature('curso.visualizacao-rapida'), 403, 'A visualização de detalhes está desativada.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.visualizar'), 403, 'Você não tem permissão para visualizar o cursos.');
 
         $curso = $service->buscarPorId($id);

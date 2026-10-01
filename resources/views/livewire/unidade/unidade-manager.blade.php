@@ -52,15 +52,19 @@
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
-                        @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
+                            
+                        @if(feature('unidade.visualizacao-rapida') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizacao-rapida')))
                             <button wire:click="showQuickView({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida">
                                 <i class="text-lg ph ph-info"></i>
                             </button>
-                            
+                        @endif
+
+                        @if(feature('unidade.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.visualizar')))
                             <a href="{{ route('unidades.show', $unidade->id) }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Página Completa">
                                 <i class="text-lg ph ph-eye"></i>
                             </a>
                         @endif
+                        
 
                         @if(feature('unidade.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.editar')))
                             <button wire:click="edit({{ $unidade->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">

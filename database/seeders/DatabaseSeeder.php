@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SystemPermissionsAndFeaturesSeeder::class,
             EtapaSeeder::class,
-            StudentSeeder::class,
             StatusInscricaoBaseSeeder::class,
             UnidadesTesteSeeder::class,
             CursosTesteSeeder::class,

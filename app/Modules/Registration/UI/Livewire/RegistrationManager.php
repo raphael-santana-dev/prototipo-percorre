@@ -346,7 +346,7 @@ class RegistrationManager extends Component
         
         foreach($statusDisponiveis as $st) {
             $selected = $st->id == $inscricao->status_inscricao_id ? 'selected' : '';
-            $prefix = $selected ? '✓ ATUAL: ' : '';
+            $prefix = $selected ? 'ATUAL: ' : '';
             $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
         }
         
@@ -824,14 +824,6 @@ class RegistrationManager extends Component
     public function getFabActionsProperty()
     {
         return [
-            [
-                'label' => 'Alterar em Lote',
-                'icon' => 'ph ph-check-square-offset',
-                'wire_click' => 'abrirModalLote',
-                'always_show_label' => true,
-                'bg_color' => 'bg-green-500 hover:bg-green-600',
-                'icon_color' => 'text-black'
-            ],
             [
                 'label' => 'Gerar Rankings',
                 'icon' => 'ph ph-medal',

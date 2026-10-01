@@ -121,14 +121,14 @@
                             @can('estudante.listar') <a href="{{ route('students.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Base de Alunos</a> @endcan
                             @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Tags de Status</a> @endcan
                             @role('dev') <a href="{{ route('empresas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Empresas Parceiras</a> @endrole
-                            <a href="{{ route('solicitacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Solicitações Helpdesk</a>
+                            <a href="{{ route('solicitacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Solicitações</a>
                         </div>
                         <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">
                             <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Secretaria</div>
                             @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Base de Alunos</a> @endcan
                             @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Tags de Status</a> @endcan
                             @role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Empresas Parceiras</a> @endrole
-                            <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Solicitações Helpdesk</a>
+                            <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Solicitações</a>
                         </div>
                     </div>
                     @endcanany
@@ -311,16 +311,18 @@
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
                             </a>
                             
-                            @canany(['financeiro.orcamentos.listagem'])
-                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                                <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
-                                    <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
-                                </button>
-                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
-                                    @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a> @endcan
+                            @if(feature('financeiro.orcamentos.listagem') && auth()->user()->can('financeiro.orcamentos.listagem'))
+                                @canany(['financeiro.orcamentos.listagem'])
+                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                    <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
+                                        <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                    </button>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                        @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a> @endcan
+                                    </div>
                                 </div>
-                            </div>
-                            @endcanany
+                                @endcanany
+                            @endif
 
                             @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -344,7 +346,7 @@
                                     @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Base de Alunos</a> @endcan
                                     @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Tags de Status</a> @endcan
                                     @role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Empresas Parceiras</a> @endrole
-                                    <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Solicitações Helpdesk</a>
+                                    <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Solicitações</a>
                                 </div>
                             </div>
                             @endcanany

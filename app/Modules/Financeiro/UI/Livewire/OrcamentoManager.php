@@ -27,6 +27,7 @@ class OrcamentoManager extends Component
 
     public function mount()
     {
+        abort_if(!feature('financeiro.orcamentos.listagem'), 403, 'A visualização de Orçamentos está desativada.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = [

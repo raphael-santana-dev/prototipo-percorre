@@ -193,7 +193,7 @@ class UnidadeManager extends Component
 
     public function showQuickView(UnidadeService $service, int $id)
     {
-        abort_if(!feature('unidade.visualizar'), 403);
+        abort_if(!feature('unidade.visualizacao-rapida'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
         
         $unidade = $service->buscarPorId($id);
