@@ -26,10 +26,10 @@
                     <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm w-full sm:w-auto shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ordenar</span>
                         <select wire:model.live="ordenacao" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium w-full sm:w-auto truncate">
+                            <option value="posicao_ranking_geral_asc">Melhor Pos. Geral</option>    
                             <option value="recentes">Mais Recentes</option>
                             <option value="pontuacao_desc">Maior Pontuação</option>
                             <option value="pontuacao_asc">Menor Pontuação</option>
-                            <option value="posicao_ranking_geral_asc">Melhor Pos. Geral</option>
                             <option value="posicao_ranking_geral_desc">Pior Pos. Geral</option>
                             @if($unidadesDb->count() === 1)
                                 <option value="posicao_ranking_unidade_asc">Melhor Pos. Unidade</option>

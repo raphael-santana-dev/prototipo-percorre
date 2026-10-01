@@ -24,12 +24,11 @@ class KanbanBoard extends Component
     public $filtroCurso = '';
     public $filtroUnidade = '';
     public $filtroDataFim = '';
-    public $ordenacao = 'recentes'; 
+    public $ordenacao = 'posicao_ranking_geral_asc'; 
 
     public bool $modalAntiSpamAberto = false;
     public array $conflitosAntiSpam = [];
     
-    // VARIÁVEIS SEGURAS (Igual ao Manager)
     public $acaoPendenteStatusId = null;
     public array $acaoPendenteIds = [];
     public string $acaoPendenteNomeStatus = '';
@@ -97,7 +96,6 @@ class KanbanBoard extends Component
     {
         $query = $this->buildBaseQuery();
         
-        // Pega os IDs respeitando os filtros atuais e a ordenação do ranking geral / pontuação
         $ids = $query->orderByRaw('posicao_ranking_geral NULLS LAST')
                      ->orderBy('pontuacao_total', 'desc')
                      ->limit($quantidade)
@@ -588,7 +586,6 @@ class KanbanBoard extends Component
             }
         }
 
-        // Lógica Inteligente para o Filtro de Unidades baseado no utilizador
         $user = auth()->user();
         $unidadesQuery = Unidade::select('id', 'nome')->whereIn('status', ['Ativa', '1', true])->orderBy('nome');
         
@@ -598,7 +595,6 @@ class KanbanBoard extends Component
         
         $unidadesDb = $unidadesQuery->get();
 
-        // Se o utilizador tiver apenas 1 unidade, força esse filtro automaticamente
         if ($unidadesDb->count() === 1 && empty($this->filtroUnidade)) {
             $this->filtroUnidade = $unidadesDb->first()->id;
         }
