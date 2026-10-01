@@ -18,6 +18,12 @@ class PortalNoticias extends Component
     public $categoriaFiltro = '';
     public $termoBusca = '';
 
+    public function mount() 
+    {
+        abort_if(!feature('portal.noticias'), 403, 'O módulo de notícias está desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('portal.noticias'), 403, 'Acesso restrito.');
+    }
+
     public function updating($prop)
     {
         if (in_array($prop, ['categoriaFiltro', 'termoBusca'])) {
