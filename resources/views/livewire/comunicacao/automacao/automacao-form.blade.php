@@ -62,8 +62,8 @@
             <div class="pt-2">
                 <label class="flex items-center gap-3 cursor-pointer group w-max">
                     <div class="relative inline-flex items-center h-5 rounded-full w-9 transition-colors {{ $status ? 'bg-green-500' : 'bg-gray-300' }}">
-                        <input type="checkbox" wire:model="status" class="sr-only">
-                        <span class="inline-block w-3.5 h-3.5 transform bg-white rounded-full transition-transform {{ $status ? 'translate-x-4.5' : 'translate-x-1' }}" style="{{ $status ? 'transform: translateX(18px);' : '' }}"></span>
+                        <input type="checkbox" wire:model.live="status" class="sr-only">
+                        <span class="inline-block w-3.5 h-3.5 transform bg-white rounded-full transition-transform" style="{{ $status ? 'transform: translateX(18px);' : 'transform: translateX(3px);' }}"></span>
                     </div>
                     <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Regra Ativa</span>
                 </label>

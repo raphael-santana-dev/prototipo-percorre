@@ -58,7 +58,7 @@ class AutomacaoService
             }
 
             if ($automacao->template) {
-                DispararAutomacaoJob::dispatch($automacao->template, $email, $inscricao, $contextoEnvio);
+                DispararAutomacaoJob::dispatch($automacao->template, $email, $inscricao, $contextoEnvio, $automacao->evento_gatilho);
             }
         }
     }
