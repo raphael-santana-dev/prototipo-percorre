@@ -217,18 +217,18 @@
                 
                 <td class="px-4 py-1.5 whitespace-nowrap">
                     @php
-                        $totalVagas = $ciclo->total_vagas ?? 0;
-                        $preenchidas = $ciclo->vagas_preenchidas ?? 0;
-                        $percentual = $totalVagas > 0 ? round(($preenchidas / $totalVagas) * 100, 1) : 0;
-                        $corBarra = $percentual >= 100 ? 'bg-red-500' : ($percentual >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+                        $totalMeta = $ciclo->total_meta ?? 0;
+                        $inscritos = $ciclo->inscricoes_count ?? 0;
+                        $percentualMeta = $totalMeta > 0 ? round(($inscritos / $totalMeta) * 100, 1) : ($inscritos > 0 ? 100 : 0);
+                        $corBarraMeta = $percentualMeta >= 100 ? 'bg-emerald-500' : ($percentualMeta >= 50 ? 'bg-blue-500' : 'bg-purpura-500');
                     @endphp
                     <div class="flex flex-col items-center justify-center w-full min-w-[120px]">
                         <div class="flex justify-between w-full text-[10px] font-bold mb-1">
-                            <span class="text-gray-500 dark:text-gray-400">{{ $preenchidas }} preench.</span>
-                            <span class="text-gray-700 dark:text-gray-300">{{ $totalVagas }} total</span>
+                            <span class="text-gray-500 dark:text-gray-400">{{ $inscritos }} captados</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ $totalMeta }} meta</span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
-                            <div class="{{ $corBarra }} h-1.5 rounded-full transition-all duration-500" style="width: {{ min($percentual, 100) }}%"></div>
+                            <div class="{{ $corBarraMeta }} h-1.5 rounded-full transition-all duration-500" style="width: {{ min($percentualMeta, 100) }}%"></div>
                         </div>
                     </div>
                 </td>
@@ -545,12 +545,12 @@
                                                 <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">{{ $oferta['turno_nome'] ?? '' }}</div>
                                             </div>
                                             
-                                            <div class="w-full xl:w-20 shrink-0">
+                                            <div class="w-full xl:w-24 shrink-0">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
-                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
+                                                <input type="number" wire:model.live="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400 text-center">
                                             </div>
 
-                                            <div class="w-full xl:w-20 shrink-0">
+                                            <div class="w-full xl:w-24 shrink-0">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
                                                 <input type="number" wire:model="ofertasVagas.{{ $index }}.meta" placeholder="-" class="w-full text-sm rounded-lg border-ponkan-200 dark:border-ponkan-800 dark:bg-gray-700 dark:text-white py-2 focus:ring-ponkan-500 font-bold text-center">
                                             </div>

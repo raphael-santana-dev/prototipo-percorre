@@ -74,13 +74,20 @@ class PeriodEdit extends Component
     public function setActiveUnidade($id) { $this->activeUnidadeId = $id; $this->activeCursoId = null; }
     public function setActiveCurso($id) { $this->activeCursoId = $id; }
 
-    public function updatedOfertasVagas($value, $name)
+   public function updatedOfertasVagas($value, $name)
     {
         $parts = explode('.', $name);
         if (count($parts) === 2) {
             $index = $parts[0]; $campo = $parts[1];
-            if ($campo === 'unidade_id') { $this->ofertasVagas[$index]['curso_id'] = ''; $this->ofertasVagas[$index]['turno_id'] = ''; } 
-            elseif ($campo === 'curso_id') { $this->ofertasVagas[$index]['turno_id'] = ''; }
+            if ($campo === 'unidade_id') { 
+                $this->ofertasVagas[$index]['curso_id'] = ''; 
+                $this->ofertasVagas[$index]['turno_id'] = ''; 
+            } elseif ($campo === 'curso_id') { 
+                $this->ofertasVagas[$index]['turno_id'] = ''; 
+            } elseif ($campo === 'vagas' && is_numeric($value)) {
+                // Cálculo automático: se digitar Vagas, Meta recebe 3x
+                $this->ofertasVagas[$index]['meta'] = $value * 3;
+            }
         }
     }
 

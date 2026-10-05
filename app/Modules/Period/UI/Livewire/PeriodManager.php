@@ -342,6 +342,14 @@ class PeriodManager extends Component
     {
         abort_if(!feature('ciclo.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
+        
+        // Impede que um ciclo que tenha inscrições (mesmo que na lixeira) seja deletado e quebre o sistema
+        $emUso = \App\Models\Inscricao::withTrashed()->where('ciclo_id', $id)->exists();
+        if ($emUso) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Este ciclo possui inscrições vinculadas a ele e não pode ser excluído.');
+            return;
+        }
+
         Ciclo::findOrFail($id)->delete();
         
         if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
@@ -419,11 +427,23 @@ class PeriodManager extends Component
             ['key' => 'nome', 'label' => 'Nome / Período', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
-            ['key' => 'inscricoes_count', 'label' => 'Inscrições', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'ocupacao', 'label' => 'Ocupação', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'meta', 'label' => 'Captação (Meta)', 'sortable' => false, 'class' => 'text-center'], // Nova coluna
+            ['key' => 'ocupacao', 'label' => 'Ocupação (Vagas)', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
+    }
+
+    public function updatedOfertasVagas($value, $name)
+    {
+        $parts = explode('.', $name);
+        if (count($parts) === 2) {
+            $index = $parts[0]; 
+            $campo = $parts[1];
+            if ($campo === 'vagas' && is_numeric($value)) {
+                $this->ofertasVagas[$index]['meta'] = $value * 3;
+            }
+        }
     }
 
     protected function obterQueryFiltrada()
@@ -432,6 +452,7 @@ class PeriodManager extends Component
         
         $query->addSelect([
             'total_vagas' => OfertaVaga::selectRaw('COALESCE(SUM(vagas), 0)')->whereColumn('ciclo_id', 'ciclos.id'),
+            'total_meta' => OfertaVaga::selectRaw('COALESCE(SUM(meta), 0)')->whereColumn('ciclo_id', 'ciclos.id'), // Busca o total da Meta
             'vagas_preenchidas' => \App\Models\Inscricao::selectRaw('COUNT(*)')
                 ->whereColumn('ciclo_id', 'ciclos.id')
                 ->whereHas('statusInscricao', fn($q) => $q->whereIn('nome', ['Aprovado', 'Selecionado']))
