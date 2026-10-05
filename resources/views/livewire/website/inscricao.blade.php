@@ -114,7 +114,7 @@
                                 </div>
 
                                 <div class="col-span-12 md:col-span-6">
-                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Celular / Telefone</label>
+                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Celular / Telefone <span class="text-red-500">*</span></label>
                                     <input wire:model="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
                                 </div>
 
