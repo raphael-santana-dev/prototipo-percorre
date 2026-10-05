@@ -148,6 +148,7 @@ class Inscricao extends Component
         'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos para concluir a inscrição.',
         'cep.required' => 'O CEP é obrigatório.',
         'data_nascimento.required' => 'A data de nascimento é obrigatória.',
+        'celular.required' => 'O preenchimento do celular é obrigatório.',
     ];
 
     public function updatedCpf($value)

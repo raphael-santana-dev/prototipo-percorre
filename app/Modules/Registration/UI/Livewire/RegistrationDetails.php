@@ -5,6 +5,7 @@ namespace App\Modules\Registration\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Computed;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
 
@@ -15,6 +16,10 @@ class RegistrationDetails extends Component
     public Inscricao $inscricao;
     public $status_selecionado; 
     public bool $modalAntiSpamAberto = false;
+    
+    public string $abaAtiva = 'geral'; 
+    public bool $modalEmailAberto = false;
+    public $emailVisualizacao = null;
 
     public function mount($id)
     {
@@ -23,6 +28,73 @@ class RegistrationDetails extends Component
 
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
+    }
+
+    public function setAba($aba)
+    {
+        $this->abaAtiva = $aba;
+    }
+
+    public function verConteudoEmail($logId)
+    {
+        $this->emailVisualizacao = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::find($logId);
+        $this->modalEmailAberto = true;
+    }
+
+    public function fecharModalEmail()
+    {
+        $this->modalEmailAberto = false;
+        $this->emailVisualizacao = null;
+    }
+
+    #[Computed]
+    public function logsMovimentacao()
+    {
+        $logsRaw = \App\Models\AuditoriaLog::where('tabela_alterada', 'inscricoes')
+            ->where('registro_id', $this->inscricao->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        $movimentacoes = [];
+        
+        foreach($logsRaw as $log) {
+            $antigo = is_string($log->informacao_anterior) ? json_decode($log->informacao_anterior, true) : $log->informacao_anterior;
+            $novo = is_string($log->nova_informacao) ? json_decode($log->nova_informacao, true) : $log->nova_informacao;
+            
+            if ($log->acao === 'criacao') {
+                $movimentacoes[] = [
+                    'tipo' => 'criacao',
+                    'data' => clone $log->created_at,
+                    'usuario' => $log->usuario_nome ?? 'Candidato / Sistema',
+                    'mensagem' => 'Inscrição iniciada/registrada no sistema.',
+                ];
+            } elseif ($log->acao === 'atualizacao') {
+                if (isset($novo['status_inscricao_id'])) {
+                    $statusAntigoId = $antigo['status_inscricao_id'] ?? null;
+                    $statusNovoId = $novo['status_inscricao_id'];
+                    
+                    $statusAntigoNome = $statusAntigoId ? (StatusInscricao::find($statusAntigoId)?->nome ?? 'Pendente') : 'Pendente';
+                    $statusNovoNome = StatusInscricao::find($statusNovoId)?->nome ?? 'Desconhecido';
+                    
+                    $movimentacoes[] = [
+                        'tipo' => 'status',
+                        'data' => clone $log->created_at,
+                        'usuario' => $log->usuario_nome ?? 'Sistema',
+                        'mensagem' => "alterou o status de <b>{$statusAntigoNome}</b> para <b>{$statusNovoNome}</b>",
+                    ];
+                }
+            }
+        }
+        
+        return $movimentacoes;
+    }
+
+    #[Computed]
+    public function logsComunicacao()
+    {
+        return \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::where('destinatario', $this->inscricao->email)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public function getDataInscricao()
@@ -145,7 +217,6 @@ class RegistrationDetails extends Component
 
                 $pontosStr = $tipo === 'multiplicador_percentual' ? "+{$pontos}%" : "+{$pontos} pts";
 
-                // NOVO MOTOR DE MATCH DE REGRAS: À prova de falhas com separadores
                 $atendida = false;
                 foreach ($auditoria as $aud) {
                     $campoAuditoria = strtolower(trim($aud['campo_avaliado'] ?? ''));
@@ -155,13 +226,11 @@ class RegistrationDetails extends Component
                         if ($aud['pontos_ganhos'] == $pontos) {
                             $condAudLimpa = str_replace('Exigência: ', '', $aud['condicao'] ?? '');
                             
-                            // 1. Tenta correspondência exata ou contém a string formatada
                             if ($condAudLimpa === $condicaoStr || str_contains($condAudLimpa, $condicaoStr) || str_contains($condicaoStr, $condAudLimpa)) {
                                 $atendida = true;
                                 break;
                             }
                             
-                            // 2. Se for 'between' ou 'in', procura as partes isoladas ('15' e '29')
                             if (in_array($operador, ['between', 'in'])) {
                                 $allMatched = true;
                                 foreach ($valores as $v) {
@@ -176,7 +245,6 @@ class RegistrationDetails extends Component
                                 }
                             }
 
-                            // 3. Fallback cru
                             if (!empty($valor) && str_contains($condAudLimpa, (string)$valor)) {
                                 $atendida = true;
                                 break;
