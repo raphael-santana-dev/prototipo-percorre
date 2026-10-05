@@ -246,6 +246,18 @@
                 
                 <td class="px-4 py-1.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
+                        <button x-data="{ copiado: false }" 
+                                @click="
+                                    let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                                    navigator.clipboard.writeText(code); 
+                                    copiado = true; 
+                                    setTimeout(() => copiado = false, 2000);
+                                " 
+                                class="p-1.5 transition-colors rounded-lg relative" 
+                                :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
+                                title="Copiar Código de Incorporação (Iframe)">
+                            <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
+                        </button>
                         <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver CRM"><i class="text-lg ph-fill ph-kanban"></i></a>
                         <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Detalhes"><i class="text-lg ph ph-eye"></i></a>
@@ -325,6 +337,7 @@
                         <span class="text-xs font-bold text-purpura-600">{{ $ciclo->inscricoes_count ?? 0 }} inscritos</span>
                         
                         <div class="flex items-center gap-1">
+                            
                             <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="CRM Kanban"><i class="text-lg ph-bold ph-kanban"></i></a>
                             <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="Info"><i class="text-lg ph-bold ph-info"></i></button>
                             <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition"><i class="text-lg ph-bold ph-arrow-right"></i></a>
@@ -532,17 +545,24 @@
                                                 <div class="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">{{ $oferta['turno_nome'] ?? '' }}</div>
                                             </div>
                                             
-                                            <div class="w-full xl:w-24">
+                                            <div class="w-full xl:w-20 shrink-0">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
-                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600">
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
                                             </div>
-                                            <div class="w-full xl:w-20">
+
+                                            <div class="w-full xl:w-20 shrink-0">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.meta" placeholder="-" class="w-full text-sm rounded-lg border-ponkan-200 dark:border-ponkan-800 dark:bg-gray-700 dark:text-white py-2 focus:ring-ponkan-500 font-bold text-center">
+                                            </div>
+
+                                            <div class="w-full xl:w-16 shrink-0">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
-                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium">
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium focus:ring-purpura-500">
                                             </div>
-                                            <div class="w-full xl:w-20">
+
+                                            <div class="w-full xl:w-16 shrink-0">
                                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
-                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium">
+                                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" placeholder="Livre" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-medium focus:ring-purpura-500">
                                             </div>
                                         </div>
                                     @empty

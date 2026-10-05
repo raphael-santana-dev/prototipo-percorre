@@ -57,7 +57,9 @@ class PeriodEdit extends Component
         foreach ($ofertas as $oferta) {
             $this->ofertasVagas[] = [
                 'unidade_id' => $oferta->unidade_id, 'curso_id' => $oferta->curso_id, 'turno_id' => $oferta->turno_id,
-                'vagas' => $oferta->vagas, 'idade_min' => $oferta->idade_min, 'idade_max' => $oferta->idade_max,
+                'vagas' => $oferta->vagas, 
+                'meta' => $oferta->meta, // <-- ADICIONADO
+                'idade_min' => $oferta->idade_min, 'idade_max' => $oferta->idade_max,
             ];
         }
 
@@ -115,8 +117,7 @@ class PeriodEdit extends Component
         \App\Models\Ciclo::findOrFail($this->cicloId)->statusPipeline()->sync($syncStatus);
     }
     
-    public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null]; }
-    public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
+    public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'meta' => null, 'idade_min' => null, 'idade_max' => null]; }    public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
 
     public function addDocumento() {
         $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true];
@@ -170,6 +171,7 @@ class PeriodEdit extends Component
                 OfertaVaga::create([
                     'ciclo_id' => $cicloSalvo->id, 'unidade_id' => $oferta['unidade_id'], 'curso_id' => $oferta['curso_id'],
                     'turno_id' => $oferta['turno_id'], 'vagas' => (int) ($oferta['vagas'] ?? 0),
+                    'meta' => !empty($oferta['meta']) ? (int) $oferta['meta'] : null, // <-- ADICIONADO
                     'idade_min' => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null,
                     'idade_max' => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null,
                 ]);

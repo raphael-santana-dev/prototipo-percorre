@@ -238,6 +238,7 @@ class PeriodManager extends Component
                         'turno_id' => (string) $tId,
                         'turno_nome' => $turno->nome,
                         'vagas' => '',
+                        'meta' => '',
                         'idade_min' => '',
                         'idade_max' => '',
                     ];
@@ -258,6 +259,7 @@ class PeriodManager extends Component
                     'ciclo_id' => $this->cicloIdEmEdicao, 'unidade_id' => $oferta['unidade_id'],
                     'curso_id' => $oferta['curso_id'], 'turno_id' => $oferta['turno_id'],
                     'vagas' => (int) ($oferta['vagas'] ?? 0),
+                    'meta' => !empty($oferta['meta']) ? (int) $oferta['meta'] : null, // <-- ADICIONADO
                     'idade_min' => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null,
                     'idade_max' => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null,
                 ]);

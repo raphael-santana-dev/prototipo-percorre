@@ -236,15 +236,19 @@
                             </select>
                         </div>
 
-                        <div class="w-full xl:w-24">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas</label>
-                            <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-black text-purpura-600 dark:text-purpura-400 text-center">
+                        <div class="w-full xl:w-20 shrink-0">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
+                            <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
                         </div>
-                        <div class="w-full xl:w-20">
+                        <div class="w-full xl:w-20 shrink-0">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
+                            <input type="number" wire:model="ofertasVagas.{{ $index }}.meta" placeholder="-" class="w-full text-sm rounded-lg border-ponkan-200 dark:border-ponkan-800 dark:bg-gray-700 dark:text-white py-2 focus:ring-ponkan-500 font-bold text-center">
+                        </div>
+                        <div class="w-full xl:w-20 shrink-0">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                         </div>
-                        <div class="w-full xl:w-20">
+                        <div class="w-full xl:w-20 shrink-0">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
                             <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
                         </div>
