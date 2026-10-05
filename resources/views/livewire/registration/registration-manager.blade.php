@@ -1,6 +1,6 @@
 <div class="w-full font-sans relative" 
-     x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto') }" 
-     x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto)">  
+     x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto'), moverCicloAberto: $wire.entangle('modalMoverCicloAberto') }" 
+     x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto || moverCicloAberto)"> 
     
     <x-page-header 
         title="Gestão de Inscrições" 
@@ -201,7 +201,9 @@
                         <button wire:click="selecionarTop(100)" class="text-purpura-600 font-bold hover:underline">Top 100</button>
                         @if(count($selecionadas) > 0)
                             <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos</button>
+                            
                         @endif
+                        
                     </div>
                     
                     {{-- Barra Escura do Lote --}}
@@ -224,6 +226,10 @@
                             
                             <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
                                 Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
+                            </button>
+
+                            <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
+                                Alterar ciclo<i class="ph-bold ph-calendar text-lg"></i>
                             </button>
                             
                             <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
@@ -655,6 +661,43 @@
                     </button>
                     <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-red-600 hover:!bg-red-700 focus:!ring-red-500 w-full sm:w-auto border-none">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($modalMoverCicloAberto)
+        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="card !w-full !max-w-md !p-0 shadow-2xl overflow-hidden">
+                <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800 w-full bg-gray-50/50 dark:bg-gray-800/50">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <i class="ph-fill ph-calendar-forward text-purpura-600"></i> Transferir de Ciclo
+                    </h3>
+                    <button wire:click="$set('modalMoverCicloAberto', false)" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><i class="text-xl ph ph-x"></i></button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        Você está prestes a mover <strong>{{ count($selecionadas) }}</strong> inscrições selecionadas para um novo Ciclo Operacional.
+                    </p>
+                    
+                    <div>
+                        <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Ciclo de Destino <span class="text-red-500">*</span></label>
+                        <select wire:model="cicloDestinoId" class="w-full text-sm rounded-lg border-gray-300 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                            <option value="">Selecione o novo ciclo...</option>
+                            @foreach($ciclosDb as $id => $nome)
+                                <option value="{{ $id }}">{{ $nome }}</option>
+                            @endforeach
+                        </select>
+                        @error('cicloDestinoId') <span class="text-red-500 text-[11px] font-medium mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+                    <button type="button" wire:click="$set('modalMoverCicloAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
+                    <button type="button" wire:click="moverCicloLote" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none">
+                        Confirmar Transferência
                     </button>
                 </div>
             </div>

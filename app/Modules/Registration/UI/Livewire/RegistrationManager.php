@@ -30,6 +30,9 @@ class RegistrationManager extends Component
     public $filtroCurso = '';
     public $filtroEtapa = '';
 
+    public bool $modalMoverCicloAberto = false;
+    public $cicloDestinoId = '';
+
     public array $selecionadas = []; 
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
@@ -70,6 +73,28 @@ class RegistrationManager extends Component
             $this->filtroCiclo = $cicloAtivo->id;
             $this->ciclo_id = $cicloAtivo->id; 
         }
+    }
+
+    public function abrirModalMoverCiclo()
+    {
+        if (count($this->selecionadas) === 0) return;
+        $this->cicloDestinoId = '';
+        $this->modalMoverCicloAberto = true;
+    }
+
+    public function moverCicloLote()
+    {
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+
+        $this->validate(['cicloDestinoId' => 'required|exists:ciclos,id']);
+        
+        // Move as inscrições em lote para o novo Ciclo Operacional
+        \App\Models\Inscricao::whereIn('id', $this->selecionadas)->update(['ciclo_id' => $this->cicloDestinoId]);
+        
+        $this->modalMoverCicloAberto = false;
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: 'As inscrições foram transferidas de ciclo com sucesso!');
     }
 
     private function getVagasConfig()
