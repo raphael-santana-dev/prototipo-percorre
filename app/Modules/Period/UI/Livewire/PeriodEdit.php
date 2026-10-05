@@ -90,9 +90,31 @@ class PeriodEdit extends Component
         $this->novoStatusSelecionado = '';
     }
 
-    public function removerStatusPipeline($id) { $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); }
-    public function atualizarOrdemStatus($ordemIds) { $this->statusSelecionados = $ordemIds; }
+    public function atualizarOrdemStatus($ordemIds) 
+    { 
+        $this->statusSelecionados = $ordemIds; 
+        
+        $syncStatus = [];
+        foreach ($this->statusSelecionados as $index => $statusId) { $syncStatus[$statusId] = ['ordem' => $index + 1]; }
+        \App\Models\Ciclo::findOrFail($this->cicloId)->statusPipeline()->sync($syncStatus);
+    }
 
+    public function removerStatusPipeline($id) 
+    { 
+        // Trava a remoção da edição
+        $emUso = \App\Models\Inscricao::where('ciclo_id', $this->cicloId)->where('status_inscricao_id', $id)->exists();
+        if ($emUso) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Já existem inscrições neste ciclo vinculadas a este status.');
+            return;
+        }
+
+        $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); 
+        
+        $syncStatus = [];
+        foreach ($this->statusSelecionados as $index => $statusId) { $syncStatus[$statusId] = ['ordem' => $index + 1]; }
+        \App\Models\Ciclo::findOrFail($this->cicloId)->statusPipeline()->sync($syncStatus);
+    }
+    
     public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'idade_min' => null, 'idade_max' => null]; }
     public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
 

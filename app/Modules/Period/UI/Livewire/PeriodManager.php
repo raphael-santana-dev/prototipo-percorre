@@ -301,9 +301,38 @@ class PeriodManager extends Component
         }
         $this->novoStatusSelecionado = '';
     }
-    public function removerStatusPipeline($id) { $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); }
-    public function atualizarOrdemStatus($ordemIds) { $this->statusSelecionados = $ordemIds; }
+    
+    public function atualizarOrdemStatus($ordemIds) 
+    { 
+        $this->statusSelecionados = $ordemIds; 
+        
+        // Força a sincronização no banco imediatamente após o drag-and-drop
+        if ($this->cicloIdEmEdicao && $this->passoAtual === 4) {
+            $this->salvarPasso4Parcial();
+        }
+    }
 
+    public function removerStatusPipeline($id) 
+    { 
+        // 1. Trava a remoção se já houver inscrições ocupando este status neste ciclo
+        if ($this->cicloIdEmEdicao) {
+            $emUso = \App\Models\Inscricao::where('ciclo_id', $this->cicloIdEmEdicao)
+                        ->where('status_inscricao_id', $id)
+                        ->exists();
+            
+            if ($emUso) {
+                $this->dispatch('erro', msg: 'Ação Bloqueada: Já existem candidatos inscritos neste ciclo ocupando este status.');
+                return;
+            }
+        }
+
+        $this->statusSelecionados = array_values(array_diff($this->statusSelecionados, [$id])); 
+        
+        if ($this->cicloIdEmEdicao && $this->passoAtual === 4) {
+            $this->salvarPasso4Parcial();
+        }
+    }
+    
     public function addDocumento() { $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true]; }
     public function removeDocumento($index) { unset($this->documentosExigidos[$index]); $this->documentosExigidos = array_values($this->documentosExigidos); }
 

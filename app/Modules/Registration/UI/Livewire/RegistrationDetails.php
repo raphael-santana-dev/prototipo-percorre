@@ -132,6 +132,12 @@ class RegistrationDetails extends Component
             return;
         }
 
+        $statusPermitidos = $this->inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        if (!empty($statusPermitidos) && !in_array($this->status_selecionado, $statusPermitidos)) {
+            $this->dispatch('erro', msg: 'Este status não pertence ao funil deste ciclo!');
+            return;
+        }
+
         $statusNovo = StatusInscricao::find($this->status_selecionado);
         if (!$statusNovo) return;
 
@@ -288,7 +294,10 @@ class RegistrationDetails extends Component
 
     public function render()
     {
-        $todosStatus = StatusInscricao::orderBy('nome')->get();
+        $todosStatus = $this->inscricao->ciclo->statusPipeline;
+        if ($todosStatus->isEmpty()) {
+            $todosStatus = StatusInscricao::orderBy('nome')->get();
+        }
 
         return view('livewire.registration.registration-details', [
             'todosStatus' => $todosStatus

@@ -606,10 +606,18 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         if (count($this->selecionadas) === 0) return;
         
-        $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
+        $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
             return;
+        }
+
+        foreach ($inscricoesValidas as $insc) {
+            $statusPermitidos = $insc->ciclo->statusPipeline->pluck('id')->toArray();
+            if (!empty($statusPermitidos) && !in_array($statusId, $statusPermitidos)) {
+                $this->dispatch('erro', msg: "Ação cancelada: O status escolhido não está no funil da inscrição #{$insc->id}.");
+                return;
+            }
         }
 
         $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
@@ -1008,11 +1016,23 @@ class RegistrationManager extends Component
             ];
         });
 
+        $statusDbView = [];
+        if (!empty($this->filtroCiclo)) {
+            $cicloAtual = Ciclo::with('statusPipeline')->find($this->filtroCiclo);
+            if ($cicloAtual && $cicloAtual->statusPipeline->isNotEmpty()) {
+                $statusDbView = $cicloAtual->statusPipeline->pluck('nome', 'id')->toArray();
+            } else {
+                $statusDbView = $dropdowns['status'];
+            }
+        } else {
+            $statusDbView = $dropdowns['status'];
+        }
+
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'etapasDb' => $etapasDb,
-            'statusInscricoesDb' => $dropdowns['status'],
+            'statusInscricoesDb' => $statusDbView, // Array Dinâmico!
             'ciclosDb' => $dropdowns['ciclos'],
             'unidadesDb' => $dropdowns['unidades'],
             'turnosDb' => $dropdowns['turnos'],

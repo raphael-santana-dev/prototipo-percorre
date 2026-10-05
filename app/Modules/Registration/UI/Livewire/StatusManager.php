@@ -135,9 +135,10 @@ class StatusManager extends Component
         abort_if(!feature('status.excluir'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
 
-        $emUso = Inscricao::where('status_inscricao_id', $id)->exists();
+        // Verifica na base de dados (incluindo a lixeira com withTrashed)
+        $emUso = Inscricao::withTrashed()->where('status_inscricao_id', $id)->exists();
         if ($emUso) {
-            $this->dispatch('erro', msg: 'Ação Bloqueada: Existem inscrições vinculadas a este status. Você não pode excluí-lo.');
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Existem inscrições ativas ou arquivadas vinculadas a este status. O sistema não pode excluí-lo.');
             return;
         }
 

@@ -1,5 +1,5 @@
 <div class="w-full font-sans relative" x-data="{ modalAberto: @entangle('modalAberto') }" x-effect="document.body.classList.toggle('overflow-hidden', modalAberto)">
-
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <x-page-header 
         title="Ciclos de Inscrições" 
         subtitle="Gerenciamento de Semestres e Vagas"
@@ -554,27 +554,33 @@
 
                         <!-- PASSO 4: ETAPAS DO CICLO (PIPELINE) -->
                         @if($passoAtual === 4)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-funnel text-purpura-600"></i> Passo 4: Etapas do Ciclo (Pipeline / Kanban)</h3>
                                     <p class="text-xs text-gray-500 mt-1">Organize as colunas de status pelas quais os candidatos passarão no funil seletivo.</p>
                                 </div>
 
-                                <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
                                 <div class="w-full" x-data="{
                                      initSortable() {
+                                         // Aguarda o objeto global estar disponível para evitar erros
+                                         if (typeof Sortable === 'undefined') {
+                                             setTimeout(() => this.initSortable(), 200);
+                                             return;
+                                         }
                                          new Sortable(this.$refs.statusList, {
-                                             animation: 150, handle: '.drag-handle', ghostClass: 'opacity-50',
+                                             animation: 150, 
+                                             handle: '.drag-handle', 
+                                             ghostClass: 'opacity-50',
                                              onEnd: () => {
                                                  let items = Array.from(this.$refs.statusList.children).map(el => el.dataset.id);
                                                  $wire.atualizarOrdemStatus(items);
                                              }
                                          });
                                      }
-                                 }" x-init="initSortable()">
+                                 }" x-init="$nextTick(() => { initSortable() })">
+                                 
                                     <div class="flex gap-2 mb-4">
-                                        <select wire:model="novoStatusSelecionado" class="flex-1 text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2">
+                                        <select wire:model="novoStatusSelecionado" class="flex-1 text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
                                             <option value="">Adicionar etapa ao funil...</option>
                                             @foreach($statusDisponiveis as $st)
                                                 @if(!in_array($st->id, $statusSelecionados))
@@ -582,20 +588,24 @@
                                                 @endif
                                             @endforeach
                                         </select>
-                                        <button type="button" wire:click="adicionarStatusPipeline" class="bg-purpura-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-purpura-700 transition"><i class="ph-bold ph-plus"></i> Inserir</button>
+                                        <button type="button" wire:click="adicionarStatusPipeline" class="bg-purpura-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-purpura-700 transition shadow-sm flex items-center gap-1">
+                                            <i class="ph-bold ph-plus"></i> Inserir
+                                        </button>
                                     </div>
 
                                     <div x-ref="statusList" class="flex flex-col gap-2">
                                         @foreach($statusSelecionados as $index => $statusId)
                                             @php $stObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
                                             @if($stObj)
-                                                <div data-id="{{ $statusId }}" wire:key="st-{{ $statusId }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                                <div data-id="{{ $statusId }}" wire:key="st-{{ $statusId }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg group transition-colors hover:border-purpura-300">
                                                     <div class="flex items-center gap-3">
-                                                        <i class="ph-bold ph-dots-six-vertical text-gray-400 cursor-grab drag-handle text-xl"></i>
-                                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-black">{{ $index + 1 }}</span>
+                                                        <i class="ph-bold ph-dots-six-vertical text-gray-400 cursor-grab active:cursor-grabbing drag-handle text-xl hover:text-gray-700 dark:hover:text-gray-200"></i>
+                                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] font-black">{{ $index + 1 }}</span>
                                                         <span class="font-bold text-sm text-gray-800 dark:text-gray-200">{{ $stObj->nome }}</span>
                                                     </div>
-                                                    <button type="button" wire:click="removerStatusPipeline('{{ $statusId }}')" class="text-gray-400 hover:text-red-500 p-1.5"><i class="ph-bold ph-trash text-base"></i></button>
+                                                    <button type="button" wire:click="removerStatusPipeline('{{ $statusId }}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded-lg transition">
+                                                        <i class="ph-bold ph-trash text-base"></i>
+                                                    </button>
                                                 </div>
                                             @endif
                                         @endforeach

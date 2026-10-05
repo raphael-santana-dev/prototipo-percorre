@@ -122,6 +122,12 @@ class KanbanBoard extends Component
             return;
         }
 
+        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        if (!empty($statusPermitidos) && !in_array($statusId, $statusPermitidos)) {
+            $this->dispatch('erro', msg: 'Status de destino inválido para o funil deste ciclo!');
+            return;
+        }
+
         $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $statusId);
         
         if ($inscricoesProcessar->isEmpty()) return;
@@ -209,6 +215,12 @@ class KanbanBoard extends Component
             return;
         }
 
+        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        if (!empty($statusPermitidos) && !in_array($status, $statusPermitidos)) {
+            $this->dispatch('erro', msg: 'Este status não pertence ao funil do ciclo!');
+            return;
+        }
+
         $inscricoesProcessar = $this->validarVagasDisponiveisParaAprovacao(collect([$inscricao]), $status);
         if ($inscricoesProcessar->isEmpty()) return;
 
@@ -223,6 +235,12 @@ class KanbanBoard extends Component
         $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionados)->where('status_inscricao_id', '!=', $this->statusDestinoLote)->get();
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições já estão na coluna de destino!');
+            return;
+        }
+
+        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        if (!empty($statusPermitidos) && !in_array($status, $statusPermitidos)) {
+            $this->dispatch('erro', msg: 'Este status não pertence ao funil do ciclo!');
             return;
         }
 
