@@ -50,7 +50,13 @@
                         </div>
                         @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
                         <span class="px-3.5 py-1.5 text-[11px] font-bold rounded-full border uppercase tracking-wider w-max shadow-sm" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                            {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                            
+                            @if($inscricao->statusInscricao->visivel_estudante)
+                                {{ $inscricao->statusInscricao->titulo_amigavel ?? 'Pendente' }}
+                            @else
+                                {{ 'Aguardando atualização...' }}
+                            @endif
+                            
                         </span>
                     </div>
                     
@@ -236,7 +242,11 @@
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Status Oficial</span>
                             @php $corHex = $inscricaoDetalhe->statusInscricao->cor ?? '#6B7280'; @endphp
                             <span class="px-2.5 py-1 text-[10px] font-bold rounded border shadow-sm uppercase tracking-wider inline-block" style="background-color: {{ $corHex }}15; color: {{ $corHex }}; border-color: {{ $corHex }}40;">
-                                {{ $inscricaoDetalhe->statusInscricao->nome ?? 'Pendente' }}
+                                @if($inscricao->statusInscricao->visivel_estudante)
+                                    {{ $inscricao->statusInscricao->titulo_amigavel ?? 'Pendente' }}
+                                @else
+                                    {{ 'Aguardando atualização...' }}
+                                @endif
                             </span>
                         </div>
                     </div>

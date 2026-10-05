@@ -11,7 +11,7 @@ class StatusInscricao extends Model
     protected $table = 'status_inscricoes';
     
     protected $fillable = [
-        'nome', 'descricao', 'cor', 'slug', 'status'
+        'nome', 'descricao', 'cor', 'slug', 'status', 'titulo_amigavel', 'visivel_estudante'
     ];
 
     protected static function booted()

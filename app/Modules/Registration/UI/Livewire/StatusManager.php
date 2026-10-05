@@ -29,6 +29,8 @@ class StatusManager extends Component
     public bool $isInUse = false; 
 
     public string $nome = '';
+    public string $titulo_amigavel = '';
+    public bool $visivel_estudante = true;
     public string $descricao = '';
 
     public string $cor = '#9CA3AF';
@@ -54,6 +56,18 @@ class StatusManager extends Component
         $this->showModal = true;
     }
 
+    public function toggleVisibilidade($id)
+    {
+        abort_if(!feature('status.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+
+        $status = StatusInscricao::findOrFail($id);
+        $status->visivel_estudante = !$status->visivel_estudante;
+        $status->save();
+        
+        $this->dispatch('sucesso', msg: $status->visivel_estudante ? 'Status Ativado!' : 'Status Desativado!');
+    }
+
     public function edit(int $id)
     {
         abort_if(!feature('status.editar'), 403);
@@ -67,6 +81,8 @@ class StatusManager extends Component
         $this->descricao = $status->descricao ?? '';
         $this->cor = $status->cor ?? '#9CA3AF';
         $this->isEditMode = true;
+        $this->titulo_amigavel = $status->titulo_amigavel ?? '';
+        $this->visivel_estudante = $status->visivel_estudante ??
         
         $this->isInUse = Inscricao::where('status_inscricao_id', $id)->exists();
         
@@ -99,6 +115,8 @@ class StatusManager extends Component
             'slug' => Str::slug($this->nome),
             'descricao' => $this->descricao,
             'cor' => $this->cor,
+            'titulo_amigavel' => $this->titulo_amigavel,
+            'visivel_estudante' => $this->visivel_estudante,
         ];
 
         if ($this->isEditMode) {
@@ -143,6 +161,8 @@ class StatusManager extends Component
         return [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Nome do Status', 'sortable' => true],
+            ['key' => 'titulo_amigavel', 'label' => 'Titulo Amigável', 'sortable' => true],
+            ['key' => 'visivel_estudante', 'label' => 'Visível para estudante', 'sortable' => true],
             ['key' => 'descricao', 'label' => 'Descrição', 'sortable' => true],
             ['key' => 'cor', 'label' => 'Cor', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
