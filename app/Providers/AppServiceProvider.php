@@ -179,6 +179,7 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('processo-matricula.portal',  \App\Modules\Matricula\UI\Livewire\PortalMatricula::class);
         Livewire::component('processo-matricula.processo',  \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class);
         Livewire::component('financeiro-orcamento.manager',  \App\Modules\Financeiro\UI\Livewire\OrcamentoManager::class);
+        Livewire::component('financeiro-aprovacao.manager',  \App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoManager::class);
         Livewire::component('teste-rd.crm',  \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class);
         Livewire::component('teste-design',  \App\Modules\Teste\RDCrm\UI\Livewire\DesignSystemViewer::class);
 

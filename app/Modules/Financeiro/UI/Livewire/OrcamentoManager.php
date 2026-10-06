@@ -8,11 +8,10 @@ use Livewire\Attributes\Title;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
-use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
-#[Title('Orçamentos (Protheus) - Financeiro')]
+#[Title('Orçamentos - Financeiro')]
 class OrcamentoManager extends Component
 {
     use WithPagination, ComPadraoListagem;
@@ -25,17 +24,11 @@ class OrcamentoManager extends Component
     public bool $modalAberto = false;
     public ?Orcamento $orcamentoSelecionado = null;
     
-    // Array para edição
     public array $editData = [];
-
-    // Variáveis para Avaliação (Aprovação/Reprovação)
-    public bool $modalAvaliacaoAberto = false;
-    public string $statusAvaliacao = '';
-    public string $comentarioAvaliacao = '';
-
     public array $breadcrumbs = [];
 
     // Variáveis do Simulador
+    public int $anoSimulacao = 2026;
     public int $mesSimulacaoAtual = 1; 
     public array $nomesMeses = [
         1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril', 5 => 'Maio', 6 => 'Junho',
@@ -50,18 +43,23 @@ class OrcamentoManager extends Component
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
             ['label' => 'Módulo Financeiro', 'url' => '#'],
-            ['label' => 'Orçamentos', 'url' => route('financeiro.orcamentos')],
+            ['label' => 'Meus Orçamentos', 'url' => route('financeiro.orcamentos')],
         ];
 
         $this->ordenacaoCampo = 'ano';
         $this->ordenacaoDirecao = 'desc';
-        $this->mesSimulacaoAtual = session('mes_simulacao_orcamento', 1);
+        
+        $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
+        $this->mesSimulacaoAtual = session('mes_simulacao_orcamento', date('n'));
     }
 
     public function updating($nomePropriedade)
     {
         if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus'])) {
             $this->resetPage();
+        }
+        if ($nomePropriedade === 'mesSimulacaoAtual' || $nomePropriedade === 'anoSimulacao') {
+            session(['mes_simulacao_orcamento' => $this->mesSimulacaoAtual, 'ano_simulacao_orcamento' => $this->anoSimulacao]);
         }
     }
 
@@ -107,14 +105,13 @@ class OrcamentoManager extends Component
 
     private function processarGravacao($statusDesejado, $mensagemSucesso)
     {
-        // Se já está aprovado, não pode mais ser mexido pelo gestor comum
         if (in_array($this->orcamentoSelecionado->status, ['Aprovado', 'Aprovado com ressalvas'])) {
             $this->dispatch('erro', msg: 'Orçamentos já aprovados não podem ser alterados.');
             return;
         }
 
         $novoStatus = $statusDesejado;
-        if ($statusDesejado === 'Em elaboração' && $this->orcamentoSelecionado->status !== 'Criado' && $this->orcamentoSelecionado->status !== 'Reprovado') {
+        if ($statusDesejado === 'Em elaboração' && !in_array($this->orcamentoSelecionado->status, ['Criado', 'Reprovado'])) {
             $novoStatus = $this->orcamentoSelecionado->status; 
         }
 
@@ -129,36 +126,8 @@ class OrcamentoManager extends Component
         }
 
         $this->orcamentoSelecionado->update($dadosUpdate);
-        
         $this->dispatch('sucesso', msg: $mensagemSucesso);
         $this->fecharModal();
-    }
-
-    // --- MÉTODOS DE AVALIAÇÃO (DIRETORIA/ADMIN) ---
-    public function abrirModalAvaliacao($status)
-    {
-        $this->statusAvaliacao = $status;
-        $this->comentarioAvaliacao = '';
-        $this->modalAvaliacaoAberto = true;
-    }
-
-    public function confirmarAvaliacao()
-    {
-        $this->validate(['comentarioAvaliacao' => 'required|string|min:5'], ['comentarioAvaliacao.required' => 'A justificativa é obrigatória.']);
-
-        $this->orcamentoSelecionado->update(['status' => $this->statusAvaliacao]);
-
-        OrcamentoAvaliacao::create([
-            'orcamento_id' => $this->orcamentoSelecionado->id,
-            'user_id' => auth()->id(),
-            'user_nome' => auth()->user()->name,
-            'status_aplicado' => $this->statusAvaliacao,
-            'comentario' => $this->comentarioAvaliacao
-        ]);
-
-        $this->modalAvaliacaoAberto = false;
-        $this->orcamentoSelecionado->refresh();
-        $this->dispatch('sucesso', msg: "Orçamento avaliado como {$this->statusAvaliacao}!");
     }
 
     public function fecharModal()
@@ -167,15 +136,12 @@ class OrcamentoManager extends Component
         $this->orcamentoSelecionado = null;
     }
 
-    public function avancarMesSimulacao()
+    public function avancarAnoSimulacao()
     {
-        // Força apenas os orçamentos não aprovados/finalizados a virarem Finalizados.
-        Orcamento::whereIn('status', ['Criado', 'Em elaboração'])->update(['status' => 'Finalizado']);
-        
-        // Em um ambiente real, aqui faríamos a fotografia.
-        $this->mesSimulacaoAtual++;
-        session(['mes_simulacao_orcamento' => $this->mesSimulacaoAtual]);
-        $this->dispatch('sucesso', msg: "Mês avançado para {$this->nomesMeses[$this->mesSimulacaoAtual]}!");
+        $this->anoSimulacao++;
+        $this->mesSimulacaoAtual = 1; // Reseta o mês para Janeiro
+        session(['ano_simulacao_orcamento' => $this->anoSimulacao, 'mes_simulacao_orcamento' => 1]);
+        $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! O ciclo mensal foi reiniciado.");
     }
 
     public function getHeadersProperty()
@@ -196,15 +162,10 @@ class OrcamentoManager extends Component
     {
         $query = Orcamento::query();
         
-        // CONTROLE VISUAL POR CENTRO DE CUSTO
-        // Se o usuário não for master, filtra para ele ver apenas os CCustos dele
-        // Exemplo: se houver relacionamento $user->centros_de_custo
         if (!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('financeiro.orcamentos.global')) {
-            // Pegamos o array de códigos de centro de custo do usuário atual
             if (method_exists(auth()->user(), 'centros_de_custo')) {
                 $query->whereIn('ccusto', auth()->user()->centros_de_custo->pluck('codigo')->toArray());
             } else {
-                // Fallback de segurança se o relacionamento não existir
                 $query->where('ccusto', '00000000'); 
             }
         }
@@ -220,7 +181,6 @@ class OrcamentoManager extends Component
     public function render()
     {
         $query = $this->obterQueryFiltrada();
-
         if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
         else $query->orderBy('id', 'desc');
 
