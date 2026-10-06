@@ -12,6 +12,10 @@ class Orcamento extends Model
     
     protected $guarded = ['id'];
 
+    public function avaliacoes()
+    {
+        return $this->hasMany(OrcamentoAvaliacao::class)->orderBy('created_at', 'desc');
+    }
     /**
      * Retorna o valor total do orçamento (Soma de todos os meses)
      */
