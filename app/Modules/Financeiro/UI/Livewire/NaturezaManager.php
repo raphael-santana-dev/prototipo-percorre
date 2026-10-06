@@ -36,8 +36,8 @@ class NaturezaManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('financeiro.natureza.listar'), 403, 'Acesso desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.listar'), 403);
+        //abort_if(!feature('financeiro.natureza.listar'), 403, 'Acesso desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.listar'), 403);
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
@@ -64,8 +64,8 @@ class NaturezaManager extends Component
 
     public function abrirModal()
     {
-        abort_if(!feature('financeiro.natureza.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.criar'), 403);
+        //abort_if(!feature('financeiro.natureza.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.criar'), 403);
 
         $this->resetInputFields();
         $this->modalAberto = true;
@@ -73,8 +73,8 @@ class NaturezaManager extends Component
 
     public function edit(int $id)
     {
-        abort_if(!feature('financeiro.natureza.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.editar'), 403);
+        //abort_if(!feature('financeiro.natureza.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.editar'), 403);
 
         $natureza = Natureza::findOrFail($id);
         
@@ -117,8 +117,8 @@ class NaturezaManager extends Component
 
     public function toggleDisponibilidade(int $id)
     {
-        abort_if(!feature('financeiro.natureza.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.editar'), 403);
+        //abort_if(!feature('financeiro.natureza.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.editar'), 403);
 
         $natureza = Natureza::findOrFail($id);
         $natureza->disponivel_orcamento = !$natureza->disponivel_orcamento;
@@ -130,8 +130,8 @@ class NaturezaManager extends Component
 
     public function excluir(int $id)
     {
-        abort_if(!feature('financeiro.natureza.excluir'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.excluir'), 403);
+        //abort_if(!feature('financeiro.natureza.excluir'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.excluir'), 403);
 
         $natureza = Natureza::findOrFail($id);
 

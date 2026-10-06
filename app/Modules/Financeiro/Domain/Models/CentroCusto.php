@@ -20,4 +20,11 @@ class CentroCusto extends Model
     protected $casts = [
         'disponivel_orcamento' => 'boolean',
     ];
+
+    public function users()
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'centro_custo_user')
+                    ->withPivot('expires_at')
+                    ->withTimestamps();
+    }
 }

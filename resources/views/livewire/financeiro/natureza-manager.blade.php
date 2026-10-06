@@ -7,11 +7,9 @@
         :breadcrumbs="$breadcrumbs">
 
         <x-slot name="actions">
-            @if(feature('financeiro.natureza.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.natureza.criar')))
                 <button wire:click="abrirModal" class="btn btn--primary btn--small">
                     <i class="ph ph-plus text-lg"></i> Nova Natureza
                 </button>
-            @endif
         </x-slot>
     </x-page-header>
 

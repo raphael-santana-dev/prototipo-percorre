@@ -70,6 +70,13 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_user');
     }
+
+    public function centros_de_custo()
+    {
+        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
+                    ->withPivot('expires_at')
+                    ->withTimestamps();
+    }
     
     
     public function temVisaoGlobal(?string $modulo = null): bool
