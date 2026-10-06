@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'cpf',
         'slug',
+        'codigo_protheus',
         'must_change_password'
     ];
 

@@ -26,6 +26,7 @@ class UserManager extends Component
 
     public string $name = '';
     public string $email = '';
+    public string $codigo_protheus = ''; // <-- NOVO CAMPO
     public string $password = '';
     public string $roleName = '';
     
@@ -113,6 +114,7 @@ class UserManager extends Component
         $rules = [
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),
+            'codigo_protheus' => 'nullable|string|max:50', // <-- NOVA VALIDAÇÃO
             'roleName' => 'required|string|exists:roles,name',
             'unidadesSelecionadas' => 'nullable|array',
             'cursosSelecionados' => 'nullable|array',
@@ -130,6 +132,7 @@ class UserManager extends Component
         $data = [
             'name' => $this->name,
             'email' => strtolower($this->email),
+            'codigo_protheus' => $this->codigo_protheus, // <-- INSERÇÃO NO BANCO
             'slug' => Str::slug($this->name),
         ];
 
@@ -166,6 +169,7 @@ class UserManager extends Component
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->codigo_protheus = $user->codigo_protheus ?? ''; // <-- CARREGA NO MODAL
         $this->password = ''; 
         
         $this->roleName = $user->roles->first()?->name ?? '';
@@ -200,6 +204,7 @@ class UserManager extends Component
     {
         $this->name = '';
         $this->email = '';
+        $this->codigo_protheus = ''; // <-- LIMPA O CAMPO
         $this->password = '';
         $this->roleName = '';
         $this->userId = null;
@@ -221,6 +226,7 @@ class UserManager extends Component
         $detalhes = [
             'Nome Completo' => $user->name,
             'E-mail' => $user->email,
+            'Código Protheus' => $user->codigo_protheus ?: 'Não vinculado', // <-- MOSTRA NO PAINEL RÁPIDO
             'Grupo Principal' => $user->roles->first()?->name ?? 'Sem grupo',
             'Unidades Vinculadas' => $unidadesStr,
             'Criado em' => $user->created_at->format('d/m/Y H:i'),

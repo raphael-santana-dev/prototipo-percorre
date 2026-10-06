@@ -138,6 +138,18 @@
                                 <input type="email" wire:model="email" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
                                 @error('email') <span class="text-xs font-bold text-red-500">{{ $message }}</span> @enderror
                             </div>
+                            <div class="mt-4">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Código Protheus (Opcional)
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="ph-bold ph-identification-card text-gray-400"></i>
+                                    </div>
+                                    <input type="text" wire:model="codigo_protheus" placeholder="Ex: 000123" class="w-full pl-10 text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+                                @error('codigo_protheus') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha {{ $isEditMode ? '(Opcional)' : '' }}</label>
                                 <input type="password" wire:model="password" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
