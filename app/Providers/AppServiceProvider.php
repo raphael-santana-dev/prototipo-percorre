@@ -182,6 +182,8 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('financeiro-aprovacao.manager',  \App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoManager::class);
         Livewire::component('financeiro-centrocusto.manager',  \App\Modules\Financeiro\UI\Livewire\CentroCustoManager::class);
         Livewire::component('financeiro-natureza.manager',  \App\Modules\Financeiro\UI\Livewire\NaturezaManager::class);
+        Livewire::component('financeiro.orcamentos.editor',  \App\Modules\Financeiro\UI\Livewire\OrcamentoEditor::class);
+        Livewire::component('financeiro.aprovacoes.editor',  \App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoEditor::class);
         Livewire::component('teste-rd.crm',  \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class);
         Livewire::component('teste-design',  \App\Modules\Teste\RDCrm\UI\Livewire\DesignSystemViewer::class);
 

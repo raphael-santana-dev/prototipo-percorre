@@ -147,6 +147,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/financeiro/aprovacoes', \App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoManager::class)->name('financeiro.aprovacoes');
     Route::get('/financeiro/centros-custo', \App\Modules\Financeiro\UI\Livewire\CentroCustoManager::class)->name('financeiro.centro_custo');
     Route::get('/financeiro/naturezas', \App\Modules\Financeiro\UI\Livewire\NaturezaManager::class)->name('financeiro.naturezas');
+    Route::get('/financeiro/orcamentos/{id}/editar', \App\Modules\Financeiro\UI\Livewire\OrcamentoEditor::class)->name('financeiro.orcamentos.editor');
+    Route::get('/financeiro/aprovacoes/{id}/avaliar', \App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoEditor::class)->name('financeiro.aprovacoes.editor');
 });
 
 Route::middleware('auth:web,student')->group(function () {
