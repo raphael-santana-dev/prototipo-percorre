@@ -119,14 +119,8 @@
                                                         <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
                                                         <div class="flex items-center gap-2 mt-0.5">
                                                             <span class="text-[10px] font-mono text-purpura-600">{{ $item->natureza_codigo ?: 'N/D' }}</span>
-                                                            @if($item->status === 'Reprovado')
-                                                                <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded uppercase">Reprovado</span>
-                                                            @elseif($item->status === 'Aprovado com ressalvas')
-                                                                <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded uppercase">Ressalvas</span>
-                                                            @elseif($item->status === 'Aprovado')
-                                                                <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Aprovado</span>
-                                                            @elseif($item->status === 'Corrigido')
-                                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
+                                                            @if($item->status === 'Corrigido')
+                                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i> Re-Analisar</span>
                                                             @endif
                                                         </div>
                                                     </div>
@@ -143,7 +137,7 @@
                                                 @endforeach
                                                 <td class="p-3 text-right text-xs font-black bg-emerald-50/30 text-gray-900">{{ number_format($totalLinha, 2, ',', '.') }}</td>
                                                 
-                                                {{-- BOTÕES DE APROVAÇÃO POR LINHA (COM BLOQUEIO VISUAL) --}}
+                                                {{-- BOTÕES DE APROVAÇÃO E DECISÃO --}}
                                                 <td class="p-2 border-l border-gray-200 bg-gray-50/50">
                                                     @if(in_array($item->status, ['Criado', 'Corrigido']))
                                                         <div class="flex items-center gap-1 justify-center">
@@ -152,8 +146,14 @@
                                                             <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded shadow-sm border border-red-200 bg-white transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
                                                         </div>
                                                     @else
-                                                        <div class="text-center text-gray-400">
-                                                            <span class="text-[10px] font-bold uppercase"><i class="ph-bold ph-lock-key"></i> Avaliado</span>
+                                                        <div class="flex justify-center items-center">
+                                                            @if($item->status === 'Aprovado')
+                                                                <span class="text-[10px] font-bold uppercase text-emerald-600 flex items-center gap-1"><i class="ph-bold ph-check"></i> Aprovado</span>
+                                                            @elseif($item->status === 'Aprovado com ressalvas')
+                                                                <span class="text-[10px] font-bold uppercase text-yellow-600 flex items-center gap-1"><i class="ph-bold ph-warning"></i> Ressalvas</span>
+                                                            @elseif($item->status === 'Reprovado')
+                                                                <span class="text-[10px] font-bold uppercase text-red-600 flex items-center gap-1"><i class="ph-bold ph-x"></i> Reprovado</span>
+                                                            @endif
                                                         </div>
                                                     @endif
                                                 </td>
@@ -164,22 +164,79 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- COLUNA DIREITA: Histórico e Ações em Lote --}}
+                    <div class="w-full md:w-96 bg-gray-50 flex flex-col border-l border-gray-200 shrink-0">
+                        <div class="p-5 border-b border-gray-200 bg-white shrink-0"><h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico de Análise</h3></div>
+                        <div class="flex-1 overflow-y-auto p-5 custom-scrollbar space-y-6 relative">
+                            <div class="absolute left-7 top-0 bottom-0 w-px bg-gray-200"></div>
+                            
+                            @php
+                                // Como agora os logs estão nas linhas, unimos todos para mostrar na timeline
+                                $todasAvaliacoes = collect();
+                                foreach($orcamentoSelecionado->itens as $itemLinha) {
+                                    foreach($itemLinha->avaliacoes as $aval) {
+                                        $aval->natureza_codigo = $itemLinha->natureza_codigo;
+                                        $todasAvaliacoes->push($aval);
+                                    }
+                                }
+                                $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
+                            @endphp
+
+                            @forelse($todasAvaliacoes as $aval)
+                                @php $corPonto = match($aval->status_aplicado) { 'Aprovado' => 'bg-emerald-500', 'Aprovado com ressalvas' => 'bg-yellow-500', 'Reprovado' => 'bg-red-500', default => 'bg-gray-500' }; @endphp
+                                <div class="relative pl-8">
+                                    <div class="absolute w-3 h-3 rounded-full {{ $corPonto }} border-2 border-white left-[-5px] top-1 shadow-sm"></div>
+                                    <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-xs font-black">{{ $aval->user_nome }}</span>
+                                            <span class="text-[9px] font-bold text-gray-400">{{ $aval->created_at->format('d/m H:i') }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-[10px] font-bold uppercase {{ str_contains($aval->status_aplicado, 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval->status_aplicado }}</span>
+                                            <span class="text-[9px] text-gray-400 font-mono">({{ $aval->natureza_codigo }})</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">"{{ $aval->comentario }}"</p>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center py-10 relative z-10"><i class="ph-fill ph-chat-slash text-4xl text-gray-300 mb-2"></i><p class="text-xs font-bold text-gray-400 uppercase">Nenhuma avaliação.</p></div>
+                            @endforelse
+                        </div>
+
+                        {{-- PAINEL DE DECISÃO EM LOTE (APENAS PARA PENDENTES) --}}
+                        <div class="p-4 bg-white border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase text-center mb-3 tracking-widest">Avaliar em Lote (Pendentes)</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button wire:click="abrirModalAvaliacaoLote('Aprovado')" class="py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition shadow-sm">Aprovar Todos</button>
+                                <button wire:click="abrirModalAvaliacaoLote('Reprovado')" class="py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition shadow-sm">Reprovar Todos</button>
+                                <button wire:click="abrirModalAvaliacaoLote('Aprovado com ressalvas')" class="col-span-2 py-2.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-bold hover:bg-yellow-500 hover:text-white transition shadow-sm">Aprovar com Ressalvas (Todos)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     @endif
 
-    {{-- MODAL DE COMENTÁRIO DO APROVADOR PARA O ITEM --}}
+    {{-- MODAL SECUNDÁRIO: COMENTÁRIO DO APROVADOR --}}
     @if($modalAvaliacaoAberto ?? false)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
                 <h3 class="text-lg font-black text-gray-900 mb-1 flex items-center gap-2"><i class="ph-fill ph-chat-centered-text text-purpura-500"></i> Justificativa de Decisão</h3>
-                <p class="text-xs text-gray-500 mb-4">Avaliando a Natureza como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>. O gestor receberá este feedback.</p>
-                <textarea wire:model="comentarioAvaliacao" rows="4" class="w-full rounded-xl border-gray-300 bg-gray-50 text-sm focus:ring-purpura-500" placeholder="Digite as diretrizes de correção para este item..."></textarea>
+                <p class="text-xs text-gray-500 mb-4">
+                    @if($isAvaliacaoLote)
+                        Avaliando <strong>TODOS OS ITENS PENDENTES</strong> como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
+                    @else
+                        Avaliando a Natureza como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
+                    @endif
+                    O gestor receberá este feedback.
+                </p>
+                <textarea wire:model="comentarioAvaliacao" rows="4" class="w-full rounded-xl border-gray-300 bg-gray-50 text-sm focus:ring-purpura-500" placeholder="Digite as diretrizes de correção..."></textarea>
                 @error('comentarioAvaliacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalAvaliacaoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="confirmarAvaliacaoItem" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm">Confirmar Decisão da Linha</button>
+                    <button wire:click="confirmarAvaliacao" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm">Confirmar Decisão</button>
                 </div>
             </div>
         </div>

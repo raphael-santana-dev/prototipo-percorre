@@ -24,10 +24,13 @@ class OrcamentoAprovacaoManager extends Component
     public bool $modalAberto = false;
     public ?Orcamento $orcamentoSelecionado = null;
 
+    // --- VARIÁVEIS DA AVALIAÇÃO POR ITEM / LOTE ---
     public bool $modalAvaliacaoAberto = false;
+    public bool $isAvaliacaoLote = false;
     public ?int $linhaParaAvaliar = null;
     public string $statusAvaliacao = '';
     public string $comentarioAvaliacao = '';
+    // ----------------------------------------------
 
     public array $breadcrumbs = [];
 
@@ -71,59 +74,89 @@ class OrcamentoAprovacaoManager extends Component
         $this->orcamentoSelecionado = null;
     }
 
+    // Abre modal para UMA linha
     public function abrirModalAvaliacaoItem($itemId, $statusDesejado)
     {
         $item = OrcamentoItem::find($itemId);
         
-        // Trava de segurança: impede que a diretoria reavalie itens que já foram julgados neste ciclo
         if (in_array($item->status, ['Aprovado', 'Aprovado com ressalvas', 'Reprovado'])) {
             $this->dispatch('erro', msg: 'Este item já foi avaliado e não pode ser alterado até que o gestor o reenvie.');
             return;
         }
 
+        $this->isAvaliacaoLote = false;
         $this->linhaParaAvaliar = $itemId;
         $this->statusAvaliacao = $statusDesejado;
         $this->comentarioAvaliacao = '';
         $this->modalAvaliacaoAberto = true;
     }
 
-    public function confirmarAvaliacaoItem()
+    // Abre modal para TODAS as linhas pendentes
+    public function abrirModalAvaliacaoLote($statusDesejado)
+    {
+        $this->isAvaliacaoLote = true;
+        $this->linhaParaAvaliar = null;
+        $this->statusAvaliacao = $statusDesejado;
+        $this->comentarioAvaliacao = '';
+        $this->modalAvaliacaoAberto = true;
+    }
+
+    // Processa a avaliação (seja de 1 item ou de todos)
+    public function confirmarAvaliacao()
     {
         $this->validate(
             ['comentarioAvaliacao' => 'required|string|min:5'], 
             ['comentarioAvaliacao.required' => 'A justificativa é obrigatória para comunicar a decisão ao gestor.']
         );
 
-        $item = OrcamentoItem::findOrFail($this->linhaParaAvaliar);
-        
-        $item->update(['status' => $this->statusAvaliacao]);
+        if ($this->isAvaliacaoLote) {
+            $itensPendentes = $this->orcamentoSelecionado->itens()->whereIn('status', ['Criado', 'Corrigido'])->get();
+            
+            if ($itensPendentes->isEmpty()) {
+                $this->dispatch('erro', msg: 'Não há naturezas pendentes de avaliação neste orçamento.');
+                $this->modalAvaliacaoAberto = false;
+                return;
+            }
 
-        OrcamentoAvaliacao::create([
-            'orcamento_item_id' => $item->id,
-            'user_id' => auth()->id(),
-            'user_nome' => auth()->user()->name,
-            'status_aplicado' => $this->statusAvaliacao,
-            'comentario' => $this->comentarioAvaliacao
-        ]);
+            foreach ($itensPendentes as $item) {
+                $item->update(['status' => $this->statusAvaliacao]);
+                OrcamentoAvaliacao::create([
+                    'orcamento_item_id' => $item->id,
+                    'user_id' => auth()->id(),
+                    'user_nome' => auth()->user()->name,
+                    'status_aplicado' => $this->statusAvaliacao,
+                    'comentario' => $this->comentarioAvaliacao
+                ]);
+            }
+        } else {
+            $item = OrcamentoItem::findOrFail($this->linhaParaAvaliar);
+            $item->update(['status' => $this->statusAvaliacao]);
+            OrcamentoAvaliacao::create([
+                'orcamento_item_id' => $item->id,
+                'user_id' => auth()->id(),
+                'user_nome' => auth()->user()->name,
+                'status_aplicado' => $this->statusAvaliacao,
+                'comentario' => $this->comentarioAvaliacao
+            ]);
+        }
 
         // INTELIGÊNCIA DE STATUS GLOBAL DO ORÇAMENTO
-        $orcamento = $item->orcamento;
+        $orcamento = $this->orcamentoSelecionado;
         
         $temReprovado = $orcamento->itens()->whereIn('status', ['Reprovado', 'Aprovado com ressalvas'])->exists();
         $temPendente = $orcamento->itens()->whereIn('status', ['Criado', 'Corrigido'])->exists();
 
         if ($temReprovado) {
-            // Se reprovou 1 único item, o orçamento global volta para o Gestor corrigir
             $orcamento->update(['status' => 'Em elaboração']);
         } elseif (!$temPendente) {
-            // Se não há mais pendentes e nenhum reprovado, o orçamento global está 100% Aprovado
             $orcamento->update(['status' => 'Aprovado']);
         }
 
         $this->modalAvaliacaoAberto = false;
-        $this->dispatch('sucesso', msg: "Linha avaliada como {$this->statusAvaliacao}.");
+        $msg = $this->isAvaliacaoLote ? "Todos os itens pendentes avaliados como {$this->statusAvaliacao}." : "Linha avaliada como {$this->statusAvaliacao}.";
+        $this->dispatch('sucesso', msg: $msg);
         
-        // Recarrega os dados do modal
+        // Recarrega a view
         $this->abrirModalDetalhes($orcamento->id);
     }
 

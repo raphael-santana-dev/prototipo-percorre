@@ -306,7 +306,7 @@
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalNovaNaturezaAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button wire:click="salvarNovaNatureza" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">Cadastrar e Usar</button>
-                </div>
+                </div>\
             </div>
         </div>
     @endif
