@@ -1,7 +1,7 @@
-<div class="min-h-screen bg-gray-50 flex flex-col font-sans" x-data="{ timelineAberta: true }">
+<div class="w-full bg-gray-50 flex flex-col font-sans" x-data="{ timelineAberta: true }">
     
-    {{-- BARRA SUPERIOR (HEADER) --}}
-    <div class="bg-white border-b border-gray-300 shadow-sm px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+    {{-- BARRA SUPERIOR (HEADER FIXO) --}}
+    <div class="bg-white border-b border-gray-300 shadow-sm px-6 py-3 flex items-center justify-between z-50 shrink-0">
         <div class="flex items-center gap-4">
             <button wire:click="voltar" class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition" title="Voltar à Listagem"><i class="ph-bold ph-arrow-left"></i></button>
             <div class="border-l border-gray-300 pl-4">
@@ -32,132 +32,157 @@
         </div>
     </div>
 
-    <div class="flex flex-1 overflow-hidden relative">
+    {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR (COM ALTURA FIXA E SCROLLS INTERNOS) --}}
+    <div class="flex flex-1 w-full overflow-hidden relative" style="height: calc(100vh - 130px); min-height: 400px;">
         
         {{-- ÁREA DA PLANILHA EXCEL (LEITURA) --}}
-        <div class="flex-1 overflow-auto custom-scrollbar p-4 transition-all duration-300" :class="timelineAberta ? 'pr-[380px]' : ''">
+        <div class="flex-1 overflow-auto custom-scrollbar p-4 transition-all duration-300 relative" :class="timelineAberta ? 'pr-[390px]' : ''">
             
-            <div class="mb-4 bg-white border border-gray-300 p-3 shadow-sm flex items-center gap-3">
+            <div class="mb-4 bg-white border border-gray-300 p-3 shadow-sm flex items-center gap-3 rounded-lg">
                 <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa do Gestor:</label>
                 <div class="w-full text-sm bg-gray-50 px-3 py-1.5 text-gray-600 italic border border-gray-200 rounded">
-                    {{ $orcamento->descricao_despesa ?: 'Nenhuma observação geral enviada.' }}
+                    {{ $orcamento->descricao_despesa ?: 'Nenhuma observação geral enviada pelo Gestor.' }}
                 </div>
             </div>
 
-            <div class="bg-white border border-gray-400 shadow-sm relative">
-                <table class="w-full border-collapse text-left whitespace-nowrap table-fixed min-w-[1800px]">
-                    <thead>
-                        <tr>
-                            <th class="w-[280px] border border-gray-300 bg-gray-100 p-2 text-[10px] font-black text-gray-700 uppercase tracking-wider sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
-                            <th class="w-[200px] border border-gray-300 bg-gray-100 p-2 text-[10px] font-black text-gray-700 uppercase tracking-wider sticky left-[280px] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Anotações da Linha</th>
-                            @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
-                            @foreach($meses as $mes)
-                                <th class="w-[100px] border border-gray-300 bg-gray-100 p-2 text-[10px] font-black text-gray-700 uppercase tracking-wider text-right">
-                                    {{ $mes }}
-                                </th>
-                            @endforeach
-                            <th class="w-[120px] border border-gray-300 bg-emerald-100 p-2 text-[10px] font-black text-emerald-800 uppercase tracking-wider text-right">Total Linha</th>
-                            <th class="w-[160px] border border-gray-300 bg-gray-100 p-2 text-center text-[10px] font-black text-gray-700 uppercase">Decisão</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php $totalGeral = 0; @endphp
-                        @foreach($orcamento->itens as $item)
-                            @php
-                                $bgRow = match($item->status) {
-                                    'Aprovado' => 'bg-emerald-50/40',
-                                    'Reprovado' => 'bg-red-50/40',
-                                    'Aprovado com ressalvas' => 'bg-yellow-50/40',
-                                    default => 'hover:bg-gray-50'
-                                };
-                            @endphp
-                            <tr class="transition-colors {{ $bgRow }}">
+            <div class="bg-white border-t border-l border-gray-300 shadow-sm relative overflow-hidden rounded-tl-lg">
+                <div class="overflow-x-auto custom-scrollbar pb-2">
+                    <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0">
+                        <thead>
+                            <tr>
+                                <th class="w-[300px] sticky left-0 z-40 bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
+                                <th class="w-[200px] sticky left-[300px] z-40 bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Anotações da Linha</th>
                                 
-                                {{-- COLUNA 1: NATUREZA (FIXA) --}}
-                                <td class="border border-gray-300 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-0 {{ $bgRow === 'hover:bg-gray-50' ? '' : '!bg-transparent' }}">
-                                    <div class="px-2 py-1.5 flex flex-col justify-center h-full">
-                                        <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
-                                        <div class="flex items-center gap-2 mt-0.5">
-                                            <span class="text-[9px] font-mono text-gray-500">{{ $item->natureza_codigo ?: 'N/D' }}</span>
-                                            @if($item->status === 'Corrigido')
-                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1 py-0.5 uppercase flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
-                                <td class="border border-gray-300 bg-white sticky left-[280px] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] p-0 {{ $bgRow === 'hover:bg-gray-50' ? '' : '!bg-transparent' }}">
-                                    <div class="w-full h-full px-2 py-2 text-[11px] text-gray-600 truncate bg-transparent" title="{{ $item->descricao }}">
-                                        {{ $item->descricao ?: '-' }}
-                                    </div>
-                                </td>
-
-                                {{-- COLUNAS DOS MESES --}}
-                                @php $totalLinha = 0; @endphp
-                                @foreach($meses as $sigla)
-                                    @php
-                                        $valorMes = (float)($item->{"valor_$sigla"} ?? 0);
-                                        $totalLinha += $valorMes;
-                                    @endphp
-                                    <td class="border border-gray-300 p-2 text-right text-xs font-medium {{ $valorMes == 0 ? 'text-gray-400' : 'text-gray-900' }}">
-                                        {{ number_format($valorMes, 2, ',', '.') }}
-                                    </td>
+                                @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
+                                @foreach($meses as $mes)
+                                    <th class="w-[140px] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider text-right border-b border-r border-gray-300">
+                                        {{ $mes }}
+                                    </th>
                                 @endforeach
-
-                                {{-- COLUNA TOTAL E AÇÕES DE APROVAÇÃO --}}
-                                @php $totalGeral += $totalLinha; @endphp
-                                <td class="border border-gray-300 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 select-none">
-                                    {{ number_format($totalLinha, 2, ',', '.') }}
-                                </td>
                                 
-                                <td class="border border-gray-300 p-1 bg-gray-50/50">
-                                    @if(in_array($item->status, ['Criado', 'Corrigido']))
-                                        <div class="flex items-center gap-1 justify-center">
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1 text-emerald-600 hover:bg-emerald-100 rounded border border-emerald-200 bg-white shadow-sm transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1 text-yellow-600 hover:bg-yellow-100 rounded border border-yellow-200 bg-white shadow-sm transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1 text-red-600 hover:bg-red-100 rounded border border-red-200 bg-white shadow-sm transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
-                                        </div>
-                                    @else
-                                        <div class="flex justify-center items-center h-full">
-                                            @if($item->status === 'Aprovado')
-                                                <span class="text-[10px] font-bold uppercase text-emerald-600 flex items-center gap-1"><i class="ph-bold ph-check"></i> Aprovado</span>
-                                            @elseif($item->status === 'Aprovado com ressalvas')
-                                                <span class="text-[10px] font-bold uppercase text-yellow-600 flex items-center gap-1"><i class="ph-bold ph-warning"></i> Ressalvas</span>
-                                            @elseif($item->status === 'Reprovado')
-                                                <span class="text-[10px] font-bold uppercase text-red-600 flex items-center gap-1"><i class="ph-bold ph-x"></i> Reprovado</span>
-                                            @endif
-                                        </div>
-                                    @endif
-                                </td>
+                                <th class="w-[120px] bg-emerald-100 p-3 text-[10px] font-black text-emerald-800 uppercase tracking-wider text-right border-b border-r border-gray-300">Total Linha</th>
+                                <th class="w-[160px] bg-gray-100 p-3 text-center border-b border-r border-gray-300 text-[10px] font-black text-gray-700 uppercase tracking-wider">Decisão</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        @php
-                            $totaisMensais = [];
-                            foreach($meses as $sigla) $totaisMensais[$sigla] = $orcamento->itens->sum("valor_$sigla");
-                        @endphp
-                        <tr class="bg-gray-200 border-t-2 border-gray-400">
-                            <td colspan="2" class="border border-gray-300 p-2 sticky left-0 z-20 bg-gray-200 text-left">
-                                <span class="text-[11px] font-black text-gray-800 uppercase tracking-widest ml-2">Total Solicitado</span>
-                            </td>
-                            @foreach($meses as $sigla)
-                                <td class="border border-gray-300 p-2 text-right text-xs font-black text-gray-900">{{ number_format($totaisMensais[$sigla], 2, ',', '.') }}</td>
+                        </thead>
+                        <tbody>
+                            @php $totalGeral = 0; @endphp
+                            @foreach($orcamento->itens as $item)
+                                @php
+                                    $bgRow = match($item->status) {
+                                        'Aprovado' => 'bg-emerald-50/40',
+                                        'Reprovado' => 'bg-red-50/40',
+                                        'Aprovado com ressalvas' => 'bg-yellow-50/40',
+                                        default => 'hover:bg-gray-50'
+                                    };
+                                @endphp
+                                <tr class="transition-colors {{ $bgRow }}">
+                                    
+                                    {{-- COLUNA 1: NATUREZA (FIXA) --}}
+                                    <td class="sticky left-0 z-30 border-b border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] p-2 align-top {{ $bgRow === 'hover:bg-gray-50' ? 'bg-white' : 'bg-transparent' }}">
+                                        <div class="flex flex-col mt-1 px-1">
+                                            <span class="text-xs font-bold text-gray-900 truncate w-[280px]" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="text-[10px] font-mono text-gray-500">{{ $item->natureza_codigo ?: 'N/D' }}</span>
+                                                @if($item->status === 'Corrigido')
+                                                    <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
+                                    <td class="sticky left-[300px] z-30 border-b border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] p-2 align-top {{ $bgRow === 'hover:bg-gray-50' ? 'bg-white' : 'bg-transparent' }}">
+                                        <div class="w-full h-full px-2 py-2 text-[11px] text-gray-600 truncate bg-transparent" title="{{ $item->descricao }}">
+                                            {{ $item->descricao ?: '-' }}
+                                        </div>
+                                    </td>
+
+                                    {{-- COLUNAS DOS MESES --}}
+                                    @php $totalLinha = 0; @endphp
+                                    @foreach($meses as $sigla)
+                                        @php
+                                            $valorMes = (float)($item->{"valor_$sigla"} ?? 0);
+                                            $previsto = (float)($item->{"previsto_$sigla"} ?? 0);
+                                            $totalLinha += $valorMes;
+                                            
+                                            $diferenca = $valorMes - $previsto;
+                                            $percentual = $previsto > 0 ? ($diferenca / $previsto) * 100 : ($valorMes > 0 ? 100 : 0);
+                                            $sinal = $diferenca > 0 ? '+' : '';
+                                            $corDiff = $diferenca > 0 ? 'text-red-500' : ($diferenca < 0 ? 'text-emerald-500' : 'text-gray-400');
+                                        @endphp
+                                        <td class="border-b border-r border-gray-200 p-2 align-top transition-colors">
+                                            <div class="w-full text-xs text-right font-bold text-gray-900 border border-gray-200 bg-white/70 rounded p-1.5 {{ $valorMes == 0 ? 'text-gray-400' : '' }}">
+                                                {{ number_format($valorMes, 2, ',', '.') }}
+                                            </div>
+                                            
+                                            <div class="mt-2 flex flex-col items-end justify-center text-[9px] font-medium leading-tight space-y-0.5">
+                                                <span class="text-gray-500">Previsto: R$ {{ number_format($previsto, 2, ',', '.') }}</span>
+                                                @if($diferenca != 0)
+                                                    <span class="{{ $corDiff }} font-bold bg-white/50 px-1.5 py-0.5 rounded flex items-center justify-end w-full">
+                                                        {{ $sinal }}R$ {{ number_format($diferenca, 2, ',', '.') }} 
+                                                        <span class="ml-1 opacity-70">({{ $sinal }}{{ number_format($percentual, 1, ',', '.') }}%)</span>
+                                                    </span>
+                                                @else
+                                                    <span class="text-gray-300 px-1.5 py-0.5">S/ Alteração</span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    @endforeach
+
+                                    {{-- COLUNA TOTAL E AÇÕES DE APROVAÇÃO --}}
+                                    @php $totalGeral += $totalLinha; @endphp
+                                    <td class="border-b border-r border-gray-200 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3">
+                                        {{ number_format($totalLinha, 2, ',', '.') }}
+                                    </td>
+                                    
+                                    <td class="border-b border-r border-gray-200 p-2 align-top pt-3 {{ $bgRow === 'hover:bg-gray-50' ? 'bg-gray-50/50' : 'bg-transparent' }}">
+                                        @if(in_array($item->status, ['Criado', 'Corrigido']))
+                                            <div class="flex items-center gap-1 justify-center">
+                                                <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded border border-emerald-200 bg-white shadow-sm transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
+                                                <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1.5 text-yellow-600 hover:bg-yellow-100 rounded border border-yellow-200 bg-white shadow-sm transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
+                                                <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1.5 text-red-600 hover:bg-red-100 rounded border border-red-200 bg-white shadow-sm transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
+                                            </div>
+                                        @else
+                                            <div class="flex justify-center items-center h-full">
+                                                @if($item->status === 'Aprovado')
+                                                    <span class="text-[10px] font-bold uppercase text-emerald-600 flex items-center gap-1"><i class="ph-bold ph-check"></i> Aprovado</span>
+                                                @elseif($item->status === 'Aprovado com ressalvas')
+                                                    <span class="text-[10px] font-bold uppercase text-yellow-600 flex items-center gap-1"><i class="ph-bold ph-warning"></i> Ressalvas</span>
+                                                @elseif($item->status === 'Reprovado')
+                                                    <span class="text-[10px] font-bold uppercase text-red-600 flex items-center gap-1"><i class="ph-bold ph-x"></i> Reprovado</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </td>
+                                </tr>
                             @endforeach
-                            <td class="border border-gray-300 bg-emerald-200 p-2 text-right text-sm font-black text-emerald-900">{{ number_format($totalGeral, 2, ',', '.') }}</td>
-                            <td class="border border-gray-300"></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </tbody>
+                        <tfoot>
+                            @php
+                                $totaisMensais = [];
+                                foreach($meses as $sigla) $totaisMensais[$sigla] = $orcamento->itens->sum("valor_$sigla");
+                            @endphp
+                            <tr class="bg-gray-200 border-t-2 border-gray-400">
+                                <td colspan="2" class="border-b border-r border-gray-300 p-3 sticky left-0 z-40 bg-gray-200 text-left">
+                                    <span class="text-[11px] font-black text-gray-800 uppercase tracking-widest pl-2">Total Solicitado</span>
+                                </td>
+                                @foreach($meses as $sigla)
+                                    <td class="border-b border-r border-gray-300 p-3 text-right text-xs font-black text-gray-900">{{ number_format($totaisMensais[$sigla], 2, ',', '.') }}</td>
+                                @endforeach
+                                <td class="border-b border-r border-gray-300 bg-emerald-200 p-3 text-right text-sm font-black text-emerald-900">{{ number_format($totalGeral, 2, ',', '.') }}</td>
+                                <td class="border-b border-r border-gray-300 bg-gray-200"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
 
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E AÇÕES EM LOTE --}}
-        <div x-show="timelineAberta" x-transition x-cloak class="w-[380px] bg-white border-l border-gray-300 shadow-2xl flex flex-col absolute right-0 top-0 bottom-0 z-30 transition-transform">
+        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E AÇÕES EM LOTE (COM SCROLL INTERNO) --}}
+        <div x-show="timelineAberta" x-transition x-cloak class="w-[380px] bg-white border-l border-gray-300 shadow-2xl flex flex-col absolute right-0 top-0 bottom-0 z-50">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
-                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700"><i class="ph-bold ph-x text-lg"></i></button>
+                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition" title="Fechar Histórico"><i class="ph-bold ph-x text-lg"></i></button>
             </div>
             
             <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
@@ -199,7 +224,7 @@
                 @endforelse
             </div>
 
-            {{-- PAINEL DE DECISÃO EM LOTE (Rodapé da Sidebar) --}}
+            {{-- PAINEL DE DECISÃO EM LOTE (Rodapé da Sidebar Fixo) --}}
             <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <p class="text-[10px] font-bold text-gray-500 uppercase text-center mb-3 tracking-widest">Avaliar Pendentes em Lote</p>
                 <div class="grid grid-cols-2 gap-2">

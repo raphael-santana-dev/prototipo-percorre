@@ -1,7 +1,7 @@
-<div class="min-h-screen bg-gray-50 flex flex-col font-sans" x-data="{ timelineAberta: false }">
+<div class="w-full bg-gray-50 flex flex-col font-sans" x-data="{ timelineAberta: false }">
     
-    {{-- BARRA SUPERIOR (HEADER) --}}
-    <div class="bg-white border-b border-gray-300 shadow-sm px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    {{-- BARRA SUPERIOR (HEADER FIXO) --}}
+    <div class="bg-white border-b border-gray-300 shadow-sm px-6 py-3 flex items-center justify-between z-50 shrink-0">
         <div class="flex items-center gap-4">
             <button wire:click="voltar" class="w-8 h-8 flex items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition"><i class="ph-bold ph-arrow-left"></i></button>
             <div class="border-l border-gray-300 pl-4">
@@ -27,7 +27,7 @@
                 <span class="text-sm font-black uppercase {{ $statusColor }}">{{ $orcamento->status }}</span>
             </div>
 
-            <button @click="timelineAberta = !timelineAberta" class="btn btn--secondary btn--small !text-gray-700 !border-gray-300 hover:!bg-gray-100">
+            <button @click="timelineAberta = !timelineAberta" class="btn btn--secondary btn--small !text-gray-700 !border-gray-300 hover:!bg-gray-100" :class="timelineAberta ? 'bg-gray-200' : ''">
                 <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
             </button>
 
@@ -42,10 +42,11 @@
         </div>
     </div>
 
-    <div class="flex flex-1 overflow-hidden relative">
+    {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR (COM ALTURA FIXA E SCROLLS INTERNOS) --}}
+    <div class="flex flex-1 w-full overflow-hidden relative" style="height: calc(100vh - 130px); min-height: 400px;">
         
-        {{-- ÁREA DA PLANILHA EXCEL --}}
-        <div class="flex-1 overflow-auto custom-scrollbar p-4 transition-all duration-300" :class="timelineAberta ? 'pr-[330px]' : ''">
+        {{-- CONTAINER DA PLANILHA EXCEL --}}
+        <div class="flex-1 overflow-auto custom-scrollbar p-4 transition-all duration-300 relative" :class="timelineAberta ? 'pr-[340px]' : ''">
             
             <div class="mb-4 bg-white border border-gray-300 p-3 shadow-sm rounded-lg flex items-center gap-3">
                 <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa Global:</label>
@@ -54,7 +55,6 @@
 
             <div class="bg-white border-t border-l border-gray-300 shadow-sm relative overflow-hidden rounded-tl-lg">
                 <div class="overflow-x-auto custom-scrollbar pb-2">
-                    {{-- BORDAS SEPARADAS: resolve o problema de sobreposição visual nos elementos 'sticky' --}}
                     <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0">
                         <thead>
                             <tr>
@@ -76,8 +76,6 @@
                             @php $totalGeral = 0; @endphp
                             @foreach($itensOrcamento as $index => $item)
                                 <tr class="group hover:bg-blue-50/40 transition-colors">
-                                    
-                                    {{-- COLUNA 1: NATUREZA (FIXA) --}}
                                     <td class="sticky left-0 z-30 bg-white group-hover:bg-blue-50 border-b border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] p-2 align-top transition-colors">
                                         @if(!empty($item['id']))
                                             <div class="flex flex-col mt-1">
@@ -101,12 +99,10 @@
                                         @endif
                                     </td>
 
-                                    {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
                                     <td class="sticky left-[300px] z-30 bg-white group-hover:bg-blue-50 border-b border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] p-2 align-top transition-colors">
                                         <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 resize-none" placeholder="Anotações para a diretoria..." @if($isLockedGlobal) disabled @endif></textarea>
                                     </td>
 
-                                    {{-- COLUNAS DOS MESES --}}
                                     @php $totalLinha = 0; @endphp
                                     @foreach($meses as $sigla)
                                         @php
@@ -115,19 +111,19 @@
                                             $previsto = (float)($item["previsto_$sigla"] ?? 0);
                                             $totalLinha += $valorMes;
                                             
-                                            // Cálculos de Diferença
                                             $diferenca = $valorMes - $previsto;
                                             $percentual = $previsto > 0 ? ($diferenca / $previsto) * 100 : ($valorMes > 0 ? 100 : 0);
                                             $sinal = $diferenca > 0 ? '+' : '';
                                             $corDiff = $diferenca > 0 ? 'text-red-500' : ($diferenca < 0 ? 'text-emerald-500' : 'text-gray-400');
                                         @endphp
                                         <td class="border-b border-r border-gray-200 p-2 align-top {{ $isDisabled ? 'bg-gray-50' : 'bg-white group-hover:bg-blue-50/40' }} transition-colors">
-                                            
+                                            @if($previsto > 0 && $previsto != $valorMes)
+                                                <div class="absolute top-0.5 right-1 text-[8px] font-bold text-gray-400 select-none">B: {{ number_format($previsto, 0, '', '') }}</div>
+                                            @endif
                                             <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs text-right font-bold text-gray-900 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5" @if($isDisabled) disabled @endif>
                                             
                                             <div class="mt-2 flex flex-col items-end justify-center text-[9px] font-medium leading-tight space-y-0.5">
                                                 <span class="text-gray-500">Previsto: R$ {{ number_format($previsto, 2, ',', '.') }}</span>
-                                                
                                                 @if($diferenca != 0)
                                                     <span class="{{ $corDiff }} font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-100 flex items-center justify-end w-full">
                                                         {{ $sinal }}R$ {{ number_format($diferenca, 2, ',', '.') }} 
@@ -140,9 +136,8 @@
                                         </td>
                                     @endforeach
 
-                                    {{-- COLUNA TOTAL E AÇÕES --}}
                                     @php $totalGeral += $totalLinha; @endphp
-                                    <td class="border-b border-r border-gray-200 bg-emerald-50/50 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3">
+                                    <td class="border-b border-r border-gray-200 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3">
                                         {{ number_format($totalLinha, 2, ',', '.') }}
                                     </td>
                                     <td class="border-b border-r border-gray-200 bg-white group-hover:bg-blue-50 p-1 text-center align-top pt-3">
@@ -151,7 +146,7 @@
                                                 <button type="button" @click="timelineAberta = true" class="text-orange-500 hover:text-orange-700 p-1 bg-orange-50 hover:bg-orange-100 rounded transition" title="Ver feedback da Diretoria"><i class="ph-fill ph-warning-circle text-lg"></i></button>
                                             @endif
                                             @if(!$isLockedGlobal)
-                                                <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-lg"></i></button>
+                                                <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover"><i class="ph-bold ph-trash text-lg"></i></button>
                                             @endif
                                         </div>
                                     </td>
@@ -184,11 +179,11 @@
             </div>
         </div>
 
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES (TOGGLE) --}}
+        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES (COM SCROLL INTERNO) --}}
         <div x-show="timelineAberta" x-transition x-cloak class="w-[330px] bg-white border-l border-gray-300 shadow-2xl flex flex-col absolute right-0 top-0 bottom-0 z-50">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
-                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition"><i class="ph-bold ph-x text-lg"></i></button>
+                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition" title="Fechar Histórico"><i class="ph-bold ph-x text-lg"></i></button>
             </div>
             
             <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
@@ -232,32 +227,25 @@
                 @endforelse
             </div>
         </div>
-
     </div>
 
     {{-- BOTÃO FLUTUANTE (NOVA NATUREZA) --}}
     @if(!$isLockedGlobal)
-        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-8 right-8 z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-2xl bg-purpura-600 hover:bg-purpura-700 text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
-            <i class="ph-bold ph-plus text-2xl"></i>
+        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
+            <i class="ph-bold ph-plus text-xl"></i>
         </button>
     @endif
 
     {{-- MODAL CADASTRAR NOVA NATUREZA --}}
     @if($modalNovaNaturezaAberto)
         <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-gray-200">
-                <h3 class="text-lg font-black text-gray-900 mb-2 flex items-center gap-2"><i class="ph-fill ph-plus-circle text-purpura-500"></i> Nova Natureza</h3>
-                <p class="text-xs text-gray-500 mb-4">Insira o nome da nova categoria de despesa. O código será gerado automaticamente.</p>
-                
-                <div class="mb-5">
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-1">Nome / Descrição <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="novaNaturezaDescricao" class="w-full text-sm border-gray-300 bg-gray-50 rounded-lg focus:border-purpura-500 focus:ring-purpura-500 px-3 py-2" placeholder="Ex: Equipamentos de TI...">
-                    @error('novaNaturezaDescricao') <span class="text-red-500 text-[10px] font-bold block mt-1">{{ $message }}</span> @enderror
-                </div>
-                
-                <div class="flex justify-end gap-3 mt-4">
-                    <button wire:click="$set('modalNovaNaturezaAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="salvarNovaNatureza" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm">Cadastrar</button>
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full border border-gray-200">
+                <h3 class="text-base font-black text-gray-900 mb-4">Nova Natureza Financeira</h3>
+                <input type="text" wire:model="novaNaturezaDescricao" class="w-full text-sm border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 mb-1" placeholder="Nome da despesa...">
+                @error('novaNaturezaDescricao') <span class="text-red-500 text-[10px] font-bold block mb-3">{{ $message }}</span> @enderror
+                <div class="flex justify-end gap-2 mt-4">
+                    <button wire:click="$set('modalNovaNaturezaAberto', false)" class="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200">Cancelar</button>
+                    <button wire:click="salvarNovaNatureza" class="px-3 py-1.5 text-xs font-bold text-white bg-gray-800 hover:bg-black">Cadastrar</button>
                 </div>
             </div>
         </div>
