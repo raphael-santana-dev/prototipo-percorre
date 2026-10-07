@@ -35,4 +35,9 @@ class OrcamentoItem extends Model
     {
         return $this->belongsTo(Natureza::class, 'natureza_codigo', 'codigo');
     }
+
+    public function avaliacoes()
+    {
+        return $this->hasMany(OrcamentoAvaliacao::class)->orderBy('created_at', 'desc');
+    }
 }

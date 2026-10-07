@@ -14,6 +14,10 @@ class OrcamentoAvaliacao extends Model
     {
         return $this->belongsTo(Orcamento::class);
     }
+    public function orcamentoItem()
+    {
+        return $this->belongsTo(OrcamentoItem::class, 'orcamento_item_id');
+    }
 
     public function usuario()
     {

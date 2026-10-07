@@ -29,6 +29,10 @@ class OrcamentoManager extends Component
     public array $itensOrcamento = [];
     public array $itensRemovidos = [];
 
+    // --- VARIÁVEIS DA NOVA NATUREZA ---
+    public bool $modalNovaNaturezaAberto = false;
+    public string $novaNaturezaDescricao = '';
+
     public array $breadcrumbs = [];
     public int $anoSimulacao = 2026;
 
@@ -38,7 +42,8 @@ class OrcamentoManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403);
 
         $this->breadcrumbs = [['label' => 'Dashboard', 'url' => route('dashboard')], ['label' => 'Financeiro', 'url' => '#'], ['label' => 'Orçamentos', 'url' => route('financeiro.orcamentos')]];
-        $this->ordenacaoCampo = 'ano'; $this->ordenacaoDirecao = 'desc';
+        $this->ordenacaoCampo = 'ano'; 
+        $this->ordenacaoDirecao = 'desc';
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
     }
 
@@ -52,18 +57,25 @@ class OrcamentoManager extends Component
 
     public function sincronizarProtheus() {
         $resultado = ProtheusOrcamentoService::sincronizar();
-        if ($resultado['sucesso']) $this->dispatch('sucesso', msg: $resultado['mensagem']); else $this->dispatch('erro', msg: $resultado['mensagem']);
+        if ($resultado['sucesso']) $this->dispatch('sucesso', msg: $resultado['mensagem']); 
+        else $this->dispatch('erro', msg: $resultado['mensagem']);
     }
 
     public function abrirModalDetalhes($id)
     {
-        $this->orcamentoSelecionado = Orcamento::with(['avaliacoes', 'itens.natureza', 'centroCusto'])->findOrFail($id);
+        // Traz as linhas, as naturezas atreladas e o log de avaliações da diretoria para cada linha
+        $this->orcamentoSelecionado = Orcamento::with(['itens.natureza', 'itens.avaliacoes', 'centroCusto'])->findOrFail($id);
         $this->justificativaGeral = $this->orcamentoSelecionado->descricao_despesa ?? '';
-        $this->itensOrcamento = []; $this->itensRemovidos = [];
+        $this->itensOrcamento = []; 
+        $this->itensRemovidos = [];
 
         foreach ($this->orcamentoSelecionado->itens as $item) {
             $this->itensOrcamento[] = [
-                'id' => $item->id, 'natureza_codigo' => $item->natureza_codigo, 'descricao' => $item->descricao,
+                'id' => $item->id, 
+                'natureza_codigo' => $item->natureza_codigo, 
+                'descricao' => $item->descricao,
+                'status' => $item->status, // Status individual da linha
+                'avaliacoes' => $item->avaliacoes, // Logs da diretoria
                 'previsto_jan' => $item->previsto_jan, 'valor_jan' => $item->valor_jan,
                 'previsto_fev' => $item->previsto_fev, 'valor_fev' => $item->valor_fev,
                 'previsto_mar' => $item->previsto_mar, 'valor_mar' => $item->valor_mar,
@@ -83,9 +95,36 @@ class OrcamentoManager extends Component
         $this->modalAberto = true;
     }
 
+    public function abrirModalNovaNatureza()
+    {
+        $this->novaNaturezaDescricao = '';
+        $this->modalNovaNaturezaAberto = true;
+    }
+
+    public function salvarNovaNatureza()
+    {
+        $this->validate([
+            'novaNaturezaDescricao' => 'required|string|min:3|max:255'
+        ]);
+
+        $codigoAleatorio = 'D' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+        while (Natureza::where('codigo', $codigoAleatorio)->exists()) {
+            $codigoAleatorio = 'D' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+        }
+
+        Natureza::create([
+            'codigo' => $codigoAleatorio,
+            'descricao' => trim($this->novaNaturezaDescricao),
+            'disponivel_orcamento' => true
+        ]);
+
+        $this->modalNovaNaturezaAberto = false;
+        $this->dispatch('sucesso', msg: "Natureza {$codigoAleatorio} cadastrada! Selecione-a no campo para utilizar.");
+    }
+
     public function adicionarItem() {
         $this->itensOrcamento[] = [
-            'id' => null, 'natureza_codigo' => '', 'descricao' => '',
+            'id' => null, 'natureza_codigo' => '', 'descricao' => '', 'status' => 'Criado', 'avaliacoes' => [],
             'previsto_jan' => 0, 'valor_jan' => 0, 'previsto_fev' => 0, 'valor_fev' => 0,
             'previsto_mar' => 0, 'valor_mar' => 0, 'previsto_abr' => 0, 'valor_abr' => 0,
             'previsto_mai' => 0, 'valor_mai' => 0, 'previsto_jun' => 0, 'valor_jun' => 0,
@@ -103,31 +142,38 @@ class OrcamentoManager extends Component
     }
 
     public function salvarOrcamento() { $this->processarGravacao('Em elaboração', 'Orçamento guardado como rascunho!'); }
-    public function finalizarOrcamento() { $this->processarGravacao('Finalizado', 'Orçamento submetido para aprovação!'); }
+    public function finalizarOrcamento() { $this->processarGravacao('Finalizado', 'Orçamento submetido para aprovação da Diretoria!'); }
 
     private function processarGravacao($statusDesejado, $mensagemSucesso) {
         if (in_array($this->orcamentoSelecionado->status, ['Aprovado', 'Aprovado com ressalvas'])) {
-            $this->dispatch('erro', msg: 'Orçamentos já aprovados não podem ser alterados.'); return;
+            $this->dispatch('erro', msg: 'Orçamentos já aprovados globalmente não podem ser alterados.'); return;
         }
 
         foreach ($this->itensOrcamento as $item) {
-            if (empty(trim($item['natureza_codigo']))) { $this->dispatch('erro', msg: 'Todas as linhas devem ter uma Natureza selecionada.'); return; }
+            if (empty(trim($item['natureza_codigo']))) { $this->dispatch('erro', msg: 'Ação Bloqueada: Todas as linhas devem ter uma Natureza selecionada.'); return; }
         }
 
         $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamentoSelecionado->status, ['Criado', 'Reprovado'])) ? $this->orcamentoSelecionado->status : $statusDesejado;
         $this->orcamentoSelecionado->update(['descricao_despesa' => $this->justificativaGeral, 'status' => $novoStatus]);
+        
         if (!empty($this->itensRemovidos)) OrcamentoItem::whereIn('id', $this->itensRemovidos)->delete();
 
         foreach ($this->itensOrcamento as $dataItem) {
             if (empty($dataItem['id'])) {
                 $naturezaDB = Natureza::where('codigo', $dataItem['natureza_codigo'])->first();
                 $descricao = $naturezaDB ? $naturezaDB->descricao : trim($dataItem['descricao']);
-            } else { $descricao = trim($dataItem['descricao']); }
+            } else { 
+                $descricao = trim($dataItem['descricao']); 
+            }
+
+            // Ao salvar novamente, se o item estava reprovado, volta para aguardando/criado
+            $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas'])) ? 'Corrigido' : ($dataItem['status'] ?? 'Criado');
 
             OrcamentoItem::updateOrCreate(
                 ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamentoSelecionado->id],
                 [
                     'natureza_codigo' => trim($dataItem['natureza_codigo']), 'descricao' => $descricao,
+                    'status' => $statusItem,
                     'previsto_jan' => empty($dataItem['previsto_jan']) ? 0 : (float) $dataItem['previsto_jan'], 'valor_jan' => empty($dataItem['valor_jan']) ? 0 : (float) $dataItem['valor_jan'],
                     'previsto_fev' => empty($dataItem['previsto_fev']) ? 0 : (float) $dataItem['previsto_fev'], 'valor_fev' => empty($dataItem['valor_fev']) ? 0 : (float) $dataItem['valor_fev'],
                     'previsto_mar' => empty($dataItem['previsto_mar']) ? 0 : (float) $dataItem['previsto_mar'], 'valor_mar' => empty($dataItem['valor_mar']) ? 0 : (float) $dataItem['valor_mar'],
@@ -162,8 +208,8 @@ class OrcamentoManager extends Component
             if ($novoOrcamento->wasRecentlyCreated || $novoOrcamento->itens()->count() === 0) {
                 foreach ($orcamento->itens as $item) {
                     OrcamentoItem::create([
-                        'orcamento_id' => $novoOrcamento->id, 'natureza_codigo' => $item->natureza_codigo, 'descricao' => $item->descricao,
-                        'previsto_jan' => $item->valor_jan, 'valor_jan' => $item->valor_jan, // Valor final de 2026 vira o Previsto de 2027
+                        'orcamento_id' => $novoOrcamento->id, 'natureza_codigo' => $item->natureza_codigo, 'descricao' => $item->descricao, 'status' => 'Criado',
+                        'previsto_jan' => $item->valor_jan, 'valor_jan' => $item->valor_jan, 
                         'previsto_fev' => $item->valor_fev, 'valor_fev' => $item->valor_fev,
                         'previsto_mar' => $item->valor_mar, 'valor_mar' => $item->valor_mar,
                         'previsto_abr' => $item->valor_abr, 'valor_abr' => $item->valor_abr,
@@ -187,7 +233,7 @@ class OrcamentoManager extends Component
         return [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true], ['key' => 'ano', 'label' => 'Ano', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'filial', 'label' => 'Filial', 'sortable' => true], ['key' => 'ccusto', 'label' => 'Centro de Custo', 'sortable' => true],
-            ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'class' => 'text-center'],
+            ['key' => 'status', 'label' => 'Status Global', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'valor_total', 'label' => 'Total Atual', 'sortable' => false, 'class' => 'text-right font-bold uppercase text-gray-400 text-[10px]'],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right']
         ];
