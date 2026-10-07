@@ -7,13 +7,13 @@ use App\Traits\RegistraAuditoria;
 
 class OrcamentoItem extends Model
 {
-    use RegistraAuditoria; // Rastrear quem criou/alterou o item
+    use RegistraAuditoria;
 
     protected $table = 'orcamento_itens';
     protected $guarded = ['id'];
 
     /**
-     * Calcula o total anual deste item dinamicamente
+     * Calcula o total anual dinamicamente
      */
     public function getValorTotalAttribute()
     {
@@ -26,5 +26,13 @@ class OrcamentoItem extends Model
     public function orcamento()
     {
         return $this->belongsTo(Orcamento::class);
+    }
+
+    /**
+     * Novo relacionamento: Cada item (linha) é uma Natureza Financeira
+     */
+    public function natureza()
+    {
+        return $this->belongsTo(Natureza::class, 'natureza_codigo', 'codigo');
     }
 }

@@ -1,5 +1,5 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
-    <x-page-header title="Orçamentos das Áreas" icon="ph ph-wallet" badge="Módulo Financeiro" :breadcrumbs="$breadcrumbs">
+    <x-page-header title="Orçamento por Centro de Custo" icon="ph ph-wallet" badge="Módulo Financeiro" :breadcrumbs="$breadcrumbs">
         <x-slot name="actions">
             @if(auth()->user()->hasRole('dev|admin'))
                 <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="btn btn--primary btn--small">
@@ -41,11 +41,9 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar Ano" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Buscar Filial" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
-                <input type="text" wire:model.live.debounce.500ms="filtroNatureza" placeholder="Buscar Natureza" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
-                <input type="text" wire:model.live.debounce.500ms="filtroCentroCusto" placeholder="Buscar Centro de Custo" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <select wire:model.live="filtroStatus" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                     <option value="">Todos os Status</option>
                     <option value="Criado">Criado (Importado)</option>
@@ -54,7 +52,7 @@
                     <option value="Aprovado">Aprovado</option>
                     <option value="Reprovado">Reprovado</option>
                 </select>
-                <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full h-[38px] bg-white"><i class="ph-bold ph-funnel-x"></i> Limpar</button>
+                <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full h-[38px] bg-white"><i class="ph-bold ph-funnel-x"></i> Limpar Filtros</button>
             </div>
         </div>
 
@@ -62,15 +60,14 @@
             <x-table :headers="$this->headers" :registros="$registros" :ordenacaoCampo="$ordenacaoCampo" :ordenacaoDirecao="$ordenacaoDirecao" :permiteGrid="$permiteGrid" :modoExibicao="$modoExibicao">
                 @forelse($registros as $orcamento)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-                        <td class="px-4 py-3 t-label-12 text-gray-500">#{{ $orcamento->id }}</td>
-                        <td class="px-4 py-3 t-body-14-semibold text-center">{{ $orcamento->ano }}</td>
-                        <td class="px-4 py-3 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
-                        <td class="px-4 py-3">
-                            <span class="text-xs font-bold block">{{ $orcamento->natureza ?: 'S/ NATUREZA' }}</span>
-                            <span class="text-[10px] text-gray-500 truncate block max-w-[200px]">{{ $orcamento->descricao_despesa ?: 'Sem justificativa geral' }}</span>
+                        <td class="px-4 py-4 t-label-12 text-gray-500">#{{ $orcamento->id }}</td>
+                        <td class="px-4 py-4 t-body-14-semibold text-center">{{ $orcamento->ano }}</td>
+                        <td class="px-4 py-4 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
+                        <td class="px-4 py-4">
+                            <span class="text-sm font-black text-gray-900 dark:text-white block">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</span>
+                            <span class="text-xs font-mono font-medium text-purpura-600">C.C. {{ $orcamento->ccusto ?: '-' }}</span>
                         </td>
-                        <td class="px-4 py-3 text-xs font-mono font-bold text-purpura-600">{{ $orcamento->ccusto ?: '-' }}</td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-4 py-4 text-center">
                             @php
                                 $statusColor = match($orcamento->status) {
                                     'Em elaboração' => 'bg-blue-100 text-blue-700 border-blue-200',
@@ -83,14 +80,14 @@
                             @endphp
                             <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase border {{ $statusColor }} whitespace-nowrap">{{ $orcamento->status ?? 'Criado' }}</span>
                         </td>
-                        <td class="px-4 py-3 t-body-14-semibold text-right text-gray-900 dark:text-white">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 rounded-lg shadow-sm transition" title="Ver / Editar Valores"><i class="text-base ph-bold ph-pencil-simple"></i></button>
+                        <td class="px-4 py-4 text-base font-medium text-right text-gray-900 dark:text-white tracking-tight">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
+                        <td class="px-4 py-4 text-right">
+                            <button wire:click="abrirModalDetalhes({{ $orcamento->id }})" class="p-2 text-gray-400 hover:text-purpura-600 bg-white border border-gray-200 rounded-lg shadow-sm transition" title="Editar Naturezas"><i class="text-base ph-bold ph-pencil-simple"></i></button>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-12 text-center text-gray-400">Nenhum orçamento encontrado.</td>
+                        <td colspan="7" class="px-4 py-12 text-center text-gray-400">Nenhum orçamento encontrado.</td>
                     </tr>
                 @endforelse
             </x-table>
@@ -106,13 +103,13 @@
         @endphp
 
         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-hidden">
-            <div class="bg-gray-50 dark:bg-gray-900 w-full h-full max-w-[1600px] rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 overflow-hidden" x-data @keydown.escape.window="$wire.fecharModal()">
+            <div class="bg-gray-50 dark:bg-gray-900 w-full h-full max-w-[1700px] rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 overflow-hidden" x-data @keydown.escape.window="$wire.fecharModal()">
                 
                 {{-- HEADER DO MODAL --}}
                 <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shrink-0">
                     <div>
-                        <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-microsoft-excel-logo text-emerald-600 text-2xl"></i> Orçamento Interativo (Itens)</h2>
-                        <p class="text-xs text-gray-500 mt-1">Modifique os itens e valores para prever o orçamento do seu Centro de Custo.</p>
+                        <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-microsoft-excel-logo text-emerald-600 text-2xl"></i> Distribuição de Naturezas Financeiras</h2>
+                        <p class="text-xs text-gray-500 mt-1">Insira os valores previstos para cada natureza ou adicione novas áreas de gasto.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button wire:click="fecharModal" class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-500 hover:text-red-500 shadow-sm transition"><i class="ph-bold ph-x text-lg"></i></button>
@@ -123,26 +120,22 @@
                 <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50 dark:bg-gray-900">
                     
                     {{-- CARDS DE RESUMO SUPERIORES --}}
-                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
                             <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filial / Ano</span>
                             <span class="text-base font-black text-gray-900 dark:text-white">{{ $orcamentoSelecionado->filial ?: '-' }} / {{ $orcamentoSelecionado->ano }}</span>
                         </div>
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Natureza</span>
-                            <span class="text-sm font-mono font-bold text-purpura-600">{{ $orcamentoSelecionado->natureza ?: '-' }}</span>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
                             <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Centro de Custo</span>
-                            <span class="text-sm font-mono font-bold text-gray-900 dark:text-gray-200">{{ $orcamentoSelecionado->ccusto ?: '-' }}</span>
+                            <span class="text-base font-black text-gray-900 dark:text-white block">{{ $orcamentoSelecionado->centroCusto ? $orcamentoSelecionado->centroCusto->nome : 'Sem Vínculo' }}</span>
+                            <span class="text-[10px] font-mono font-medium text-purpura-600">C.C. {{ $orcamentoSelecionado->ccusto ?: '-' }}</span>
                         </div>
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Justificativa da Despesa</span>
+                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Observações do Gestor</span>
                             <input type="text" wire:model="justificativaGeral" class="w-full text-xs p-1 border-b border-gray-300 bg-transparent focus:ring-0 focus:border-purpura-500 text-gray-800 dark:text-gray-200" placeholder="Motivo geral..." @if($isLockedGlobal) disabled @endif>
                         </div>
 
                         @php
-                            // Calcula o total geral dinâmico do Livewire Array
                             $totalGeralLivewire = 0;
                             foreach($itensOrcamento as $item) {
                                 $totalGeralLivewire += (float)($item['valor_jan'] ?? 0) + (float)($item['valor_fev'] ?? 0) + (float)($item['valor_mar'] ?? 0) + 
@@ -151,19 +144,20 @@
                                                        (float)($item['valor_out'] ?? 0) + (float)($item['valor_nov'] ?? 0) + (float)($item['valor_dez'] ?? 0);
                             }
                         @endphp
-                        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800">
-                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Total Previsto Geral</span>
-                            <span class="text-lg font-black text-emerald-700 dark:text-emerald-400">R$ {{ number_format($totalGeralLivewire, 2, ',', '.') }}</span>
+                        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800 flex flex-col justify-center">
+                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Orçamento Total do Centro de Custo</span>
+                            <span class="text-xl font-black text-emerald-700 dark:text-emerald-400">R$ {{ number_format($totalGeralLivewire, 2, ',', '.') }}</span>
                         </div>
                     </div>
 
                     {{-- PLANILHA INTERATIVA (SCROLL HORIZONTAL) --}}
                     <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                         <div class="overflow-x-auto custom-scrollbar pb-2">
-                            <table class="w-full text-left border-collapse min-w-[1500px]">
+                            <table class="w-full text-left border-collapse min-w-[1600px]">
                                 <thead>
                                     <tr class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[250px] sticky left-0 z-10 bg-gray-50 dark:bg-gray-900/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Item / Descrição</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[250px] sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-400 w-[200px] sticky left-[250px] z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">Descrição Opcional</th>
                                         
                                         @php
                                             $mesesKeys = [
@@ -174,44 +168,72 @@
                                         
                                         @foreach($mesesKeys as $num => $sigla)
                                             @php
-                                                // O bloqueio inteligente passa a analisar apenas se o Ano do orçamento é antigo
                                                 $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
                                             @endphp
-                                            <th class="p-3 text-[10px] font-bold uppercase w-[120px] {{ $isPassado ? 'text-gray-400 bg-gray-100/50 dark:bg-gray-800/80' : 'text-gray-600 dark:text-gray-300' }}">
+                                            <th class="p-3 text-[10px] font-bold uppercase w-[110px] {{ $isPassado ? 'text-gray-400 bg-gray-100/50 dark:bg-gray-800/80' : 'text-gray-600 dark:text-gray-300' }}">
                                                 {{ ucfirst($sigla) }} {!! $isPassado ? '<i class="ph-fill ph-lock-key"></i>' : '' !!}
                                             </th>
                                         @endforeach
-                                        
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[60px] text-center">Ações</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-900 dark:text-white w-[100px] text-right bg-emerald-50/50 dark:bg-emerald-900/20">Total</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[50px] text-center">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($itensOrcamento as $index => $item)
                                         <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-blue-50/30 transition-colors">
-                                            <td class="p-2 sticky left-0 z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                                <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Nome do item..." class="w-full text-xs font-bold text-gray-800 dark:text-white rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600" @if($isLockedGlobal) disabled @endif>
+                                            
+                                            {{-- Coluna 1: Seleção de Natureza --}}
+                                            <td class="p-2 sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700">
+                                                @if($isLockedGlobal)
+                                                    <div class="flex flex-col px-2">
+                                                        <span class="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
+                                                        <span class="text-[10px] font-mono text-purpura-600 mt-0.5">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
+                                                    </div>
+                                                @else
+                                                    <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-xs font-bold text-gray-800 dark:text-white rounded border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                                        <option value="">Selecione uma Natureza...</option>
+                                                        @foreach($todasNaturezas as $nat)
+                                                            <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @endif
+                                            </td>
+
+                                            {{-- Coluna 2: Observação daquela linha --}}
+                                            <td class="p-2 sticky left-[250px] z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-200 dark:border-gray-700">
+                                                <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Detalhes (Opcional)" class="w-full text-[11px] text-gray-500 italic rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-600" @if($isLockedGlobal) disabled @endif>
                                             </td>
                                             
+                                            {{-- Colunas dos 12 Meses --}}
+                                            @php $totalDestaLinha = 0; @endphp
                                             @foreach($mesesKeys as $num => $sigla)
                                                 @php
                                                     $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
                                                     $isDisabled = $isLockedGlobal || $isPassado;
+                                                    $valorMes = (float)($item["valor_$sigla"] ?? 0);
+                                                    $totalDestaLinha += $valorMes;
                                                 @endphp
-                                                <td class="p-2 {{ $isDisabled ? 'bg-gray-50/50 dark:bg-gray-900/30 opacity-60' : '' }}">
-                                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs font-medium text-right text-gray-900 dark:text-gray-200 rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600" @if($isDisabled) disabled @endif>
+                                                <td class="p-2 border-r border-gray-50 dark:border-gray-800 {{ $isDisabled ? 'bg-gray-50/50 dark:bg-gray-900/30 opacity-70' : '' }}">
+                                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs font-medium text-right text-gray-900 dark:text-gray-200 rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-600 {{ $valorMes == 0 ? 'text-gray-300' : '' }}" @if($isDisabled) disabled @endif>
                                                 </td>
                                             @endforeach
 
-                                            <td class="p-2 text-center">
+                                            {{-- Coluna Total da Linha --}}
+                                            <td class="p-3 text-right text-xs font-black bg-emerald-50/30 dark:bg-emerald-900/10 text-gray-900 dark:text-white">
+                                                {{ number_format($totalDestaLinha, 2, ',', '.') }}
+                                            </td>
+
+                                            {{-- Coluna Ações (Remover Linha) --}}
+                                            <td class="p-2 text-center border-l border-gray-100 dark:border-gray-800">
                                                 @if(!$isLockedGlobal)
-                                                    <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Item"><i class="ph-bold ph-trash text-base"></i></button>
+                                                    <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-base"></i></button>
                                                 @endif
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                                 <tfoot>
-                                    {{-- CÁLCULO DE TOTAIS E VARIAÇÕES --}}
+                                    {{-- CÁLCULO DE TOTAIS MENSAL (COLUNAS) --}}
                                     @php
                                         $totaisMensais = [];
                                         foreach($mesesKeys as $num => $sigla) {
@@ -219,35 +241,26 @@
                                         }
                                     @endphp
 
-                                    <tr class="bg-gray-50 dark:bg-gray-900/50">
-                                        <td class="p-4 sticky left-0 z-10 bg-gray-50 dark:bg-gray-900/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                    <tr class="bg-gray-100 dark:bg-gray-900">
+                                        <td colspan="2" class="p-4 sticky left-0 z-20 bg-gray-100 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">
                                             <div class="flex items-center justify-between">
-                                                <span class="text-xs font-black uppercase text-gray-700 dark:text-gray-300">Total Mensal</span>
+                                                <span class="text-xs font-black uppercase text-gray-700 dark:text-gray-300">Total Previsto por Mês</span>
                                                 @if(!$isLockedGlobal)
-                                                    <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Linha</button>
+                                                    <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Adicionar Natureza</button>
                                                 @endif
                                             </div>
                                         </td>
                                         
-                                        @php $valorAnterior = 0; @endphp
                                         @foreach($mesesKeys as $num => $sigla)
-                                            @php
-                                                $valorAtual = $totaisMensais[$num];
-                                                $variacao = $num === 1 ? 0 : $valorAtual - $valorAnterior;
-                                                $percVariacao = $valorAnterior > 0 ? ($variacao / $valorAnterior) * 100 : ($variacao > 0 ? 100 : 0);
-                                                $valorAnterior = $valorAtual;
-                                            @endphp
-                                            <td class="p-3 text-right">
-                                                <div class="text-sm font-black text-gray-900 dark:text-white mb-1">R$ {{ number_format($valorAtual, 2, ',', '.') }}</div>
-                                                
-                                                @if($num > 1 && $variacao !== 0)
-                                                    <div class="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded {{ $variacao > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}" title="Variação em relação ao mês anterior">
-                                                        {!! $variacao > 0 ? '<i class="ph-bold ph-trend-up"></i>' : '<i class="ph-bold ph-trend-down"></i>' !!}
-                                                        R$ {{ number_format(abs($variacao), 2, ',', '.') }} ({{ number_format($percVariacao, 1, ',', '.') }}%)
-                                                    </div>
-                                                @endif
+                                            <td class="p-3 text-right border-r border-gray-200 dark:border-gray-800">
+                                                <div class="text-[13px] font-black text-gray-900 dark:text-white">
+                                                    {{ number_format($totaisMensais[$num], 2, ',', '.') }}
+                                                </div>
                                             </td>
                                         @endforeach
+                                        <td class="p-3 text-right text-sm font-black text-emerald-700 bg-emerald-100/50 dark:bg-emerald-900/50 border-r border-emerald-200 dark:border-emerald-800">
+                                            {{ number_format($totalGeralLivewire, 2, ',', '.') }}
+                                        </td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
@@ -263,7 +276,7 @@
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         @if(!$isLockedGlobal)
                             <button wire:click="salvarOrcamento" class="btn btn--secondary btn--medium flex-1 sm:flex-auto border-gray-300">Gravar Edição</button>
-                            <button wire:click="finalizarOrcamento" class="btn btn--primary btn--medium bg-blue-600 border-none hover:bg-blue-700 flex-1 sm:flex-auto shadow-sm" onclick="confirm('Ao submeter para aprovação, este orçamento será trancado para novas edições. Deseja continuar?') || event.stopImmediatePropagation()">
+                            <button wire:click="finalizarOrcamento" class="btn btn--primary btn--medium bg-blue-600 border-none hover:bg-blue-700 flex-1 sm:flex-auto shadow-sm" onclick="confirm('Ao submeter para aprovação, a edição deste orçamento será bloqueada. Deseja continuar?') || event.stopImmediatePropagation()">
                                 <i class="ph-bold ph-paper-plane-tilt"></i> Submeter P/ Aprovação
                             </button>
                         @else

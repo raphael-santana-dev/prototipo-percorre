@@ -9,6 +9,7 @@ use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
+use App\Modules\Financeiro\Domain\Models\Natureza;
 use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
@@ -19,8 +20,6 @@ class OrcamentoManager extends Component
 
     public $filtroAno = '';
     public $filtroFilial = '';
-    public $filtroNatureza = '';
-    public $filtroCentroCusto = '';
     public $filtroStatus = '';
 
     public bool $modalAberto = false;
@@ -32,7 +31,6 @@ class OrcamentoManager extends Component
 
     public array $breadcrumbs = [];
 
-    // --- VARIÁVEL DO SIMULADOR (APENAS ANO) ---
     public int $anoSimulacao = 2026;
 
     public function mount()
@@ -54,7 +52,7 @@ class OrcamentoManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus', 'filtroCentroCusto'])) {
+        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroStatus'])) {
             $this->resetPage();
         }
         if ($nomePropriedade === 'anoSimulacao') {
@@ -64,7 +62,7 @@ class OrcamentoManager extends Component
 
     public function limparFiltros()
     {
-        $this->reset(['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus', 'filtroCentroCusto']);
+        $this->reset(['filtroAno', 'filtroFilial', 'filtroStatus']);
         $this->resetPage();
     }
 
@@ -77,7 +75,7 @@ class OrcamentoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
-        $this->orcamentoSelecionado = Orcamento::with(['avaliacoes', 'itens'])->findOrFail($id);
+        $this->orcamentoSelecionado = Orcamento::with(['avaliacoes', 'itens.natureza', 'centroCusto'])->findOrFail($id);
         
         $this->justificativaGeral = $this->orcamentoSelecionado->descricao_despesa ?? '';
         $this->itensOrcamento = [];
@@ -86,6 +84,7 @@ class OrcamentoManager extends Component
         foreach ($this->orcamentoSelecionado->itens as $item) {
             $this->itensOrcamento[] = [
                 'id' => $item->id,
+                'natureza_codigo' => $item->natureza_codigo,
                 'descricao' => $item->descricao,
                 'valor_jan' => $item->valor_jan, 'valor_fev' => $item->valor_fev,
                 'valor_mar' => $item->valor_mar, 'valor_abr' => $item->valor_abr,
@@ -107,6 +106,7 @@ class OrcamentoManager extends Component
     {
         $this->itensOrcamento[] = [
             'id' => null,
+            'natureza_codigo' => '', // Fica vazio para o utilizador escolher no dropdown
             'descricao' => '',
             'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
             'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
@@ -147,8 +147,8 @@ class OrcamentoManager extends Component
         }
 
         foreach ($this->itensOrcamento as $item) {
-            if (empty(trim($item['descricao']))) {
-                $this->dispatch('erro', msg: 'Ação Bloqueada: Todos os itens do orçamento devem ter uma descrição.');
+            if (empty(trim($item['natureza_codigo']))) {
+                $this->dispatch('erro', msg: 'Ação Bloqueada: Todas as linhas do orçamento devem ter uma Natureza selecionada.');
                 return;
             }
         }
@@ -168,10 +168,19 @@ class OrcamentoManager extends Component
         }
 
         foreach ($this->itensOrcamento as $dataItem) {
+            // Se for uma nova natureza escolhida, vai buscar a descrição correta à BD
+            if (empty($dataItem['id'])) {
+                $naturezaDB = Natureza::where('codigo', $dataItem['natureza_codigo'])->first();
+                $descricao = $naturezaDB ? $naturezaDB->descricao : trim($dataItem['descricao']);
+            } else {
+                $descricao = trim($dataItem['descricao']);
+            }
+
             OrcamentoItem::updateOrCreate(
                 ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamentoSelecionado->id],
                 [
-                    'descricao' => trim($dataItem['descricao']),
+                    'natureza_codigo' => trim($dataItem['natureza_codigo']),
+                    'descricao' => $descricao,
                     'valor_jan' => empty($dataItem['valor_jan']) ? 0 : (float) $dataItem['valor_jan'],
                     'valor_fev' => empty($dataItem['valor_fev']) ? 0 : (float) $dataItem['valor_fev'],
                     'valor_mar' => empty($dataItem['valor_mar']) ? 0 : (float) $dataItem['valor_mar'],
@@ -206,33 +215,28 @@ class OrcamentoManager extends Component
         $orcamentosAtuais = Orcamento::with('itens')->where('ano', (string) $anoAtual)->get();
 
         foreach ($orcamentosAtuais as $orcamento) {
-            $novaChaveComposta = "{$orcamento->filial}_{$proximoAno}_{$orcamento->natureza}_{$orcamento->ccusto}";
+            $novaChaveComposta = "{$orcamento->filial}_{$proximoAno}_{$orcamento->ccusto}";
 
             $novoOrcamento = Orcamento::firstOrCreate(
-                [
-                    'chave_composta' => $novaChaveComposta,
-                ],
+                ['chave_composta' => $novaChaveComposta],
                 [
                     'filial' => $orcamento->filial,
                     'ano' => (string) $proximoAno,
-                    'natureza' => $orcamento->natureza,
                     'ccusto' => $orcamento->ccusto,
                     'moeda' => $orcamento->moeda,
                     'cmoeda' => $orcamento->cmoeda,
                     'xcat' => $orcamento->xcat,
                     'descricao_despesa' => $orcamento->descricao_despesa,
                     'status' => 'Criado', 
-                    'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
-                    'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
-                    'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
-                    'valor_out' => 0, 'valor_nov' => 0, 'valor_dez' => 0,
                 ]
             );
 
+            // Copia as naturezas E os valores do ano anterior para o novo ano
             if ($novoOrcamento->wasRecentlyCreated || $novoOrcamento->itens()->count() === 0) {
                 foreach ($orcamento->itens as $item) {
                     OrcamentoItem::create([
                         'orcamento_id' => $novoOrcamento->id,
+                        'natureza_codigo' => $item->natureza_codigo,
                         'descricao' => $item->descricao,
                         'valor_jan' => $item->valor_jan, 'valor_fev' => $item->valor_fev,
                         'valor_mar' => $item->valor_mar, 'valor_abr' => $item->valor_abr,
@@ -248,7 +252,7 @@ class OrcamentoManager extends Component
         $this->anoSimulacao = $proximoAno;
         session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
         
-        $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! Todos os orçamentos e itens foram duplicados para o novo ciclo.");
+        $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! Naturezas e valores foram replicados.");
     }
 
     public function getHeadersProperty()
@@ -257,31 +261,29 @@ class OrcamentoManager extends Component
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'ano', 'label' => 'Ano', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'filial', 'label' => 'Filial', 'sortable' => true],
-            ['key' => 'natureza', 'label' => 'Natureza', 'sortable' => true],
-            ['key' => 'ccusto', 'label' => 'C. Custo', 'sortable' => true],
+            ['key' => 'ccusto', 'label' => 'Centro de Custo', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'class' => 'text-center'],
-            ['key' => 'valor_total', 'label' => 'Total Previsto', 'sortable' => false, 'class' => 'text-right font-bold'],
-            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
+            ['key' => 'valor_total', 'label' => 'Total Previsto', 'sortable' => false, 'class' => 'text-right font-bold uppercase text-gray-400 text-[10px]'],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right uppercase text-gray-400 text-[10px] font-bold'],
         ];
     }
 
     protected function obterQueryFiltrada()
     {
-        $query = Orcamento::query();
+        $query = Orcamento::with('centroCusto');
         
-        if (!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('financeiro.orcamentos.global')) {
+        // Verifica as permissões (DEV vê tudo, Financeiro vê os seus Centros de Custo)
+        if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {
                 $query->whereIn('ccusto', auth()->user()->centros_de_custo->pluck('codigo')->toArray());
             } else {
-                $query->where('ccusto', '00000000'); 
+                $query->where('ccusto', '00000000'); // Bloqueia se não tiver centros de custo
             }
         }
 
         if (!empty($this->filtroAno)) $query->where('ano', $this->filtroAno);
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
-        if (!empty($this->filtroNatureza)) $query->where('natureza', 'ilike', '%' . $this->filtroNatureza . '%');
         if (!empty($this->filtroStatus)) $query->where('status', $this->filtroStatus);
-        if (!empty($this->filtroCentroCusto)) $query->where('ccusto', 'ilike', '%' . $this->filtroCentroCusto . '%');
 
         return $query;
     }
@@ -296,13 +298,17 @@ class OrcamentoManager extends Component
         $totalAnualGeral = (clone $query)->get()->sum('valor_total');
         
         $metricas = [
-            ['label' => 'Itens Listados (Seu CCusto)', 'value' => $query->count(), 'color_text' => 'text-blue-600', 'color_bg' => 'bg-blue-100'],
+            ['label' => 'Orçamentos (Centros de Custo)', 'value' => $query->count(), 'color_text' => 'text-blue-600', 'color_bg' => 'bg-blue-100'],
             ['label' => 'Previsão Total (Filtro)', 'value' => 'R$ ' . number_format($totalAnualGeral, 2, ',', '.'), 'color_text' => 'text-emerald-600', 'color_bg' => 'bg-emerald-100'],
         ];
 
+        // Passa todas as naturezas ativas para alimentar o select da planilha
+        $todasNaturezas = Natureza::where('disponivel_orcamento', true)->orderBy('descricao')->get();
+
         return view('livewire.financeiro.orcamento-manager', [
             'registros' => $orcamentos,
-            'metricas' => $metricas
+            'metricas' => $metricas,
+            'todasNaturezas' => $todasNaturezas
         ]);
     }
 }

@@ -10,34 +10,53 @@ class OrcamentoAjusteSeeder extends Seeder
 {
     public function run(): void
     {
-        $codigosCC = CentroCusto::pluck('codigo')->toArray();
+        $centrosCusto = CentroCusto::pluck('codigo')->toArray();
         
-        if (empty($codigosCC)) {
+        if (empty($centrosCusto)) {
             $this->command->error('Execute o CentroCustoSeeder primeiro!');
             return;
         }
 
-        $orcamentos = Orcamento::all();
-        $atualizados = 0;
+        // 1. Procura orçamentos onde o Centro de Custo está vazio ou com espaços
+        $orcamentosVazios = Orcamento::with('itens')->where('ccusto', '')->orWhere('ccusto', 'like', '% %')->get();
+        $itensMovidos = 0;
 
-        foreach ($orcamentos as $orc) {
-            $naturezaLimpa = trim($orc->natureza);
+        foreach ($orcamentosVazios as $orcamentoVazio) {
             
-            // Se o centro de custo for vazio ou apenas espaços, sorteia um dos criados
-            $ccustoValido = empty(trim($orc->ccusto)) ? $codigosCC[array_rand($codigosCC)] : trim($orc->ccusto);
+            // 2. Percorre cada Natureza (Item) desse orçamento gigante
+            foreach ($orcamentoVazio->itens as $item) {
+                
+                // Escolhe um Centro de Custo aleatório da nossa base (ex: 001, 002)
+                $ccustoSorteado = $centrosCusto[array_rand($centrosCusto)];
 
-            // Refaz a chave composta para não bugar a importação futura
-            $novaChave = "{$orc->filial}_{$orc->ano}_{$naturezaLimpa}_{$ccustoValido}";
+                // Cria a nova chave do Cabeçalho (agora sem a natureza)
+                $chaveComposta = "{$orcamentoVazio->filial}_{$orcamentoVazio->ano}_{$ccustoSorteado}";
 
-            $orc->update([
-                'natureza' => $naturezaLimpa,
-                'ccusto' => $ccustoValido,
-                'chave_composta' => $novaChave
-            ]);
+                // 3. Verifica se já existe um orçamento para este C.Custo, se não, cria
+                $novoOrcamento = Orcamento::firstOrCreate(
+                    ['chave_composta' => $chaveComposta],
+                    [
+                        'filial' => $orcamentoVazio->filial,
+                        'ano'    => $orcamentoVazio->ano,
+                        'ccusto' => $ccustoSorteado,
+                        'moeda'  => $orcamentoVazio->moeda,
+                        'cmoeda' => $orcamentoVazio->cmoeda,
+                        'xcat'   => $orcamentoVazio->xcat,
+                        'status' => 'Criado',
+                    ]
+                );
 
-            $atualizados++;
+                // 4. Move o item (Natureza) para o novo orçamento
+                $item->update(['orcamento_id' => $novoOrcamento->id]);
+                $itensMovidos++;
+            }
+
+            // 5. Apaga o orçamento original vazio se ele ficou sem itens
+            if ($orcamentoVazio->itens()->count() === 0) {
+                $orcamentoVazio->delete();
+            }
         }
 
-        $this->command->info("{$atualizados} orçamentos foram limpos e vinculados a Centros de Custo aleatórios.");
+        $this->command->info("{$itensMovidos} naturezas (linhas) foram distribuídas pelos Centros de Custo reais.");
     }
 }

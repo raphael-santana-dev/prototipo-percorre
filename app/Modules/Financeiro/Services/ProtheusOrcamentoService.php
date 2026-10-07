@@ -19,7 +19,7 @@ class ProtheusOrcamentoService
         if (!$url || !$user || !$password) {
             return [
                 'sucesso' => false,
-                'mensagem' => 'As credenciais ou o URL da API do Protheus não estão configuradas no arquivo .env.'
+                'mensagem' => 'As credenciais ou o URL da API do Protheus não estão configuradas no ficheiro .env.'
             ];
         }
 
@@ -43,15 +43,16 @@ class ProtheusOrcamentoService
                 $processados = 0;
                 $naturezasCriadas = 0;
 
+                // 1. Agrupar os dados por Filial + Ano + Centro de Custo
+                $orcamentosAgrupados = [];
+
                 foreach ($orcamentos as $item) {
-                    
                     $filial = trim($item['filial'] ?? '');
                     $ano = trim($item['ano'] ?? '');
-                    // Faz o trim para limpar os espaços em branco que vêm da API
                     $naturezaCod = trim($item['natureza'] ?? ''); 
                     $ccusto = trim($item['ccusto'] ?? '');
 
-                    // --- AUTOCADASTRO DA NATUREZA ---
+                    // Auto-cadastro da Natureza caso não exista
                     if (!empty($naturezaCod)) {
                         $naturezaModel = Natureza::firstOrCreate(
                             ['codigo' => $naturezaCod],
@@ -65,58 +66,93 @@ class ProtheusOrcamentoService
                             $naturezasCriadas++;
                         }
                     }
-                    // --------------------------------
 
-                    // A chave composta deve manter a rastreabilidade exata do Protheus
-                    $chaveComposta = "{$filial}_{$ano}_{$naturezaCod}_{$ccusto}";
+                    // A chave do cabeçalho agora é independente da Natureza
+                    $chaveHeader = "{$filial}_{$ano}_{$ccusto}";
 
-                    // 1. Cria ou atualiza o Cabeçalho (Header) do Orçamento
+                    if (!isset($orcamentosAgrupados[$chaveHeader])) {
+                        $orcamentosAgrupados[$chaveHeader] = [
+                            'filial' => $filial,
+                            'ano'    => $ano,
+                            'ccusto' => $ccusto,
+                            'moeda'  => $item['moeda'] ?? null,
+                            'cmoeda' => trim($item['cmoeda'] ?? ''),
+                            'xcat'   => trim($item['xcat'] ?? ''),
+                            'itens'  => []
+                        ];
+                    }
+
+                    // Adiciona a Natureza como uma linha (Item) dentro deste Cabeçalho
+                    $orcamentosAgrupados[$chaveHeader]['itens'][] = [
+                        'natureza_codigo' => $naturezaCod,
+                        'valor_jan' => $item['valor_jan'] ?? 0,
+                        'valor_fev' => $item['valor_fev'] ?? 0,
+                        'valor_mar' => $item['valor_mar'] ?? 0,
+                        'valor_abr' => $item['valor_abr'] ?? 0,
+                        'valor_mai' => $item['valor_mai'] ?? 0,
+                        'valor_jun' => $item['valor_jun'] ?? 0,
+                        'valor_jul' => $item['valor_jul'] ?? 0,
+                        'valor_ago' => $item['valor_ago'] ?? 0,
+                        'valor_set' => $item['valor_set'] ?? 0,
+                        'valor_out' => $item['valor_out'] ?? 0,
+                        'valor_nov' => $item['valor_nov'] ?? 0,
+                        'valor_dez' => $item['valor_dez'] ?? 0,
+                    ];
+                }
+
+                // 2. Gravar os Cabeçalhos e as linhas da Planilha
+                foreach ($orcamentosAgrupados as $chaveComposta => $dados) {
+                    
                     $orcamento = Orcamento::firstOrCreate(
                         ['chave_composta' => $chaveComposta],
                         [
-                            'filial'    => $filial,
-                            'ano'       => $ano,
-                            'natureza'  => $naturezaCod,
-                            'ccusto'    => $ccusto,
-                            'moeda'     => $item['moeda'] ?? null,
-                            'cmoeda'    => trim($item['cmoeda'] ?? ''),
-                            'xcat'      => trim($item['xcat'] ?? ''),
+                            'filial'    => $dados['filial'],
+                            'ano'       => $dados['ano'],
+                            'ccusto'    => $dados['ccusto'],
+                            'moeda'     => $dados['moeda'],
+                            'cmoeda'    => $dados['cmoeda'],
+                            'xcat'      => $dados['xcat'],
                             'status'    => 'Criado', 
-                            'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
-                            'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
-                            'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
-                            'valor_out' => 0, 'valor_nov' => 0, 'valor_dez' => 0,
                         ]
                     );
 
-                    // 2. Lança o "Item Base" na tabela orcamento_itens, APENAS se estiver vazio
+                    // Apenas insere os itens da API se o orçamento estiver vazio.
+                    // Isso evita apagar o trabalho do gestor nas futuras sincronizações.
                     if ($orcamento->itens()->count() === 0) {
-                        OrcamentoItem::create([
-                            'orcamento_id' => $orcamento->id,
-                            'descricao'    => 'Orçamento Base (Importado do Protheus)',
-                            'valor_jan'    => $item['valor_jan'] ?? 0,
-                            'valor_fev'    => $item['valor_fev'] ?? 0,
-                            'valor_mar'    => $item['valor_mar'] ?? 0,
-                            'valor_abr'    => $item['valor_abr'] ?? 0,
-                            'valor_mai'    => $item['valor_mai'] ?? 0,
-                            'valor_jun'    => $item['valor_jun'] ?? 0,
-                            'valor_jul'    => $item['valor_jul'] ?? 0,
-                            'valor_ago'    => $item['valor_ago'] ?? 0,
-                            'valor_set'    => $item['valor_set'] ?? 0,
-                            'valor_out'    => $item['valor_out'] ?? 0,
-                            'valor_nov'    => $item['valor_nov'] ?? 0,
-                            'valor_dez'    => $item['valor_dez'] ?? 0,
-                        ]);
+                        foreach ($dados['itens'] as $linha) {
+                            
+                            // Obtém a descrição da Natureza para popular a linha de forma legível
+                            $naturezaObj = Natureza::where('codigo', $linha['natureza_codigo'])->first();
+                            $descricaoLinha = $naturezaObj ? $naturezaObj->descricao : 'Natureza Importada';
+
+                            OrcamentoItem::create([
+                                'orcamento_id'    => $orcamento->id,
+                                'natureza_codigo' => $linha['natureza_codigo'],
+                                'descricao'       => $descricaoLinha,
+                                'valor_jan'       => $linha['valor_jan'],
+                                'valor_fev'       => $linha['valor_fev'],
+                                'valor_mar'       => $linha['valor_mar'],
+                                'valor_abr'       => $linha['valor_abr'],
+                                'valor_mai'       => $linha['valor_mai'],
+                                'valor_jun'       => $linha['valor_jun'],
+                                'valor_jul'       => $linha['valor_jul'],
+                                'valor_ago'       => $linha['valor_ago'],
+                                'valor_set'       => $linha['valor_set'],
+                                'valor_out'       => $linha['valor_out'],
+                                'valor_nov'       => $linha['valor_nov'],
+                                'valor_dez'       => $linha['valor_dez'],
+                            ]);
+                        }
                     }
 
                     $processados++;
                 }
 
-                $msgComplemento = $naturezasCriadas > 0 ? " ({$naturezasCriadas} novas naturezas cadastradas automaticamente)." : ".";
+                $msgComplemento = $naturezasCriadas > 0 ? " ({$naturezasCriadas} novas naturezas registadas)." : ".";
 
                 return [
                     'sucesso' => true,
-                    'mensagem' => "Sincronização concluída! {$processados} orçamentos processados" . $msgComplemento,
+                    'mensagem' => "Sincronização concluída! {$processados} Centros de Custo processados" . $msgComplemento,
                     'total' => $processados
                 ];
 
@@ -136,7 +172,7 @@ class ProtheusOrcamentoService
             Log::error("Exceção Crítica API Protheus", ['erro' => $e->getMessage()]);
             return [
                 'sucesso' => false,
-                'mensagem' => "Erro de conexão ao tentar ler a API do Protheus."
+                'mensagem' => "Erro de ligação ao tentar ler a API do Protheus."
             ];
         }
     }
