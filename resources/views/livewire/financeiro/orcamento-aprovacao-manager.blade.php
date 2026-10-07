@@ -104,7 +104,6 @@
                                     <tbody>
                                         @foreach($orcamentoSelecionado->itens as $item)
                                             @php
-                                                // Muda a cor de fundo da linha se já estiver avaliada
                                                 $bgRow = match($item->status) {
                                                     'Aprovado' => 'bg-emerald-50/40',
                                                     'Reprovado' => 'bg-red-50/40',
@@ -137,7 +136,6 @@
                                                 @endforeach
                                                 <td class="p-3 text-right text-xs font-black bg-emerald-50/30 text-gray-900">{{ number_format($totalLinha, 2, ',', '.') }}</td>
                                                 
-                                                {{-- BOTÕES DE APROVAÇÃO E DECISÃO --}}
                                                 <td class="p-2 border-l border-gray-200 bg-gray-50/50">
                                                     @if(in_array($item->status, ['Criado', 'Corrigido']))
                                                         <div class="flex items-center gap-1 justify-center">
@@ -172,11 +170,11 @@
                             <div class="absolute left-7 top-0 bottom-0 w-px bg-gray-200"></div>
                             
                             @php
-                                // Como agora os logs estão nas linhas, unimos todos para mostrar na timeline
                                 $todasAvaliacoes = collect();
                                 foreach($orcamentoSelecionado->itens as $itemLinha) {
                                     foreach($itemLinha->avaliacoes as $aval) {
                                         $aval->natureza_codigo = $itemLinha->natureza_codigo;
+                                        $aval->natureza_descricao = $itemLinha->descricao;
                                         $todasAvaliacoes->push($aval);
                                     }
                                 }
@@ -192,11 +190,11 @@
                                             <span class="text-xs font-black">{{ $aval->user_nome }}</span>
                                             <span class="text-[9px] font-bold text-gray-400">{{ $aval->created_at->format('d/m H:i') }}</span>
                                         </div>
-                                        <div class="flex items-center gap-2 mb-2">
+                                        <div class="flex flex-col gap-0.5 mb-2">
                                             <span class="text-[10px] font-bold uppercase {{ str_contains($aval->status_aplicado, 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval->status_aplicado }}</span>
-                                            <span class="text-[9px] text-gray-400 font-mono">({{ $aval->natureza_codigo }})</span>
+                                            <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval->natureza_descricao }}">{{ $aval->natureza_codigo }} - {{ $aval->natureza_descricao }}</span>
                                         </div>
-                                        <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">"{{ $aval->comentario }}"</p>
+                                        <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval->comentario }}"</p>
                                     </div>
                                 </div>
                             @empty

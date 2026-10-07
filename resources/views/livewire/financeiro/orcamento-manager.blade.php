@@ -89,7 +89,6 @@
         </div>
     </div>
 
-    {{-- TELA DEDICADA DE EDIÇÃO (MODAL FULLSCREEN) --}}
     @if($modalAberto && $orcamentoSelecionado)
         @php
             $isLockedGlobal = in_array($orcamentoSelecionado->status, ['Aprovado', 'Aprovado com ressalvas', 'Finalizado']);
@@ -101,7 +100,6 @@
         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-900 w-full h-full max-w-[1700px] rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 overflow-hidden relative" x-data @keydown.escape.window="$wire.fecharModal()">
                 
-                {{-- BOTÃO FAB (NOVA NATUREZA) --}}
                 @if(!$isLockedGlobal)
                     <button wire:click="abrirModalNovaNatureza" class="absolute bottom-8 right-8 z-[105] flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 bg-purpura-600 hover:bg-purpura-700 text-white focus:outline-none" title="Cadastrar Nova Natureza">
                         <i class="ph-bold ph-plus text-2xl"></i>
@@ -118,157 +116,208 @@
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50 dark:bg-gray-900">
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filial / Ano</span>
-                            <span class="text-base font-black text-gray-900 dark:text-white">{{ $orcamentoSelecionado->filial ?: '-' }} / {{ $orcamentoSelecionado->ano }}</span>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Centro de Custo</span>
-                            <span class="text-base font-black text-gray-900 dark:text-white block">{{ $orcamentoSelecionado->centroCusto ? $orcamentoSelecionado->centroCusto->nome : 'Sem Vínculo' }}</span>
-                            <span class="text-[10px] font-mono font-medium text-purpura-600">C.C. {{ $orcamentoSelecionado->ccusto ?: '-' }}</span>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Observações do Gestor</span>
-                            <input type="text" wire:model="justificativaGeral" class="w-full text-xs p-1 border-b border-gray-300 bg-transparent focus:ring-0 focus:border-purpura-500 text-gray-800 dark:text-gray-200" placeholder="Motivo geral..." @if($isLockedGlobal) disabled @endif>
+                <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
+                    {{-- COLUNA ESQUERDA: Planilha --}}
+                    <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50 dark:bg-gray-900">
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                                <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filial / Ano</span>
+                                <span class="text-base font-black text-gray-900 dark:text-white">{{ $orcamentoSelecionado->filial ?: '-' }} / {{ $orcamentoSelecionado->ano }}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                                <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Centro de Custo</span>
+                                <span class="text-base font-black text-gray-900 dark:text-white block">{{ $orcamentoSelecionado->centroCusto ? $orcamentoSelecionado->centroCusto->nome : 'Sem Vínculo' }}</span>
+                                <span class="text-[10px] font-mono font-medium text-purpura-600">C.C. {{ $orcamentoSelecionado->ccusto ?: '-' }}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                                <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Observações do Gestor</span>
+                                <input type="text" wire:model="justificativaGeral" class="w-full text-xs p-1 border-b border-gray-300 bg-transparent focus:ring-0 focus:border-purpura-500 text-gray-800 dark:text-gray-200" placeholder="Motivo geral..." @if($isLockedGlobal) disabled @endif>
+                            </div>
+
+                            @php
+                                $totalGeralLivewire = 0;
+                                foreach($itensOrcamento as $item) {
+                                    $totalGeralLivewire += (float)($item['valor_jan'] ?? 0) + (float)($item['valor_fev'] ?? 0) + (float)($item['valor_mar'] ?? 0) + 
+                                                           (float)($item['valor_abr'] ?? 0) + (float)($item['valor_mai'] ?? 0) + (float)($item['valor_jun'] ?? 0) + 
+                                                           (float)($item['valor_jul'] ?? 0) + (float)($item['valor_ago'] ?? 0) + (float)($item['valor_set'] ?? 0) + 
+                                                           (float)($item['valor_out'] ?? 0) + (float)($item['valor_nov'] ?? 0) + (float)($item['valor_dez'] ?? 0);
+                                }
+                            @endphp
+                            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800 flex flex-col justify-center">
+                                <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Orçamento Atual Calculado</span>
+                                <span class="text-xl font-black text-emerald-700 dark:text-emerald-400">R$ {{ number_format($totalGeralLivewire, 2, ',', '.') }}</span>
+                            </div>
                         </div>
 
-                        @php
-                            $totalGeralLivewire = 0;
-                            foreach($itensOrcamento as $item) {
-                                $totalGeralLivewire += (float)($item['valor_jan'] ?? 0) + (float)($item['valor_fev'] ?? 0) + (float)($item['valor_mar'] ?? 0) + 
-                                                       (float)($item['valor_abr'] ?? 0) + (float)($item['valor_mai'] ?? 0) + (float)($item['valor_jun'] ?? 0) + 
-                                                       (float)($item['valor_jul'] ?? 0) + (float)($item['valor_ago'] ?? 0) + (float)($item['valor_set'] ?? 0) + 
-                                                       (float)($item['valor_out'] ?? 0) + (float)($item['valor_nov'] ?? 0) + (float)($item['valor_dez'] ?? 0);
-                            }
-                        @endphp
-                        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800 flex flex-col justify-center">
-                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Orçamento Atual Calculado</span>
-                            <span class="text-xl font-black text-emerald-700 dark:text-emerald-400">R$ {{ number_format($totalGeralLivewire, 2, ',', '.') }}</span>
+                        <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+                            <div class="overflow-x-auto custom-scrollbar pb-2">
+                                <table class="w-full text-left border-collapse min-w-[1600px]">
+                                    <thead>
+                                        <tr class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
+                                            <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[300px] sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
+                                            <th class="p-3 text-[10px] font-bold uppercase text-gray-400 w-[200px] sticky left-[300px] z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">Descrição / Justificativa</th>
+                                            
+                                            @php
+                                                $mesesKeys = [
+                                                    1 => 'jan', 2 => 'fev', 3 => 'mar', 4 => 'abr', 5 => 'mai', 6 => 'jun',
+                                                    7 => 'jul', 8 => 'ago', 9 => 'set', 10 => 'out', 11 => 'nov', 12 => 'dez'
+                                                ];
+                                            @endphp
+                                            
+                                            @foreach($mesesKeys as $num => $sigla)
+                                                @php $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao); @endphp
+                                                <th class="p-3 text-[10px] font-bold uppercase w-[110px] {{ $isPassado ? 'text-gray-400 bg-gray-100/50' : 'text-gray-600' }}">
+                                                    {{ ucfirst($sigla) }} {!! $isPassado ? '<i class="ph-fill ph-lock-key"></i>' : '' !!}
+                                                </th>
+                                            @endforeach
+                                            <th class="p-3 text-[10px] font-bold uppercase text-gray-900 w-[100px] text-right bg-emerald-50/50">Total Atual</th>
+                                            <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[50px] text-center">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($itensOrcamento as $index => $item)
+                                            <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
+                                                
+                                                <td class="p-2 sticky left-0 z-10 bg-white border-r border-gray-100">
+                                                    @if(!empty($item['id']))
+                                                        <div class="flex flex-col px-2 w-[280px]">
+                                                            <span class="text-xs font-bold text-gray-900 leading-tight truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
+                                                            <div class="flex items-center gap-2 mt-0.5">
+                                                                <span class="text-[10px] font-mono text-purpura-600">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
+                                                                @if($item['status'] === 'Reprovado')
+                                                                    <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded uppercase">Reprovado</span>
+                                                                @elseif($item['status'] === 'Aprovado com ressalvas')
+                                                                    <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded uppercase">Ressalvas</span>
+                                                                @elseif($item['status'] === 'Aprovado')
+                                                                    <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Aprovado</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-xs font-bold text-gray-800 rounded border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                                            <option value="">Selecione Natureza...</option>
+                                                            @foreach($todasNaturezas as $nat)
+                                                                <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @endif
+                                                </td>
+
+                                                <td class="p-2 sticky left-[300px] z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-200">
+                                                    <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Detalhes da linha" class="w-full text-[11px] text-gray-500 italic rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500" @if($isLockedGlobal) disabled @endif>
+                                                </td>
+                                                
+                                                @php $totalDestaLinha = 0; @endphp
+                                                @foreach($mesesKeys as $num => $sigla)
+                                                    @php
+                                                        $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
+                                                        $isDisabled = $isLockedGlobal || $isPassado;
+                                                        $valorMes = (float)($item["valor_$sigla"] ?? 0);
+                                                        $totalDestaLinha += $valorMes;
+                                                    @endphp
+                                                    <td class="p-2 border-r border-gray-50 {{ $isDisabled ? 'bg-gray-50/50 opacity-70' : '' }}">
+                                                        <div class="text-[9px] font-bold text-gray-400 text-right mb-0.5" title="Valor Base da API / Ano Anterior">
+                                                            Base: {{ number_format((float)($item["previsto_$sigla"] ?? 0), 2, ',', '.') }}
+                                                        </div>
+                                                        <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs font-medium text-right text-gray-900 rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 {{ $valorMes == 0 ? 'text-gray-300' : '' }}" @if($isDisabled) disabled @endif>
+                                                    </td>
+                                                @endforeach
+
+                                                <td class="p-3 text-right text-xs font-black bg-emerald-50/30 text-gray-900">
+                                                    {{ number_format($totalDestaLinha, 2, ',', '.') }}
+                                                </td>
+
+                                                <td class="p-2 text-center border-l border-gray-100 flex items-center justify-center h-full">
+                                                    @if(!$isLockedGlobal)
+                                                        <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-base"></i></button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        @php
+                                            $totaisMensais = [];
+                                            foreach($mesesKeys as $num => $sigla) {
+                                                $totaisMensais[$num] = collect($itensOrcamento)->sum("valor_$sigla");
+                                            }
+                                        @endphp
+                                        <tr class="bg-gray-100">
+                                            <td colspan="2" class="p-4 sticky left-0 z-20 bg-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-xs font-black uppercase text-gray-700">Total Atual Mensal</span>
+                                                    @if(!$isLockedGlobal)
+                                                        <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Adicionar Linha</button>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            @foreach($mesesKeys as $num => $sigla)
+                                                <td class="p-3 text-right border-r border-gray-200">
+                                                    <div class="text-[13px] font-black text-gray-900">{{ number_format($totaisMensais[$num], 2, ',', '.') }}</div>
+                                                </td>
+                                            @endforeach
+                                            <td class="p-3 text-right text-sm font-black text-emerald-700 bg-emerald-100/50 border-r border-emerald-200">{{ number_format($totalGeralLivewire, 2, ',', '.') }}</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
-                        <div class="overflow-x-auto custom-scrollbar pb-2">
-                            <table class="w-full text-left border-collapse min-w-[1600px]">
-                                <thead>
-                                    <tr class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[300px] sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-400 w-[200px] sticky left-[300px] z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">Descrição / Justificativa</th>
-                                        
-                                        @php
-                                            $mesesKeys = [
-                                                1 => 'jan', 2 => 'fev', 3 => 'mar', 4 => 'abr', 5 => 'mai', 6 => 'jun',
-                                                7 => 'jul', 8 => 'ago', 9 => 'set', 10 => 'out', 11 => 'nov', 12 => 'dez'
-                                            ];
-                                        @endphp
-                                        
-                                        @foreach($mesesKeys as $num => $sigla)
-                                            @php $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao); @endphp
-                                            <th class="p-3 text-[10px] font-bold uppercase w-[110px] {{ $isPassado ? 'text-gray-400 bg-gray-100/50' : 'text-gray-600' }}">
-                                                {{ ucfirst($sigla) }} {!! $isPassado ? '<i class="ph-fill ph-lock-key"></i>' : '' !!}
-                                            </th>
-                                        @endforeach
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-900 w-[100px] text-right bg-emerald-50/50">Total Atual</th>
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[80px] text-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($itensOrcamento as $index => $item)
-                                        <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
-                                            
-                                            <td class="p-2 sticky left-0 z-10 bg-white border-r border-gray-100">
-                                                @if(!empty($item['id']))
-                                                    <div class="flex flex-col px-2 w-[280px]">
-                                                        <span class="text-xs font-bold text-gray-900 leading-tight truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
-                                                        <div class="flex items-center gap-2 mt-0.5">
-                                                            <span class="text-[10px] font-mono text-purpura-600">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
-                                                            @if($item['status'] === 'Reprovado')
-                                                                <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded uppercase">Reprovado</span>
-                                                            @elseif($item['status'] === 'Aprovado com ressalvas')
-                                                                <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded uppercase">Ressalvas</span>
-                                                            @elseif($item['status'] === 'Aprovado')
-                                                                <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Aprovado</span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-xs font-bold text-gray-800 rounded border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                                        <option value="">Selecione Natureza...</option>
-                                                        @foreach($todasNaturezas as $nat)
-                                                            <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @endif
-                                            </td>
-
-                                            <td class="p-2 sticky left-[300px] z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-200">
-                                                <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Detalhes da linha" class="w-full text-[11px] text-gray-500 italic rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500" @if($isLockedGlobal) disabled @endif>
-                                            </td>
-                                            
-                                            @php $totalDestaLinha = 0; @endphp
-                                            @foreach($mesesKeys as $num => $sigla)
-                                                @php
-                                                    $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
-                                                    $isDisabled = $isLockedGlobal || $isPassado;
-                                                    $valorMes = (float)($item["valor_$sigla"] ?? 0);
-                                                    $totalDestaLinha += $valorMes;
-                                                @endphp
-                                                <td class="p-2 border-r border-gray-50 {{ $isDisabled ? 'bg-gray-50/50 opacity-70' : '' }}">
-                                                    <div class="text-[9px] font-bold text-gray-400 text-right mb-0.5" title="Valor Base da API / Ano Anterior">
-                                                        Base: {{ number_format((float)($item["previsto_$sigla"] ?? 0), 2, ',', '.') }}
-                                                    </div>
-                                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs font-medium text-right text-gray-900 rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 {{ $valorMes == 0 ? 'text-gray-300' : '' }}" @if($isDisabled) disabled @endif>
-                                                </td>
-                                            @endforeach
-
-                                            <td class="p-3 text-right text-xs font-black bg-emerald-50/30 text-gray-900">
-                                                {{ number_format($totalDestaLinha, 2, ',', '.') }}
-                                            </td>
-
-                                            <td class="p-2 text-center border-l border-gray-100 flex items-center justify-center gap-1">
-                                                {{-- Botão de Feedback da Diretoria --}}
-                                                @if(count($item['avaliacoes'] ?? []) > 0)
-                                                    <button type="button" onclick="alert('Motivo / Feedback da Diretoria:\n\n{{ addslashes($item['avaliacoes'][0]['comentario']) }}')" class="p-1 text-orange-500 hover:bg-orange-50 rounded transition" title="Ver feedback da Diretoria">
-                                                        <i class="ph-fill ph-chat-circle-text text-base"></i>
-                                                    </button>
-                                                @endif
-
-                                                {{-- BOTÃO REMOVER LIBERADO PARA QUALQUER ITEM (DESDE QUE O ORÇAMENTO NÃO ESTEJA TOTALMENTE BLOQUEADO) --}}
-                                                @if(!$isLockedGlobal)
-                                                    <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-base"></i></button>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                                <tfoot>
-                                    @php
-                                        $totaisMensais = [];
-                                        foreach($mesesKeys as $num => $sigla) {
-                                            $totaisMensais[$num] = collect($itensOrcamento)->sum("valor_$sigla");
+                    {{-- COLUNA DIREITA: Timeline de Histórico para o Gestor --}}
+                    <div class="w-full md:w-96 bg-gray-50 flex flex-col border-l border-gray-200 shrink-0">
+                        <div class="p-5 border-b border-gray-200 bg-white shrink-0">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico de Análise</h3>
+                            <p class="text-xs text-gray-500 mt-1">Acompanhe as decisões da Diretoria.</p>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-5 custom-scrollbar space-y-6 relative">
+                            <div class="absolute left-7 top-0 bottom-0 w-px bg-gray-200"></div>
+                            
+                            @php
+                                $todasAvaliacoes = collect();
+                                foreach($itensOrcamento as $itemLinha) {
+                                    if(!empty($itemLinha['avaliacoes'])) {
+                                        foreach($itemLinha['avaliacoes'] as $aval) {
+                                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                                            $avalArray['natureza_codigo'] = $itemLinha['natureza_codigo'];
+                                            $avalArray['natureza_descricao'] = $itemLinha['descricao'];
+                                            $todasAvaliacoes->push($avalArray);
                                         }
-                                    @endphp
-                                    <tr class="bg-gray-100">
-                                        <td colspan="2" class="p-4 sticky left-0 z-20 bg-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200">
-                                            <div class="flex items-center justify-between">
-                                                <span class="text-xs font-black uppercase text-gray-700">Total Atual Mensal</span>
-                                                @if(!$isLockedGlobal)
-                                                    <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Adicionar Linha</button>
-                                                @endif
-                                            </div>
-                                        </td>
-                                        @foreach($mesesKeys as $num => $sigla)
-                                            <td class="p-3 text-right border-r border-gray-200">
-                                                <div class="text-[13px] font-black text-gray-900">{{ number_format($totaisMensais[$num], 2, ',', '.') }}</div>
-                                            </td>
-                                        @endforeach
-                                        <td class="p-3 text-right text-sm font-black text-emerald-700 bg-emerald-100/50 border-r border-emerald-200">{{ number_format($totalGeralLivewire, 2, ',', '.') }}</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                    }
+                                }
+                                $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
+                            @endphp
+
+                            @forelse($todasAvaliacoes as $aval)
+                                @php 
+                                    $corPonto = match($aval['status_aplicado']) { 
+                                        'Aprovado' => 'bg-emerald-500', 
+                                        'Aprovado com ressalvas' => 'bg-yellow-500', 
+                                        'Reprovado' => 'bg-red-500', 
+                                        default => 'bg-gray-500' 
+                                    }; 
+                                @endphp
+                                <div class="relative pl-8">
+                                    <div class="absolute w-3 h-3 rounded-full {{ $corPonto }} border-2 border-white left-[-5px] top-1 shadow-sm"></div>
+                                    <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Diretoria' }}</span>
+                                            <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m H:i') }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-[10px] font-bold uppercase {{ str_contains($aval['status_aplicado'], 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
+                                            <span class="text-[9px] text-gray-400 font-mono" title="{{ $aval['natureza_descricao'] }}">({{ $aval['natureza_codigo'] }})</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center py-10 relative z-10">
+                                    <i class="ph-fill ph-chat-slash text-4xl text-gray-300 mb-2"></i>
+                                    <p class="text-xs font-bold text-gray-400 uppercase">Nenhuma avaliação registada.</p>
+                                </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
@@ -306,9 +355,8 @@
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalNovaNaturezaAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button wire:click="salvarNovaNatureza" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">Cadastrar e Usar</button>
-                </div>\
+                </div>
             </div>
         </div>
     @endif
-
 </div>
