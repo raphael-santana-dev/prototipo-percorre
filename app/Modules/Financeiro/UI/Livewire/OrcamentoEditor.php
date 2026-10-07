@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
+use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao; // Adicionado para os logs
 
 #[Layout('components.layouts.app')]
 #[Title('Edição de Orçamento - Excel View')]
@@ -21,6 +22,11 @@ class OrcamentoEditor extends Component
     public bool $modalNovaNaturezaAberto = false;
     public string $novaNaturezaDescricao = '';
 
+    // --- VARIÁVEIS DE DESBLOQUEIO (DUPLO CLIQUE) ---
+    public bool $modalDesbloqueioAberto = false;
+    public ?int $linhaParaDesbloquear = null;
+    public string $justificativaDesbloqueio = '';
+
     public int $anoSimulacao = 2026;
     public bool $isLockedGlobal = false;
 
@@ -28,7 +34,6 @@ class OrcamentoEditor extends Component
     {
         $this->orcamento = Orcamento::with(['itens.natureza', 'itens.avaliacoes', 'centroCusto'])->findOrFail($id);
         
-        // Verifica permissões
         if (!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('financeiro.orcamentos.global')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {
                 $ccPermitidos = auth()->user()->centros_de_custo->pluck('codigo')->toArray();
@@ -40,7 +45,6 @@ class OrcamentoEditor extends Component
 
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
         
-        // Verifica se está trancado
         $this->isLockedGlobal = in_array($this->orcamento->status, ['Aprovado', 'Aprovado com ressalvas', 'Finalizado']);
         if (!auth()->user()->hasRole('dev|admin') && $this->orcamento->status === 'Finalizado') {
             $this->isLockedGlobal = true;
@@ -77,6 +81,49 @@ class OrcamentoEditor extends Component
         }
     }
 
+    // --- MÉTODOS DE DESBLOQUEIO DE LINHA ---
+    public function solicitarDesbloqueio($index)
+    {
+        // Se a linha não for 'Aprovado' ou o orçamento estiver bloqueado globalmente, ignora
+        if ($this->itensOrcamento[$index]['status'] !== 'Aprovado' || $this->isLockedGlobal) return;
+
+        $this->linhaParaDesbloquear = $index;
+        $this->justificativaDesbloqueio = '';
+        $this->modalDesbloqueioAberto = true;
+    }
+
+    public function confirmarDesbloqueio()
+    {
+        $index = $this->linhaParaDesbloquear;
+        
+        if ($index !== null && isset($this->itensOrcamento[$index])) {
+            // Desbloqueia na Interface (muda para Corrigido)
+            $this->itensOrcamento[$index]['status'] = 'Corrigido';
+
+            // Cria imediatamente o log de auditoria da alteração na base de dados
+            if (!empty($this->itensOrcamento[$index]['id'])) {
+                OrcamentoAvaliacao::create([
+                    'orcamento_id' => $this->orcamento->id,
+                    'orcamento_item_id' => $this->itensOrcamento[$index]['id'],
+                    'user_id' => auth()->id(),
+                    'user_nome' => auth()->user()->name,
+                    'status_aplicado' => 'Edição Pós-Aprovação',
+                    'comentario' => trim($this->justificativaDesbloqueio) ?: 'Edição desbloqueada pelo gestor.',
+                    'tipo_evento' => 'edicao_item_aprovado'
+                ]);
+            }
+            
+            // Recarrega o orçamento silenciosamente para atualizar a Timeline
+            $this->orcamento->refresh();
+
+            $this->dispatch('sucesso', msg: 'Linha desbloqueada! Os campos estão agora abertos para edição.');
+        }
+        
+        $this->modalDesbloqueioAberto = false;
+        $this->linhaParaDesbloquear = null;
+    }
+    // ----------------------------------------
+
     public function adicionarItem() {
         $this->itensOrcamento[] = [
             'id' => null, 'natureza_codigo' => '', 'descricao' => '', 'status' => 'Criado', 'avaliacoes' => [],
@@ -111,9 +158,7 @@ class OrcamentoEditor extends Component
             $codigoAleatorio = 'D' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
         }
 
-        Natureza::create([
-            'codigo' => $codigoAleatorio, 'descricao' => trim($this->novaNaturezaDescricao), 'disponivel_orcamento' => true
-        ]);
+        Natureza::create(['codigo' => $codigoAleatorio, 'descricao' => trim($this->novaNaturezaDescricao), 'disponivel_orcamento' => true]);
 
         $this->modalNovaNaturezaAberto = false;
         $this->dispatch('sucesso', msg: "Natureza {$codigoAleatorio} cadastrada com sucesso!");
@@ -168,23 +213,18 @@ class OrcamentoEditor extends Component
         $this->dispatch('sucesso', msg: $mensagemSucesso);
         
         if ($statusDesejado === 'Finalizado') {
-            return redirect()->route('financeiro.orcamentos'); // Volta para a listagem
+            return redirect()->route('financeiro.orcamentos');
         }
         
         $this->orcamento->refresh();
         $this->carregarItens();
     }
 
-    public function voltar()
-    {
-        return redirect()->route('financeiro.orcamentos');
-    }
+    public function voltar() { return redirect()->route('financeiro.orcamentos'); }
 
     public function render()
     {
         $todasNaturezas = Natureza::where('disponivel_orcamento', true)->orderBy('descricao')->get();
-        return view('livewire.financeiro.orcamento-editor', [
-            'todasNaturezas' => $todasNaturezas
-        ]);
+        return view('livewire.financeiro.orcamento-editor', ['todasNaturezas' => $todasNaturezas]);
     }
 }

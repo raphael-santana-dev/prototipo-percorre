@@ -3,7 +3,7 @@
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
     
-    {{-- CSS Dinâmico: Força o modo Tela Cheia sem interferir no resto do sistema --}}
+    {{-- CSS Dinâmico: Força o modo Tela Cheia e Cursor de Desbloqueio --}}
     <style>
         body.modo-expandido main > div > div.max-w-7xl { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
@@ -11,6 +11,9 @@
         
         body.navbar-oculta .js-topnav { display: none !important; }
         body.navbar-oculta header { display: none !important; }
+        
+        /* Cursor especial para itens aprovados */
+        .cursor-unlock { cursor: cell !important; }
     </style>
 
     {{-- BARRA SUPERIOR (HEADER FIXO) --}}
@@ -84,7 +87,7 @@
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
-                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300">Natureza Financeira</th>
+                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
                             <th class="w-[200px] min-w-[200px] sticky left-[300px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Observações da Linha</th>
                             
                             @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
@@ -101,7 +104,14 @@
                     <tbody class="bg-white">
                         @php $totalGeral = 0; @endphp
                         @foreach($itensOrcamento as $index => $item)
-                            <tr class="group hover:bg-blue-50 transition-colors">
+                            @php 
+                                $isLinhaAprovada = ($item['status'] === 'Aprovado');
+                                $eventoDuploClique = ($isLinhaAprovada && !$isLockedGlobal) ? "wire:dblclick=solicitarDesbloqueio($index)" : "";
+                                $classeCursor = ($isLinhaAprovada && !$isLockedGlobal) ? "cursor-unlock" : "";
+                                $tooltipMsg = ($isLinhaAprovada && !$isLockedGlobal) ? "Duplo clique para solicitar desbloqueio desta linha" : "";
+                            @endphp
+                            
+                            <tr class="group hover:bg-blue-50 transition-colors {{ $classeCursor }}" {!! $eventoDuploClique !!} title="{{ $tooltipMsg }}">
                                 
                                 {{-- COLUNA 1: NATUREZA (FIXA) --}}
                                 <td class="sticky left-0 z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors">
@@ -112,7 +122,7 @@
                                                 <span class="text-[10px] font-mono text-gray-500">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
                                                 @if($item['status'] === 'Reprovado') <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Reprovado</span>
                                                 @elseif($item['status'] === 'Aprovado com ressalvas') <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Ressalvas</span>
-                                                @elseif($item['status'] === 'Aprovado') <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Aprovado</span>
+                                                @elseif($item['status'] === 'Aprovado') <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 uppercase rounded shadow-sm" title="Aprovado pela Diretoria. Duplo clique na linha para desbloquear."><i class="ph-bold ph-lock-key mr-0.5"></i> Aprovado</span>
                                                 @elseif($item['status'] === 'Corrigido') <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Re-Analisar</span>
                                                 @endif
                                             </div>
@@ -129,14 +139,15 @@
 
                                 {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
                                 <td class="sticky left-[300px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full min-w-[180px] text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 resize-none bg-white" placeholder="Anotações para a diretoria..." @if($isLockedGlobal) disabled @endif></textarea>
+                                    <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full min-w-[180px] text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 resize-none bg-white {{ $classeCursor }}" placeholder="Anotações para a diretoria..." @if($isLockedGlobal || $isLinhaAprovada) disabled @endif></textarea>
                                 </td>
 
                                 {{-- COLUNAS DOS MESES --}}
                                 @php $totalLinha = 0; @endphp
                                 @foreach($meses as $sigla)
                                     @php
-                                        $isDisabled = $isLockedGlobal || ($orcamento->ano < $anoSimulacao);
+                                        // A linha fica bloqueada se o orçamento global está trancado, ou se o ano passou, ou se ESTA LINHA específica já foi aprovada
+                                        $isDisabled = $isLockedGlobal || ($orcamento->ano < $anoSimulacao) || $isLinhaAprovada;
                                         $valorMes = (float)($item["valor_$sigla"] ?? 0);
                                         $previsto = (float)($item["previsto_$sigla"] ?? 0);
                                         $totalLinha += $valorMes;
@@ -144,21 +155,19 @@
                                         $diferenca = $valorMes - $previsto;
                                         $percentual = $previsto > 0 ? ($diferenca / $previsto) * 100 : ($valorMes > 0 ? 100 : 0);
                                         $sinal = $diferenca > 0 ? '+' : '';
-                                        $corDiff = $diferenca > 0 ? 'text-red-600' : ($diferenca < 0 ? 'text-emerald-600' : 'text-gray-400');
+                                        $corDiff = $diferenca > 0 ? 'text-red-500' : ($diferenca < 0 ? 'text-emerald-500' : 'text-gray-400');
                                     @endphp
-                                    <td class="border-b border-r border-gray-300 p-2 align-top {{ $isDisabled ? 'bg-gray-50' : 'bg-transparent' }} transition-colors z-0">
-                                        <div class="relative">
-                                            @if($previsto > 0 && $previsto != $valorMes)
-                                                <div class="absolute -top-1.5 right-1 bg-white px-1 text-[8px] font-bold text-gray-400 rounded-sm">Base: {{ number_format($previsto, 0, '', '') }}</div>
-                                            @endif
-                                            
-                                            <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs text-right font-bold text-gray-900 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 {{ $isDisabled ? 'bg-gray-100' : 'bg-white' }}" @if($isDisabled) disabled @endif>
-                                        </div>
+                                    <td class="border-b border-r border-gray-200 p-2 align-top {{ $isDisabled ? 'bg-gray-50' : 'bg-transparent' }} transition-colors z-0 relative">
+                                        @if($previsto > 0 && $previsto != $valorMes)
+                                            <div class="absolute -top-1.5 right-1 bg-white px-1 text-[8px] font-bold text-gray-400 rounded-sm">Base: {{ number_format($previsto, 0, '', '') }}</div>
+                                        @endif
+                                        
+                                        <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs text-right font-bold text-gray-900 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 {{ $isDisabled ? 'bg-gray-100' : 'bg-white' }} {{ $classeCursor }}" @if($isDisabled) disabled @endif>
                                         
                                         <div class="mt-2 flex flex-col items-end justify-center text-[9px] font-medium leading-tight space-y-0.5 px-1">
                                             <span class="text-gray-500">Previsto: R$ {{ number_format($previsto, 2, ',', '.') }}</span>
                                             @if($diferenca != 0)
-                                                <span class="{{ $corDiff }} font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200 flex items-center justify-end w-full">
+                                                <span class="{{ $corDiff }} font-bold bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-100 flex items-center justify-end w-full">
                                                     {{ $sinal }}R$ {{ number_format($diferenca, 2, ',', '.') }} 
                                                     <span class="ml-1 opacity-70">({{ $sinal }}{{ number_format($percentual, 1, ',', '.') }}%)</span>
                                                 </span>
@@ -170,16 +179,18 @@
                                 @endforeach
 
                                 @php $totalGeral += $totalLinha; @endphp
-                                <td class="border-b border-r border-gray-300 bg-emerald-50/50 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
+                                <td class="border-b border-r border-gray-200 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
                                     {{ number_format($totalLinha, 2, ',', '.') }}
                                 </td>
-                                <td class="border-b border-gray-300 p-1 text-center align-top pt-3 z-0">
+                                <td class="border-b border-gray-200 p-1 text-center align-top pt-3 z-0">
                                     <div class="flex items-center justify-center gap-1 flex-col">
                                         @if(!empty($item['avaliacoes']))
                                             <button type="button" @click="timelineAberta = true" class="text-orange-500 hover:text-orange-700 p-1 bg-orange-50 hover:bg-orange-100 rounded transition" title="Ver feedback da Diretoria"><i class="ph-fill ph-warning-circle text-lg"></i></button>
                                         @endif
-                                        @if(!$isLockedGlobal)
-                                            <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover"><i class="ph-bold ph-trash text-lg"></i></button>
+                                        
+                                        {{-- Só permite remover itens se não for aprovado e o orçamento não estiver fechado --}}
+                                        @if(!$isLockedGlobal && !$isLinhaAprovada)
+                                            <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-lg"></i></button>
                                         @endif
                                     </div>
                                 </td>
@@ -211,8 +222,8 @@
             </div>
         </div>
 
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES --}}
-        <div x-show="timelineAberta" x-transition x-cloak class="w-[340px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[60]">
+        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES (COM SCROLL INTERNO INDEPENDENTE) --}}
+        <div x-show="timelineAberta" x-transition x-cloak class="w-[340px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[70] transition-transform">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
                 <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition" title="Fechar Histórico"><i class="ph-bold ph-x text-lg"></i></button>
@@ -222,6 +233,7 @@
                 <div class="absolute left-7 top-4 bottom-4 w-px bg-gray-200"></div>
                 @php
                     $todasAvaliacoes = collect();
+                    // Associa as avaliações de linha e as avaliações globais
                     foreach($itensOrcamento as $itemLinha) {
                         if(!empty($itemLinha['avaliacoes'])) {
                             foreach($itemLinha['avaliacoes'] as $aval) {
@@ -232,23 +244,42 @@
                             }
                         }
                     }
+                    // Junta com os Logs Gerais do Orçamento
+                    if(!empty($orcamento->logsGerais)) {
+                        foreach($orcamento->logsGerais as $aval) {
+                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                            $avalArray['natureza_codigo'] = 'GERAL';
+                            $avalArray['natureza_descricao'] = 'Ação Global do Centro de Custo';
+                            $todasAvaliacoes->push($avalArray);
+                        }
+                    }
                     $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
                 @endphp
 
                 @forelse($todasAvaliacoes as $aval)
-                    @php $cor = match($aval['status_aplicado']) { 'Aprovado' => 'bg-emerald-500', 'Aprovado com ressalvas' => 'bg-yellow-500', 'Reprovado' => 'bg-red-500', default => 'bg-gray-500' }; @endphp
+                    @php 
+                        $cor = match($aval['status_aplicado']) { 
+                            'Aprovado' => 'bg-emerald-500', 
+                            'Aprovado com ressalvas' => 'bg-yellow-500', 
+                            'Reprovado' => 'bg-red-500', 
+                            'Edição Pós-Aprovação' => 'bg-blue-500',
+                            default => 'bg-gray-500' 
+                        }; 
+                    @endphp
                     <div class="relative pl-7 mb-6">
                         <div class="absolute w-3 h-3 rounded-full {{ $cor }} border-2 border-white left-[-6px] top-1 shadow-sm"></div>
                         <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Diretoria' }}</span>
+                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Usuário' }}</span>
                                 <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m/Y H:i') }}</span>
                             </div>
                             <div class="flex flex-col gap-0.5 mb-2">
-                                <span class="text-[10px] font-bold uppercase {{ str_contains($aval['status_aplicado'], 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
-                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] }}">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
+                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
+                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] ?? '' }}">{{ $aval['natureza_codigo'] ?? '' }} {{ !empty($aval['natureza_descricao']) ? '- ' . $aval['natureza_descricao'] : '' }}</span>
                             </div>
-                            <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
+                            @if(!empty($aval['comentario']))
+                                <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
+                            @endif
                         </div>
                     </div>
                 @empty
@@ -264,7 +295,7 @@
 
     {{-- BOTÃO FLUTUANTE (NOVA NATUREZA) --}}
     @if(!$isLockedGlobal)
-        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-[70] flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
+        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-[40] flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
             <i class="ph-bold ph-plus text-xl"></i>
         </button>
     @endif
@@ -283,4 +314,20 @@
             </div>
         </div>
     @endif
+
+    {{-- MODAL DESBLOQUEAR LINHA (DUPLO CLIQUE) --}}
+    @if($modalDesbloqueioAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+                <h3 class="text-base font-black text-gray-900 mb-2 flex items-center gap-2"><i class="ph-fill ph-lock-key-open text-blue-500"></i> Desbloquear Edição</h3>
+                <p class="text-xs text-gray-500 mb-4">Esta linha já foi aprovada. Para editá-la, pode informar o motivo do desbloqueio (opcional). O status da linha voltará para "Corrigido".</p>
+                <textarea wire:model="justificativaDesbloqueio" rows="3" class="w-full text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md" placeholder="Motivo da alteração (Opcional)..."></textarea>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button wire:click="$set('modalDesbloqueioAberto', false)" class="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded">Cancelar</button>
+                    <button wire:click="confirmarDesbloqueio" class="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm">Confirmar e Desbloquear</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>
