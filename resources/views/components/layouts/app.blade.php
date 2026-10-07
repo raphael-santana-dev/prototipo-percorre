@@ -79,11 +79,32 @@
                                 <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
                             </button>
                             <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                                @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a> @endcan
+                                <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a>
+                            </div>
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                <a href="{{ route('financeiro.aprovacoes') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Aprovações</a>
+                            </div>
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                <a href="{{ route('financeiro.centro_custo') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Centro de Custos</a>
+                            </div>
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                <a href="{{ route('financeiro.naturezas') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Naturezas</a>
                             </div>
                             <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                                 <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
-                                @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a> @endcan
+                                <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a>
+                            </div>
+                            <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                                <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Aprovações</a>
+                            </div>
+                            <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                                <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Centro de Custos</a>
+                            </div>
+                            <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                                <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
                             </div>
                         </div>
                         @endcanany
@@ -327,7 +348,16 @@
                                         <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
                                     </button>
                                     <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
-                                        @can('financeiro.orcamentos.listagem') <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a> @endcan
+                                        <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a>
+                                    </div>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                        <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Aprovações</a>
+                                    </div>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                        <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Centro de Custos</a>
+                                    </div>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-50" x-cloak>
+                                        <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
                                     </div>
                                 </div>
                                 @endcanany

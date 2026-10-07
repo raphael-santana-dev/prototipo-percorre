@@ -7,10 +7,12 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Models\Curso;
 use App\Modules\Turno\Domain\Models\Turno;
+use App\Modules\Financeiro\Domain\Models\CentroCusto;
 use Illuminate\Support\Str;
 
 use Livewire\WithPagination;
@@ -26,6 +28,7 @@ class UserManager extends Component
 
     public string $name = '';
     public string $email = '';
+    public string $codigo_protheus = '';
     public string $password = '';
     public string $roleName = '';
     
@@ -36,6 +39,12 @@ class UserManager extends Component
     public array $unidadesSelecionadas = [];
     public array $cursosSelecionados = [];
     public array $turnosSelecionados = [];
+
+    // --- NOVAS VARIÁVEIS FINANCEIRAS ---
+    public bool $acessoGlobalFinanceiro = false;
+    public array $centrosCustoSelecionados = [];
+    public array $expiracoesCentrosCusto = [];
+    // -----------------------------------
 
     public $cursosFiltrados = [];
     public $turnosFiltrados = [];
@@ -113,10 +122,13 @@ class UserManager extends Component
         $rules = [
             'name' => 'required|string|min:3|max:255',
             'email' => 'required|email|unique:users,email' . ($this->userId ? ',' . $this->userId : ''),
+            'codigo_protheus' => 'nullable|string|max:50',
             'roleName' => 'required|string|exists:roles,name',
             'unidadesSelecionadas' => 'nullable|array',
             'cursosSelecionados' => 'nullable|array',
             'turnosSelecionados' => 'nullable|array',
+            'centrosCustoSelecionados' => 'nullable|array',
+            'acessoGlobalFinanceiro' => 'boolean',
         ];
 
         if (!$this->isEditMode) {
@@ -130,6 +142,7 @@ class UserManager extends Component
         $data = [
             'name' => $this->name,
             'email' => strtolower($this->email),
+            'codigo_protheus' => $this->codigo_protheus,
             'slug' => Str::slug($this->name),
         ];
 
@@ -155,6 +168,31 @@ class UserManager extends Component
         $user->cursos()->sync($this->cursosSelecionados);
         $user->turnos()->sync($this->turnosSelecionados);
 
+        // --- LÓGICA DO MÓDULO FINANCEIRO ---
+        
+        // 1. Permissão Global (Spatie ACL)
+        $permName = 'financeiro.visao_global';
+        Permission::firstOrCreate(['name' => $permName], ['module' => 'financeiro', 'description' => 'Acesso global aos centros de custo e orçamentos', 'guard_name' => 'web']);
+        
+        if ($this->acessoGlobalFinanceiro) {
+            $user->givePermissionTo($permName);
+        } else {
+            $user->revokePermissionTo($permName);
+        }
+
+        // 2. Sincronização dos Centros de Custo (Temporários ou Fixos)
+        $syncDataCC = [];
+        if (!$this->acessoGlobalFinanceiro) {
+            foreach ($this->centrosCustoSelecionados as $ccId) {
+                if ($ccId) {
+                    $expires = !empty($this->expiracoesCentrosCusto[$ccId]) ? $this->expiracoesCentrosCusto[$ccId] : null;
+                    $syncDataCC[$ccId] = ['expires_at' => $expires];
+                }
+            }
+        }
+        $user->centros_de_custo()->sync($syncDataCC);
+        // ------------------------------------
+
         $this->showModal = false;
         $this->resetInputFields();
         $this->dispatch('sucesso', msg: 'Usuário e vínculos salvos com sucesso!');
@@ -162,10 +200,11 @@ class UserManager extends Component
 
     public function edit(int $id)
     {
-        $user = User::with(['roles', 'unidades', 'cursos', 'turnos'])->findOrFail($id);
+        $user = User::with(['roles', 'unidades', 'cursos', 'turnos', 'centros_de_custo'])->findOrFail($id);
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->codigo_protheus = $user->codigo_protheus ?? '';
         $this->password = ''; 
         
         $this->roleName = $user->roles->first()?->name ?? '';
@@ -175,6 +214,19 @@ class UserManager extends Component
         $this->turnosSelecionados = $user->turnos->pluck('id')->map(fn($id) => (string) $id)->toArray();
         
         $this->aplicarRegrasCascata();
+
+        // --- CARREGA DADOS DO FINANCEIRO ---
+        $this->acessoGlobalFinanceiro = $user->hasDirectPermission('financeiro.visao_global');
+        
+        $this->centrosCustoSelecionados = $user->centros_de_custo->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->expiracoesCentrosCusto = [];
+        
+        foreach ($user->centros_de_custo as $cc) {
+            if ($cc->pivot->expires_at) {
+                $this->expiracoesCentrosCusto[$cc->id] = \Carbon\Carbon::parse($cc->pivot->expires_at)->format('Y-m-d');
+            }
+        }
+        // -----------------------------------
 
         $this->isEditMode = true;
         $this->showModal = true;
@@ -200,6 +252,7 @@ class UserManager extends Component
     {
         $this->name = '';
         $this->email = '';
+        $this->codigo_protheus = '';
         $this->password = '';
         $this->roleName = '';
         $this->userId = null;
@@ -208,21 +261,28 @@ class UserManager extends Component
         $this->unidadesSelecionadas = [];
         $this->cursosSelecionados = [];
         $this->turnosSelecionados = [];
+
+        $this->acessoGlobalFinanceiro = false;
+        $this->centrosCustoSelecionados = [];
+        $this->expiracoesCentrosCusto = [];
         
         $this->resetErrorBag();
     }
 
     public function showQuickDetails(int $id)
     {
-        $user = User::with(['roles', 'unidades', 'cursos'])->findOrFail($id);
+        $user = User::with(['roles', 'unidades', 'centros_de_custo'])->findOrFail($id);
         
         $unidadesStr = $user->unidades->count() > 0 ? implode(', ', $user->unidades->pluck('nome')->toArray()) : 'Acesso Global';
+        $ccustosStr = $user->hasDirectPermission('financeiro.visao_global') ? 'Permissão Global (Visão Total)' : ($user->centros_de_custo->count() > 0 ? implode(', ', $user->centros_de_custo->pluck('codigo')->toArray()) : 'Sem acesso a C.Custo');
         
         $detalhes = [
             'Nome Completo' => $user->name,
             'E-mail' => $user->email,
+            'Código Protheus' => $user->codigo_protheus ?: 'Não vinculado',
             'Grupo Principal' => $user->roles->first()?->name ?? 'Sem grupo',
             'Unidades Vinculadas' => $unidadesStr,
+            'Centros de Custo (Fin)' => $ccustosStr,
             'Criado em' => $user->created_at->format('d/m/Y H:i'),
         ];
 
@@ -257,6 +317,7 @@ class UserManager extends Component
             'registros' => $query->paginate($this->porPagina),
             'roles' => Role::orderBy('name')->get(),
             'todasUnidades' => Unidade::whereIn('status', ['Ativa', '1', true])->get(), 
+            'todosCentrosCusto' => CentroCusto::where('disponivel_orcamento', true)->orderBy('codigo')->get(),
         ]);
     }
 }

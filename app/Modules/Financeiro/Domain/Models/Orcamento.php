@@ -13,13 +13,39 @@ class Orcamento extends Model
     protected $guarded = ['id'];
 
     /**
-     * Retorna o valor total do orçamento (Soma de todos os meses)
+     * Retorna o valor total do orçamento somando todos os itens (naturezas) vinculados a ele
      */
     public function getValorTotalAttribute()
     {
-        return $this->valor_jan + $this->valor_fev + $this->valor_mar + 
-               $this->valor_abr + $this->valor_mai + $this->valor_jun + 
-               $this->valor_jul + $this->valor_ago + $this->valor_set + 
-               $this->valor_out + $this->valor_nov + $this->valor_dez;
+        if ($this->itens && $this->itens->count() > 0) {
+            return $this->itens->sum(function ($item) {
+                return $item->valor_total;
+            });
+        }
+        
+        return 0;
+    }
+
+    public function avaliacoes()
+    {
+        return $this->hasMany(OrcamentoAvaliacao::class)->orderBy('created_at', 'desc');
+    }
+
+    public function itens()
+    {
+        return $this->hasMany(OrcamentoItem::class)->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Relacionamento: Este orçamento pertence a um Centro de Custo
+     */
+    public function centroCusto()
+    {
+        return $this->belongsTo(CentroCusto::class, 'ccusto', 'codigo');
+    }
+    
+    public function logsGerais()
+    {
+        return $this->hasMany(OrcamentoAvaliacao::class, 'orcamento_id')->orderBy('created_at', 'desc');
     }
 }

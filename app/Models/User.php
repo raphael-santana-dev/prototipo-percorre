@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'cpf',
         'slug',
+        'codigo_protheus',
         'must_change_password'
     ];
 
@@ -68,6 +69,13 @@ class User extends Authenticatable
     public function turnos()
     {
         return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_user');
+    }
+
+    public function centros_de_custo()
+    {
+        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
+                    ->withPivot('expires_at')
+                    ->withTimestamps();
     }
     
     

@@ -138,6 +138,18 @@
                                 <input type="email" wire:model="email" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
                                 @error('email') <span class="text-xs font-bold text-red-500">{{ $message }}</span> @enderror
                             </div>
+                            <div class="mt-4">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Código Protheus (Opcional)
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="ph-bold ph-identification-card text-gray-400"></i>
+                                    </div>
+                                    <input type="text" wire:model="codigo_protheus" placeholder="Ex: 000123" class="w-full pl-10 text-sm rounded-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+                                @error('codigo_protheus') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">Senha {{ $isEditMode ? '(Opcional)' : '' }}</label>
                                 <input type="password" wire:model="password" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
@@ -215,7 +227,58 @@
                                 </div>
 
                             </div>
+
+                            
                         </div>
+
+                        <!-- Bloco existente das Unidades/Cursos/Turnos... -->
+
+                    {{-- --- INÍCIO: SECÇÃO DO MÓDULO FINANCEIRO --- --}}
+                    <div class="pt-6 mt-6 border-t border-gray-100 dark:border-gray-800">
+                        <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="ph-fill ph-wallet text-purpura-500"></i> Acessos Módulo Financeiro
+                        </h4>
+
+                        <label class="flex items-center gap-3 cursor-pointer mb-5 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 hover:border-purpura-300 transition-colors">
+                            <input type="checkbox" wire:model.live="acessoGlobalFinanceiro" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700">
+                            <div>
+                                <span class="text-sm font-bold text-gray-900 dark:text-white block">Permissão Global (Todos os Centros de Custo)</span>
+                                <span class="text-[11px] text-gray-500">Permite ver, analisar e interagir com orçamentos de todas as áreas (Geralmente para Diretores ou Controladoria).</span>
+                            </div>
+                        </label>
+
+                        <div x-show="!$wire.acessoGlobalFinanceiro" x-collapse>
+                            <div class="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 max-h-72 overflow-y-auto custom-scrollbar space-y-2">
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3 sticky top-0 bg-gray-50 dark:bg-gray-800 p-1 z-10">Centros de Custo Específicos (Gestores)</p>
+                                
+                                @foreach($todosCentrosCusto as $cc)
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm transition-colors hover:border-purpura-300">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                            <input type="checkbox" wire:model.live="centrosCustoSelecionados" value="{{ $cc->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300 font-mono">{{ $cc->codigo }} <span class="font-sans text-gray-500 font-medium ml-1">- {{ $cc->nome }}</span></span>
+                                        </label>
+
+                                        @if(in_array((string)$cc->id, $centrosCustoSelecionados))
+                                            <div class="flex items-center gap-2 sm:w-auto w-full bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-md border border-gray-200 dark:border-gray-700">
+                                                <span class="text-[10px] text-gray-500 font-bold uppercase whitespace-nowrap"><i class="ph-bold ph-hourglass-high"></i> Expira em:</span>
+                                                <input type="date" wire:model="expiracoesCentrosCusto.{{ $cc->id }}" class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-1 focus:ring-purpura-500" title="Deixe em branco para acesso permanente">
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+
+                                @if($todosCentrosCusto->isEmpty())
+                                    <div class="text-center py-4 text-xs font-bold text-gray-400">
+                                        Nenhum Centro de Custo disponível. Cadastre no módulo financeiro.
+                                    </div>
+                                @endif
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="ph-fill ph-info text-purpura-500"></i> Dica: Preencha a data de expiração para conceder acesso temporário para cobrir férias ou licenças.</p>
+                        </div>
+                    </div>
+                    {{-- --- FIM: SECÇÃO DO MÓDULO FINANCEIRO --- --}}
+
+                    <!-- Botões de Salvar/Cancelar existentes... -->
 
                         <div class="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-600 border-gray-300 hover:bg-gray-50">
