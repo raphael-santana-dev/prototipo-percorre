@@ -19,17 +19,15 @@ class OrcamentoAprovacaoManager extends Component
 
     public $filtroAno = '';
     public $filtroFilial = '';
-    public $filtroStatus = 'Finalizado'; // Mostra apenas os que aguardam aprovação por defeito
+    public $filtroStatus = 'Finalizado'; 
 
     public bool $modalAberto = false;
     public ?Orcamento $orcamentoSelecionado = null;
 
-    // --- VARIÁVEIS DA AVALIAÇÃO POR ITEM ---
     public bool $modalAvaliacaoAberto = false;
     public ?int $linhaParaAvaliar = null;
     public string $statusAvaliacao = '';
     public string $comentarioAvaliacao = '';
-    // ---------------------------------------
 
     public array $breadcrumbs = [];
 
@@ -39,7 +37,7 @@ class OrcamentoAprovacaoManager extends Component
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Módulo Financeiro', 'url' => '#'],
+            ['label' => 'Financeiro', 'url' => '#'],
             ['label' => 'Aprovações', 'url' => '#'],
         ];
 
@@ -63,7 +61,6 @@ class OrcamentoAprovacaoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
-        // Traz as linhas, naturezas associadas e logs da diretoria associados a cada item
         $this->orcamentoSelecionado = Orcamento::with(['itens.natureza', 'itens.avaliacoes.usuario', 'centroCusto'])->findOrFail($id);
         $this->modalAberto = true;
     }
@@ -74,9 +71,16 @@ class OrcamentoAprovacaoManager extends Component
         $this->orcamentoSelecionado = null;
     }
 
-    // --- MÉTODOS DE AVALIAÇÃO INDIVIDUAL (POR ITEM) ---
     public function abrirModalAvaliacaoItem($itemId, $statusDesejado)
     {
+        $item = OrcamentoItem::find($itemId);
+        
+        // Trava de segurança: impede que a diretoria reavalie itens que já foram julgados neste ciclo
+        if (in_array($item->status, ['Aprovado', 'Aprovado com ressalvas', 'Reprovado'])) {
+            $this->dispatch('erro', msg: 'Este item já foi avaliado e não pode ser alterado até que o gestor o reenvie.');
+            return;
+        }
+
         $this->linhaParaAvaliar = $itemId;
         $this->statusAvaliacao = $statusDesejado;
         $this->comentarioAvaliacao = '';
@@ -92,10 +96,8 @@ class OrcamentoAprovacaoManager extends Component
 
         $item = OrcamentoItem::findOrFail($this->linhaParaAvaliar);
         
-        // 1. Atualiza o status específico da Natureza (Linha)
         $item->update(['status' => $this->statusAvaliacao]);
 
-        // 2. Regista a auditoria de avaliação vinculada à linha e não ao cabeçalho
         OrcamentoAvaliacao::create([
             'orcamento_item_id' => $item->id,
             'user_id' => auth()->id(),
@@ -104,23 +106,29 @@ class OrcamentoAprovacaoManager extends Component
             'comentario' => $this->comentarioAvaliacao
         ]);
 
-        // 3. Se a diretoria reprovar ou colocar ressalvas num único item, 
-        // força o orçamento global daquele Centro de Custo a voltar para "Em elaboração"
-        if (in_array($this->statusAvaliacao, ['Reprovado', 'Aprovado com ressalvas'])) {
-            $item->orcamento->update(['status' => 'Em elaboração']);
+        // INTELIGÊNCIA DE STATUS GLOBAL DO ORÇAMENTO
+        $orcamento = $item->orcamento;
+        
+        $temReprovado = $orcamento->itens()->whereIn('status', ['Reprovado', 'Aprovado com ressalvas'])->exists();
+        $temPendente = $orcamento->itens()->whereIn('status', ['Criado', 'Corrigido'])->exists();
+
+        if ($temReprovado) {
+            // Se reprovou 1 único item, o orçamento global volta para o Gestor corrigir
+            $orcamento->update(['status' => 'Em elaboração']);
+        } elseif (!$temPendente) {
+            // Se não há mais pendentes e nenhum reprovado, o orçamento global está 100% Aprovado
+            $orcamento->update(['status' => 'Aprovado']);
         }
 
         $this->modalAvaliacaoAberto = false;
-        $this->dispatch('sucesso', msg: "Linha avaliada como {$this->statusAvaliacao}. O Gestor será notificado.");
+        $this->dispatch('sucesso', msg: "Linha avaliada como {$this->statusAvaliacao}.");
         
-        // Atualiza a view do modal mantendo-o aberto para o Diretor continuar a avaliar as restantes naturezas
-        $this->abrirModalDetalhes($item->orcamento_id);
+        // Recarrega os dados do modal
+        $this->abrirModalDetalhes($orcamento->id);
     }
-    // --------------------------------------------------
 
     public function getHeadersProperty()
     {
-        // A listagem agora reflete o Centro de Custo Mestre (O Agrupador)
         return [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'ano', 'label' => 'Ano', 'sortable' => true, 'class' => 'text-center'],

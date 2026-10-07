@@ -180,7 +180,7 @@
                                             
                                             <td class="p-2 sticky left-0 z-10 bg-white border-r border-gray-100">
                                                 @if(!empty($item['id']))
-                                                    <div class="flex flex-col px-2 w-[280px]"> <!-- Largura fixa para evitar sobreposição -->
+                                                    <div class="flex flex-col px-2 w-[280px]">
                                                         <span class="text-xs font-bold text-gray-900 leading-tight truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
                                                         <div class="flex items-center gap-2 mt-0.5">
                                                             <span class="text-[10px] font-mono text-purpura-600">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
@@ -235,8 +235,9 @@
                                                     </button>
                                                 @endif
 
-                                                @if(!$isLockedGlobal && empty($item['id']))
-                                                    <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Nova Natureza"><i class="ph-bold ph-trash text-base"></i></button>
+                                                {{-- BOTÃO REMOVER LIBERADO PARA QUALQUER ITEM (DESDE QUE O ORÇAMENTO NÃO ESTEJA TOTALMENTE BLOQUEADO) --}}
+                                                @if(!$isLockedGlobal)
+                                                    <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-base"></i></button>
                                                 @endif
                                             </td>
                                         </tr>
@@ -253,6 +254,9 @@
                                         <td colspan="2" class="p-4 sticky left-0 z-20 bg-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200">
                                             <div class="flex items-center justify-between">
                                                 <span class="text-xs font-black uppercase text-gray-700">Total Atual Mensal</span>
+                                                @if(!$isLockedGlobal)
+                                                    <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Adicionar Linha</button>
+                                                @endif
                                             </div>
                                         </td>
                                         @foreach($mesesKeys as $num => $sigla)

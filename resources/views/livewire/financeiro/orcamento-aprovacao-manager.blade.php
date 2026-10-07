@@ -84,7 +84,7 @@
 
                         <h3 class="font-extrabold text-xs text-gray-800 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Distribuição Solicitada por Natureza Financeira</h3>
                         
-                        {{-- TABELA DE NATUREZAS COM APROVAÇÃO POR LINHA --}}
+                        {{-- TABELA DE NATUREZAS COM APROVAÇÃO POR LINHA E TRAVA VISUAL --}}
                         <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                             <div class="overflow-x-auto custom-scrollbar pb-2">
                                 <table class="w-full text-left border-collapse min-w-[1500px]">
@@ -103,8 +103,18 @@
                                     </thead>
                                     <tbody>
                                         @foreach($orcamentoSelecionado->itens as $item)
-                                            <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
-                                                <td class="p-3 sticky left-0 z-10 bg-white border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-[280px]">
+                                            @php
+                                                // Muda a cor de fundo da linha se já estiver avaliada
+                                                $bgRow = match($item->status) {
+                                                    'Aprovado' => 'bg-emerald-50/40',
+                                                    'Reprovado' => 'bg-red-50/40',
+                                                    'Aprovado com ressalvas' => 'bg-yellow-50/40',
+                                                    default => 'hover:bg-blue-50/30'
+                                                };
+                                            @endphp
+                                            
+                                            <tr class="border-b border-gray-100 transition-colors {{ $bgRow }}">
+                                                <td class="p-3 sticky left-0 z-10 border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-[280px] {{ $bgRow === 'hover:bg-blue-50/30' ? 'bg-white' : '' }}">
                                                     <div class="flex flex-col">
                                                         <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
                                                         <div class="flex items-center gap-2 mt-0.5">
@@ -116,7 +126,7 @@
                                                             @elseif($item->status === 'Aprovado')
                                                                 <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Aprovado</span>
                                                             @elseif($item->status === 'Corrigido')
-                                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Re-Analisar</span>
+                                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
                                                             @endif
                                                         </div>
                                                     </div>
@@ -128,18 +138,24 @@
                                                         $totalLinha += $valorAtual;
                                                     @endphp
                                                     <td class="p-3 border-r border-gray-50 text-right">
-                                                        <span class="text-xs font-medium {{ $valorAtual == 0 ? 'text-gray-300' : 'text-gray-900' }}">{{ number_format($valorAtual, 2, ',', '.') }}</span>
+                                                        <span class="text-xs font-medium {{ $valorAtual == 0 ? 'text-gray-400' : 'text-gray-900' }}">{{ number_format($valorAtual, 2, ',', '.') }}</span>
                                                     </td>
                                                 @endforeach
                                                 <td class="p-3 text-right text-xs font-black bg-emerald-50/30 text-gray-900">{{ number_format($totalLinha, 2, ',', '.') }}</td>
                                                 
-                                                {{-- BOTÕES DE APROVAÇÃO POR LINHA --}}
-                                                <td class="p-2 border-l border-gray-200 bg-gray-50">
-                                                    <div class="flex items-center gap-1 justify-center">
-                                                        <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded shadow-sm border border-emerald-200 bg-white transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
-                                                        <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1.5 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 rounded shadow-sm border border-yellow-200 bg-white transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
-                                                        <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded shadow-sm border border-red-200 bg-white transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
-                                                    </div>
+                                                {{-- BOTÕES DE APROVAÇÃO POR LINHA (COM BLOQUEIO VISUAL) --}}
+                                                <td class="p-2 border-l border-gray-200 bg-gray-50/50">
+                                                    @if(in_array($item->status, ['Criado', 'Corrigido']))
+                                                        <div class="flex items-center gap-1 justify-center">
+                                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded shadow-sm border border-emerald-200 bg-white transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
+                                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1.5 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 rounded shadow-sm border border-yellow-200 bg-white transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
+                                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded shadow-sm border border-red-200 bg-white transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
+                                                        </div>
+                                                    @else
+                                                        <div class="text-center text-gray-400">
+                                                            <span class="text-[10px] font-bold uppercase"><i class="ph-bold ph-lock-key"></i> Avaliado</span>
+                                                        </div>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach
