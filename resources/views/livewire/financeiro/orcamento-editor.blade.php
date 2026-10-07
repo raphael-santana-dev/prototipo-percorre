@@ -3,16 +3,12 @@
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
     
-    {{-- CSS Dinâmico: Força o modo Tela Cheia e Cursor de Desbloqueio --}}
     <style>
         body.modo-expandido main > div > div.max-w-7xl { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main { overflow: hidden !important; display: flex; flex-direction: column; }
-        
         body.navbar-oculta .js-topnav { display: none !important; }
         body.navbar-oculta header { display: none !important; }
-        
-        /* Cursor especial para itens aprovados */
         .cursor-unlock { cursor: cell !important; }
     </style>
 
@@ -25,7 +21,7 @@
                     <i class="ph-fill ph-microsoft-excel-logo text-emerald-600"></i> Planilha de Orçamento
                 </h1>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-widest mt-0.5">
-                    Centro de Custo: <span class="text-purpura-600 font-bold">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'S/ Vínculo' }} ({{ $orcamento->ccusto }})</span> | Ano: {{ $orcamento->ano }}
+                    C. Custo: <span class="text-purpura-600 font-bold">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'S/ Vínculo' }} ({{ $orcamento->ccusto }})</span> | Ano: {{ $orcamento->ano }}
                 </p>
             </div>
         </div>
@@ -40,17 +36,20 @@
                         'Reprovado' => 'text-red-600', default => 'text-gray-600'
                     };
                 @endphp
-                <span class="text-sm font-black uppercase {{ $statusColor }}">{{ $orcamento->status }}</span>
+                <span class="text-sm font-black uppercase {{ $statusColor }} flex flex-col items-end leading-tight">
+                    {{ $orcamento->status }}
+                    @if($orcamento->prazo_edicao && !$isLockedGlobal)
+                        <span class="text-[9px] font-bold text-orange-600">Reaberto até {{ \Carbon\Carbon::parse($orcamento->prazo_edicao)->format('d/m/y H:i') }}</span>
+                    @endif
+                </span>
             </div>
 
-            {{-- BOTÕES DE VISUALIZAÇÃO --}}
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
                 <button @click="modoExpandido = !modoExpandido" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Área de Trabalho">
                     <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
                 </button>
                 
-                {{-- Botão que SÓ aparece no Modo Expandido para ocultar os menus do sistema --}}
                 <button x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 text-gray-900' : ''" title="Ocultar Navbar do Sistema">
                     <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
                     <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Menus Ocultos' : 'Ocultar Menus'"></span>
@@ -68,6 +67,17 @@
                 <button wire:click="finalizarOrcamento" class="btn btn--primary btn--small shadow-sm" onclick="confirm('Submeter para aprovação da Diretoria?') || event.stopImmediatePropagation()">
                     <i class="ph-bold ph-paper-plane-tilt"></i> <span class="hidden sm:inline">Enviar</span>
                 </button>
+            @else
+                {{-- LÓGICA DE REABERTURA (QUANDO BLOQUEADO) --}}
+                @if($orcamento->reabertura_solicitada)
+                    <span class="btn btn--small bg-orange-100 text-orange-700 border border-orange-200 cursor-not-allowed opacity-80" title="Aguardando a resposta da Diretoria">
+                        <i class="ph-bold ph-hourglass-high animate-pulse"></i> Reabertura Solicitada
+                    </span>
+                @else
+                    <button wire:click="$set('modalReaberturaAberto', true)" class="btn btn--secondary btn--small !bg-orange-50 !text-orange-700 !border-orange-300 hover:!bg-orange-100 shadow-sm" title="Pedir autorização para editar o orçamento fechado">
+                        <i class="ph-bold ph-lock-key-open"></i> Solicitar Reabertura
+                    </button>
+                @endif
             @endif
         </div>
     </div>
@@ -75,7 +85,6 @@
     {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR --}}
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50">
         
-        {{-- CONTAINER DA PLANILHA EXCEL --}}
         <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative" :class="timelineAberta ? 'pr-[340px]' : ''">
             
             <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center gap-3 shrink-0 z-10 relative">
@@ -112,8 +121,6 @@
                             @endphp
                             
                             <tr class="group hover:bg-blue-50 transition-colors {{ $classeCursor }}" {!! $eventoDuploClique !!} title="{{ $tooltipMsg }}">
-                                
-                                {{-- COLUNA 1: NATUREZA (FIXA) --}}
                                 <td class="sticky left-0 z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors">
                                     @if(!empty($item['id']))
                                         <div class="flex flex-col mt-1 w-[280px]">
@@ -137,16 +144,13 @@
                                     @endif
                                 </td>
 
-                                {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
                                 <td class="sticky left-[300px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full min-w-[180px] text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 resize-none bg-white {{ $classeCursor }}" placeholder="Anotações para a diretoria..." @if($isLockedGlobal || $isLinhaAprovada) disabled @endif></textarea>
                                 </td>
 
-                                {{-- COLUNAS DOS MESES --}}
                                 @php $totalLinha = 0; @endphp
                                 @foreach($meses as $sigla)
                                     @php
-                                        // A linha fica bloqueada se o orçamento global está trancado, ou se o ano passou, ou se ESTA LINHA específica já foi aprovada
                                         $isDisabled = $isLockedGlobal || ($orcamento->ano < $anoSimulacao) || $isLinhaAprovada;
                                         $valorMes = (float)($item["valor_$sigla"] ?? 0);
                                         $previsto = (float)($item["previsto_$sigla"] ?? 0);
@@ -187,10 +191,8 @@
                                         @if(!empty($item['avaliacoes']))
                                             <button type="button" @click="timelineAberta = true" class="text-orange-500 hover:text-orange-700 p-1 bg-orange-50 hover:bg-orange-100 rounded transition" title="Ver feedback da Diretoria"><i class="ph-fill ph-warning-circle text-lg"></i></button>
                                         @endif
-                                        
-                                        {{-- Só permite remover itens se não for aprovado e o orçamento não estiver fechado --}}
                                         @if(!$isLockedGlobal && !$isLinhaAprovada)
-                                            <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-lg"></i></button>
+                                            <button type="button" wire:click="removerItem({{ $index }})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" title="Remover"><i class="ph-bold ph-trash text-lg"></i></button>
                                         @endif
                                     </div>
                                 </td>
@@ -222,7 +224,7 @@
             </div>
         </div>
 
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES (COM SCROLL INTERNO INDEPENDENTE) --}}
+        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E SOLICITAÇÕES --}}
         <div x-show="timelineAberta" x-transition x-cloak class="w-[340px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[70] transition-transform">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
@@ -233,7 +235,6 @@
                 <div class="absolute left-7 top-4 bottom-4 w-px bg-gray-200"></div>
                 @php
                     $todasAvaliacoes = collect();
-                    // Associa as avaliações de linha e as avaliações globais
                     foreach($itensOrcamento as $itemLinha) {
                         if(!empty($itemLinha['avaliacoes'])) {
                             foreach($itemLinha['avaliacoes'] as $aval) {
@@ -244,7 +245,6 @@
                             }
                         }
                     }
-                    // Junta com os Logs Gerais do Orçamento
                     if(!empty($orcamento->logsGerais)) {
                         foreach($orcamento->logsGerais as $aval) {
                             $avalArray = is_array($aval) ? $aval : $aval->toArray();
@@ -259,9 +259,9 @@
                 @forelse($todasAvaliacoes as $aval)
                     @php 
                         $cor = match($aval['status_aplicado']) { 
-                            'Aprovado' => 'bg-emerald-500', 
-                            'Aprovado com ressalvas' => 'bg-yellow-500', 
-                            'Reprovado' => 'bg-red-500', 
+                            'Aprovado', 'Reabertura Aprovada' => 'bg-emerald-500', 
+                            'Aprovado com ressalvas', 'Pedido de Reabertura' => 'bg-yellow-500', 
+                            'Reprovado', 'Reabertura Negada' => 'bg-red-500', 
                             'Edição Pós-Aprovação' => 'bg-blue-500',
                             default => 'bg-gray-500' 
                         }; 
@@ -274,8 +274,8 @@
                                 <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m/Y H:i') }}</span>
                             </div>
                             <div class="flex flex-col gap-0.5 mb-2">
-                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
-                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] ?? '' }}">{{ $aval['natureza_codigo'] ?? '' }} {{ !empty($aval['natureza_descricao']) ? '- ' . $aval['natureza_descricao'] : '' }}</span>
+                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
+                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] }}">{{ $aval['natureza_codigo'] }} {{ $aval['natureza_codigo'] !== 'GERAL' ? '- ' . $aval['natureza_descricao'] : '' }}</span>
                             </div>
                             @if(!empty($aval['comentario']))
                                 <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
@@ -292,13 +292,6 @@
         </div>
 
     </div>
-
-    {{-- BOTÃO FLUTUANTE (NOVA NATUREZA) --}}
-    @if(!$isLockedGlobal)
-        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-[40] flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
-            <i class="ph-bold ph-plus text-xl"></i>
-        </button>
-    @endif
 
     {{-- MODAL CADASTRAR NOVA NATUREZA --}}
     @if($modalNovaNaturezaAberto)
@@ -330,4 +323,26 @@
         </div>
     @endif
 
+    {{-- MODAL SOLICITAR REABERTURA GERAL --}}
+    @if($modalReaberturaAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+                <h3 class="text-base font-black text-gray-900 mb-2 flex items-center gap-2"><i class="ph-fill ph-warning-circle text-orange-500"></i> Solicitar Reabertura</h3>
+                <p class="text-xs text-gray-500 mb-4">Este orçamento encontra-se bloqueado pela Diretoria. Indique o motivo para solicitar a reabertura dos campos para nova edição.</p>
+                <textarea wire:model="motivoReabertura" rows="3" class="w-full text-sm border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-md" placeholder="Motivo obrigatório..."></textarea>
+                @error('motivoReabertura') <span class="text-red-500 text-[10px] font-bold block mt-1">{{ $message }}</span> @enderror
+                <div class="flex justify-end gap-2 mt-4">
+                    <button wire:click="$set('modalReaberturaAberto', false)" class="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded">Cancelar</button>
+                    <button wire:click="solicitarReabertura" class="px-3 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded shadow-sm">Enviar Pedido</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- BOTÃO FLUTUANTE (NOVA NATUREZA) --}}
+    @if(!$isLockedGlobal)
+        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-[40] flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
+            <i class="ph-bold ph-plus text-xl"></i>
+        </button>
+    @endif
 </div>

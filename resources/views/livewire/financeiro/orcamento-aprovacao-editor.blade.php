@@ -55,6 +55,17 @@
         </div>
     </div>
 
+    {{-- ALERTA DE PEDIDO DE REABERTURA (SÓ APARECE SE REABERTURA FOR SOLICITADA) --}}
+    @if($orcamento->reabertura_solicitada)
+        <div class="bg-orange-50 border-b border-orange-200 p-4 flex justify-between items-center z-[55] relative shrink-0">
+            <div>
+                <h4 class="text-sm font-black text-orange-800 flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> Pedido de Reabertura Pendente</h4>
+                <p class="text-xs text-orange-700 mt-0.5">O Gestor necessita corrigir este orçamento que já estava bloqueado. <span class="font-bold ml-1">Motivo do Gestor:</span> <span class="italic">"{{ $orcamento->reabertura_motivo }}"</span></p>
+            </div>
+            <button wire:click="$set('modalAprovarReaberturaAberto', true)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded shadow-sm transition">Analisar Pedido</button>
+        </div>
+    @endif
+
     {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR --}}
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50">
         
@@ -87,7 +98,7 @@
                             @endforeach
                             
                             <th class="w-[120px] sticky top-0 z-[40] bg-emerald-100 p-3 text-[10px] font-black text-emerald-800 uppercase tracking-wider text-right border-b border-r border-gray-300">Total Linha</th>
-                            <th class="w-[160px] sticky top-0 z-[40] bg-gray-100 p-3 text-center border-b border-gray-300 text-[10px] font-black text-gray-700 uppercase tracking-wider">Decisão</th>
+                            <th class="w-[160px] sticky top-0 z-[40] bg-gray-100 p-3 text-center border-b border-r border-gray-300 text-[10px] font-black text-gray-700 uppercase tracking-wider">Decisão</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
@@ -95,22 +106,20 @@
                         @foreach($orcamento->itens as $item)
                             @php
                                 $bgRowSolid = match($item->status) {
-                                    'Aprovado' => 'bg-[#eefcf5]', // verde muito suave
-                                    'Reprovado' => 'bg-[#fff5f5]', // vermelho suave
-                                    'Aprovado com ressalvas' => 'bg-[#fffbeb]', // amarelo suave
+                                    'Aprovado' => 'bg-[#eefcf5]',
+                                    'Reprovado' => 'bg-[#fff5f5]',
+                                    'Aprovado com ressalvas' => 'bg-[#fffbeb]',
                                     default => 'bg-white'
                                 };
                             @endphp
                             <tr class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50">
                                 
-                                {{-- COLUNA 1: NATUREZA COM CHECKBOX --}}
                                 <td class="sticky left-0 z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <div class="flex items-start gap-2 mt-1 px-1 w-[280px]">
-                                        {{-- Checkbox só aparece se a linha estiver pendente --}}
                                         @if(in_array($item->status, ['Criado', 'Corrigido']))
                                             <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $item->id }}" class="mt-0.5 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                                         @else
-                                            <div class="w-4 mt-0.5"></div> {{-- Espaçador --}}
+                                            <div class="w-4 mt-0.5"></div>
                                         @endif
                                         
                                         <div class="flex flex-col w-full overflow-hidden">
@@ -125,14 +134,12 @@
                                     </div>
                                 </td>
 
-                                {{-- COLUNA 2: OBSERVAÇÃO --}}
                                 <td class="sticky left-[300px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <div class="w-full min-w-[180px] h-full px-2 py-2 text-[11px] text-gray-600 truncate bg-transparent" title="{{ $item->descricao }}">
                                         {{ $item->descricao ?: '-' }}
                                     </div>
                                 </td>
 
-                                {{-- COLUNAS DOS MESES --}}
                                 @php $totalLinha = 0; @endphp
                                 @foreach($meses as $sigla)
                                     @php
@@ -168,7 +175,7 @@
                                 @endforeach
 
                                 @php $totalGeral += $totalLinha; @endphp
-                                <td class="border-b border-r border-gray-300 bg-emerald-50/50 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
+                                <td class="border-b border-r border-gray-300 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
                                     {{ number_format($totalLinha, 2, ',', '.') }}
                                 </td>
                                 
@@ -233,21 +240,37 @@
                             $todasAvaliacoes->push($avalArray);
                         }
                     }
+                    if(!empty($orcamento->logsGerais)) {
+                        foreach($orcamento->logsGerais as $aval) {
+                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                            $avalArray['natureza_codigo'] = 'GERAL';
+                            $avalArray['natureza_descricao'] = 'Ação Global do Centro de Custo';
+                            $todasAvaliacoes->push($avalArray);
+                        }
+                    }
                     $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
                 @endphp
 
                 @forelse($todasAvaliacoes as $aval)
-                    @php $cor = match($aval['status_aplicado']) { 'Aprovado' => 'bg-emerald-500', 'Aprovado com ressalvas' => 'bg-yellow-500', 'Reprovado' => 'bg-red-500', default => 'bg-gray-500' }; @endphp
+                    @php 
+                        $cor = match($aval['status_aplicado']) { 
+                            'Aprovado', 'Reabertura Aprovada' => 'bg-emerald-500', 
+                            'Aprovado com ressalvas', 'Pedido de Reabertura' => 'bg-yellow-500', 
+                            'Reprovado', 'Reabertura Negada' => 'bg-red-500', 
+                            'Edição Pós-Aprovação' => 'bg-blue-500',
+                            default => 'bg-gray-500' 
+                        }; 
+                    @endphp
                     <div class="relative pl-8 mb-6">
                         <div class="absolute w-3 h-3 rounded-full {{ $cor }} border-2 border-white left-[-6px] top-1 shadow-sm"></div>
                         <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-start mb-2">
-                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Diretoria' }}</span>
+                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Usuário' }}</span>
                                 <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m/Y H:i') }}</span>
                             </div>
                             <div class="flex flex-col gap-0.5 mb-2">
-                                <span class="text-[10px] font-bold uppercase {{ str_contains($aval['status_aplicado'], 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
-                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] }}">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
+                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
+                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] ?? '' }}">{{ $aval['natureza_codigo'] ?? '' }} {{ !empty($aval['natureza_descricao']) ? '- ' . $aval['natureza_descricao'] : '' }}</span>
                             </div>
                             @if(!empty($aval['comentario']))
                                 <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
@@ -269,10 +292,9 @@
                 $qtdRestantes = $totalPendentes - $qtdSelecionados;
             @endphp
 
-            @if($totalPendentes > 0)
+            @if($totalPendentes > 0 && !$orcamento->reabertura_solicitada)
                 <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex flex-col gap-4">
                     
-                    {{-- AÇÃO PARA OS CHECKBOXES SELECIONADOS --}}
                     @if($qtdSelecionados > 0)
                         <div>
                             <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
@@ -286,7 +308,6 @@
                         </div>
                     @endif
                     
-                    {{-- AÇÃO PARA OS RESTANTES --}}
                     @if($qtdRestantes > 0)
                         <div class="{{ $qtdSelecionados > 0 ? 'border-t border-gray-200 pt-4' : '' }}">
                             <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
@@ -299,14 +320,13 @@
                             </div>
                         </div>
                     @endif
-
                 </div>
             @endif
         </div>
 
     </div>
 
-    {{-- MODAL DE COMENTÁRIO DO APROVADOR (Agora Opcional) --}}
+    {{-- MODAL DE COMENTÁRIO DO APROVADOR (Opcional) --}}
     @if($modalAvaliacaoAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
@@ -326,6 +346,27 @@
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalAvaliacaoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button wire:click="confirmarAvaliacao" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm">Confirmar Decisão</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE RESPOSTA AO PEDIDO DE REABERTURA --}}
+    @if($modalAprovarReaberturaAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
+                <h3 class="text-lg font-black text-orange-600 mb-2 flex items-center gap-2"><i class="ph-fill ph-lock-key-open"></i> Avaliar Reabertura</h3>
+                <p class="text-xs text-gray-600 mb-4">O gestor quer editar o orçamento. Se aprovar, o status volta para "Em Elaboração". Pode também definir uma data limite (opcional) para o orçamento bloquear novamente e automaticamente.</p>
+                
+                <div class="mb-5">
+                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-1">Prazo Limite para Edição (Opcional)</label>
+                    <input type="datetime-local" wire:model="prazoReabertura" class="w-full text-sm border-gray-300 bg-gray-50 rounded-lg focus:border-orange-500 focus:ring-orange-500 px-3 py-2">
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 border-t border-gray-100 pt-4">
+                    <button wire:click="negarReabertura" class="px-4 py-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded shadow-sm">Negar Pedido</button>
+                    <button wire:click="$set('modalAprovarReaberturaAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded">Cancelar</button>
+                    <button wire:click="aprovarReabertura" class="px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded shadow-sm">Aprovar Reabertura</button>
                 </div>
             </div>
         </div>

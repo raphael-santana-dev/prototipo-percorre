@@ -8,7 +8,7 @@ use Livewire\Attributes\Title;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
-use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao; // Adicionado para os logs
+use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 
 #[Layout('components.layouts.app')]
 #[Title('Edição de Orçamento - Excel View')]
@@ -22,10 +22,13 @@ class OrcamentoEditor extends Component
     public bool $modalNovaNaturezaAberto = false;
     public string $novaNaturezaDescricao = '';
 
-    // --- VARIÁVEIS DE DESBLOQUEIO (DUPLO CLIQUE) ---
     public bool $modalDesbloqueioAberto = false;
     public ?int $linhaParaDesbloquear = null;
     public string $justificativaDesbloqueio = '';
+
+    // --- VARIÁVEIS DE SOLICITAÇÃO DE REABERTURA ---
+    public bool $modalReaberturaAberto = false;
+    public string $motivoReabertura = '';
 
     public int $anoSimulacao = 2026;
     public bool $isLockedGlobal = false;
@@ -45,8 +48,14 @@ class OrcamentoEditor extends Component
 
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
         
+        // Verifica bloqueio base
         $this->isLockedGlobal = in_array($this->orcamento->status, ['Aprovado', 'Aprovado com ressalvas', 'Finalizado']);
         if (!auth()->user()->hasRole('dev|admin') && $this->orcamento->status === 'Finalizado') {
+            $this->isLockedGlobal = true;
+        }
+
+        // Verifica o Prazo de Edição (Se existir um prazo e ele já passou, bloqueia)
+        if ($this->orcamento->prazo_edicao && now()->greaterThan($this->orcamento->prazo_edicao)) {
             $this->isLockedGlobal = true;
         }
 
@@ -81,12 +90,34 @@ class OrcamentoEditor extends Component
         }
     }
 
-    // --- MÉTODOS DE DESBLOQUEIO DE LINHA ---
+    // --- SOLICITAR REABERTURA GERAL ---
+    public function solicitarReabertura()
+    {
+        $this->validate(['motivoReabertura' => 'required|string|min:5'], ['motivoReabertura.required' => 'O motivo é obrigatório.']);
+
+        $this->orcamento->update([
+            'reabertura_solicitada' => true,
+            'reabertura_motivo' => $this->motivoReabertura
+        ]);
+
+        OrcamentoAvaliacao::create([
+            'orcamento_id' => $this->orcamento->id,
+            'user_id' => auth()->id(),
+            'user_nome' => auth()->user()->name,
+            'status_aplicado' => 'Pedido de Reabertura',
+            'comentario' => $this->motivoReabertura,
+            'tipo_evento' => 'solicitacao_reabertura'
+        ]);
+
+        $this->modalReaberturaAberto = false;
+        $this->dispatch('sucesso', msg: 'Pedido enviado à Diretoria. Aguarde a aprovação.');
+        $this->orcamento->refresh();
+    }
+
+    // --- SOLICITAR DESBLOQUEIO DE LINHA ---
     public function solicitarDesbloqueio($index)
     {
-        // Se a linha não for 'Aprovado' ou o orçamento estiver bloqueado globalmente, ignora
         if ($this->itensOrcamento[$index]['status'] !== 'Aprovado' || $this->isLockedGlobal) return;
-
         $this->linhaParaDesbloquear = $index;
         $this->justificativaDesbloqueio = '';
         $this->modalDesbloqueioAberto = true;
@@ -95,12 +126,8 @@ class OrcamentoEditor extends Component
     public function confirmarDesbloqueio()
     {
         $index = $this->linhaParaDesbloquear;
-        
         if ($index !== null && isset($this->itensOrcamento[$index])) {
-            // Desbloqueia na Interface (muda para Corrigido)
             $this->itensOrcamento[$index]['status'] = 'Corrigido';
-
-            // Cria imediatamente o log de auditoria da alteração na base de dados
             if (!empty($this->itensOrcamento[$index]['id'])) {
                 OrcamentoAvaliacao::create([
                     'orcamento_id' => $this->orcamento->id,
@@ -112,17 +139,12 @@ class OrcamentoEditor extends Component
                     'tipo_evento' => 'edicao_item_aprovado'
                 ]);
             }
-            
-            // Recarrega o orçamento silenciosamente para atualizar a Timeline
             $this->orcamento->refresh();
-
             $this->dispatch('sucesso', msg: 'Linha desbloqueada! Os campos estão agora abertos para edição.');
         }
-        
         $this->modalDesbloqueioAberto = false;
         $this->linhaParaDesbloquear = null;
     }
-    // ----------------------------------------
 
     public function adicionarItem() {
         $this->itensOrcamento[] = [
@@ -152,14 +174,11 @@ class OrcamentoEditor extends Component
     public function salvarNovaNatureza()
     {
         $this->validate(['novaNaturezaDescricao' => 'required|string|min:3|max:255']);
-
         $codigoAleatorio = 'D' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
         while (Natureza::where('codigo', $codigoAleatorio)->exists()) {
             $codigoAleatorio = 'D' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
         }
-
         Natureza::create(['codigo' => $codigoAleatorio, 'descricao' => trim($this->novaNaturezaDescricao), 'disponivel_orcamento' => true]);
-
         $this->modalNovaNaturezaAberto = false;
         $this->dispatch('sucesso', msg: "Natureza {$codigoAleatorio} cadastrada com sucesso!");
     }
@@ -169,7 +188,7 @@ class OrcamentoEditor extends Component
 
     private function processarGravacao($statusDesejado, $mensagemSucesso) {
         if ($this->isLockedGlobal) {
-            $this->dispatch('erro', msg: 'Ação bloqueada. Orçamento finalizado ou aprovado.'); return;
+            $this->dispatch('erro', msg: 'Ação bloqueada. Orçamento finalizado ou fora do prazo de edição.'); return;
         }
 
         foreach ($this->itensOrcamento as $item) {
@@ -177,7 +196,15 @@ class OrcamentoEditor extends Component
         }
 
         $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamento->status, ['Criado', 'Reprovado'])) ? $this->orcamento->status : $statusDesejado;
-        $this->orcamento->update(['descricao_despesa' => $this->justificativaGeral, 'status' => $novoStatus]);
+        
+        // Se estiver a enviar para a diretoria, limpa o prazo de edição e o pedido de reabertura para fechar o ciclo
+        $dadosUpdate = ['descricao_despesa' => $this->justificativaGeral, 'status' => $novoStatus];
+        if ($statusDesejado === 'Finalizado') {
+            $dadosUpdate['prazo_edicao'] = null;
+            $dadosUpdate['reabertura_solicitada'] = false;
+        }
+        
+        $this->orcamento->update($dadosUpdate);
         
         if (!empty($this->itensRemovidos)) OrcamentoItem::whereIn('id', $this->itensRemovidos)->delete();
 
@@ -211,11 +238,7 @@ class OrcamentoEditor extends Component
         }
 
         $this->dispatch('sucesso', msg: $mensagemSucesso);
-        
-        if ($statusDesejado === 'Finalizado') {
-            return redirect()->route('financeiro.orcamentos');
-        }
-        
+        if ($statusDesejado === 'Finalizado') { return redirect()->route('financeiro.orcamentos'); }
         $this->orcamento->refresh();
         $this->carregarItens();
     }
