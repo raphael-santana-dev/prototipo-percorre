@@ -213,10 +213,60 @@ class OrcamentoManager extends Component
 
     public function avancarAnoSimulacao()
     {
-        $this->anoSimulacao++;
-        $this->mesSimulacaoAtual = 1;
+        $anoAtual = $this->anoSimulacao;
+        $proximoAno = $anoAtual + 1;
+
+        // 1. Procura todos os orçamentos do ano atual que o utilizador está a simular
+        $orcamentosAtuais = Orcamento::with('itens')->where('ano', (string) $anoAtual)->get();
+
+        foreach ($orcamentosAtuais as $orcamento) {
+            $novaChaveComposta = "{$orcamento->filial}_{$proximoAno}_{$orcamento->natureza}_{$orcamento->ccusto}";
+
+            // 2. Cria a cópia do Cabeçalho para o ano novo
+            $novoOrcamento = Orcamento::firstOrCreate(
+                [
+                    'chave_composta' => $novaChaveComposta,
+                ],
+                [
+                    'filial' => $orcamento->filial,
+                    'ano' => (string) $proximoAno,
+                    'natureza' => $orcamento->natureza,
+                    'ccusto' => $orcamento->ccusto,
+                    'moeda' => $orcamento->moeda,
+                    'cmoeda' => $orcamento->cmoeda,
+                    'xcat' => $orcamento->xcat,
+                    'descricao_despesa' => $orcamento->descricao_despesa,
+                    'status' => 'Criado', // O novo orçamento nasce com status Criado
+                    'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
+                    'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
+                    'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
+                    'valor_out' => 0, 'valor_nov' => 0, 'valor_dez' => 0,
+                ]
+            );
+
+            // 3. Se o orçamento é novo e ainda não tem itens, clona os itens do ano passado
+            if ($novoOrcamento->wasRecentlyCreated || $novoOrcamento->itens()->count() === 0) {
+                foreach ($orcamento->itens as $item) {
+                    OrcamentoItem::create([
+                        'orcamento_id' => $novoOrcamento->id,
+                        'descricao' => $item->descricao,
+                        'valor_jan' => $item->valor_jan, 'valor_fev' => $item->valor_fev,
+                        'valor_mar' => $item->valor_mar, 'valor_abr' => $item->valor_abr,
+                        'valor_mai' => $item->valor_mai, 'valor_jun' => $item->valor_jun,
+                        'valor_jul' => $item->valor_jul, 'valor_ago' => $item->valor_ago,
+                        'valor_set' => $item->valor_set, 'valor_out' => $item->valor_out,
+                        'valor_nov' => $item->valor_nov, 'valor_dez' => $item->valor_dez,
+                    ]);
+                }
+            }
+        }
+
+        // 4. Avança as variáveis de sessão para o novo ano
+        $this->anoSimulacao = $proximoAno;
+        $this->mesSimulacaoAtual = 1; // Reseta para Janeiro
         session(['ano_simulacao_orcamento' => $this->anoSimulacao, 'mes_simulacao_orcamento' => 1]);
-        $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! O ciclo mensal foi reiniciado.");
+        
+        $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! Todos os orçamentos e itens foram duplicados para o novo ciclo.");
     }
 
     public function getHeadersProperty()
