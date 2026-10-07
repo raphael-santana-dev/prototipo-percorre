@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
+use App\Modules\Financeiro\Domain\Models\Natureza;
 
 class ProtheusOrcamentoService
 {
@@ -18,7 +19,7 @@ class ProtheusOrcamentoService
         if (!$url || !$user || !$password) {
             return [
                 'sucesso' => false,
-                'mensagem' => 'As credenciais ou o URL da API do Protheus não estão configuradas no ficheiro .env.'
+                'mensagem' => 'As credenciais ou o URL da API do Protheus não estão configuradas no arquivo .env.'
             ];
         }
 
@@ -40,31 +41,47 @@ class ProtheusOrcamentoService
 
                 $orcamentos = $dados['orcamentos'];
                 $processados = 0;
+                $naturezasCriadas = 0;
 
                 foreach ($orcamentos as $item) {
                     
                     $filial = trim($item['filial'] ?? '');
                     $ano = trim($item['ano'] ?? '');
-                    $natureza = trim($item['natureza'] ?? '');
+                    // Faz o trim para limpar os espaços em branco que vêm da API
+                    $naturezaCod = trim($item['natureza'] ?? ''); 
                     $ccusto = trim($item['ccusto'] ?? '');
 
-                    $chaveComposta = "{$filial}_{$ano}_{$natureza}_{$ccusto}";
+                    // --- AUTOCADASTRO DA NATUREZA ---
+                    if (!empty($naturezaCod)) {
+                        $naturezaModel = Natureza::firstOrCreate(
+                            ['codigo' => $naturezaCod],
+                            [
+                                'descricao' => 'Natureza Importada (API)', 
+                                'disponivel_orcamento' => true
+                            ]
+                        );
+                        
+                        if ($naturezaModel->wasRecentlyCreated) {
+                            $naturezasCriadas++;
+                        }
+                    }
+                    // --------------------------------
+
+                    // A chave composta deve manter a rastreabilidade exata do Protheus
+                    $chaveComposta = "{$filial}_{$ano}_{$naturezaCod}_{$ccusto}";
 
                     // 1. Cria ou atualiza o Cabeçalho (Header) do Orçamento
-                    // Usamos firstOrCreate para não sobrescrever o status caso o gestor já esteja a editar
                     $orcamento = Orcamento::firstOrCreate(
                         ['chave_composta' => $chaveComposta],
                         [
                             'filial'    => $filial,
                             'ano'       => $ano,
-                            'natureza'  => $natureza,
+                            'natureza'  => $naturezaCod,
                             'ccusto'    => $ccusto,
                             'moeda'     => $item['moeda'] ?? null,
                             'cmoeda'    => trim($item['cmoeda'] ?? ''),
                             'xcat'      => trim($item['xcat'] ?? ''),
-                            'status'    => 'Criado', // Status inicial web
-                            // Os valores agregados já não ficam no cabeçalho. 
-                            // Podem ficar a 0, pois a soma virá dinamicamente dos itens.
+                            'status'    => 'Criado', 
                             'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
                             'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
                             'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
@@ -72,9 +89,7 @@ class ProtheusOrcamentoService
                         ]
                     );
 
-                    // 2. Lança o "Item Base" na tabela orcamento_itens
-                    // Apenas insere os dados da API se este orçamento ainda não tiver nenhum item.
-                    // Isto protege o trabalho do Gestor de ser apagado numa futura sincronização.
+                    // 2. Lança o "Item Base" na tabela orcamento_itens, APENAS se estiver vazio
                     if ($orcamento->itens()->count() === 0) {
                         OrcamentoItem::create([
                             'orcamento_id' => $orcamento->id,
@@ -97,9 +112,11 @@ class ProtheusOrcamentoService
                     $processados++;
                 }
 
+                $msgComplemento = $naturezasCriadas > 0 ? " ({$naturezasCriadas} novas naturezas cadastradas automaticamente)." : ".";
+
                 return [
                     'sucesso' => true,
-                    'mensagem' => "Sincronização concluída com sucesso! {$processados} orçamentos importados.",
+                    'mensagem' => "Sincronização concluída! {$processados} orçamentos processados" . $msgComplemento,
                     'total' => $processados
                 ];
 
@@ -119,7 +136,7 @@ class ProtheusOrcamentoService
             Log::error("Exceção Crítica API Protheus", ['erro' => $e->getMessage()]);
             return [
                 'sucesso' => false,
-                'mensagem' => "Erro de ligação ao tentar aceder à API do Protheus."
+                'mensagem' => "Erro de conexão ao tentar ler a API do Protheus."
             ];
         }
     }

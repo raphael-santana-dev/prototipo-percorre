@@ -12,7 +12,7 @@
     </x-page-header>
 
     @if(isset($metricas))
-        <!-- BARRA DO SIMULADOR DE ANO/MÊS -->
+        <!-- BARRA DO SIMULADOR DE ANO -->
         @if(auth()->user()->hasRole('dev|admin'))
             <div class="mb-6 bg-gradient-to-r from-gray-900 to-purpura-900 rounded-xl p-5 shadow-lg border border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-white">
                 <div class="flex items-center gap-4">
@@ -21,16 +21,10 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-black tracking-wide">Simulador de Tempo Ativo</h3>
-                        <p class="text-xs text-gray-300 mt-0.5">Altere o mês vigente para testar o bloqueio dinâmico das despesas passadas.</p>
+                        <p class="text-xs text-gray-300 mt-0.5">Altere o ano vigente para testar a renovação e bloqueio de orçamentos.</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <select wire:model.live="mesSimulacaoAtual" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-purpura-500 py-2">
-                        @foreach($nomesMeses as $num => $nome)
-                            <option value="{{ $num }}">{{ $nome }}</option>
-                        @endforeach
-                    </select>
-
                     <div class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg py-2 px-4 font-bold">
                         Ano: {{ $anoSimulacao }}
                     </div>
@@ -47,10 +41,11 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
                 <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar Ano" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Buscar Filial" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <input type="text" wire:model.live.debounce.500ms="filtroNatureza" placeholder="Buscar Natureza" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
+                <input type="text" wire:model.live.debounce.500ms="filtroCentroCusto" placeholder="Buscar Centro de Custo" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <select wire:model.live="filtroStatus" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                     <option value="">Todos os Status</option>
                     <option value="Criado">Criado (Importado)</option>
@@ -179,7 +174,8 @@
                                         
                                         @foreach($mesesKeys as $num => $sigla)
                                             @php
-                                                $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao) || ($orcamentoSelecionado->ano == $anoSimulacao && $num < $mesSimulacaoAtual);
+                                                // O bloqueio inteligente passa a analisar apenas se o Ano do orçamento é antigo
+                                                $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
                                             @endphp
                                             <th class="p-3 text-[10px] font-bold uppercase w-[120px] {{ $isPassado ? 'text-gray-400 bg-gray-100/50 dark:bg-gray-800/80' : 'text-gray-600 dark:text-gray-300' }}">
                                                 {{ ucfirst($sigla) }} {!! $isPassado ? '<i class="ph-fill ph-lock-key"></i>' : '' !!}
@@ -198,7 +194,7 @@
                                             
                                             @foreach($mesesKeys as $num => $sigla)
                                                 @php
-                                                    $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao) || ($orcamentoSelecionado->ano == $anoSimulacao && $num < $mesSimulacaoAtual);
+                                                    $isPassado = ($orcamentoSelecionado->ano < $anoSimulacao);
                                                     $isDisabled = $isLockedGlobal || $isPassado;
                                                 @endphp
                                                 <td class="p-2 {{ $isDisabled ? 'bg-gray-50/50 dark:bg-gray-900/30 opacity-60' : '' }}">

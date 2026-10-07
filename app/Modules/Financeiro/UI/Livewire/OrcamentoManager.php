@@ -20,25 +20,20 @@ class OrcamentoManager extends Component
     public $filtroAno = '';
     public $filtroFilial = '';
     public $filtroNatureza = '';
+    public $filtroCentroCusto = '';
     public $filtroStatus = '';
 
     public bool $modalAberto = false;
     public ?Orcamento $orcamentoSelecionado = null;
     
-    // --- NOVAS VARIÁVEIS PARA OS ITENS ---
     public string $justificativaGeral = '';
     public array $itensOrcamento = [];
     public array $itensRemovidos = [];
-    // -------------------------------------
 
     public array $breadcrumbs = [];
 
+    // --- VARIÁVEL DO SIMULADOR (APENAS ANO) ---
     public int $anoSimulacao = 2026;
-    public int $mesSimulacaoAtual = 1; 
-    public array $nomesMeses = [
-        1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril', 5 => 'Maio', 6 => 'Junho',
-        7 => 'Julho', 8 => 'Agosto', 9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
-    ];
 
     public function mount()
     {
@@ -55,22 +50,21 @@ class OrcamentoManager extends Component
         $this->ordenacaoDirecao = 'desc';
         
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
-        $this->mesSimulacaoAtual = session('mes_simulacao_orcamento', date('n'));
     }
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus'])) {
+        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus', 'filtroCentroCusto'])) {
             $this->resetPage();
         }
-        if ($nomePropriedade === 'mesSimulacaoAtual' || $nomePropriedade === 'anoSimulacao') {
-            session(['mes_simulacao_orcamento' => $this->mesSimulacaoAtual, 'ano_simulacao_orcamento' => $this->anoSimulacao]);
+        if ($nomePropriedade === 'anoSimulacao') {
+            session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus']);
+        $this->reset(['filtroAno', 'filtroFilial', 'filtroNatureza', 'filtroStatus', 'filtroCentroCusto']);
         $this->resetPage();
     }
 
@@ -83,14 +77,12 @@ class OrcamentoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
-        // Carrega o orçamento com as suas avaliações e os seus itens
         $this->orcamentoSelecionado = Orcamento::with(['avaliacoes', 'itens'])->findOrFail($id);
         
         $this->justificativaGeral = $this->orcamentoSelecionado->descricao_despesa ?? '';
         $this->itensOrcamento = [];
         $this->itensRemovidos = [];
 
-        // Mapeia os itens da base de dados para o array do Livewire
         foreach ($this->orcamentoSelecionado->itens as $item) {
             $this->itensOrcamento[] = [
                 'id' => $item->id,
@@ -104,7 +96,6 @@ class OrcamentoManager extends Component
             ];
         }
 
-        // Se, por alguma anomalia, o orçamento não tiver itens, cria uma linha vazia
         if (empty($this->itensOrcamento)) {
             $this->adicionarItem();
         }
@@ -126,16 +117,15 @@ class OrcamentoManager extends Component
 
     public function removerItem($index)
     {
-        // Se o item já existir na base de dados, guardamos o ID para apagá-lo ao guardar
         if (!empty($this->itensOrcamento[$index]['id'])) {
             $this->itensRemovidos[] = $this->itensOrcamento[$index]['id'];
         }
         
         unset($this->itensOrcamento[$index]);
-        $this->itensOrcamento = array_values($this->itensOrcamento); // Reorganiza os índices do array
+        $this->itensOrcamento = array_values($this->itensOrcamento); 
         
         if (empty($this->itensOrcamento)) {
-            $this->adicionarItem(); // Garante que há sempre pelo menos uma linha
+            $this->adicionarItem(); 
         }
     }
 
@@ -168,18 +158,15 @@ class OrcamentoManager extends Component
             $novoStatus = $this->orcamentoSelecionado->status; 
         }
 
-        // 1. Atualiza o Cabeçalho
         $this->orcamentoSelecionado->update([
             'descricao_despesa' => $this->justificativaGeral,
             'status' => $novoStatus,
         ]);
 
-        // 2. Apaga os itens removidos pelo gestor
         if (!empty($this->itensRemovidos)) {
             OrcamentoItem::whereIn('id', $this->itensRemovidos)->delete();
         }
 
-        // 3. Atualiza os itens existentes ou cria os novos itens adicionados
         foreach ($this->itensOrcamento as $dataItem) {
             OrcamentoItem::updateOrCreate(
                 ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamentoSelecionado->id],
@@ -216,13 +203,11 @@ class OrcamentoManager extends Component
         $anoAtual = $this->anoSimulacao;
         $proximoAno = $anoAtual + 1;
 
-        // 1. Procura todos os orçamentos do ano atual que o utilizador está a simular
         $orcamentosAtuais = Orcamento::with('itens')->where('ano', (string) $anoAtual)->get();
 
         foreach ($orcamentosAtuais as $orcamento) {
             $novaChaveComposta = "{$orcamento->filial}_{$proximoAno}_{$orcamento->natureza}_{$orcamento->ccusto}";
 
-            // 2. Cria a cópia do Cabeçalho para o ano novo
             $novoOrcamento = Orcamento::firstOrCreate(
                 [
                     'chave_composta' => $novaChaveComposta,
@@ -236,7 +221,7 @@ class OrcamentoManager extends Component
                     'cmoeda' => $orcamento->cmoeda,
                     'xcat' => $orcamento->xcat,
                     'descricao_despesa' => $orcamento->descricao_despesa,
-                    'status' => 'Criado', // O novo orçamento nasce com status Criado
+                    'status' => 'Criado', 
                     'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
                     'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
                     'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
@@ -244,7 +229,6 @@ class OrcamentoManager extends Component
                 ]
             );
 
-            // 3. Se o orçamento é novo e ainda não tem itens, clona os itens do ano passado
             if ($novoOrcamento->wasRecentlyCreated || $novoOrcamento->itens()->count() === 0) {
                 foreach ($orcamento->itens as $item) {
                     OrcamentoItem::create([
@@ -261,10 +245,8 @@ class OrcamentoManager extends Component
             }
         }
 
-        // 4. Avança as variáveis de sessão para o novo ano
         $this->anoSimulacao = $proximoAno;
-        $this->mesSimulacaoAtual = 1; // Reseta para Janeiro
-        session(['ano_simulacao_orcamento' => $this->anoSimulacao, 'mes_simulacao_orcamento' => 1]);
+        session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
         
         $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! Todos os orçamentos e itens foram duplicados para o novo ciclo.");
     }
@@ -299,6 +281,7 @@ class OrcamentoManager extends Component
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
         if (!empty($this->filtroNatureza)) $query->where('natureza', 'ilike', '%' . $this->filtroNatureza . '%');
         if (!empty($this->filtroStatus)) $query->where('status', $this->filtroStatus);
+        if (!empty($this->filtroCentroCusto)) $query->where('ccusto', 'ilike', '%' . $this->filtroCentroCusto . '%');
 
         return $query;
     }
