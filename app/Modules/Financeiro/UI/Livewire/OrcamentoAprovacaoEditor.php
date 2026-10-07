@@ -16,11 +16,16 @@ class OrcamentoAprovacaoEditor extends Component
     public Orcamento $orcamento;
     public int $anoSimulacao = 2026;
 
+    // --- VARIÁVEIS DA AVALIAÇÃO ---
     public bool $modalAvaliacaoAberto = false;
-    public bool $isAvaliacaoLote = false;
+    public string $modoAvaliacao = 'unico'; // unico, selecionados, restantes
     public ?int $linhaParaAvaliar = null;
     public string $statusAvaliacao = '';
     public string $comentarioAvaliacao = '';
+
+    // --- VARIÁVEIS DE SELEÇÃO MÚLTIPLA ---
+    public array $itensSelecionados = [];
+    public bool $selecionarTudo = false;
 
     public function mount($id)
     {
@@ -32,9 +37,24 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function voltar()
     {
-        return redirect()->route('financeiro.aprovacoes'); // Ajuste o nome da rota da listagem se for diferente
+        return redirect()->route('financeiro.aprovacoes'); 
     }
 
+    // Toggle para a Checkbox "Selecionar Todos os Pendentes"
+    public function updatedSelecionarTudo($value)
+    {
+        if ($value) {
+            $this->itensSelecionados = $this->orcamento->itens()
+                ->whereIn('status', ['Criado', 'Corrigido'])
+                ->pluck('id')
+                ->map(fn($id) => (string)$id)
+                ->toArray();
+        } else {
+            $this->itensSelecionados = [];
+        }
+    }
+
+    // 1. AVALIAR UM ÚNICO ITEM (No botão da linha)
     public function abrirModalAvaliacaoItem($itemId, $statusDesejado)
     {
         $item = OrcamentoItem::find($itemId);
@@ -44,16 +64,42 @@ class OrcamentoAprovacaoEditor extends Component
             return;
         }
 
-        $this->isAvaliacaoLote = false;
+        $this->modoAvaliacao = 'unico';
         $this->linhaParaAvaliar = $itemId;
         $this->statusAvaliacao = $statusDesejado;
         $this->comentarioAvaliacao = '';
         $this->modalAvaliacaoAberto = true;
     }
 
-    public function abrirModalAvaliacaoLote($statusDesejado)
+    // 2. AVALIAR ITENS SELECIONADOS NAS CHECKBOXES
+    public function abrirModalAvaliacaoSelecionados($statusDesejado)
     {
-        $this->isAvaliacaoLote = true;
+        if (count($this->itensSelecionados) === 0) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos um item usando as caixas de seleção.');
+            return;
+        }
+
+        $this->modoAvaliacao = 'selecionados';
+        $this->linhaParaAvaliar = null;
+        $this->statusAvaliacao = $statusDesejado;
+        $this->comentarioAvaliacao = '';
+        $this->modalAvaliacaoAberto = true;
+    }
+
+    // 3. AVALIAR ITENS RESTANTES PENDENTES
+    public function abrirModalAvaliacaoRestantes($statusDesejado)
+    {
+        $pendentes = $this->orcamento->itens()
+            ->whereIn('status', ['Criado', 'Corrigido'])
+            ->whereNotIn('id', $this->itensSelecionados)
+            ->count();
+        
+        if ($pendentes === 0) {
+            $this->dispatch('erro', msg: 'Não há itens pendentes restantes para avaliar.');
+            return;
+        }
+
+        $this->modoAvaliacao = 'restantes';
         $this->linhaParaAvaliar = null;
         $this->statusAvaliacao = $statusDesejado;
         $this->comentarioAvaliacao = '';
@@ -62,42 +108,46 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function confirmarAvaliacao()
     {
-        $this->validate(
-            ['comentarioAvaliacao' => 'required|string|min:5'], 
-            ['comentarioAvaliacao.required' => 'A justificativa é obrigatória para comunicar a decisão ao gestor.']
-        );
+        // Validação foi alterada: comentário agora é nullable (opcional)
+        $this->validate([
+            'comentarioAvaliacao' => 'nullable|string'
+        ]);
 
-        if ($this->isAvaliacaoLote) {
-            $itensPendentes = $this->orcamento->itens()->whereIn('status', ['Criado', 'Corrigido'])->get();
-            
-            if ($itensPendentes->isEmpty()) {
-                $this->dispatch('erro', msg: 'Não há naturezas pendentes de avaliação neste orçamento.');
-                $this->modalAvaliacaoAberto = false;
-                return;
-            }
+        $itensParaProcessar = collect();
 
-            foreach ($itensPendentes as $item) {
-                $item->update(['status' => $this->statusAvaliacao]);
-                OrcamentoAvaliacao::create([
-                    'orcamento_item_id' => $item->id,
-                    'user_id' => auth()->id(),
-                    'user_nome' => auth()->user()->name,
-                    'status_aplicado' => $this->statusAvaliacao,
-                    'comentario' => $this->comentarioAvaliacao
-                ]);
-            }
-        } else {
-            $item = OrcamentoItem::findOrFail($this->linhaParaAvaliar);
+        if ($this->modoAvaliacao === 'unico') {
+            $itensParaProcessar->push(OrcamentoItem::findOrFail($this->linhaParaAvaliar));
+        } elseif ($this->modoAvaliacao === 'selecionados') {
+            $itensParaProcessar = OrcamentoItem::whereIn('id', $this->itensSelecionados)->get();
+        } elseif ($this->modoAvaliacao === 'restantes') {
+            $itensParaProcessar = $this->orcamento->itens()
+                ->whereIn('status', ['Criado', 'Corrigido'])
+                ->whereNotIn('id', $this->itensSelecionados)
+                ->get();
+        }
+
+        foreach ($itensParaProcessar as $item) {
             $item->update(['status' => $this->statusAvaliacao]);
+            
+            // Regista o log Híbrido (vinculado à linha e ao cabeçalho)
             OrcamentoAvaliacao::create([
+                'orcamento_id' => $this->orcamento->id,
                 'orcamento_item_id' => $item->id,
                 'user_id' => auth()->id(),
                 'user_nome' => auth()->user()->name,
                 'status_aplicado' => $this->statusAvaliacao,
-                'comentario' => $this->comentarioAvaliacao
+                'comentario' => trim($this->comentarioAvaliacao) ?: null,
+                'tipo_evento' => 'avaliacao_item'
             ]);
         }
 
+        // Limpa a seleção se a ação foi concluída
+        if ($this->modoAvaliacao === 'selecionados') {
+            $this->itensSelecionados = [];
+            $this->selecionarTudo = false;
+        }
+
+        // INTELIGÊNCIA GLOBAL DO ORÇAMENTO
         $temReprovado = $this->orcamento->itens()->whereIn('status', ['Reprovado', 'Aprovado com ressalvas'])->exists();
         $temPendente = $this->orcamento->itens()->whereIn('status', ['Criado', 'Corrigido'])->exists();
 
@@ -108,8 +158,7 @@ class OrcamentoAprovacaoEditor extends Component
         }
 
         $this->modalAvaliacaoAberto = false;
-        $msg = $this->isAvaliacaoLote ? "Todos os itens pendentes avaliados como {$this->statusAvaliacao}." : "Linha avaliada como {$this->statusAvaliacao}.";
-        $this->dispatch('sucesso', msg: $msg);
+        $this->dispatch('sucesso', msg: "Avaliação registrada com sucesso!");
         
         $this->orcamento->refresh();
     }

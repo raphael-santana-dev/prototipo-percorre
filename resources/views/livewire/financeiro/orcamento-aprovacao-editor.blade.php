@@ -3,12 +3,10 @@
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
     
-    {{-- CSS Dinâmico: Força o modo Tela Cheia sem interferir no resto do sistema --}}
     <style>
         body.modo-expandido main > div > div.max-w-7xl { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main { overflow: hidden !important; display: flex; flex-direction: column; }
-        
         body.navbar-oculta .js-topnav { display: none !important; }
         body.navbar-oculta header { display: none !important; }
     </style>
@@ -40,14 +38,11 @@
                 <span class="text-sm font-black uppercase {{ $statusColor }}">{{ $orcamento->status === 'Finalizado' ? 'Aguardando Avaliação' : $orcamento->status }}</span>
             </div>
 
-            {{-- BOTÕES DE VISUALIZAÇÃO --}}
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
-                <button @click="modoExpandido = !modoExpandido" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Área de Trabalho">
+                <button @click="modoExpandido = !modoExpandido" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Tela">
                     <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
                 </button>
-                
-                {{-- Botão que SÓ aparece no Modo Expandido --}}
                 <button x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 text-gray-900' : ''" title="Ocultar Navbar do Sistema">
                     <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
                     <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Menus Ocultos' : 'Ocultar Menus'"></span>
@@ -63,21 +58,25 @@
     {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR --}}
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50">
         
-        {{-- ÁREA DA PLANILHA EXCEL (LEITURA) --}}
-        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative" :class="timelineAberta ? 'pr-[380px]' : ''">
+        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative bg-white" :class="timelineAberta ? 'pr-[380px]' : ''">
             
-            <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center gap-3 shrink-0 z-10 relative">
+            <div class="p-3 bg-white border-b border-gray-200 shadow-sm flex items-center gap-3 shrink-0 z-10 relative">
                 <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa do Gestor:</label>
                 <div class="w-full text-sm bg-gray-50 px-3 py-1.5 text-gray-600 italic border border-gray-200 rounded-md">
                     {{ $orcamento->descricao_despesa ?: 'Nenhuma observação geral enviada pelo Gestor.' }}
                 </div>
             </div>
 
-            <div class="flex-1 overflow-auto custom-scrollbar relative bg-white">
+            <div class="flex-1 overflow-auto custom-scrollbar relative">
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
-                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
+                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer" title="Selecionar todos os pendentes">
+                                    <span>Natureza Financeira</span>
+                                </div>
+                            </th>
                             <th class="w-[200px] min-w-[200px] sticky left-[300px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Anotações da Linha</th>
                             
                             @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
@@ -88,7 +87,7 @@
                             @endforeach
                             
                             <th class="w-[120px] sticky top-0 z-[40] bg-emerald-100 p-3 text-[10px] font-black text-emerald-800 uppercase tracking-wider text-right border-b border-r border-gray-300">Total Linha</th>
-                            <th class="w-[160px] sticky top-0 z-[40] bg-gray-100 p-3 text-center border-b border-r border-gray-300 text-[10px] font-black text-gray-700 uppercase tracking-wider">Decisão</th>
+                            <th class="w-[160px] sticky top-0 z-[40] bg-gray-100 p-3 text-center border-b border-gray-300 text-[10px] font-black text-gray-700 uppercase tracking-wider">Decisão</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
@@ -96,28 +95,37 @@
                         @foreach($orcamento->itens as $item)
                             @php
                                 $bgRowSolid = match($item->status) {
-                                    'Aprovado' => 'bg-[#eefcf5]', // verde muito suave sólido
-                                    'Reprovado' => 'bg-[#fff5f5]', // vermelho suave sólido
-                                    'Aprovado com ressalvas' => 'bg-[#fffbeb]', // amarelo suave sólido
+                                    'Aprovado' => 'bg-[#eefcf5]', // verde muito suave
+                                    'Reprovado' => 'bg-[#fff5f5]', // vermelho suave
+                                    'Aprovado com ressalvas' => 'bg-[#fffbeb]', // amarelo suave
                                     default => 'bg-white'
                                 };
                             @endphp
                             <tr class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50">
                                 
-                                {{-- COLUNA 1: NATUREZA (FIXA) --}}
+                                {{-- COLUNA 1: NATUREZA COM CHECKBOX --}}
                                 <td class="sticky left-0 z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    <div class="flex flex-col mt-1 px-1 w-[280px]">
-                                        <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span class="text-[10px] font-mono text-gray-500">{{ $item->natureza_codigo ?: 'N/D' }}</span>
-                                            @if($item->status === 'Corrigido')
-                                                <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
-                                            @endif
+                                    <div class="flex items-start gap-2 mt-1 px-1 w-[280px]">
+                                        {{-- Checkbox só aparece se a linha estiver pendente --}}
+                                        @if(in_array($item->status, ['Criado', 'Corrigido']))
+                                            <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $item->id }}" class="mt-0.5 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                        @else
+                                            <div class="w-4 mt-0.5"></div> {{-- Espaçador --}}
+                                        @endif
+                                        
+                                        <div class="flex flex-col w-full overflow-hidden">
+                                            <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="text-[10px] font-mono text-gray-500">{{ $item->natureza_codigo ?: 'N/D' }}</span>
+                                                @if($item->status === 'Corrigido')
+                                                    <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
 
-                                {{-- COLUNA 2: OBSERVAÇÃO (FIXA) --}}
+                                {{-- COLUNA 2: OBSERVAÇÃO --}}
                                 <td class="sticky left-[300px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <div class="w-full min-w-[180px] h-full px-2 py-2 text-[11px] text-gray-600 truncate bg-transparent" title="{{ $item->descricao }}">
                                         {{ $item->descricao ?: '-' }}
@@ -137,20 +145,18 @@
                                         $sinal = $diferenca > 0 ? '+' : '';
                                         $corDiff = $diferenca > 0 ? 'text-red-600' : ($diferenca < 0 ? 'text-emerald-600' : 'text-gray-400');
                                     @endphp
-                                    <td class="border-b border-r border-gray-300 p-2 align-top transition-colors z-0">
-                                        <div class="relative">
-                                            @if($previsto > 0 && $previsto != $valorMes)
-                                                <div class="absolute -top-1.5 right-1 bg-white px-1 text-[8px] font-bold text-gray-400 rounded-sm">Base: {{ number_format($previsto, 0, '', '') }}</div>
-                                            @endif
-                                            <div class="w-full text-xs text-right font-bold text-gray-900 border border-gray-300 bg-white rounded p-1.5 {{ $valorMes == 0 ? 'text-gray-400' : '' }}">
-                                                {{ number_format($valorMes, 2, ',', '.') }}
-                                            </div>
+                                    <td class="border-b border-r border-gray-300 p-2 align-top transition-colors z-0 relative">
+                                        @if($previsto > 0 && $previsto != $valorMes)
+                                            <div class="absolute -top-1.5 right-1 bg-white px-1 text-[8px] font-bold text-gray-400 rounded-sm">Base: {{ number_format($previsto, 0, '', '') }}</div>
+                                        @endif
+                                        <div class="w-full text-xs text-right font-bold text-gray-900 border border-gray-200 bg-white/80 rounded p-1.5 {{ $valorMes == 0 ? 'text-gray-400' : '' }}">
+                                            {{ number_format($valorMes, 2, ',', '.') }}
                                         </div>
                                         
                                         <div class="mt-2 flex flex-col items-end justify-center text-[9px] font-medium leading-tight space-y-0.5 px-1">
                                             <span class="text-gray-500">Previsto: R$ {{ number_format($previsto, 2, ',', '.') }}</span>
                                             @if($diferenca != 0)
-                                                <span class="{{ $corDiff }} font-bold bg-white/70 px-1.5 py-0.5 rounded shadow-sm flex items-center justify-end w-full border border-gray-200">
+                                                <span class="{{ $corDiff }} font-bold bg-white/70 px-1.5 py-0.5 rounded shadow-sm flex items-center justify-end w-full border border-gray-100">
                                                     {{ $sinal }}R$ {{ number_format($diferenca, 2, ',', '.') }} 
                                                     <span class="ml-1 opacity-70">({{ $sinal }}{{ number_format($percentual, 1, ',', '.') }}%)</span>
                                                 </span>
@@ -162,16 +168,16 @@
                                 @endforeach
 
                                 @php $totalGeral += $totalLinha; @endphp
-                                <td class="border-b border-r border-gray-300 bg-emerald-50/30 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
+                                <td class="border-b border-r border-gray-300 bg-emerald-50/50 p-2 text-right text-xs font-black text-emerald-900 align-top pt-3 z-0">
                                     {{ number_format($totalLinha, 2, ',', '.') }}
                                 </td>
                                 
                                 <td class="border-b border-gray-300 p-2 align-top pt-3 {{ $bgRowSolid === 'bg-white' ? 'bg-gray-50/50' : '' }} z-0">
                                     @if(in_array($item->status, ['Criado', 'Corrigido']))
                                         <div class="flex items-center gap-1 justify-center">
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1 text-emerald-600 hover:bg-emerald-100 rounded border border-emerald-200 bg-white shadow-sm transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1 text-yellow-600 hover:bg-yellow-100 rounded border border-yellow-200 bg-white shadow-sm transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
-                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1 text-red-600 hover:bg-red-100 rounded border border-red-200 bg-white shadow-sm transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
+                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado')" class="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded border border-emerald-200 bg-white shadow-sm transition" title="Aprovar Item"><i class="ph-bold ph-check text-base"></i></button>
+                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Aprovado com ressalvas')" class="p-1.5 text-yellow-600 hover:bg-yellow-100 rounded border border-yellow-200 bg-white shadow-sm transition" title="Aprovar com Ressalvas"><i class="ph-bold ph-warning text-base"></i></button>
+                                            <button wire:click="abrirModalAvaliacaoItem({{ $item->id }}, 'Reprovado')" class="p-1.5 text-red-600 hover:bg-red-100 rounded border border-red-200 bg-white shadow-sm transition" title="Reprovar Item"><i class="ph-bold ph-x text-base"></i></button>
                                         </div>
                                     @else
                                         <div class="flex justify-center items-center h-full">
@@ -208,7 +214,7 @@
             </div>
         </div>
 
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E AÇÕES EM LOTE (SCROLL INTERNO INDEPENDENTE) --}}
+        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E AÇÕES EM LOTE --}}
         <div x-show="timelineAberta" x-transition x-cloak class="w-[380px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[60] transition-transform">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
@@ -243,7 +249,9 @@
                                 <span class="text-[10px] font-bold uppercase {{ str_contains($aval['status_aplicado'], 'Reprovado') ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
                                 <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] }}">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
                             </div>
-                            <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
+                            @if(!empty($aval['comentario']))
+                                <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
+                            @endif
                         </div>
                     </div>
                 @empty
@@ -254,33 +262,66 @@
                 @endforelse
             </div>
 
-            {{-- PAINEL DE DECISÃO EM LOTE (Rodapé da Sidebar Fixo) --}}
-            <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                <p class="text-[10px] font-bold text-gray-500 uppercase text-center mb-3 tracking-widest">Avaliar Pendentes em Lote</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button wire:click="abrirModalAvaliacaoLote('Aprovado')" class="py-2.5 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded-lg text-xs font-bold hover:bg-emerald-50 transition">Aprovar Todos</button>
-                    <button wire:click="abrirModalAvaliacaoLote('Reprovado')" class="py-2.5 bg-white text-red-700 border border-red-200 shadow-sm rounded-lg text-xs font-bold hover:bg-red-50 transition">Reprovar Todos</button>
-                    <button wire:click="abrirModalAvaliacaoLote('Aprovado com ressalvas')" class="col-span-2 py-2.5 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded-lg text-xs font-bold hover:bg-yellow-50 transition">Aprovar com Ressalvas (Todos)</button>
+            {{-- PAINEL INTELIGENTE DE DECISÃO EM LOTE --}}
+            @php
+                $totalPendentes = $orcamento->itens->whereIn('status', ['Criado', 'Corrigido'])->count();
+                $qtdSelecionados = count($itensSelecionados);
+                $qtdRestantes = $totalPendentes - $qtdSelecionados;
+            @endphp
+
+            @if($totalPendentes > 0)
+                <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex flex-col gap-4">
+                    
+                    {{-- AÇÃO PARA OS CHECKBOXES SELECIONADOS --}}
+                    @if($qtdSelecionados > 0)
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
+                                Selecionados ({{ $qtdSelecionados }})
+                            </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado')" class="py-2 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[11px] font-bold hover:bg-emerald-50 transition">Aprovar</button>
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Reprovado')" class="py-2 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[11px] font-bold hover:bg-red-50 transition">Reprovar</button>
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado com ressalvas')" class="col-span-2 py-2 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded text-[11px] font-bold hover:bg-yellow-50 transition">Ressalvas (Selecionados)</button>
+                            </div>
+                        </div>
+                    @endif
+                    
+                    {{-- AÇÃO PARA OS RESTANTES --}}
+                    @if($qtdRestantes > 0)
+                        <div class="{{ $qtdSelecionados > 0 ? 'border-t border-gray-200 pt-4' : '' }}">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
+                                {{ $qtdSelecionados > 0 ? 'Restantes' : 'Todos os Pendentes' }} ({{ $qtdRestantes }})
+                            </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button wire:click="abrirModalAvaliacaoRestantes('Aprovado')" class="py-2 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[11px] font-bold hover:bg-emerald-50 transition">Aprovar Restantes</button>
+                                <button wire:click="abrirModalAvaliacaoRestantes('Reprovado')" class="py-2 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[11px] font-bold hover:bg-red-50 transition">Reprovar Restantes</button>
+                                <button wire:click="abrirModalAvaliacaoRestantes('Aprovado com ressalvas')" class="col-span-2 py-2 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded text-[11px] font-bold hover:bg-yellow-50 transition">Ressalvas (Restantes)</button>
+                            </div>
+                        </div>
+                    @endif
+
                 </div>
-            </div>
+            @endif
         </div>
 
     </div>
 
-    {{-- MODAL DE COMENTÁRIO DO APROVADOR --}}
+    {{-- MODAL DE COMENTÁRIO DO APROVADOR (Agora Opcional) --}}
     @if($modalAvaliacaoAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
-                <h3 class="text-lg font-black text-gray-900 mb-1 flex items-center gap-2"><i class="ph-fill ph-chat-centered-text text-purpura-500"></i> Justificativa de Decisão</h3>
+                <h3 class="text-lg font-black text-gray-900 mb-1 flex items-center gap-2"><i class="ph-fill ph-chat-centered-text text-purpura-500"></i> Justificativa / Comentário</h3>
                 <p class="text-xs text-gray-500 mb-4">
-                    @if($isAvaliacaoLote)
-                        Avaliando <strong>TODOS OS ITENS PENDENTES</strong> como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
+                    @if($modoAvaliacao === 'selecionados')
+                        Avaliando <strong>{{ count($itensSelecionados) }} ITEM(NS) SELECIONADO(S)</strong> como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
+                    @elseif($modoAvaliacao === 'restantes')
+                        Avaliando <strong>TODOS OS ITENS RESTANTES PENDENTES</strong> como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
                     @else
                         Avaliando a Natureza como: <strong class="uppercase text-purpura-600">{{ $statusAvaliacao }}</strong>.
                     @endif
-                    O gestor receberá este feedback.
+                    <br>Pode incluir um comentário opcional abaixo.
                 </p>
-                <textarea wire:model="comentarioAvaliacao" rows="4" class="w-full rounded-xl border-gray-300 bg-gray-50 text-sm focus:ring-purpura-500" placeholder="Digite as diretrizes de correção..."></textarea>
+                <textarea wire:model="comentarioAvaliacao" rows="4" class="w-full rounded-xl border-gray-300 bg-gray-50 text-sm focus:ring-purpura-500" placeholder="Digite as observações (Opcional)..."></textarea>
                 @error('comentarioAvaliacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalAvaliacaoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>

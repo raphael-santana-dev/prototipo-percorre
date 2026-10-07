@@ -43,4 +43,9 @@ class Orcamento extends Model
     {
         return $this->belongsTo(CentroCusto::class, 'ccusto', 'codigo');
     }
+    
+    public function logsGerais()
+    {
+        return $this->hasMany(OrcamentoAvaliacao::class, 'orcamento_id')->orderBy('created_at', 'desc');
+    }
 }

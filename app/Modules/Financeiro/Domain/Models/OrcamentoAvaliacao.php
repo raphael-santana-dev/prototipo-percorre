@@ -10,13 +10,16 @@ class OrcamentoAvaliacao extends Model
     protected $table = 'orcamento_avaliacoes';
     protected $guarded = ['id'];
 
-    public function orcamento()
-    {
-        return $this->belongsTo(Orcamento::class);
-    }
+    // Relacionamento com o Item (Log Específico)
     public function orcamentoItem()
     {
         return $this->belongsTo(OrcamentoItem::class, 'orcamento_item_id');
+    }
+
+    // Relacionamento com o Cabeçalho (Log Geral)
+    public function orcamento()
+    {
+        return $this->belongsTo(Orcamento::class, 'orcamento_id');
     }
 
     public function usuario()
