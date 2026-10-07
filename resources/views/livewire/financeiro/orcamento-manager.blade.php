@@ -105,21 +105,17 @@
         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-900 w-full h-full max-w-[1700px] rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800 overflow-hidden" x-data @keydown.escape.window="$wire.fecharModal()">
                 
-                {{-- HEADER DO MODAL --}}
                 <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shrink-0">
                     <div>
-                        <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-microsoft-excel-logo text-emerald-600 text-2xl"></i> Distribuição de Naturezas Financeiras</h2>
-                        <p class="text-xs text-gray-500 mt-1">Insira os valores previstos para cada natureza ou adicione novas áreas de gasto.</p>
+                        <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-microsoft-excel-logo text-emerald-600 text-2xl"></i> Orçamento Interativo</h2>
+                        <p class="text-xs text-gray-500 mt-1">O valor Base (Previsto) representa a integração original ou o histórico de {{ $orcamentoSelecionado->ano - 1 }}.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button wire:click="fecharModal" class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-500 hover:text-red-500 shadow-sm transition"><i class="ph-bold ph-x text-lg"></i></button>
                     </div>
                 </div>
 
-                {{-- CORPO PRINCIPAL (SCROLL Y) --}}
                 <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50 dark:bg-gray-900">
-                    
-                    {{-- CARDS DE RESUMO SUPERIORES --}}
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
                             <span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filial / Ano</span>
@@ -145,19 +141,18 @@
                             }
                         @endphp
                         <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800 flex flex-col justify-center">
-                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Orçamento Total do Centro de Custo</span>
+                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Orçamento Atual Calculado</span>
                             <span class="text-xl font-black text-emerald-700 dark:text-emerald-400">R$ {{ number_format($totalGeralLivewire, 2, ',', '.') }}</span>
                         </div>
                     </div>
 
-                    {{-- PLANILHA INTERATIVA (SCROLL HORIZONTAL) --}}
                     <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                         <div class="overflow-x-auto custom-scrollbar pb-2">
                             <table class="w-full text-left border-collapse min-w-[1600px]">
                                 <thead>
                                     <tr class="bg-gray-50 border-b border-gray-200 dark:bg-gray-900/50 dark:border-gray-700">
                                         <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[250px] sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-400 w-[200px] sticky left-[250px] z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">Descrição Opcional</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-400 w-[200px] sticky left-[250px] z-20 bg-gray-50 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">Descrição / Justificativa</th>
                                         
                                         @php
                                             $mesesKeys = [
@@ -174,7 +169,7 @@
                                                 {{ ucfirst($sigla) }} {!! $isPassado ? '<i class="ph-fill ph-lock-key"></i>' : '' !!}
                                             </th>
                                         @endforeach
-                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-900 dark:text-white w-[100px] text-right bg-emerald-50/50 dark:bg-emerald-900/20">Total</th>
+                                        <th class="p-3 text-[10px] font-bold uppercase text-gray-900 dark:text-white w-[100px] text-right bg-emerald-50/50 dark:bg-emerald-900/20">Total Atual</th>
                                         <th class="p-3 text-[10px] font-bold uppercase text-gray-500 w-[50px] text-center">Ações</th>
                                     </tr>
                                 </thead>
@@ -182,16 +177,15 @@
                                     @foreach($itensOrcamento as $index => $item)
                                         <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-blue-50/30 transition-colors">
                                             
-                                            {{-- Coluna 1: Seleção de Natureza --}}
                                             <td class="p-2 sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700">
-                                                @if($isLockedGlobal)
+                                                @if($isLockedGlobal || !empty($item['id']))
                                                     <div class="flex flex-col px-2">
                                                         <span class="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
                                                         <span class="text-[10px] font-mono text-purpura-600 mt-0.5">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
                                                     </div>
                                                 @else
                                                     <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-xs font-bold text-gray-800 dark:text-white rounded border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                                        <option value="">Selecione uma Natureza...</option>
+                                                        <option value="">Selecione Natureza...</option>
                                                         @foreach($todasNaturezas as $nat)
                                                             <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
                                                         @endforeach
@@ -199,12 +193,10 @@
                                                 @endif
                                             </td>
 
-                                            {{-- Coluna 2: Observação daquela linha --}}
                                             <td class="p-2 sticky left-[250px] z-10 bg-white dark:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-gray-200 dark:border-gray-700">
-                                                <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Detalhes (Opcional)" class="w-full text-[11px] text-gray-500 italic rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-600" @if($isLockedGlobal) disabled @endif>
+                                                <input type="text" wire:model="itensOrcamento.{{ $index }}.descricao" placeholder="Detalhes da linha" class="w-full text-[11px] text-gray-500 italic rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-600" @if($isLockedGlobal) disabled @endif>
                                             </td>
                                             
-                                            {{-- Colunas dos 12 Meses --}}
                                             @php $totalDestaLinha = 0; @endphp
                                             @foreach($mesesKeys as $num => $sigla)
                                                 @php
@@ -214,16 +206,17 @@
                                                     $totalDestaLinha += $valorMes;
                                                 @endphp
                                                 <td class="p-2 border-r border-gray-50 dark:border-gray-800 {{ $isDisabled ? 'bg-gray-50/50 dark:bg-gray-900/30 opacity-70' : '' }}">
+                                                    <div class="text-[9px] font-bold text-gray-400 text-right mb-0.5" title="Valor Base da API / Ano Anterior">
+                                                        Base: {{ number_format((float)($item["previsto_$sigla"] ?? 0), 2, ',', '.') }}
+                                                    </div>
                                                     <input type="number" step="0.01" wire:model.live.debounce.500ms="itensOrcamento.{{ $index }}.valor_{{ $sigla }}" class="w-full text-xs font-medium text-right text-gray-900 dark:text-gray-200 rounded border-gray-200 focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-600 {{ $valorMes == 0 ? 'text-gray-300' : '' }}" @if($isDisabled) disabled @endif>
                                                 </td>
                                             @endforeach
 
-                                            {{-- Coluna Total da Linha --}}
                                             <td class="p-3 text-right text-xs font-black bg-emerald-50/30 dark:bg-emerald-900/10 text-gray-900 dark:text-white">
                                                 {{ number_format($totalDestaLinha, 2, ',', '.') }}
                                             </td>
 
-                                            {{-- Coluna Ações (Remover Linha) --}}
                                             <td class="p-2 text-center border-l border-gray-100 dark:border-gray-800">
                                                 @if(!$isLockedGlobal)
                                                     <button type="button" wire:click="removerItem({{ $index }})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remover Natureza"><i class="ph-bold ph-trash text-base"></i></button>
@@ -233,34 +226,27 @@
                                     @endforeach
                                 </tbody>
                                 <tfoot>
-                                    {{-- CÁLCULO DE TOTAIS MENSAL (COLUNAS) --}}
                                     @php
                                         $totaisMensais = [];
                                         foreach($mesesKeys as $num => $sigla) {
                                             $totaisMensais[$num] = collect($itensOrcamento)->sum("valor_$sigla");
                                         }
                                     @endphp
-
                                     <tr class="bg-gray-100 dark:bg-gray-900">
                                         <td colspan="2" class="p-4 sticky left-0 z-20 bg-gray-100 dark:bg-gray-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r border-gray-200 dark:border-gray-700">
                                             <div class="flex items-center justify-between">
-                                                <span class="text-xs font-black uppercase text-gray-700 dark:text-gray-300">Total Previsto por Mês</span>
+                                                <span class="text-xs font-black uppercase text-gray-700 dark:text-gray-300">Total Atual Mensal</span>
                                                 @if(!$isLockedGlobal)
                                                     <button type="button" wire:click="adicionarItem" class="px-3 py-1 bg-purpura-100 text-purpura-700 hover:bg-purpura-200 text-[10px] font-bold uppercase rounded-lg border border-purpura-200 shadow-sm transition"><i class="ph-bold ph-plus"></i> Adicionar Natureza</button>
                                                 @endif
                                             </div>
                                         </td>
-                                        
                                         @foreach($mesesKeys as $num => $sigla)
                                             <td class="p-3 text-right border-r border-gray-200 dark:border-gray-800">
-                                                <div class="text-[13px] font-black text-gray-900 dark:text-white">
-                                                    {{ number_format($totaisMensais[$num], 2, ',', '.') }}
-                                                </div>
+                                                <div class="text-[13px] font-black text-gray-900 dark:text-white">{{ number_format($totaisMensais[$num], 2, ',', '.') }}</div>
                                             </td>
                                         @endforeach
-                                        <td class="p-3 text-right text-sm font-black text-emerald-700 bg-emerald-100/50 dark:bg-emerald-900/50 border-r border-emerald-200 dark:border-emerald-800">
-                                            {{ number_format($totalGeralLivewire, 2, ',', '.') }}
-                                        </td>
+                                        <td class="p-3 text-right text-sm font-black text-emerald-700 bg-emerald-100/50 dark:bg-emerald-900/50 border-r border-emerald-200 dark:border-emerald-800">{{ number_format($totalGeralLivewire, 2, ',', '.') }}</td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
@@ -269,10 +255,8 @@
                     </div>
                 </div>
 
-                {{-- RODAPÉ DE AÇÕES GERAIS --}}
                 <div class="p-5 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 flex justify-between items-center gap-4 shrink-0">
                     <span class="text-xs text-gray-500 font-medium hidden sm:block">Ações disponíveis de acordo com a sua permissão.</span>
-                    
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         @if(!$isLockedGlobal)
                             <button wire:click="salvarOrcamento" class="btn btn--secondary btn--medium flex-1 sm:flex-auto border-gray-300">Gravar Edição</button>
