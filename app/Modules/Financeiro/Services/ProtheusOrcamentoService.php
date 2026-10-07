@@ -5,6 +5,7 @@ namespace App\Modules\Financeiro\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
+use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 
 class ProtheusOrcamentoService
 {
@@ -17,7 +18,7 @@ class ProtheusOrcamentoService
         if (!$url || !$user || !$password) {
             return [
                 'sucesso' => false,
-                'mensagem' => 'Credenciais ou URL da API do Protheus não estão configuradas no arquivo .env.'
+                'mensagem' => 'As credenciais ou o URL da API do Protheus não estão configuradas no ficheiro .env.'
             ];
         }
 
@@ -49,37 +50,56 @@ class ProtheusOrcamentoService
 
                     $chaveComposta = "{$filial}_{$ano}_{$natureza}_{$ccusto}";
 
-                    Orcamento::updateOrCreate(
+                    // 1. Cria ou atualiza o Cabeçalho (Header) do Orçamento
+                    // Usamos firstOrCreate para não sobrescrever o status caso o gestor já esteja a editar
+                    $orcamento = Orcamento::firstOrCreate(
                         ['chave_composta' => $chaveComposta],
                         [
                             'filial'    => $filial,
                             'ano'       => $ano,
                             'natureza'  => $natureza,
+                            'ccusto'    => $ccusto,
                             'moeda'     => $item['moeda'] ?? null,
                             'cmoeda'    => trim($item['cmoeda'] ?? ''),
-                            'valor_jan' => $item['valor_jan'] ?? 0,
-                            'valor_fev' => $item['valor_fev'] ?? 0,
-                            'valor_mar' => $item['valor_mar'] ?? 0,
-                            'valor_abr' => $item['valor_abr'] ?? 0,
-                            'valor_mai' => $item['valor_mai'] ?? 0,
-                            'valor_jun' => $item['valor_jun'] ?? 0,
-                            'valor_jul' => $item['valor_jul'] ?? 0,
-                            'valor_ago' => $item['valor_ago'] ?? 0,
-                            'valor_set' => $item['valor_set'] ?? 0,
-                            'valor_out' => $item['valor_out'] ?? 0,
-                            'valor_nov' => $item['valor_nov'] ?? 0,
-                            'valor_dez' => $item['valor_dez'] ?? 0,
-                            'ccusto'    => $ccusto,
                             'xcat'      => trim($item['xcat'] ?? ''),
+                            'status'    => 'Criado', // Status inicial web
+                            // Os valores agregados já não ficam no cabeçalho. 
+                            // Podem ficar a 0, pois a soma virá dinamicamente dos itens.
+                            'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
+                            'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
+                            'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
+                            'valor_out' => 0, 'valor_nov' => 0, 'valor_dez' => 0,
                         ]
                     );
+
+                    // 2. Lança o "Item Base" na tabela orcamento_itens
+                    // Apenas insere os dados da API se este orçamento ainda não tiver nenhum item.
+                    // Isto protege o trabalho do Gestor de ser apagado numa futura sincronização.
+                    if ($orcamento->itens()->count() === 0) {
+                        OrcamentoItem::create([
+                            'orcamento_id' => $orcamento->id,
+                            'descricao'    => 'Orçamento Base (Importado do Protheus)',
+                            'valor_jan'    => $item['valor_jan'] ?? 0,
+                            'valor_fev'    => $item['valor_fev'] ?? 0,
+                            'valor_mar'    => $item['valor_mar'] ?? 0,
+                            'valor_abr'    => $item['valor_abr'] ?? 0,
+                            'valor_mai'    => $item['valor_mai'] ?? 0,
+                            'valor_jun'    => $item['valor_jun'] ?? 0,
+                            'valor_jul'    => $item['valor_jul'] ?? 0,
+                            'valor_ago'    => $item['valor_ago'] ?? 0,
+                            'valor_set'    => $item['valor_set'] ?? 0,
+                            'valor_out'    => $item['valor_out'] ?? 0,
+                            'valor_nov'    => $item['valor_nov'] ?? 0,
+                            'valor_dez'    => $item['valor_dez'] ?? 0,
+                        ]);
+                    }
 
                     $processados++;
                 }
 
                 return [
                     'sucesso' => true,
-                    'mensagem' => "Sincronização concluída! {$processados} orçamentos atualizados.",
+                    'mensagem' => "Sincronização concluída com sucesso! {$processados} orçamentos importados.",
                     'total' => $processados
                 ];
 
@@ -99,7 +119,7 @@ class ProtheusOrcamentoService
             Log::error("Exceção Crítica API Protheus", ['erro' => $e->getMessage()]);
             return [
                 'sucesso' => false,
-                'mensagem' => "Erro de conexão ao tentar ler a API do Protheus."
+                'mensagem' => "Erro de ligação ao tentar aceder à API do Protheus."
             ];
         }
     }

@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
+use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
@@ -24,10 +25,14 @@ class OrcamentoManager extends Component
     public bool $modalAberto = false;
     public ?Orcamento $orcamentoSelecionado = null;
     
-    public array $editData = [];
+    // --- NOVAS VARIÁVEIS PARA OS ITENS ---
+    public string $justificativaGeral = '';
+    public array $itensOrcamento = [];
+    public array $itensRemovidos = [];
+    // -------------------------------------
+
     public array $breadcrumbs = [];
 
-    // Variáveis do Simulador
     public int $anoSimulacao = 2026;
     public int $mesSimulacaoAtual = 1; 
     public array $nomesMeses = [
@@ -78,24 +83,65 @@ class OrcamentoManager extends Component
 
     public function abrirModalDetalhes($id)
     {
-        $this->orcamentoSelecionado = Orcamento::with('avaliacoes')->findOrFail($id);
+        // Carrega o orçamento com as suas avaliações e os seus itens
+        $this->orcamentoSelecionado = Orcamento::with(['avaliacoes', 'itens'])->findOrFail($id);
         
-        $this->editData = [
-            'descricao_despesa' => $this->orcamentoSelecionado->descricao_despesa,
-            'valor_jan' => $this->orcamentoSelecionado->valor_jan, 'valor_fev' => $this->orcamentoSelecionado->valor_fev,
-            'valor_mar' => $this->orcamentoSelecionado->valor_mar, 'valor_abr' => $this->orcamentoSelecionado->valor_abr,
-            'valor_mai' => $this->orcamentoSelecionado->valor_mai, 'valor_jun' => $this->orcamentoSelecionado->valor_jun,
-            'valor_jul' => $this->orcamentoSelecionado->valor_jul, 'valor_ago' => $this->orcamentoSelecionado->valor_ago,
-            'valor_set' => $this->orcamentoSelecionado->valor_set, 'valor_out' => $this->orcamentoSelecionado->valor_out,
-            'valor_nov' => $this->orcamentoSelecionado->valor_nov, 'valor_dez' => $this->orcamentoSelecionado->valor_dez,
-        ];
+        $this->justificativaGeral = $this->orcamentoSelecionado->descricao_despesa ?? '';
+        $this->itensOrcamento = [];
+        $this->itensRemovidos = [];
+
+        // Mapeia os itens da base de dados para o array do Livewire
+        foreach ($this->orcamentoSelecionado->itens as $item) {
+            $this->itensOrcamento[] = [
+                'id' => $item->id,
+                'descricao' => $item->descricao,
+                'valor_jan' => $item->valor_jan, 'valor_fev' => $item->valor_fev,
+                'valor_mar' => $item->valor_mar, 'valor_abr' => $item->valor_abr,
+                'valor_mai' => $item->valor_mai, 'valor_jun' => $item->valor_jun,
+                'valor_jul' => $item->valor_jul, 'valor_ago' => $item->valor_ago,
+                'valor_set' => $item->valor_set, 'valor_out' => $item->valor_out,
+                'valor_nov' => $item->valor_nov, 'valor_dez' => $item->valor_dez,
+            ];
+        }
+
+        // Se, por alguma anomalia, o orçamento não tiver itens, cria uma linha vazia
+        if (empty($this->itensOrcamento)) {
+            $this->adicionarItem();
+        }
         
         $this->modalAberto = true;
     }
 
+    public function adicionarItem()
+    {
+        $this->itensOrcamento[] = [
+            'id' => null,
+            'descricao' => '',
+            'valor_jan' => 0, 'valor_fev' => 0, 'valor_mar' => 0,
+            'valor_abr' => 0, 'valor_mai' => 0, 'valor_jun' => 0,
+            'valor_jul' => 0, 'valor_ago' => 0, 'valor_set' => 0,
+            'valor_out' => 0, 'valor_nov' => 0, 'valor_dez' => 0,
+        ];
+    }
+
+    public function removerItem($index)
+    {
+        // Se o item já existir na base de dados, guardamos o ID para apagá-lo ao guardar
+        if (!empty($this->itensOrcamento[$index]['id'])) {
+            $this->itensRemovidos[] = $this->itensOrcamento[$index]['id'];
+        }
+        
+        unset($this->itensOrcamento[$index]);
+        $this->itensOrcamento = array_values($this->itensOrcamento); // Reorganiza os índices do array
+        
+        if (empty($this->itensOrcamento)) {
+            $this->adicionarItem(); // Garante que há sempre pelo menos uma linha
+        }
+    }
+
     public function salvarOrcamento()
     {
-        $this->processarGravacao('Em elaboração', 'Orçamento salvo como rascunho com sucesso!');
+        $this->processarGravacao('Em elaboração', 'Orçamento guardado como rascunho com sucesso!');
     }
 
     public function finalizarOrcamento()
@@ -110,22 +156,51 @@ class OrcamentoManager extends Component
             return;
         }
 
+        foreach ($this->itensOrcamento as $item) {
+            if (empty(trim($item['descricao']))) {
+                $this->dispatch('erro', msg: 'Ação Bloqueada: Todos os itens do orçamento devem ter uma descrição.');
+                return;
+            }
+        }
+
         $novoStatus = $statusDesejado;
         if ($statusDesejado === 'Em elaboração' && !in_array($this->orcamentoSelecionado->status, ['Criado', 'Reprovado'])) {
             $novoStatus = $this->orcamentoSelecionado->status; 
         }
 
-        $dadosUpdate = [
-            'descricao_despesa' => $this->editData['descricao_despesa'] ?? null,
+        // 1. Atualiza o Cabeçalho
+        $this->orcamentoSelecionado->update([
+            'descricao_despesa' => $this->justificativaGeral,
             'status' => $novoStatus,
-        ];
+        ]);
 
-        $meses = ['valor_jan', 'valor_fev', 'valor_mar', 'valor_abr', 'valor_mai', 'valor_jun', 'valor_jul', 'valor_ago', 'valor_set', 'valor_out', 'valor_nov', 'valor_dez'];
-        foreach($meses as $mes) {
-            $dadosUpdate[$mes] = empty($this->editData[$mes]) ? 0 : (float) $this->editData[$mes];
+        // 2. Apaga os itens removidos pelo gestor
+        if (!empty($this->itensRemovidos)) {
+            OrcamentoItem::whereIn('id', $this->itensRemovidos)->delete();
         }
 
-        $this->orcamentoSelecionado->update($dadosUpdate);
+        // 3. Atualiza os itens existentes ou cria os novos itens adicionados
+        foreach ($this->itensOrcamento as $dataItem) {
+            OrcamentoItem::updateOrCreate(
+                ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamentoSelecionado->id],
+                [
+                    'descricao' => trim($dataItem['descricao']),
+                    'valor_jan' => empty($dataItem['valor_jan']) ? 0 : (float) $dataItem['valor_jan'],
+                    'valor_fev' => empty($dataItem['valor_fev']) ? 0 : (float) $dataItem['valor_fev'],
+                    'valor_mar' => empty($dataItem['valor_mar']) ? 0 : (float) $dataItem['valor_mar'],
+                    'valor_abr' => empty($dataItem['valor_abr']) ? 0 : (float) $dataItem['valor_abr'],
+                    'valor_mai' => empty($dataItem['valor_mai']) ? 0 : (float) $dataItem['valor_mai'],
+                    'valor_jun' => empty($dataItem['valor_jun']) ? 0 : (float) $dataItem['valor_jun'],
+                    'valor_jul' => empty($dataItem['valor_jul']) ? 0 : (float) $dataItem['valor_jul'],
+                    'valor_ago' => empty($dataItem['valor_ago']) ? 0 : (float) $dataItem['valor_ago'],
+                    'valor_set' => empty($dataItem['valor_set']) ? 0 : (float) $dataItem['valor_set'],
+                    'valor_out' => empty($dataItem['valor_out']) ? 0 : (float) $dataItem['valor_out'],
+                    'valor_nov' => empty($dataItem['valor_nov']) ? 0 : (float) $dataItem['valor_nov'],
+                    'valor_dez' => empty($dataItem['valor_dez']) ? 0 : (float) $dataItem['valor_dez'],
+                ]
+            );
+        }
+
         $this->dispatch('sucesso', msg: $mensagemSucesso);
         $this->fecharModal();
     }
@@ -139,7 +214,7 @@ class OrcamentoManager extends Component
     public function avancarAnoSimulacao()
     {
         $this->anoSimulacao++;
-        $this->mesSimulacaoAtual = 1; // Reseta o mês para Janeiro
+        $this->mesSimulacaoAtual = 1;
         session(['ano_simulacao_orcamento' => $this->anoSimulacao, 'mes_simulacao_orcamento' => 1]);
         $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! O ciclo mensal foi reiniciado.");
     }
