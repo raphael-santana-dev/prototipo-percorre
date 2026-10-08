@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
 #[Title('Fluxo de Inscrição')]
 class KanbanBoard extends Component
 {
-    public $cicloId = null;
+    public $cicloId = '';
     public array $selecionados = []; 
     public $statusDestinoLote = '';
 
@@ -50,13 +50,14 @@ class KanbanBoard extends Component
         $cicloPadrao = $this->obterCicloPadrao($paramId ? (int)$paramId : null);
 
         if ($cicloPadrao) {
-            $this->cicloId = $cicloPadrao->id;
+            $this->cicloId = (string) $cicloPadrao->id;
+        } else {
+            $this->cicloId = '';
         }
     }
 
     protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
     {
-        // 1. Se um ID específico foi fornecido via parâmetro ou URL
         if ($cicloId) {
             $cicloEncontrado = Ciclo::find($cicloId);
             if ($cicloEncontrado) return $cicloEncontrado;
@@ -64,7 +65,6 @@ class KanbanBoard extends Component
 
         $agora = now();
 
-        // 2. Procura pelo Ciclo Ativo vigente (PostgreSQL estrito: boolean true)
         $cicloAtivoVigente = Ciclo::where('status', true)
             ->where(function ($q) use ($agora) {
                 $q->whereNull('data_inicio')->orWhere('data_inicio', '<=', $agora);
@@ -79,7 +79,6 @@ class KanbanBoard extends Component
             return $cicloAtivoVigente;
         }
 
-        // 3. Qualquer ciclo com status ativo
         $cicloAtivo = Ciclo::where('status', true)
             ->latest('id')
             ->first();
@@ -88,26 +87,22 @@ class KanbanBoard extends Component
             return $cicloAtivo;
         }
 
-        // 4. Fallback final: último ciclo cadastrado no banco de dados
         return Ciclo::latest('id')->first();
     }
 
     #[Computed]
     public function relacaoVagas(): array
     {
-        if (!$this->cicloId) {
-            return [
-                'total_vagas' => 0,
-                'vagas_ocupadas' => 0,
-                'percentual_preenchido' => 0,
-                'saldo_disponivel' => 0,
-            ];
+        $totalVagasQuery = OfertaVaga::query();
+        $queryOcupadas = Inscricao::query();
+
+        if (!empty($this->cicloId)) {
+            $totalVagasQuery->where('ciclo_id', $this->cicloId);
+            $queryOcupadas->where('ciclo_id', $this->cicloId);
         }
 
-        $totalVagas = OfertaVaga::where('ciclo_id', $this->cicloId)->sum('vagas') ?? 0;
-        
+        $totalVagas = $totalVagasQuery->sum('vagas') ?? 0;
         $config = $this->getVagasConfig();
-        $queryOcupadas = Inscricao::where('ciclo_id', $this->cicloId);
 
         if ($config['regra'] === 'por_matricula') {
             $queryOcupadas->where(function($q) use ($config) {
@@ -123,10 +118,10 @@ class KanbanBoard extends Component
         $percentual = $totalVagas > 0 ? min(100, round(($vagasOcupadas / $totalVagas) * 100, 1)) : 0;
 
         return [
-            'total_vagas' => $totalVagas,
-            'vagas_ocupadas' => $vagasOcupadas,
+            'total_vagas' => (int) $totalVagas,
+            'vagas_ocupadas' => (int) $vagasOcupadas,
             'percentual_preenchido' => $percentual,
-            'saldo_disponivel' => $saldo,
+            'saldo_disponivel' => (int) $saldo,
         ];
     }
 
@@ -149,9 +144,7 @@ class KanbanBoard extends Component
         $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna', 'filtroDataInicio', 'selecionados']);
         
         $cicloPadrao = $this->obterCicloPadrao();
-        if ($cicloPadrao) {
-            $this->cicloId = $cicloPadrao->id;
-        }
+        $this->cicloId = $cicloPadrao ? (string) $cicloPadrao->id : '';
     }
 
     private function buildBaseQuery()
@@ -274,7 +267,9 @@ class KanbanBoard extends Component
                 continue;
             }
 
-            $oferta = OfertaVaga::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+            $cicloIdEfetivo = !empty($this->cicloId) ? $this->cicloId : $grupoInscricoes->first()->ciclo_id;
+
+            $oferta = OfertaVaga::where('ciclo_id', $cicloIdEfetivo)
                 ->where('unidade_id', $partes[0])
                 ->where('curso_id', $partes[1])
                 ->where('turno_id', $partes[2])
@@ -282,7 +277,7 @@ class KanbanBoard extends Component
 
             if (!$oferta) continue;
 
-            $queryOcupadas = Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+            $queryOcupadas = Inscricao::where('ciclo_id', $cicloIdEfetivo)
                 ->where('unidade_id', $partes[0])
                 ->where('curso_id', $partes[1])
                 ->where('turno_id', $partes[2])
@@ -500,7 +495,6 @@ class KanbanBoard extends Component
         $inscricao = Inscricao::findOrFail($id);
         
         $html = '<div class="space-y-5">';
-        
         $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->email ?? 'Não informado').'</span></div>';
         $html .= '<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700"><span class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Celular / Telefone</span><span class="block text-sm font-bold text-gray-900 dark:text-gray-100">'.($inscricao->celular ?? 'Não informado').'</span></div>';
         
@@ -540,7 +534,6 @@ class KanbanBoard extends Component
         }
         $botoesAcao .= '</div>';
 
-        // Renderização dos Dados Dinâmicos com Suporte a Arquivos/Documentos
         $detalhesDinamicos = '';
         if ($inscricao->dados_dinamicos && is_array($inscricao->dados_dinamicos)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
@@ -703,9 +696,8 @@ class KanbanBoard extends Component
 
     public function render()
     {
-        $ciclo = Ciclo::with('statusPipeline')->find($this->cicloId);
+        $ciclo = !empty($this->cicloId) ? Ciclo::with('statusPipeline')->find($this->cicloId) : null;
         
-        // Garante que se o ciclo não possuir pipeline cadastrado, liste todos os status padrão do sistema
         $colunas = ($ciclo && $ciclo->statusPipeline && $ciclo->statusPipeline->isNotEmpty()) 
             ? $ciclo->statusPipeline 
             : StatusInscricao::orderBy('id', 'asc')->get();
