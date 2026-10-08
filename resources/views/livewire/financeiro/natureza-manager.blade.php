@@ -15,13 +15,19 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6 mt-6">
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <input type="text" wire:model.live.debounce.500ms="filtroCodigo" placeholder="Pesquisar por Código..." class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
                 <input type="text" wire:model.live.debounce.500ms="filtroDescricao" placeholder="Pesquisar por Descrição..." class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
                 <select wire:model.live="filtroDisponivel" class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
                     <option value="">Status de Disponibilidade</option>
                     <option value="1">Apenas Disponíveis</option>
                     <option value="0">Apenas Ocultas</option>
+                </select>
+                <select wire:model.live="filtroTipo" class="rounded-lg border-gray-200 shadow-sm text-sm focus:ring-purpura-500 w-full dark:bg-gray-700 dark:text-white">
+                    <option value="">Selecione o Tipo</option>
+                    @foreach($tipos as $tipo)
+                        <option value="{{ $tipo }}">{{ $tipo }}</option>
+                    @endforeach
                 </select>
                 <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full h-[38px] bg-white">
                     <i class="ph-bold ph-funnel-x"></i> Limpar Filtros
@@ -40,16 +46,19 @@
 
                 @forelse($registros as $natureza)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-                        <td class="px-4 py-3 t-label-12 text-gray-500 dark:text-gray-400">#{{ $natureza->id }}</td>
-                        <td class="px-4 py-3 text-sm font-mono font-bold text-purpura-600 dark:text-purpura-400">{{ $natureza->codigo }}</td>
-                        <td class="px-4 py-3 t-body-14-semibold text-gray-900 dark:text-white">{{ $natureza->descricao }}</td>
-                        <td class="px-4 py-3 text-center">
-                                <button wire:click="toggleDisponibilidade({{ $natureza->id }})" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border transition-colors {{ $natureza->disponivel_orcamento ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200' }}">
-                                    {!! $natureza->disponivel_orcamento ? '<i class="ph-bold ph-check"></i> SIM' : '<i class="ph-bold ph-x"></i> NÃO' !!}
-                                </button>
+                        <td class="px-4 py-1.5 t-label-12 text-gray-500 dark:text-gray-400">#{{ $natureza->id }}</td>
+                        <td class="px-4 py-1.5 text-sm font-mono font-bold text-purpura-600 dark:text-purpura-400">{{ $natureza->codigo }}</td>
+                        <td class="px-4 py-1.5 t-body-14-semibold text-gray-900 dark:text-white">{{ $tipos[$natureza->tipo] ?? $natureza->tipo }}</td>
+                        <td class="px-4 py-1.5 t-body-14-semibold text-gray-900 dark:text-white">{{ $natureza->descricao }}</td>
+                        <td class="px-4 py-1.5 whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-2">
+                                <x-toggle :status="$natureza->disponivel_orcamento" action="toggleDisponibilidade({{$natureza->id}})" />
+
                                 <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $natureza->disponivel_orcamento ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200' }}">
                                     {{ $natureza->disponivel_orcamento ? 'SIM' : 'NÃO' }}
                                 </span>
+                            </div>
+                            
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
@@ -75,7 +84,6 @@
         </div>
     </div>
 
-    {{-- Modal de Criação / Edição --}}
     @if($modalAberto)
         <div class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-gray-800" x-data @keydown.escape.window="$wire.fecharModal()">
@@ -99,6 +107,20 @@
                         </div>
 
                         <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Tipo de Natureza <span class="text-red-500">*</span></label>
+
+                            <select wire:model="tipo" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                                <option value="">Selecione o Tipo</option>
+                                @foreach($tipos as $tipo)
+                                    <option value="{{ $tipo }}">{{ $tipo }}</option>
+                                @endforeach
+                            </select>
+                            @error('tipo') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                        <div class="md:col-span-1">
                             <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Descrição da Natureza <span class="text-red-500">*</span></label>
                             <input type="text" wire:model="descricao" placeholder="Ex: Despesas com Pessoal" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
                             @error('descricao') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror

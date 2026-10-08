@@ -14,6 +14,7 @@ class Natureza extends Model
     protected $fillable = [
         'codigo',
         'descricao',
+        'tipo',
         'disponivel_orcamento',
     ];
 
