@@ -27,6 +27,18 @@
     <div class="relative z-10 w-full {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         <div class="w-full mx-auto {{ $formWidth }} form-container">
             @if($inscricoesAbertas)
+                @if($isPreview)
+                    <div class="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm">
+                        <span class="flex items-center gap-2">
+                            <i class="ph-fill ph-eye text-lg text-amber-600"></i> 
+                            Modo de Pré-visualização: Pode avançar e voltar entre as etapas livremente sem preenchimento obrigatório.
+                        </span>
+                        <span class="px-2 py-0.5 bg-amber-500/20 text-amber-800 dark:text-amber-200 rounded text-[10px] font-extrabold uppercase tracking-wider">
+                            Simulação
+                        </span>
+                    </div>
+                @endif
+
                 @if($etapaAtual <= $totalEtapas)
                     
                     <div class="mb-8 progresso-container flex flex-col items-center sm:items-start">
@@ -339,7 +351,11 @@
                             
                             <button type="button" wire:click="avancarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span wire:loading.remove wire:target="avancarEtapa, uploads">
-                                    {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
+                                    @if($isPreview && $etapaAtual === $totalEtapas)
+                                        Finalizar
+                                    @else
+                                        {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
+                                    @endif
                                 </span>
                                 <span wire:loading wire:target="uploads" class="inline-flex items-center gap-2">
                                     <i class="ph-bold ph-spinner animate-spin"></i> A carregar anexo(s)...

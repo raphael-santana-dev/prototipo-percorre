@@ -20,6 +20,8 @@ class Inscricao extends Component
     use \App\Traits\WithCepConsulta;
     use WithFileUploads;
 
+    public bool $isPreview = false;
+
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
     public $inscricaoId = null;
@@ -51,12 +53,25 @@ class Inscricao extends Component
 
     public function mount()
     {
-        $ciclo = Ciclo::with(['campos' => function($query) {
-            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-        }])->where('status', true)
-            ->where('data_inicio', '<=', now())
-            ->where('data_fim', '>=', now())
-            ->first();
+        $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
+
+        if ($this->isPreview) {
+            $cicloPreviewId = request()->query('ciclo_id');
+            $queryCiclo = Ciclo::with(['campos' => function($query) {
+                $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+            }]);
+
+            $ciclo = $cicloPreviewId 
+                ? $queryCiclo->find($cicloPreviewId) 
+                : ($queryCiclo->where('status', true)->latest('id')->first() ?? Ciclo::latest('id')->first());
+        } else {
+            $ciclo = Ciclo::with(['campos' => function($query) {
+                $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+            }])->where('status', true)
+                ->where('data_inicio', '<=', now())
+                ->where('data_fim', '>=', now())
+                ->first();
+        }
 
         if ($ciclo) {
             $this->cicloAtivoId = $ciclo->id;
@@ -378,6 +393,13 @@ class Inscricao extends Component
 
     public function avancarEtapa()
     {
+        if ($this->isPreview) {
+            if ($this->etapaAtual < $this->totalEtapas) {
+                $this->etapaAtual++;
+            }
+            return;
+        }
+        
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
         
         $this->validate($regrasFinais, [
