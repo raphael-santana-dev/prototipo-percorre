@@ -30,7 +30,7 @@
             $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : $campo->configuracoes;
         }
 
-        $colSpan = "col-span-12 md:col-span-{$campo->largura}";
+        $colSpan = ($campo->largura == 0) ? "col-span-12 md:col-auto md:col-end-13" : "col-span-12 md:col-span-{$campo->largura}";$colSpan = "col-span-12 md:col-span-{$campo->largura}";
         
         $bgStyle = "";
         $overlayStyle = "";
@@ -95,7 +95,7 @@
         @endif
 
         <div class="relative z-10">
-            @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media']))
+            @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media', 'spacer']))
                 <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
                     {!! formatWppText($campo->label) !!} 
                     @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
@@ -187,6 +187,9 @@
 
             @elseif($campo->tipo === 'divider')
                 <hr class="border-t-2 border-dashed border-gray-300 dark:border-gray-700 my-6">
+
+            @elseif($campo->tipo === 'spacer')
+                <div class="w-full h-full min-h-[1px] pointer-events-none" aria-hidden="true"></div>
 
             @elseif($campo->tipo === 'social')
                 @php $redesPermitidas = $config['redes_permitidas'] ?? []; @endphp

@@ -153,7 +153,7 @@ class DynamicFields extends Component
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
-        if (in_array($tipo, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
+        if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer']) && !$this->campoId && empty($this->name)) {
             $this->name = 'ui_' . time(); 
         }
 
@@ -193,7 +193,7 @@ class DynamicFields extends Component
 
     public function updatedLabel($valor)
     {
-        if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social'])) {
+        if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer'])) {
             $this->name = Str::slug($valor, '_');
         } elseif (!$this->campoId) {
             $this->name = 'campo_' . time(); 
@@ -451,7 +451,7 @@ class DynamicFields extends Component
             'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
-            'label' => empty($this->label) ? 'Campo Visão' : $this->label, 
+            'label' => empty($this->label) ? ($this->tipo === 'spacer' ? 'Espaço em Branco' : 'Campo Visão') : $this->label, 
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
@@ -461,8 +461,7 @@ class DynamicFields extends Component
             'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
             'opcoes' => $arrayOpcoes,
             'configuracoes' => empty($configToSave) ? null : $configToSave,
-            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social']) ? false : $this->obrigatorio,
-            'regras_validacao' => $this->regras_validacao,
+            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer']) ? false : $this->obrigatorio,            'regras_validacao' => $this->regras_validacao,
             'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
             'depende_operador' => $this->depende_operador,
             'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,

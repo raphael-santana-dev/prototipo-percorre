@@ -168,7 +168,7 @@
                                             @foreach($grupo['campos'] as $c)
                                                 @php 
                                                     $isActive = $campoId == $c->id; 
-                                                    $colSpan = "col-span-12 md:col-span-{$c->largura}";
+                                                    $colSpan = ($c->largura == 0) ? "col-span-12 md:col-auto md:col-end-13" : "col-span-12 md:col-span-{$c->largura}";
                                                     $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
                                                     $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
                                                 @endphp
@@ -182,7 +182,7 @@
 
                                                     <div class="relative z-10">
                                                         <div class="flex justify-between items-start mb-2">
-                                                            @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social']))
+                                                            @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer']))
                                                                 <label class="block text-sm font-bold text-gray-800">
                                                                     {!! formatWppText($c->label) !!} @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
                                                                 </label>
@@ -324,6 +324,11 @@
 
                                                         @elseif($c->tipo === 'divider')
                                                             <hr class="border-t-2 border-dashed border-gray-300 my-2">
+
+                                                        @elseif($c->tipo === 'spacer')
+                                                            <div class="w-full h-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center bg-gray-50/60 dark:bg-gray-800/40 text-gray-400 text-xs font-semibold select-none">
+                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5 text-base"></i> Espaço em Branco ({{ $c->largura == 0 ? 'Ocupar Restante' : $c->largura . '/12' }})
+                                                            </div>
 
                                                         @elseif($c->tipo === 'media')
                                                             <div class="w-full bg-gray-50 rounded-md p-4 text-center border border-gray-200 pointer-events-none text-gray-500 shadow-sm">
@@ -512,6 +517,10 @@
                                             <i class="ph ph-minus text-xl {{ $tipo == 'divider' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Linha Divisória</span>
                                         </button>
+                                        <button type="button" wire:click="setTipo('spacer', 'spacer')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'spacer' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                            <i class="ph ph-arrows-out-line-horizontal text-xl {{ $tipo == 'spacer' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                            <span class="text-xs font-bold">Espaço em Branco</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -539,7 +548,7 @@
 
                         <hr class="border-gray-100">
 
-                        @if($tipo !== 'divider')
+                        @if(!in_array($tipo, ['divider', 'spacer']))
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
                                     <span>{{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : 'Título da Pergunta' }} <span class="text-red-500">*</span></span>
@@ -562,6 +571,7 @@
                                     <option value="6">50% (Metade)</option>
                                     <option value="4">33% (Um Terço)</option>
                                     <option value="3">25% (Um Quarto)</option>
+                                    <option value="0">Ocupar Espaço Restante (Auto)</option>
                                 </select>
                             </div>
                         </div>
@@ -768,7 +778,7 @@
                             </div>
                         @endif
 
-                        @if(!in_array($tipo, ['html', 'divider', 'media', 'social']))
+                        @if(!in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer']))
                             <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition mt-4">
                                 <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
                                 <div class="flex flex-col">
