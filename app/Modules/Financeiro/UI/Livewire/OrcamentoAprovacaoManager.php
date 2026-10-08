@@ -18,6 +18,7 @@ class OrcamentoAprovacaoManager extends Component
     public $filtroAno = '';
     public $filtroFilial = '';
     public $filtroStatus = 'Finalizado'; 
+    public $filtroCentroCusto = '';
 
     public array $breadcrumbs = [];
 
@@ -37,14 +38,14 @@ class OrcamentoAprovacaoManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroStatus'])) {
+        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroStatus', 'filtroCentroCusto'])) {
             $this->resetPage();
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtroAno', 'filtroFilial']);
+        $this->reset(['filtroAno', 'filtroFilial', 'filtroCentroCusto']);
         $this->filtroStatus = 'Finalizado';
         $this->resetPage();
     }
@@ -75,6 +76,7 @@ class OrcamentoAprovacaoManager extends Component
         if (!empty($this->filtroAno)) $query->where('ano', $this->filtroAno);
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
         if (!empty($this->filtroStatus)) $query->where('status', $this->filtroStatus);
+        if (!empty($this->filtroCentroCusto)) $query->where('ccusto', 'ilike', '%' . $this->filtroCentroCusto . '%');
 
         return $query;
     }

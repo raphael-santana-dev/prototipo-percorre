@@ -20,6 +20,7 @@ class OrcamentoManager extends Component
     public $filtroAno = '';
     public $filtroFilial = '';
     public $filtroStatus = '';
+    public $filtroCentroCusto = '';
 
     public array $breadcrumbs = [];
     public int $anoSimulacao = 2026;
@@ -34,6 +35,7 @@ class OrcamentoManager extends Component
             ['label' => 'Financeiro', 'url' => '#'], 
             ['label' => 'Orçamentos', 'url' => route('financeiro.orcamentos')]
         ];
+
         $this->ordenacaoCampo = 'ano'; 
         $this->ordenacaoDirecao = 'desc';
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
@@ -41,12 +43,12 @@ class OrcamentoManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroStatus'])) $this->resetPage();
+        if (in_array($nomePropriedade, ['filtroAno', 'filtroFilial', 'filtroStatus', 'filtroCentroCusto'])) $this->resetPage();
         if ($nomePropriedade === 'anoSimulacao') session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
     }
 
     public function limparFiltros() { 
-        $this->reset(['filtroAno', 'filtroFilial', 'filtroStatus']); 
+        $this->reset(['filtroAno', 'filtroFilial', 'filtroStatus', 'filtroCentroCusto']); 
         $this->resetPage(); 
     }
 
@@ -56,7 +58,6 @@ class OrcamentoManager extends Component
         else $this->dispatch('erro', msg: $resultado['mensagem']);
     }
 
-    // NOVA FUNÇÃO: Redireciona para a tela dedicada do Excel View
     public function editarOrcamento($id)
     {
         return redirect()->route('financeiro.orcamentos.editor', $id);
@@ -117,6 +118,7 @@ class OrcamentoManager extends Component
         }
         if (!empty($this->filtroAno)) $query->where('ano', $this->filtroAno);
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
+        if (!empty($this->filtroCentroCusto)) $query->where('ccusto', 'ilike', '%' . $this->filtroCentroCusto . '%');
         if (!empty($this->filtroStatus)) $query->where('status', $this->filtroStatus);
         return $query;
     }

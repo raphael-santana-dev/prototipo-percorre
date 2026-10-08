@@ -10,9 +10,10 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mt-6">
         <div class="p-4 bg-gray-50/40 dark:bg-gray-900/20 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Buscar Ano" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Buscar Filial" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
+                <input type="text" wire:model.live.debounce.500ms="filtroCentroCusto" placeholder="Buscar Centro de Custo" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                 <select wire:model.live="filtroStatus" class="rounded-lg border-gray-200 shadow-sm text-sm w-full dark:bg-gray-700 dark:text-white">
                     <option value="Finalizado">Aguardando Avaliação</option>
                     <option value="Aprovado">Aprovados</option>
@@ -28,14 +29,14 @@
             <x-table :headers="$this->headers" :registros="$registros" :ordenacaoCampo="$ordenacaoCampo" :ordenacaoDirecao="$ordenacaoDirecao" :permiteGrid="$permiteGrid" :modoExibicao="$modoExibicao">
                 @forelse($registros as $orcamento)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-                        <td class="px-4 py-4 t-label-12 text-gray-500">#{{ $orcamento->id }}</td>
-                        <td class="px-4 py-4 t-body-14-semibold text-center">{{ $orcamento->ano }}</td>
-                        <td class="px-4 py-4 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
-                        <td class="px-4 py-4">
-                            <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</span>
-                            <span class="text-[10px] text-purpura-600 font-mono block max-w-[200px]">C.C. {{ $orcamento->ccusto ?: '-' }}</span>
+                        <td class="px-4 py-1.5 t-label-12 text-gray-500">#{{ $orcamento->id }}</td>
+                        <td class="px-4 py-1.5 t-body-14-semibold text-center">{{ $orcamento->ano }}</td>
+                        <td class="px-4 py-1.5 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
+                        <td class="px-4 py-1.5">
+                            <span class="text-sm t-label-12 text-gray-900 dark:text-white block">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</span>
+                            <span class="text-xs t-label-12 font-medium text-purpura-600">C.C. {{ $orcamento->ccusto ?: '-' }}</span>
                         </td>
-                        <td class="px-4 py-4 text-center">
+                        <td class="px-4 py-1.5 text-center">
                             @php
                                 $statusColor = match($orcamento->status) {
                                     'Finalizado' => 'bg-purple-100 text-purple-700 border-purple-200',
@@ -47,9 +48,9 @@
                             @endphp
                             <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase border {{ $statusColor }} whitespace-nowrap">{{ $orcamento->status === 'Finalizado' ? 'Aguardando' : $orcamento->status }}</span>
                         </td>
-                        <td class="px-4 py-4 t-body-14-semibold text-right text-gray-900 dark:text-white">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
-                        <td class="px-4 py-4 text-right">
-                            <button wire:click="avaliarOrcamento({{ $orcamento->id }})" class="p-2 text-white bg-gray-900 hover:bg-black rounded-lg shadow-sm transition flex items-center gap-2 ml-auto" title="Analisar Orçamento"><i class="text-base ph-bold ph-magnifying-glass"></i> Analisar</button>
+                        <td class="px-4 py-1.5 t-body-14-semibold text-right text-gray-900 dark:text-white">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
+                        <td class="px-4 py-1.5 text-right">
+                            <button wire:click="avaliarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Analisar Orçamento"><i class="text-base ph ph-magnifying-glass"></i></button>
                         </td>
                     </tr>
                 @empty
