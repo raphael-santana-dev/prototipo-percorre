@@ -23,7 +23,7 @@ class OrcamentoAprovacaoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito a aprovadores.');
+        // abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito a aprovadores.');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],

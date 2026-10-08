@@ -26,8 +26,8 @@ class OrcamentoManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('financeiro.orcamentos.listagem'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403);
+        // abort_if(!feature('financeiro.orcamentos.listagem'), 403);
+        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403);
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')], 

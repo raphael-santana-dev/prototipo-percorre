@@ -56,16 +56,12 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                @if(feature('financeiro.centro_custo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.centro_custo.editar')))
                                     <button wire:click="edit({{ $centro->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                         <i class="text-lg ph ph-pencil-simple"></i>
                                     </button>
-                                @endif
-                                @if(feature('financeiro.centro_custo.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.centro_custo.excluir')))
                                     <button wire:click="excluir({{ $centro->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem a certeza que deseja excluir este Centro de Custo permanentemente?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph ph-trash"></i>
                                     </button>
-                                @endif
                             </div>
                         </td>
                     </tr>

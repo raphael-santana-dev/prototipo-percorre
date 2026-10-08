@@ -1,19 +1,15 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     <x-page-header title="Orçamentos Financeiros" icon="ph ph-wallet" badge="Gestão" :breadcrumbs="$breadcrumbs">
         <x-slot name="actions">
-            @if(auth()->user()->hasRole('dev|admin'))
-                <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="btn btn--primary btn--small">
-                    <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
-                    <span wire:loading.remove wire:target="sincronizarProtheus">Importar Protheus</span>
-                    <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
-                </button>
-            @endif
+            <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="btn btn--primary btn--small">
+                <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
+                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Protheus</span>
+                <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
+            </button>
         </x-slot>
     </x-page-header>
 
     @if(isset($metricas))
-        <!-- BARRA DO SIMULADOR DE ANO -->
-        @if(auth()->user()->hasRole('dev|admin'))
             <div class="mb-6 bg-gradient-to-r from-gray-900 to-purpura-900 rounded-xl p-5 shadow-lg border border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20 shrink-0">
@@ -31,7 +27,6 @@
                     </button>
                 </div>
             </div>
-        @endif
 
         <div class="mb-6"><x-summary-cards :metricas="$metricas" /></div>
     @endif

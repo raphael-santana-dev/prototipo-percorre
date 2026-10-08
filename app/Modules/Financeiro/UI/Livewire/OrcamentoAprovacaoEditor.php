@@ -31,7 +31,7 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito a aprovadores.');
+        // abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito a aprovadores.');
         
         $this->orcamento = Orcamento::with(['itens.natureza', 'itens.avaliacoes.usuario', 'centroCusto', 'logsGerais.usuario'])->findOrFail($id);
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));

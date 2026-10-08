@@ -44,28 +44,22 @@
                         <td class="px-4 py-3 text-sm font-mono font-bold text-purpura-600 dark:text-purpura-400">{{ $natureza->codigo }}</td>
                         <td class="px-4 py-3 t-body-14-semibold text-gray-900 dark:text-white">{{ $natureza->descricao }}</td>
                         <td class="px-4 py-3 text-center">
-                            @if(feature('financeiro.natureza.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.natureza.editar')))
                                 <button wire:click="toggleDisponibilidade({{ $natureza->id }})" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border transition-colors {{ $natureza->disponivel_orcamento ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200' }}">
                                     {!! $natureza->disponivel_orcamento ? '<i class="ph-bold ph-check"></i> SIM' : '<i class="ph-bold ph-x"></i> NÃO' !!}
                                 </button>
-                            @else
                                 <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border {{ $natureza->disponivel_orcamento ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200' }}">
                                     {{ $natureza->disponivel_orcamento ? 'SIM' : 'NÃO' }}
                                 </span>
-                            @endif
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                @if(feature('financeiro.natureza.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.natureza.editar')))
+
                                     <button wire:click="edit({{ $natureza->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
                                         <i class="text-lg ph ph-pencil-simple"></i>
                                     </button>
-                                @endif
-                                @if(feature('financeiro.natureza.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.natureza.excluir')))
                                     <button wire:click="excluir({{ $natureza->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Tem a certeza que deseja excluir esta Natureza permanentemente?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph ph-trash"></i>
                                     </button>
-                                @endif
                             </div>
                         </td>
                     </tr>
