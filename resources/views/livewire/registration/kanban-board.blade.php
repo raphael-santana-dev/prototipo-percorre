@@ -9,11 +9,22 @@
             {{-- LINHA SUPERIOR: Título, Busca e Ordenação --}}
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full gap-4">
                 
-                {{-- Esquerda: Título --}}
-                <div class="flex items-center gap-4 w-full lg:w-auto shrink-0">
+                {{-- Esquerda: Título com Distintivo de Ciclo Ativo / Último Registado --}}
+                <div class="flex items-center gap-3 w-full lg:w-auto shrink-0 flex-wrap">
                     <h2 class="t-heading-small text-gray-900 dark:text-white flex items-center gap-2 whitespace-nowrap">
-                        <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo: {{ $ciclo->nome ?? 'Nenhum' }}
+                        <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo: {{ $ciclo->nome ?? 'Nenhum Ciclo Encontrado' }}
                     </h2>
+                    @if($ciclo)
+                        @if($ciclo->status && $ciclo->data_inicio <= now() && $ciclo->data_fim >= now())
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-sm">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ciclo Ativo
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-sm">
+                                <i class="ph-bold ph-clock-counter-clockwise text-xs"></i> Último Ciclo Registado
+                            </span>
+                        @endif
+                    @endif
                 </div>
 
                 {{-- Direita: Busca e Ordenação --}}
@@ -119,7 +130,7 @@
             </div>
         </div>
 
-        {{-- BARRA ESCURA DE AÇÕES EM LOTE (Exibe abaixo do card, 100% de largura) --}}
+        {{-- BARRA ESCURA DE AÇÕES EM LOTE --}}
         @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
             <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak 
                  class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
@@ -206,17 +217,17 @@
                                             <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/80 rounded border border-gray-100 dark:border-gray-700 p-2">
                                                 <div class="flex items-center gap-1" title="Ranking Geral">
                                                     <i class="ph-fill ph-trophy text-ponkan-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? $inscricao->posicao_ranking_geral ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? '-' }}º</span>
                                                 </div>
                                                 <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
                                                 <div class="flex items-center gap-1" title="Ranking na Unidade">
                                                     <i class="ph-fill ph-buildings text-blue-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_unidade ?? $inscricao->posicao_ranking_unidade ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_unidade ?? '-' }}º</span>
                                                 </div>
                                                 <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
                                                 <div class="flex items-center gap-1" title="Ranking no Curso">
                                                     <i class="ph-fill ph-graduation-cap text-purpura-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_curso ?? $inscricao->posicao_ranking_curso ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_curso ?? '-' }}º</span>
                                                 </div>
                                             </div>
 
@@ -268,23 +279,54 @@
                     @endforeach
                 @else
                     <div class="w-full flex items-center justify-center p-12 text-gray-400">
-                        Nenhum ciclo ativo cadastrado no sistema.
+                        Nenhum ciclo cadastrado no sistema.
                     </div>
                 @endif
             </div>
         </div>
 
+        {{-- BARRA LATERAL: Relação de Vagas e Totalizadores --}}
         @if($ciclo)
-            <div class="w-56 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
+            <div class="w-64 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
                 
-                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 mb-4 text-center">
-                    <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total</span>
-                    <span class="text-3xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
+                {{-- Card de Ocupação e Relação de Vagas --}}
+                <div class="border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl p-3.5 mb-3.5 shadow-sm">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1">
+                            <i class="ph-bold ph-graduation-cap"></i> Relação de Vagas
+                        </span>
+                        <span class="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-300">
+                            {{ $relacaoVagas['percentual_preenchido'] ?? 0 }}%
+                        </span>
+                    </div>
+
+                    <div class="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                        {{ number_format($relacaoVagas['vagas_ocupadas'] ?? 0, 0, ',', '.') }} 
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">/ {{ number_format($relacaoVagas['total_vagas'] ?? 0, 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2.5 overflow-hidden">
+                        <div class="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: {{ $relacaoVagas['percentual_preenchido'] ?? 0 }}%"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-2 pt-1 border-t border-indigo-100/80 dark:border-indigo-900/40">
+                        <span>Restantes: <strong class="text-gray-700 dark:text-gray-300">{{ number_format($relacaoVagas['saldo_disponivel'] ?? 0, 0, ',', '.') }}</strong></span>
+                        @if(($relacaoVagas['total_vagas'] ?? 0) > 0 && $totalInscricoes > 0)
+                            <span>C/V: <strong class="text-indigo-600 dark:text-indigo-400">{{ round($totalInscricoes / max(1, $relacaoVagas['total_vagas']), 1) }}</strong></span>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Total Geral de Inscritos --}}
+                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 mb-4 text-center bg-white/40 dark:bg-gray-800/40">
+                    <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total de Candidatos</span>
+                    <span class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
                 </div>
                 
+                {{-- Distribuição por Status do Pipeline --}}
                 <div class="space-y-0 flex-1 border-t border-gray-200 dark:border-gray-700">
                     @foreach($resumo as $id => $dado)
-                        <div class="flex justify-between items-center text-sm py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition px-1">
+                        <div class="flex justify-between items-center text-sm py-2.5 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition px-1">
                             <span class="font-bold text-gray-600 dark:text-gray-400 text-[10px] uppercase truncate w-32" title="{{ $dado['nome'] }}">{{ $dado['nome'] }}</span>
                             <span class="font-black text-gray-800 dark:text-gray-300 text-xs">{{ number_format($dado['total'], 0, ',', '.') }}</span>
                         </div>
@@ -295,9 +337,10 @@
 
     </div>
 
+    {{-- MODAL ANTI-SPAM --}}
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="card !w-full !max-w-2xl !p-0">
+            <div class="card !w-full !max-w-2xl !p-0 shadow-2xl">
                 <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-pitaya-50 dark:bg-pitaya-900/20 w-full">
                     <h3 class="text-lg font-bold text-pitaya-700 dark:text-pitaya-400 flex items-center gap-2">
                         <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
@@ -306,8 +349,8 @@
                 </div>
                 
                 <div class="p-6 overflow-y-auto custom-scrollbar w-full">
-                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium">
-                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium leading-relaxed">
+                        O sistema detetou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -341,7 +384,7 @@
                     <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium">
                         Cancelar Tudo
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 hover:!bg-pitaya-700">
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 hover:!bg-pitaya-700 border-none">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
                     </button>
                 </div>

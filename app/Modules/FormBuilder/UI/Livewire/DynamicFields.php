@@ -102,7 +102,8 @@ class DynamicFields extends Component
         $this->atualizarProximaOrdem();
     }
 
-    private function getContextColumn() {
+    private function getContextColumn()
+    {
         return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
     }
 
@@ -150,14 +151,43 @@ class DynamicFields extends Component
     public function setTipo($tipo, $subtipo = 'text')
     {
         $this->tipo = $tipo;
-        $this->subtipo = $subtipo;
+        $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
         if (in_array($tipo, ['html', 'divider', 'media', 'social']) && !$this->campoId && empty($this->name)) {
-             $this->name = 'ui_' . time(); 
+            $this->name = 'ui_' . time(); 
         }
 
         if ($tipo === 'social') {
             $this->configuracoes['redes_permitidas'] = [];
+        }
+
+        // Configurações padrão caso selecione o tipo 'file'
+        if ($tipo === 'file') {
+            $this->configuracoes['tipo_arquivo'] = $this->configuracoes['tipo_arquivo'] ?? 'todos';
+            $this->configuracoes['aceita_multiplos'] = $this->configuracoes['aceita_multiplos'] ?? false;
+            $this->configuracoes['extensoes_permitidas'] = $this->configuracoes['extensoes_permitidas'] ?? 'pdf, docx, jpg, png, mp4';
+            $this->configuracoes['max_size_mb'] = $this->configuracoes['max_size_mb'] ?? 10;
+            $this->configuracoes['max_arquivos'] = $this->configuracoes['max_arquivos'] ?? 5;
+        }
+    }
+
+    public function updatedConfiguracoesTipoArquivo($valor)
+    {
+        if ($this->tipo !== 'file') return;
+
+        switch ($valor) {
+            case 'imagem':
+                $this->configuracoes['extensoes_permitidas'] = 'jpg, jpeg, png, webp, gif';
+                break;
+            case 'video':
+                $this->configuracoes['extensoes_permitidas'] = 'mp4, mov, avi, webm, mkv';
+                break;
+            case 'documento':
+                $this->configuracoes['extensoes_permitidas'] = 'pdf, doc, docx, xls, xlsx, txt';
+                break;
+            case 'todos':
+                $this->configuracoes['extensoes_permitidas'] = 'pdf, docx, jpg, png, mp4';
+                break;
         }
     }
 
@@ -215,7 +245,7 @@ class DynamicFields extends Component
         $this->tamanho_min = $campo->tamanho_min;
         $this->tamanho_max = $campo->tamanho_max;
         $this->regex_mascara = $campo->regex_mascara;
-        $this->obrigatorio = $campo->obrigatorio;
+        $this->obrigatorio = (bool) $campo->obrigatorio;
         $this->regras_validacao = $campo->regras_validacao;
         $this->depende_de = $campo->depende_de;
         $this->depende_operador = $campo->depende_operador;
@@ -234,6 +264,14 @@ class DynamicFields extends Component
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config;
 
+        if ($campo->tipo === 'file') {
+            $this->configuracoes['tipo_arquivo'] = $config['tipo_arquivo'] ?? 'todos';
+            $this->configuracoes['aceita_multiplos'] = filter_var($config['aceita_multiplos'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $this->configuracoes['extensoes_permitidas'] = $config['extensoes_permitidas'] ?? 'pdf, docx, jpg, png, mp4';
+            $this->configuracoes['max_size_mb'] = (int) ($config['max_size_mb'] ?? 10);
+            $this->configuracoes['max_arquivos'] = (int) ($config['max_arquivos'] ?? 5);
+        }
+
         if ($campo->tipo === 'matriz') {
             $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
@@ -248,7 +286,7 @@ class DynamicFields extends Component
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
-            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes','matriz_linhas', 'matriz_colunas'
+            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes', 'matriz_linhas', 'matriz_colunas'
         ]);
         
         $this->configuracoes = [];
@@ -259,10 +297,11 @@ class DynamicFields extends Component
     {
         $tabelaFoco = $this->contextoTipo === 'ciclo' ? 'ciclos' : 'formularios';
 
-        $this->slug = \Illuminate\Support\Str::slug($this->slug);
+        $this->slug = Str::slug($this->slug);
 
         $this->validate([
-            'bg_image_upload' => 'nullable|mimes:jpg,jpeg,png,webp|max:10240',            'slug' => [
+            'bg_image_upload' => 'nullable|mimes:jpg,jpeg,png,webp|max:10240',
+            'slug' => [
                 'required',
                 'regex:/^[a-z0-9\-]+$/',
                 \Illuminate\Validation\Rule::unique($tabelaFoco, 'slug')->ignore($this->contextoId)
@@ -337,6 +376,20 @@ class DynamicFields extends Component
 
         $configToSave = $this->configuracoes ?? [];
         
+        if ($this->tipo === 'file') {
+            // Normaliza as extensões removendo pontos e espaços (ex: ".pdf, .jpg" -> "pdf,jpg")
+            $extensoesCruas = $this->configuracoes['extensoes_permitidas'] ?? 'pdf,docx,jpg,png,mp4';
+            $extensoesTratadas = implode(',', array_filter(array_map(function($ext) {
+                return ltrim(strtolower(trim($ext)), '.');
+            }, explode(',', $extensoesCruas))));
+
+            $configToSave['tipo_arquivo'] = $this->configuracoes['tipo_arquivo'] ?? 'todos';
+            $configToSave['aceita_multiplos'] = filter_var($this->configuracoes['aceita_multiplos'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['extensoes_permitidas'] = $extensoesTratadas ?: 'pdf,docx,jpg,png,mp4';
+            $configToSave['max_size_mb'] = max(1, (int) ($this->configuracoes['max_size_mb'] ?? 10));
+            $configToSave['max_arquivos'] = max(1, (int) ($this->configuracoes['max_arquivos'] ?? 5));
+        }
+
         if ($this->tipo === 'matriz') {
             $linhasStr = $this->matriz_linhas ?? '';
             $colunasStr = $this->matriz_colunas ?? '';
@@ -359,17 +412,38 @@ class DynamicFields extends Component
             if ($etapaAntiga == $etapaNova) {
                 if ($ordemAntiga != $ordemNova) {
                     if ($ordemNova < $ordemAntiga) {
-                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])->increment('ordem');
+                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                            ->where('etapa', $etapaNova)
+                            ->where('tipo', '!=', 'config')
+                            ->whereBetween('ordem', [$ordemNova, $ordemAntiga - 1])
+                            ->increment('ordem');
                     } else {
-                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])->decrement('ordem');
+                        CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                            ->where('etapa', $etapaNova)
+                            ->where('tipo', '!=', 'config')
+                            ->whereBetween('ordem', [$ordemAntiga + 1, $ordemNova])
+                            ->decrement('ordem');
                     }
                 }
             } else {
-                CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaAntiga)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemAntiga)->decrement('ordem');
-                CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaNova)->where('tipo', '!=', 'config')->where('ordem', '>=', $ordemNova)->increment('ordem');
+                CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                    ->where('etapa', $etapaAntiga)
+                    ->where('tipo', '!=', 'config')
+                    ->where('ordem', '>', $ordemAntiga)
+                    ->decrement('ordem');
+
+                CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                    ->where('etapa', $etapaNova)
+                    ->where('tipo', '!=', 'config')
+                    ->where('ordem', '>=', $ordemNova)
+                    ->increment('ordem');
             }
         } else {
-            CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $this->etapa)->where('tipo', '!=', 'config')->where('ordem', '>=', $this->ordem)->increment('ordem');
+            CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('etapa', $this->etapa)
+                ->where('tipo', '!=', 'config')
+                ->where('ordem', '>=', $this->ordem)
+                ->increment('ordem');
         }
 
         $dadosGerais = [
@@ -381,7 +455,7 @@ class DynamicFields extends Component
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
-            'subtipo' => empty($this->subtipo) ? 'text' : $this->subtipo,
+            'subtipo' => empty($this->subtipo) ? ($this->tipo === 'file' ? 'file' : 'text') : $this->subtipo,
             'tamanho_min' => empty($this->tamanho_min) ? null : $this->tamanho_min,
             'tamanho_max' => empty($this->tamanho_max) ? null : $this->tamanho_max,
             'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
@@ -412,7 +486,12 @@ class DynamicFields extends Component
         
         $campo->delete();
         
-        CampoFormulario::where($this->getContextColumn(), $this->contextoId)->where('etapa', $etapaExcluida)->where('tipo', '!=', 'config')->where('ordem', '>', $ordemExcluida)->decrement('ordem');
+        CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $etapaExcluida)
+            ->where('tipo', '!=', 'config')
+            ->where('ordem', '>', $ordemExcluida)
+            ->decrement('ordem');
+
         $this->atualizarProximaOrdem();
         $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
     }

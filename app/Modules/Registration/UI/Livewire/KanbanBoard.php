@@ -6,11 +6,16 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Computed;
 use App\Models\Ciclo;
 use App\Models\Inscricao;
 use App\Models\Curso;
 use App\Models\StatusInscricao;
+use App\Models\OfertaVaga;
+use App\Models\ConfiguracaoGeral;
+use App\Models\SystemTask;
 use App\Modules\Unidade\Domain\Models\Unidade;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Fluxo de Inscrição')]
@@ -23,6 +28,7 @@ class KanbanBoard extends Component
     public $filtroBusca = '';
     public $filtroCurso = '';
     public $filtroUnidade = '';
+    public $filtroDataInicio = '';
     public $filtroDataFim = '';
     public $ordenacao = 'posicao_ranking_geral_asc'; 
 
@@ -33,21 +39,79 @@ class KanbanBoard extends Component
     public array $acaoPendenteIds = [];
     public string $acaoPendenteNomeStatus = '';
 
-    public $limitesPorColuna = [];
-
-    public $filtroDataInicio = '';
+    public array $limitesPorColuna = [];
 
     public function mount($id = null)
     {
         abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('crm.acessar'), 403, 'Acesso restrito.');
         
-        if ($id) {
-            $this->cicloId = $id;
-        } else {
-            $cicloAtivo = Ciclo::where('status', true)->latest()->first();
-            $this->cicloId = $cicloAtivo ? $cicloAtivo->id : null;
+        $cicloPadrao = $this->obterCicloPadrao($id ? (int)$id : null);
+
+        if ($cicloPadrao) {
+            $this->cicloId = $cicloPadrao->id;
         }
+    }
+
+    protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
+    {
+        // 1. Se um ID específico foi fornecido via parâmetro ou URL
+        if ($cicloId) {
+            return Ciclo::find($cicloId);
+        }
+
+        $agora = now();
+
+        // 2. Procura pelo Ciclo Ativo vigente
+        $cicloAtivo = Ciclo::where('status', true)
+            ->where('data_inicio', '<=', $agora)
+            ->where('data_fim', '>=', $agora)
+            ->first();
+
+        if ($cicloAtivo) {
+            return $cicloAtivo;
+        }
+
+        // 3. Fallback: Se não houver ciclo ativo, obtém o último ciclo cadastrado
+        return Ciclo::latest('id')->first();
+    }
+
+    #[Computed]
+    public function relacaoVagas(): array
+    {
+        if (!$this->cicloId) {
+            return [
+                'total_vagas' => 0,
+                'vagas_ocupadas' => 0,
+                'percentual_preenchido' => 0,
+                'saldo_disponivel' => 0,
+            ];
+        }
+
+        $totalVagas = OfertaVaga::where('ciclo_id', $this->cicloId)->sum('vagas') ?? 0;
+        
+        $config = $this->getVagasConfig();
+        $queryOcupadas = Inscricao::where('ciclo_id', $this->cicloId);
+
+        if ($config['regra'] === 'por_matricula') {
+            $queryOcupadas->where(function($q) use ($config) {
+                $q->whereIn('student_id', \App\Modules\Student\Domain\Models\Student::where('matriculado', true)->select('id'))
+                  ->orWhereIn('status_inscricao_id', $config['status_ids']);
+            });
+        } else {
+            $queryOcupadas->whereIn('status_inscricao_id', $config['status_ids']);
+        }
+
+        $vagasOcupadas = $queryOcupadas->count();
+        $saldo = max(0, $totalVagas - $vagasOcupadas);
+        $percentual = $totalVagas > 0 ? min(100, round(($vagasOcupadas / $totalVagas) * 100, 1)) : 0;
+
+        return [
+            'total_vagas' => $totalVagas,
+            'vagas_ocupadas' => $vagasOcupadas,
+            'percentual_preenchido' => $percentual,
+            'saldo_disponivel' => $saldo,
+        ];
     }
 
     public function updating($nomePropriedade)
@@ -96,13 +160,13 @@ class KanbanBoard extends Component
     {
         $query = $this->buildBaseQuery();
         
-        $ids = $query->orderByRaw('posicao_ranking_geral NULLS LAST')
+        $ids = $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST')
                      ->orderBy('pontuacao_total', 'desc')
                      ->limit($quantidade)
                      ->pluck('id')
                      ->toArray();
                      
-        $this->selecionados = array_map('strval', $ids); // Transforma em strings para o checkbox HTML
+        $this->selecionados = array_map('strval', $ids);
     }
 
     public function carregarMais($statusId)
@@ -116,13 +180,13 @@ class KanbanBoard extends Component
     {
         abort_if(!feature('inscricao.editar'), 403);
 
-        $inscricao = Inscricao::with('curso')->find($id);
+        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
         
         if (!$inscricao || $inscricao->status_inscricao_id == $statusId) {
             return;
         }
 
-        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        $statusPermitidos = $inscricao->ciclo?->statusPipeline?->pluck('id')->toArray() ?? [];
         if (!empty($statusPermitidos) && !in_array($statusId, $statusPermitidos)) {
             $this->dispatch('erro', msg: 'Status de destino inválido para o funil deste ciclo!');
             return;
@@ -135,13 +199,13 @@ class KanbanBoard extends Component
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
     }
 
-    private function getVagasConfig()
+    private function getVagasConfig(): array
     {
-        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
-        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $regra = ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
         $statusIds = $statusJson ? json_decode($statusJson, true) : [];
         if (empty($statusIds)) {
-            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+            $statusIds = StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado', 'Matriculado'])->pluck('id')->toArray();
         }
         return ['regra' => $regra, 'status_ids' => $statusIds];
     }
@@ -154,22 +218,28 @@ class KanbanBoard extends Component
             return $inscricoes; 
         }
 
-        $agrupadas = $inscricoes->groupBy(function($insc) { return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}"; });
+        $agrupadas = $inscricoes->groupBy(function($insc) { 
+            return "{$insc->unidade_id}-{$insc->curso_id}-{$insc->turno_id}"; 
+        });
 
         $inscricoesAprovadas = collect();
 
         foreach ($agrupadas as $chave => $grupoInscricoes) {
             $partes = explode('-', $chave);
             if (count($partes) !== 3 || empty($partes[0]) || empty($partes[1]) || empty($partes[2])) {
-                $this->dispatch('erro', msg: 'Inscrições sem vínculos não puderam ser processadas para preenchimento de vaga.');
+                $this->dispatch('erro', msg: 'Inscrições sem vínculos acadêmicos não puderam ser processadas para ocupação de vaga.');
                 continue;
             }
 
-            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)->where('unidade_id', $partes[0])->where('curso_id', $partes[1])->where('turno_id', $partes[2])->first();
+            $oferta = OfertaVaga::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+                ->where('unidade_id', $partes[0])
+                ->where('curso_id', $partes[1])
+                ->where('turno_id', $partes[2])
+                ->first();
 
             if (!$oferta) continue;
 
-            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
+            $queryOcupadas = Inscricao::where('ciclo_id', $this->cicloId ?? $grupoInscricoes->first()->ciclo_id)
                 ->where('unidade_id', $partes[0])
                 ->where('curso_id', $partes[1])
                 ->where('turno_id', $partes[2])
@@ -197,7 +267,7 @@ class KanbanBoard extends Component
 
             if ($tentandoAprovar > $vagasRestantes) {
                 $cursoNome = $grupoInscricoes->first()->curso->nome ?? 'Curso';
-                $this->dispatch('erro', msg: "Atenção: Aprovamos apenas as {$vagasRestantes} vagas que restavam para {$cursoNome}.");
+                $this->dispatch('erro', msg: "Atenção: Aprovamos apenas as {$vagasRestantes} vagas restantes para {$cursoNome}.");
                 $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes->take($vagasRestantes));
             } else {
                 $inscricoesAprovadas = $inscricoesAprovadas->merge($grupoInscricoes);
@@ -209,13 +279,13 @@ class KanbanBoard extends Component
     #[On('quick-change-status-crm')]
     public function quickChangeStatus($id, $status)
     {
-        $inscricao = Inscricao::with('curso')->find($id);
+        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $status) {
             $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
             return;
         }
 
-        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
+        $statusPermitidos = $inscricao->ciclo?->statusPipeline?->pluck('id')->toArray() ?? [];
         if (!empty($statusPermitidos) && !in_array($status, $statusPermitidos)) {
             $this->dispatch('erro', msg: 'Este status não pertence ao funil do ciclo!');
             return;
@@ -230,18 +300,27 @@ class KanbanBoard extends Component
     public function moverLote()
     {
         abort_if(!feature('inscricao.editar'), 403);
-        $this->validate(['selecionados' => 'required|array|min:1', 'statusDestinoLote' => 'required|exists:status_inscricoes,id']);
+        $this->validate([
+            'selecionados' => 'required|array|min:1', 
+            'statusDestinoLote' => 'required|exists:status_inscricoes,id'
+        ]);
 
-        $inscricoesValidas = Inscricao::with('curso')->whereIn('id', $this->selecionados)->where('status_inscricao_id', '!=', $this->statusDestinoLote)->get();
+        $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])
+            ->whereIn('id', $this->selecionados)
+            ->where('status_inscricao_id', '!=', $this->statusDestinoLote)
+            ->get();
+
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições já estão na coluna de destino!');
             return;
         }
 
-        $statusPermitidos = $inscricao->ciclo->statusPipeline->pluck('id')->toArray();
-        if (!empty($statusPermitidos) && !in_array($status, $statusPermitidos)) {
-            $this->dispatch('erro', msg: 'Este status não pertence ao funil do ciclo!');
-            return;
+        foreach ($inscricoesValidas as $insc) {
+            $statusPermitidos = $insc->ciclo?->statusPipeline?->pluck('id')->toArray() ?? [];
+            if (!empty($statusPermitidos) && !in_array($this->statusDestinoLote, $statusPermitidos)) {
+                $this->dispatch('erro', msg: "Ação cancelada: O status escolhido não pertence ao funil do ciclo da inscrição #{$insc->id}!");
+                return;
+            }
         }
 
         $inscricoesValidas = $inscricoesValidas->sortBy(function($model) {
@@ -408,7 +487,7 @@ class KanbanBoard extends Component
         $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
         
         $botoesAcao = '<div class="flex flex-wrap gap-2 mt-2">';
-        foreach($statusDisponiveis as $st) {
+        foreach ($statusDisponiveis as $st) {
             $corClass = $st->id == $inscricao->status_inscricao_id 
                         ? 'bg-purpura-500 text-white border-purpura-500' 
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700';
@@ -416,12 +495,38 @@ class KanbanBoard extends Component
         }
         $botoesAcao .= '</div>';
 
+        // Renderização dos Dados Dinâmicos com Suporte a Arquivos/Documentos
         $detalhesDinamicos = '';
-        if($inscricao->dados_dinamicos) {
+        if ($inscricao->dados_dinamicos && is_array($inscricao->dados_dinamicos)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-            foreach($inscricao->dados_dinamicos as $chave => $valor) {
-                $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
-                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
+            
+            $renderValor = function($v) {
+                if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
+                    $url = asset('storage/' . $v);
+                    $nomeArquivo = basename($v);
+                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $v);
+                    
+                    if ($isImagem) {
+                        return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
+                    }
+                    return '<a href="'.$url.'" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
+                }
+                return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+            };
+
+            foreach ($inscricao->dados_dinamicos as $chave => $valor) {
+                $htmlConteudo = '';
+                if (is_array($valor)) {
+                    $itens = array_map($renderValor, $valor);
+                    $htmlConteudo = '<div class="flex flex-col gap-1">' . implode('', $itens) . '</div>';
+                } else {
+                    $htmlConteudo = $renderValor($valor);
+                }
+
+                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2.5 rounded border border-gray-100 dark:border-gray-700">'
+                    . '<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">' . str_replace('_', ' ', $chave) . '</span>'
+                    . '<span class="text-sm font-medium text-gray-900 dark:text-gray-200">' . ($htmlConteudo ?: '-') . '</span>'
+                    . '</div>';
             }
             $detalhesDinamicos .= '</div>';
         } else {
@@ -451,8 +556,8 @@ class KanbanBoard extends Component
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $statusNovo = StatusInscricao::find($statusId);
+        $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
         $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
 
         $conflitos = [];
@@ -516,7 +621,7 @@ class KanbanBoard extends Component
 
     private function executarMudancaStatusFinal($ids, $statusId)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $statusNovo = StatusInscricao::find($statusId);
         $qtd = count($ids);
         
         if ($qtd <= 10) {
@@ -526,7 +631,7 @@ class KanbanBoard extends Component
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
         } 
         else {
-            $tracking = \App\Models\SystemTask::create([
+            $tracking = SystemTask::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status via Fluxo: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
             ]);
@@ -579,10 +684,10 @@ class KanbanBoard extends Component
                         $q->orderBy('nome', 'desc');
                         break;
                     case 'posicao_ranking_geral_asc':
-                        $q->orderBy('posicao_ranking_geral', 'asc');
+                        $q->orderByRaw('posicao_ranking_geral ASC NULLS LAST');
                         break;
                     case 'posicao_ranking_geral_desc':
-                        $q->orderBy('posicao_ranking_geral', 'desc');
+                        $q->orderByRaw('posicao_ranking_geral DESC NULLS LAST');
                         break;
                     case 'pontuacao_asc':
                         $q->orderBy('pontuacao_total', 'asc');
@@ -591,12 +696,12 @@ class KanbanBoard extends Component
                         $q->orderBy('pontuacao_total', 'desc');
                         break;
                     case 'posicao_ranking_unidade_asc':
-                        $q->orderBy('posicao_ranking_unidade', 'asc');
+                        $q->orderByRaw('posicao_ranking_unidade ASC NULLS LAST');
                         break;
                     case 'posicao_ranking_unidade_desc':
-                        $q->orderBy('posicao_ranking_unidade', 'desc');
+                        $q->orderByRaw('posicao_ranking_unidade DESC NULLS LAST');
                         break;
-                    endswitch;
+                endswitch;
 
                 $inscricoesGrupadas[$col->id] = $q->get();
             } else {
@@ -624,7 +729,8 @@ class KanbanBoard extends Component
             'cursosDb' => Curso::select('id', 'nome')->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
             'unidadesDb' => $unidadesDb,
             'resumo' => $resumo,
-            'totalInscricoes' => $totalInscricoes
+            'totalInscricoes' => $totalInscricoes,
+            'relacaoVagas' => $this->relacaoVagas,
         ]);
     }
 }

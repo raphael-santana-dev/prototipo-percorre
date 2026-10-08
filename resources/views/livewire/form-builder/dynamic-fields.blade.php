@@ -1,6 +1,6 @@
 <div class="p-6 max-w-[1400px] mx-auto h-full flex flex-col font-sans">
     
-    <!-- CABEÇALHO ATUALIZADO COM BADGE DE CONTEXTO -->
+    <!-- CABEÇALHO COM BADGE DE CONTEXTO -->
     <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
         <div>
             <a href="{{ route('formbuilder.hub') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
@@ -9,7 +9,6 @@
             <div class="flex items-center gap-3 mt-1">
                 <h2 class="text-2xl font-bold text-gray-900">Construtor do Formulário</h2>
                 
-                <!-- O Badge dinâmico de identificação -->
                 @if($badgeContexto === 'Avaliação de Aprendizagem')
                     <span class="px-2.5 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-md border border-orange-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-tree-structure"></i> {{ $badgeContexto }}</span>
                 @elseif($badgeContexto === 'Pré-Inscrição (Lead)')
@@ -93,7 +92,7 @@
                         
                         <div class="mb-10 border-b border-gray-200 pb-6">
                             <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Construtor de Formulários</h1>
-                            <p class="text-gray-600">Abaixo está a estrutura de como o usuário verá este formulário.</p>
+                            <p class="text-gray-600">Abaixo está a estrutura de como o utilizador visualizará este formulário.</p>
                         </div>
 
                         @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
@@ -105,7 +104,6 @@
                                         $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
                                         $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
                                         
-                                        // 1. Função de Customização de Texto (Clone para o Preview)
                                         if (!function_exists('formatWppText')) {
                                             function formatWppText($text) {
                                                 $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
@@ -116,7 +114,6 @@
                                             }
                                         }
 
-                                        // 2. Divisão Lógica para Renderização Correta do Preview na Etapa 1
                                         $gruposRender = [];
                                         if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
                                             $camposTopo = $camposDaEtapa->filter(function($c) {
@@ -128,13 +125,10 @@
                                                 return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
                                             });
                                             
-                                            // Grupo 1: Dinâmicos do Topo
                                             if ($camposTopo->count() > 0) {
                                                 $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
                                             }
-                                            // Grupo 2: O Card Fantasma Padrão
                                             $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                                            // Grupo 3: Dinâmicos do Fundo
                                             if ($camposRodape->count() > 0) {
                                                 $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
                                             }
@@ -148,7 +142,6 @@
                                 
                                 @foreach($gruposRender as $grupo)
                                     @if($grupo['titulo'] === 'placeholder_dados_pessoais')
-                                        <!-- Representação Visual do Sistema -->
                                         <div class="w-full my-8 pointer-events-none">
                                             <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gray-50/50 opacity-70">
                                                 <h4 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
@@ -160,7 +153,7 @@
                                                     <div class="h-10 bg-gray-200 rounded-md col-span-2"></div>
                                                 </div>
                                                 <p class="text-xs text-gray-400 mt-4 text-center">
-                                                    Os campos fixos de perfil (Nome, E-mail, Nascimento, Localidade, etc) e escolhas académicas serão renderizados automaticamente pelo sistema aqui na visão pública.
+                                                    Os campos fixos de perfil (Nome, E-mail, Nascimento, Localidade, etc.) e escolhas académicas serão renderizados automaticamente pelo sistema aqui na visão pública.
                                                 </p>
                                             </div>
                                         </div>
@@ -184,7 +177,7 @@
                                                     
                                                     <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
                                                         <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
-                                                        <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
+                                                        <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza de que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
                                                     </div>
 
                                                     <div class="relative z-10">
@@ -211,6 +204,32 @@
                                                                 <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
                                                             </div>
                                                         
+                                                        @elseif($c->tipo === 'file')
+                                                            @php
+                                                                $tipoArquivoPv = $cfg['tipo_arquivo'] ?? 'todos';
+                                                                $multiPv = !empty($cfg['aceita_multiplos']);
+                                                                $extsPv = $cfg['extensoes_permitidas'] ?? '';
+                                                                $maxMbPv = $cfg['max_size_mb'] ?? 10;
+                                                            @endphp
+                                                            <div class="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50/60 text-center pointer-events-none transition hover:border-purpura-400">
+                                                                <div class="flex flex-col items-center justify-center py-1">
+                                                                    @if($tipoArquivoPv === 'imagem')
+                                                                        <i class="ph ph-image text-2xl text-purpura-500 mb-1"></i>
+                                                                    @elseif($tipoArquivoPv === 'video')
+                                                                        <i class="ph ph-video-camera text-2xl text-purpura-500 mb-1"></i>
+                                                                    @elseif($tipoArquivoPv === 'documento')
+                                                                        <i class="ph ph-file-text text-2xl text-purpura-500 mb-1"></i>
+                                                                    @else
+                                                                        <i class="ph ph-cloud-arrow-up text-2xl text-purpura-500 mb-1"></i>
+                                                                    @endif
+                                                                    <p class="text-xs font-bold text-gray-700">Carregar Anexo ({{ ucfirst($tipoArquivoPv) }})</p>
+                                                                    <span class="text-[10px] text-gray-400 mt-0.5">
+                                                                        {{ $multiPv ? 'Múltiplos ficheiros permitidos' : 'Ficheiro único' }} &middot; Máx: {{ $maxMbPv }}MB
+                                                                        @if(!empty($extsPv)) &middot; ({{ strtoupper($extsPv) }}) @endif
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
                                                         @elseif($c->tipo === 'select')
                                                             <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
                                                                 <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
@@ -353,7 +372,7 @@
                                     <i class="ph ph-list-plus text-4xl text-gray-400"></i>
                                 </div>
                                 <h3 class="text-lg font-bold text-gray-900 mb-1">Formulário Vazio</h3>
-                                <p class="text-gray-500 text-sm max-w-sm">Use a aba de configurações ao lado para construir seu layout.</p>
+                                <p class="text-gray-500 text-sm max-w-sm">Utilize a barra lateral ao lado para adicionar elementos e estruturar o seu formulário.</p>
                             </div>
                         @endforelse
 
@@ -368,7 +387,7 @@
             </div>
         </div>
 
-        <div x-data="{ activeTab: 'form' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
+        <div x-data="{ activeTab: 'field' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
             
             <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
                 <button type="button" @click="activeTab = 'field'" :class="activeTab === 'field' ? 'border-purpura-600 text-purpura-700 bg-white shadow-[0_2px_0_0_#9333ea]' : 'border-transparent text-gray-500 hover:text-gray-700'" class="flex-1 py-3.5 text-xs font-bold border-b-2 text-center transition tracking-wide uppercase flex flex-col items-center gap-1">
@@ -386,7 +405,7 @@
                         
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold text-gray-800">{{ $campoId ? 'Editar Propriedades' : 'Inserir Novo Elemento' }}</h3>
-                            @if($campoId) <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider border border-indigo-200">Editando</span> @endif
+                            @if($campoId) <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider border border-indigo-200">A Editar</span> @endif
                         </div>
 
                         <div>
@@ -405,13 +424,12 @@
                             </div>
                             @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
 
-                            <!-- NOVO BLOCO: Checkbox para fixar no topo -->
                             @if($etapa == 1 && $contextoTipo === 'ciclo')
                                 <label class="flex items-center gap-3 p-3 mt-3 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer transition hover:bg-indigo-100">
                                     <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500">
                                     <div class="flex flex-col">
                                         <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
-                                        <span class="text-[10px] text-indigo-700 mt-0.5">Renderizar este campo ANTES dos dados pessoais (Nome, CPF, etc).</span>
+                                        <span class="text-[10px] text-indigo-700 mt-0.5">Renderizar este campo ANTES dos dados pessoais (Nome, CPF, etc.).</span>
                                     </div>
                                 </label>
                             @endif
@@ -434,6 +452,13 @@
                                         <button type="button" wire:click="setTipo('text', 'date')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                                             <i class="ph ph-calendar-blank text-xl {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                             <span class="text-xs font-bold">Datas e Horas</span>
+                                        </button>
+                                        <button type="button" wire:click="setTipo('file', 'file')" class="col-span-2 flex items-center gap-3 p-3 border rounded-lg text-left transition {{ $tipo == 'file' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                            <i class="ph ph-upload-simple text-xl {{ $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold">Upload / Anexos</span>
+                                                <span class="text-[10px] text-gray-500">Imagens, vídeos e documentos</span>
+                                            </div>
                                         </button>
                                     </div>
                                 </div>
@@ -540,6 +565,53 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- CONFIGURAÇÕES DE UPLOAD DE ARQUIVOS -->
+                        @if($tipo === 'file')
+                            <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4">
+                                <h5 class="font-bold text-xs text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
+                                </h5>
+
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Categoria de Ficheiros</label>
+                                        <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
+                                            <option value="todos">Todos os Tipos (Documentos, Imagens, Vídeos)</option>
+                                            <option value="imagem">Apenas Imagens (JPG, PNG, WEBP, GIF)</option>
+                                            <option value="video">Apenas Vídeos (MP4, MOV, WEBM, MKV)</option>
+                                            <option value="documento">Apenas Documentos (PDF, DOCX, XLS, TXT)</option>
+                                            <option value="custom">Personalizado (Extensões Manuais)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Extensões Permitidas (separadas por vírgula)</label>
+                                        <input type="text" wire:model="configuracoes.extensoes_permitidas" placeholder="ex: pdf, docx, png, jpg, mp4" class="w-full text-xs font-mono rounded-md border-gray-300 dark:bg-gray-900">
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Máx. por Ficheiro (MB)</label>
+                                            <input type="number" min="1" max="100" wire:model="configuracoes.max_size_mb" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
+                                        </div>
+                                        @if(!empty($configuracoes['aceita_multiplos']))
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Qtd. Máx. Ficheiros</label>
+                                                <input type="number" min="2" max="20" wire:model="configuracoes.max_arquivos" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="pt-2">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                            <span class="text-xs text-gray-700 dark:text-gray-300 font-bold">Permitir múltiplos ficheiros?</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
 
                         @if($tipo === 'text')
                             <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
@@ -701,7 +773,7 @@
                                 <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
                                 <div class="flex flex-col">
                                     <span class="text-sm text-gray-900 font-bold">Campo Obrigatório</span>
-                                    <span class="text-[10px] text-gray-500">O aluno não avança sem preencher.</span>
+                                    <span class="text-[10px] text-gray-500">O candidato ou utilizador não poderá avançar sem preencher.</span>
                                 </div>
                             </label>
                         @endif
@@ -768,7 +840,7 @@
                             
                             @if($contextoTipo === 'formulario')
                                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para compartilhar)</label>
+                                    <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para partilhar)</label>
                                     <div class="flex items-center mt-2">
                                         <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
                                         <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
@@ -784,14 +856,14 @@
                                     <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition">
                                         <div class="flex flex-col items-center justify-center pt-5 pb-6">
                                             <i class="ph ph-upload-simple text-3xl text-gray-400 mb-1"></i>
-                                            <p class="text-[11px] text-gray-500"><span class="font-bold">Clique para enviar</span> (PNG/JPG)</p>
+                                            <p class="text-[11px] text-gray-500"><span class="font-bold">Clique para carregar</span> (PNG/JPG)</p>
                                         </div>
                                         <input type="file" wire:model="bg_image_upload" class="hidden" accept="image/*">
                                     </label>
                                 </div>
                                 
                                 <div wire:loading wire:target="bg_image_upload" class="mt-2 text-xs font-bold text-purpura-600 flex items-center gap-2">
-                                    <i class="ph ph-spinner animate-spin text-lg"></i> Fazendo upload seguro...
+                                    <i class="ph ph-spinner animate-spin text-lg"></i> A carregar imagem...
                                 </div>
                                 @error('bg_image_upload') <span class="text-xs text-red-500 mt-2 block font-bold">{{ $message }}</span> @enderror
 
@@ -800,8 +872,8 @@
                                         <div class="col-span-2">
                                             <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
                                             <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                                <option value="cover">Preencher a Tela Toda (Cortar sobras)</option>
-                                                <option value="contain">Encaixar na Tela (Sem cortar)</option>
+                                                <option value="cover">Preencher todo o ecrã (Cortar sobras)</option>
+                                                <option value="contain">Encaixar no ecrã (Sem cortar)</option>
                                                 <option value="auto">Tamanho Original (Centralizado)</option>
                                                 <option value="repeat">Repetir como Textura (Mosaico)</option>
                                             </select>
@@ -821,13 +893,13 @@
                             </div>
 
                             <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">Layout do Cartão Branco</h4>
+                                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">Layout do Cartão</h4>
                                 
                                 <div class="mb-4">
                                     <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Largura Central</label>
                                     <select wire:model.live="formSettings.form_width" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
                                         <option value="max-w-4xl">Largo (Preenchimento Duplo/Grid)</option>
-                                        <option value="max-w-2xl">Médio (Padrão para pesquisas)</option>
+                                        <option value="max-w-2xl">Médio (Padrão para inquéritos)</option>
                                         <option value="max-w-lg">Estreito (Foco no centro)</option>
                                     </select>
                                 </div>
@@ -851,7 +923,7 @@
                                         <input type="checkbox" wire:model.live="formSettings.use_vacancy_limit" id="use_vacancy_limit" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                                     </div>
                                     <div class="ml-3 text-sm">
-                                        <label for="use_vacancy_limit" class="font-bold text-gray-900 cursor-pointer">Ativar Trava de Vagas (Limitar Matrículas)</label>
+                                        <label for="use_vacancy_limit" class="font-bold text-gray-900 cursor-pointer">Ativar Trava de Vagas (Limitar Vagas)</label>
                                         <p class="text-[10px] text-gray-500 font-medium leading-tight mt-0.5">Se ativo, os menus de Unidade, Curso e Turno ocultarão opções que já atingiram o limite de vagas (inscrições aprovadas) na matriz do Ciclo.</p>
                                     </div>
                                 </div>
