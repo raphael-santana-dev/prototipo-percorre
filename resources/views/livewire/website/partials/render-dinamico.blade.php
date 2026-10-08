@@ -13,8 +13,9 @@
     }
 @endphp
 
-<div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
+<div class="hidden col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 md:col-span-1 md:col-span-2 md:col-span-3 md:col-span-4 md:col-span-5 md:col-span-6 md:col-span-7 md:col-span-8 md:col-span-9 md:col-span-10 md:col-span-11 md:col-span-12"></div>
 
+@php $colunasUsadasLinha = 0; @endphp
 @foreach($camposVigentes as $campo)
     @php
         $isCondicional = !empty($campo->depende_de) && !empty($campo->depende_valor);
@@ -30,8 +31,19 @@
             $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : $campo->configuracoes;
         }
 
-        $colSpan = ($campo->largura == 0) ? "col-span-12 md:col-auto md:col-end-13" : "col-span-12 md:col-span-{$campo->largura}";$colSpan = "col-span-12 md:col-span-{$campo->largura}";
-        
+        $larguraSolicitada = (int) $campo->largura;
+        if ($larguraSolicitada === 0) {
+            $larguraEfetiva = ($colunasUsadasLinha === 0) ? 12 : (12 - $colunasUsadasLinha);
+            $colunasUsadasLinha = 0;
+        } else {
+            if ($colunasUsadasLinha + $larguraSolicitada > 12) {
+                $colunasUsadasLinha = 0;
+            }
+            $larguraEfetiva = $larguraSolicitada;
+            $colunasUsadasLinha = ($colunasUsadasLinha + $larguraSolicitada) % 12;
+        }
+
+        $colSpan = "col-span-12 md:col-span-{$larguraEfetiva}";
         $bgStyle = "";
         $overlayStyle = "";
         if(isset($config['bg_image']) && !empty($config['bg_image'])) {

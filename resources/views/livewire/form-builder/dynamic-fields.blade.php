@@ -34,7 +34,7 @@
         
         <div class="lg:col-span-8 space-y-6">
             
-            <div class="hidden col-span-3 col-span-4 col-span-6 col-span-12 md:col-span-3 md:col-span-4 md:col-span-6 md:col-span-12"></div>
+            <div class="hidden col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 md:col-span-1 md:col-span-2 md:col-span-3 md:col-span-4 md:col-span-5 md:col-span-6 md:col-span-7 md:col-span-8 md:col-span-9 md:col-span-10 md:col-span-11 md:col-span-12"></div>
 
             @php
                 $previewBgUrl = null;
@@ -165,10 +165,25 @@
                                         @endif
 
                                         <div class="grid grid-cols-12 gap-x-6 gap-y-4 w-full">
+                                            @php $colunasUsadasLinha = 0; @endphp
                                             @foreach($grupo['campos'] as $c)
                                                 @php 
                                                     $isActive = $campoId == $c->id; 
-                                                    $colSpan = ($c->largura == 0) ? "col-span-12 md:col-auto md:col-end-13" : "col-span-12 md:col-span-{$c->largura}";
+                                                    $larguraSolicitada = (int) $c->largura;
+
+                                                    // Se for 0 (Ocupar Restante), preenche exatamente o saldo restante da linha de 12 colunas
+                                                    if ($larguraSolicitada === 0) {
+                                                        $larguraEfetiva = ($colunasUsadasLinha === 0) ? 12 : (12 - $colunasUsadasLinha);
+                                                        $colunasUsadasLinha = 0; // fecha a linha
+                                                    } else {
+                                                        if ($colunasUsadasLinha + $larguraSolicitada > 12) {
+                                                            $colunasUsadasLinha = 0; // o grid quebrou para a linha seguinte
+                                                        }
+                                                        $larguraEfetiva = $larguraSolicitada;
+                                                        $colunasUsadasLinha = ($colunasUsadasLinha + $larguraSolicitada) % 12;
+                                                    }
+
+                                                    $colSpan = "col-span-12 md:col-span-{$larguraEfetiva}";
                                                     $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
                                                     $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
                                                 @endphp
@@ -327,7 +342,7 @@
 
                                                         @elseif($c->tipo === 'spacer')
                                                             <div class="w-full h-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center bg-gray-50/60 dark:bg-gray-800/40 text-gray-400 text-xs font-semibold select-none">
-                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5 text-base"></i> Espaço em Branco ({{ $c->largura == 0 ? 'Ocupar Restante' : $c->largura . '/12' }})
+                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5 text-base"></i> Espaço em Branco ({{ $c->largura == 0 ? "Restante: {$larguraEfetiva}/12" : "{$c->largura}/12" }})
                                                             </div>
 
                                                         @elseif($c->tipo === 'media')
