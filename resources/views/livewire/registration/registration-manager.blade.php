@@ -4,7 +4,7 @@
     
     <x-page-header 
         title="Gestão de Inscrições" 
-        subtitle="Controle e Triagem de Candidatos"
+        subtitle="Controlo e Triagem de Candidatos"
         :breadcrumbs="null" 
         :metricas="$metricas ?? null">
 
@@ -78,7 +78,7 @@
 
             @if(feature('inscricao.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.criar')))
                 <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none shadow-none">
-                    Novo Registro
+                    Novo Registo
                 </button>
             @endif
         </x-slot>
@@ -121,16 +121,34 @@
                     get canAddMore() { return this.visible.length < this.allFilters.length; }
                 }" class="flex flex-wrap items-center gap-2">
                     
-                    <!-- Chip Fixo: Ciclo -->
-                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
+                    {{-- Chip Fixo: Ciclo com Indicador de Status --}}
+                    @php
+                        $cicloSelecionadoObj = !empty($filtroCiclo) ? \App\Models\Ciclo::find($filtroCiclo) : null;
+                    @endphp
+
+                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
-                        <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @foreach($ciclosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
+                        <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[160px] truncate">
+                            <option value="">Qualquer Ciclo</option>
+                            @foreach($ciclosDb as $id => $nome) 
+                                <option value="{{ $id }}">{{ $nome }}</option> 
+                            @endforeach
                         </select>
+
+                        @if($cicloSelecionadoObj)
+                            @if($cicloSelecionadoObj->status && $cicloSelecionadoObj->data_inicio <= now() && $cicloSelecionadoObj->data_fim >= now())
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" title="Ciclo com inscrições abertas e vigentes">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
+                                </span>
+                            @else
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" title="Exibindo último ciclo registado">
+                                    Histórico
+                                </span>
+                            @endif
+                        @endif
                     </div>
 
-                    <!-- Chip: Status -->
+                    {{-- Chip: Status --}}
                     <div x-show="visible.includes('status')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Status</span>
                         <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
@@ -140,7 +158,7 @@
                         <button @click="remove('status')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
                     </div>
 
-                    <!-- Chip: Etapa -->
+                    {{-- Chip: Etapa --}}
                     <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Etapa</span>
                         <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
@@ -153,7 +171,7 @@
                         <button @click="remove('etapa')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
                     </div>
 
-                    <!-- Chip: Unidade -->
+                    {{-- Chip: Unidade --}}
                     <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Unidade</span>
                         <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
@@ -163,7 +181,7 @@
                         <button @click="remove('unidade')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
                     </div>
 
-                    <!-- Chip: Curso -->
+                    {{-- Chip: Curso --}}
                     <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Curso</span>
                         <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
@@ -201,9 +219,7 @@
                         <button wire:click="selecionarTop(100)" class="text-purpura-600 font-bold hover:underline">Top 100</button>
                         @if(count($selecionadas) > 0)
                             <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos</button>
-                            
                         @endif
-                        
                     </div>
                     
                     {{-- Barra Escura do Lote --}}
@@ -213,7 +229,18 @@
                             <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
                         </div>
                         
-                        <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
+                        @if($cicloBloqueado)
+                            {{-- MODO CICLO BLOQUEADO: APENAS SOLICITAR ALTERAÇÃO --}}
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
+                                    <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
+                                </span>
+                                <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                                    <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
+                                </button>
+                            </div>
+                        @else
+                            {{-- MODO NORMAL: ALTERAÇÕES DIRETAS --}}
                             <div class="flex items-center gap-2 w-full sm:w-auto">
                                 <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
                                     <option value="">Alterar status para...</option>
@@ -229,13 +256,13 @@
                             </button>
 
                             <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
-                                Alterar ciclo<i class="ph-bold ph-calendar text-lg"></i>
+                                Alterar ciclo <i class="ph-bold ph-calendar text-lg"></i>
                             </button>
                             
                             <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
                                 <i class="ph-bold ph-list-dashes text-lg"></i>
                             </button>
-                        </div>
+                        @endif
                     </div>
                     @endif
                 @endif
@@ -244,7 +271,6 @@
         </x-slot>
 
         @forelse($registros as $inscricao)
-            <!-- Padronizando espaçamentos py-1.5 para visual minimalista comprimido -->
             <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
@@ -314,10 +340,10 @@
                     <div class="flex items-center justify-end gap-1">
                         <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                         
-                        <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-star"></i></button>
+                        <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
 
                         @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
-                            <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400 title="Ver Perfil Completo">
+                            <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400" title="Ver Perfil Completo">
                                 <i class="text-lg ph-bold ph-eye"></i>
                             </a>
                         @endif
@@ -415,7 +441,7 @@
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
                             <i class="ph-fill ph-check-square-offset text-purpura-500"></i> Alteração em Lote
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Você selecionou <strong>{{ count($selecionadas) }}</strong> inscrições para alterar simultaneamente.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Selecionou <strong>{{ count($selecionadas) }}</strong> inscrições para alterar simultaneamente.</p>
                     </div>
                 </div>
                 
@@ -559,7 +585,7 @@
                     
                     <div class="bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-4 rounded-lg text-sm text-blue-800 dark:text-blue-300 font-medium mb-4 flex items-start gap-3">
                         <i class="ph-fill ph-info text-xl text-blue-500 mt-0.5"></i>
-                        <p class="leading-snug">O candidato receberá o link seguro de retomada no e-mail para concluir as demais etapas acadêmicas após a efetivação deste cadastro.</p>
+                        <p class="leading-snug">O candidato receberá o link seguro de retoma no e-mail para concluir as demais etapas académicas após a efetivação deste registo.</p>
                     </div>
 
                     <div>
@@ -575,14 +601,14 @@
                             @error('cpf') <span class="text-red-500 text-[11px] font-medium mt-1 block">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Celular / Telefone</label>
+                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Telemóvel / Telefone</label>
                             <input type="text" wire:model="celular" x-mask="(99) 99999-9999" placeholder="(00) 00000-0000" class="w-full">
                             @error('celular') <span class="text-red-500 text-[11px] font-medium mt-1 block">{{ $message }}</span> @enderror
                         </div>
                     </div>
 
                     <div>
-                        <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">E-mail de Contato <span class="text-red-500">*</span></label>
+                        <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">E-mail de Contacto <span class="text-red-500">*</span></label>
                         <input type="email" wire:model="email" class="w-full" required>
                         @error('email') <span class="text-red-500 text-[11px] font-medium mt-1 block">{{ $message }}</span> @enderror
                     </div>
@@ -623,7 +649,7 @@
                 
                 <div class="p-6 overflow-y-auto custom-scrollbar w-full max-h-[50vh]">
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium leading-relaxed">
-                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
+                        O sistema detetou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
@@ -667,6 +693,7 @@
         </div>
     @endif
 
+    {{-- MODAL TRANSFERIR DE CICLO --}}
     @if($modalMoverCicloAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="card !w-full !max-w-md !p-0 shadow-2xl overflow-hidden">
@@ -679,7 +706,7 @@
 
                 <div class="p-6 space-y-4">
                     <p class="text-sm text-gray-600 dark:text-gray-300">
-                        Você está prestes a mover <strong>{{ count($selecionadas) }}</strong> inscrições selecionadas para um novo Ciclo Operacional.
+                        Está prestes a mover <strong>{{ count($selecionadas) }}</strong> inscrições selecionadas para um novo Ciclo Operacional.
                     </p>
                     
                     <div>
@@ -698,6 +725,111 @@
                     <button type="button" wire:click="$set('modalMoverCicloAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button type="button" wire:click="moverCicloLote" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none">
                         Confirmar Transferência
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL SOLICITAR ALTERAÇÃO (CICLO BLOQUEADO) --}}
+    @if($modalSolicitarAlteracaoAberto)
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="card !w-full !max-w-2xl !p-0 shadow-2xl overflow-hidden bg-white dark:bg-gray-800 flex flex-col max-h-[90vh]">
+                
+                {{-- CABEÇALHO DO MODAL (w-full garantido) --}}
+                <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-amber-50 dark:bg-amber-950/30 w-full shrink-0">
+                    <div class="flex items-center gap-3">
+                        <span class="p-2 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 rounded-lg text-xl shrink-0">
+                            <i class="ph-fill ph-lock-key"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-base font-bold text-amber-900 dark:text-amber-300 leading-tight">
+                                Solicitar Alteração em Ciclo Bloqueado
+                            </h3>
+                            <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                                O ciclo atual está bloqueado. As alterações solicitadas serão submetidas para aprovação da coordenação.
+                            </p>
+                        </div>
+                    </div>
+                    <button wire:click="$set('modalSolicitarAlteracaoAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-white transition p-1">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                {{-- CORPO DO FORMULÁRIO (w-full com scroll) --}}
+                <div class="p-6 space-y-5 overflow-y-auto custom-scrollbar w-full flex-1">
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">
+                            Novo Status Desejado <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model="statusDesejadoSolicitacao" class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm focus:ring-amber-500 focus:border-amber-500">
+                            <option value="">Selecione o status de destino...</option>
+                            @foreach($statusInscricoesDb as $id => $nome)
+                                <option value="{{ $id }}">{{ $nome }}</option>
+                            @endforeach
+                        </select>
+                        @error('statusDesejadoSolicitacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">
+                            Justificativa da Alteração <span class="text-red-500">*</span>
+                        </label>
+                        <textarea wire:model="justificativaSolicitacao" rows="3" placeholder="Explique o motivo da alteração das inscrições neste ciclo bloqueado..." class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm focus:ring-amber-500 focus:border-amber-500"></textarea>
+                        @error('justificativaSolicitacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 mb-2">
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                Inscrições Selecionadas ({{ count($inscricoesParaSolicitar) }})
+                            </label>
+                            <span class="text-[11px] text-gray-400">Pode remover itens individuais abaixo se necessário</span>
+                        </div>
+                        
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto custom-scrollbar w-full">
+                            <table class="w-full text-left text-xs whitespace-nowrap">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                    <tr>
+                                        <th class="p-2.5">Candidato</th>
+                                        <th class="p-2.5">Curso / Unidade</th>
+                                        <th class="p-2.5 text-right w-16">Remover</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @php
+                                        $inscricoesModal = \App\Models\Inscricao::with(['curso', 'unidade'])->whereIn('id', $inscricoesParaSolicitar)->get();
+                                    @endphp
+                                    @foreach($inscricoesModal as $item)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40" wire:key="solicitar-item-{{ $item->id }}">
+                                            <td class="p-2.5">
+                                                <div class="font-bold text-gray-900 dark:text-white">{{ $item->nome }}</div>
+                                                <div class="text-[10px] text-gray-400">{{ $item->cpf }}</div>
+                                            </td>
+                                            <td class="p-2.5">
+                                                <div class="text-gray-700 dark:text-gray-300">{{ $item->curso->nome ?? '-' }}</div>
+                                                <div class="text-[10px] text-gray-400">{{ $item->unidade->nome ?? '-' }}</div>
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <button type="button" wire:click="removerDaSolicitacao({{ $item->id }})" class="text-red-500 hover:text-red-700 p-1" title="Remover desta solicitação">
+                                                    <i class="ph-bold ph-trash text-sm"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- RODAPÉ DO MODAL (w-full e justify-end garantidos) --}}
+                <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end items-center gap-3 w-full shrink-0">
+                    <button type="button" wire:click="$set('modalSolicitarAlteracaoAberto', false)" class="btn btn--secondary btn--medium">
+                        Cancelar
+                    </button>
+                    <button type="button" wire:click="enviarSolicitacaoAlteracao" class="btn btn--primary btn--medium !bg-amber-600 hover:!bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Submeter Solicitação
                     </button>
                 </div>
             </div>

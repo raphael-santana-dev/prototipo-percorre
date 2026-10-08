@@ -7,8 +7,8 @@
     $formWidth = $formSettings['form_width'] ?? 'max-w-4xl';
     $isTranslucent = filter_var($formSettings['translucent_card'] ?? false, FILTER_VALIDATE_BOOLEAN);
     
-    $cardClass = $isTranslucent ? 'bg-white/80 backdrop-blur-md shadow-2xl' : 'bg-white shadow-xl';
-    $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
+    $cardClass = $isTranslucent ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-2xl border border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-gray-900 shadow-xl border border-gray-100 dark:border-gray-800';
+    $textoForm = $isTranslucent ? 'text-gray-900 dark:text-white drop-shadow-sm' : 'text-gray-900 dark:text-white';
 @endphp
 
 <div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent">
@@ -83,10 +83,10 @@
                     @if($formulario->exigir_email && $etapaAtual === 1)
                         <div class="col-span-12 relative rounded-lg transition-all duration-300">
                             <div class="relative z-10">
-                                <label class="block text-sm font-semibold text-gray-800 mb-2 {{ isset($formSettings['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
+                                <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 {{ isset($formSettings['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
                                     Seu E-mail Institucional ou Pessoal <span class="text-red-500">*</span>
                                 </label>
-                                <input type="email" wire:model.live.debounce.500ms="respostas._email_coletado" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 @error('respostas._email_coletado') border-red-500 bg-red-50 @else border-gray-300 bg-white @enderror" placeholder="seu.email@exemplo.com">
+                                <input type="email" wire:model.live.debounce.500ms="respostas._email_coletado" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas._email_coletado') border-red-500 bg-red-50 @else border-gray-300 dark:border-gray-700 bg-white @enderror" placeholder="seu.email@exemplo.com">
                                 @error('respostas._email_coletado') <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror
                             </div>
                         </div>
@@ -97,7 +97,7 @@
 
                 <div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                     @if($etapaAtual > 1)
-                        <button type="button" wire:click="$set('etapaAtual', {{ $etapaAtual - 1 }})" class="text-gray-600 dark:text-gray-300 hover:text-purpura-600 dark:hover:text-purpura-400 font-bold py-2.5 px-4 rounded-md transition duration-200 flex items-center gap-2">
+                        <button type="button" wire:click="$set('etapaAtual', {{ $etapaAtual - 1 }})" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="text-gray-600 dark:text-gray-300 hover:text-purpura-600 dark:hover:text-purpura-400 font-bold py-2.5 px-4 rounded-md transition duration-200 flex items-center gap-2 disabled:opacity-50">
                             <i class="ph ph-arrow-left text-lg"></i> Voltar
                         </button>
                     @else
@@ -109,9 +109,17 @@
                             <i class="ph-fill ph-eye"></i> Visualização Concluída
                         </div>
                     @else
-                        <button type="button" wire:click="avancarEtapa" class="bg-purpura-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-purpura-700 hover:shadow-lg transition duration-200 flex items-center gap-2">
-                            {{ $etapaAtual === $totalEtapas ? 'Enviar Respostas' : 'Próxima Etapa' }}
-                            @if($etapaAtual !== $totalEtapas) <i class="ph ph-arrow-right text-lg"></i> @else <i class="ph-bold ph-paper-plane-tilt text-lg"></i> @endif
+                        <button type="button" wire:click="avancarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="bg-purpura-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-purpura-700 hover:shadow-lg transition duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span wire:loading.remove wire:target="avancarEtapa, uploads" class="inline-flex items-center gap-2">
+                                {{ $etapaAtual === $totalEtapas ? 'Enviar Respostas' : 'Próxima Etapa' }}
+                                @if($etapaAtual !== $totalEtapas) <i class="ph ph-arrow-right text-lg"></i> @else <i class="ph-bold ph-paper-plane-tilt text-lg"></i> @endif
+                            </span>
+                            <span wire:loading wire:target="uploads" class="inline-flex items-center gap-2">
+                                <i class="ph-bold ph-spinner animate-spin"></i> A carregar anexo(s)...
+                            </span>
+                            <span wire:loading wire:target="avancarEtapa" class="inline-flex items-center gap-2">
+                                <i class="ph-bold ph-spinner animate-spin"></i> A gravar respostas...
+                            </span>
                         </button>
                     @endif
                 </div>

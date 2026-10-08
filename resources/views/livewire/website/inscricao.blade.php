@@ -61,7 +61,6 @@
                                         <h4 class="text-xl font-bold {{ $textoForm }}">Informações Preliminares</h4>
                                     </div>
                                     
-                                    <!-- Renderiza os campos marcados para o topo -->
                                     @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposTopo])
                                     
                                     <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
@@ -302,14 +301,12 @@
                                 <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
                                     <h4 class="text-xl font-bold {{ $textoForm }}">Informações Adicionais</h4>
                                 </div>
-                                <!-- Renderiza os campos dinâmicos que sobraram na etapa 1 (após os fixos) -->
                                 @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposRodape])
                                 
                             @elseif($etapaAtual > 1 && $camposDinamicos && $camposDinamicos->where('etapa', $etapaAtual)->count() > 0)
                                 <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
                                     <h4 class="text-xl font-bold {{ $textoForm }}">Informações Complementares</h4>
                                 </div>
-                                <!-- Renderiza as etapas 2 em diante normalmente -->
                                 @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDinamicos->where('etapa', $etapaAtual)])
                             @endif
                             
@@ -335,13 +332,21 @@
                         
                         <div class="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
                             @if($etapaAtual > 1)
-                                <button type="button" wire:click="voltarEtapa" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-bold py-2 px-6 rounded-md transition duration-200">Voltar</button>
+                                <button type="button" wire:click="voltarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, voltarEtapa, uploads" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-bold py-2 px-6 rounded-md transition duration-200 disabled:opacity-50">Voltar</button>
                             @else
                                 <div></div>
                             @endif
                             
-                            <button type="button" wire:click="avancarEtapa" class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6">
-                                {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
+                            <button type="button" wire:click="avancarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span wire:loading.remove wire:target="avancarEtapa, uploads">
+                                    {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
+                                </span>
+                                <span wire:loading wire:target="uploads" class="inline-flex items-center gap-2">
+                                    <i class="ph-bold ph-spinner animate-spin"></i> A carregar anexo(s)...
+                                </span>
+                                <span wire:loading wire:target="avancarEtapa" class="inline-flex items-center gap-2">
+                                    <i class="ph-bold ph-spinner animate-spin"></i> A processar...
+                                </span>
                             </button>
                         </div>
                     </div>

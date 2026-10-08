@@ -5,15 +5,19 @@ namespace App\Modules\Website\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\WithFileUploads;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 
 #[Layout('components.layouts.public')]
 class FormularioPublico extends Component
 {
+    use WithFileUploads;
+
     public Formulario $formulario;
     public $camposDinamicos = [];
     public $respostas = [];
+    public array $uploads = [];
     public array $unidadesDisponiveis = [];
     public array $cursosDisponiveis = [];
     public array $turnosDisponiveis = [];
@@ -35,13 +39,11 @@ class FormularioPublico extends Component
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug);
 
-        // Se NÃO for preview, exige que o formulário esteja ativo
         if (!request()->query('preview')) {
             $query->where('status', true);
         }
         
         $this->formulario = $query->firstOrFail();
-        
         $this->camposDinamicos = $this->formulario->campos;
         
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
@@ -56,7 +58,7 @@ class FormularioPublico extends Component
             return;
         }
         if ($this->formulario->data_fim && $agora->gt($this->formulario->data_fim)) {
-            $this->bloquearAcesso('O período para responder este formulário já foi encerrado.', 'ph-clock-countdown');
+            $this->bloquearAcesso('O período para responder a este formulário já foi encerrado.', 'ph-clock-countdown');
             return;
         }
 
@@ -64,7 +66,7 @@ class FormularioPublico extends Component
             $liberado = false;
 
             if (!auth('web')->check() && !auth('student')->check()) {
-                $this->bloquearAcesso('Formulário restrito. Faça login em sua conta para acessar.', 'ph-lock-key', true);
+                $this->bloquearAcesso('Formulário restrito. Inicie sessão na sua conta para aceder.', 'ph-lock-key', true);
                 return;
             }
 
@@ -114,7 +116,7 @@ class FormularioPublico extends Component
             }
 
             if (!$liberado) {
-                $this->bloquearAcesso('Seu nível de acesso ou vínculo acadêmico não permite visualizar este formulário.', 'ph-hand-waving');
+                $this->bloquearAcesso('O seu nível de acesso ou vínculo académico não permite visualizar este formulário.', 'ph-hand-waving');
                 return;
             }
         }
@@ -132,8 +134,12 @@ class FormularioPublico extends Component
         
         foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
             if (!isset($this->respostas[$campo->name])) {
-                if (in_array($campo->tipo, ['check', 'matriz'])) $this->respostas[$campo->name] = [];
-                else $this->respostas[$campo->name] = '';
+                $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                if (in_array($campo->tipo, ['check', 'matriz']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
+                    $this->respostas[$campo->name] = [];
+                } else {
+                    $this->respostas[$campo->name] = '';
+                }
             }
         }
     }
@@ -203,6 +209,38 @@ class FormularioPublico extends Component
                 if (!$condicaoAtendida) continue; 
             }
 
+            if ($campo->tipo === 'file') {
+                $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+                $maxKb = ((int)($cfg['max_size_mb'] ?? 10)) * 1024;
+                $exts = !empty($cfg['extensoes_permitidas']) ? str_replace(' ', '', $cfg['extensoes_permitidas']) : null;
+
+                $baseRule = ['file', "max:{$maxKb}"];
+                if ($exts) {
+                    $baseRule[] = "mimes:{$exts}";
+                }
+
+                $jaPossuiArquivo = !empty($this->respostas[$campo->name]);
+
+                if ($aceitaMultiplos) {
+                    if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                        $regras['uploads.' . $campo->name] = 'required|array|min:1';
+                    } else {
+                        $regras['uploads.' . $campo->name] = 'nullable|array';
+                    }
+                    $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                } else {
+                    if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                        $baseRule[] = 'required';
+                    } else {
+                        $baseRule[] = 'nullable';
+                    }
+                    $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                }
+
+                continue;
+            }
+
             $ruleStr = [];
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
@@ -225,6 +263,20 @@ class FormularioPublico extends Component
 
     public function updated($propertyName)
     {
+        if (str_starts_with($propertyName, 'uploads.')) {
+            $regras = $this->regrasPorEtapa($this->etapaAtual);
+            if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
+                $this->validateOnly($propertyName, $regras, [
+                    'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
+                    'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
+                    'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
+                    'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
+                    'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                ]);
+            }
+            return;
+        }
+
         if (str_starts_with($propertyName, 'respostas.')) {
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras)) {
@@ -274,24 +326,70 @@ class FormularioPublico extends Component
         }
     }
 
+    public function removerArquivo(string $campoName, $index = null)
+    {
+        if (isset($this->respostas[$campoName])) {
+            if ($index !== null && is_array($this->respostas[$campoName])) {
+                unset($this->respostas[$campoName][$index]);
+                $this->respostas[$campoName] = array_values($this->respostas[$campoName]);
+            } else {
+                $this->respostas[$campoName] = '';
+            }
+        }
+
+        if (isset($this->uploads[$campoName])) {
+            if ($index !== null && is_array($this->uploads[$campoName])) {
+                unset($this->uploads[$campoName][$index]);
+                $this->uploads[$campoName] = array_values($this->uploads[$campoName]);
+            } else {
+                unset($this->uploads[$campoName]);
+            }
+        }
+    }
+
     public function avancarEtapa()
     {
-
         if (request()->query('preview')) {
             if ($this->etapaAtual < $this->totalEtapas) {
                 $this->etapaAtual++;
             }
             return;
         }
-        
+
         $regras = $this->regrasPorEtapa($this->etapaAtual);
 
         if (!empty($regras)) {
             $this->validate($regras, [
                 'respostas.*.required' => 'Este campo é obrigatório.',
                 'respostas.*.email' => 'Informe um e-mail válido.',
-                'respostas.*.numeric' => 'Este campo aceita apenas números.'
+                'respostas.*.numeric' => 'Este campo aceita apenas números.',
+                'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
+                'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
+                'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
+                'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
+                'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
             ]);
+        }
+
+        foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+            if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+
+                if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                    $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                    foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                        if ($arquivo) {
+                            $caminhos[] = $arquivo->store('formularios/uploads', 'public');
+                        }
+                    }
+                    $this->respostas[$campoFile->name] = $caminhos;
+                } else {
+                    $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('formularios/uploads', 'public');
+                }
+
+                unset($this->uploads[$campoFile->name]);
+            }
         }
 
         if ($this->etapaAtual < $this->totalEtapas) {

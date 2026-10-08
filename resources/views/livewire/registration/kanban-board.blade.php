@@ -1,19 +1,35 @@
 <div class="px-2 md:px-6 py-4 h-[calc(100vh-60px)] flex flex-col font-sans relative w-full overflow-hidden">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-    <div class="mb-4 flex flex-col gap-3 shrink-0 w-full overflow-hidden">
+    {{-- WRAPPER DO TOPO: overflow-visible e z-30 para não cortar dropdowns --}}
+    <div class="mb-4 flex flex-col gap-3 shrink-0 w-full relative z-30">
         
         {{-- CARD PRINCIPAL: Título, Busca e Filtros --}}
-        <div class="card !p-4 shrink-0 shadow-sm flex flex-col w-full gap-4">
+        <div class="card !p-4 shrink-0 shadow-sm flex flex-col w-full gap-4 relative z-30 overflow-visible">
             
             {{-- LINHA SUPERIOR: Título, Busca e Ordenação --}}
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full gap-4">
                 
-                {{-- Esquerda: Título --}}
-                <div class="flex items-center gap-4 w-full lg:w-auto shrink-0">
+                {{-- Esquerda: Título com Distintivo de Ciclo Ativo / Último Registrado / Geral --}}
+                <div class="flex items-center gap-3 w-full lg:w-auto shrink-0 flex-wrap">
                     <h2 class="t-heading-small text-gray-900 dark:text-white flex items-center gap-2 whitespace-nowrap">
-                        <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo: {{ $ciclo->nome ?? 'Nenhum' }}
+                        <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo: {{ $ciclo->nome ?? 'Todos os Ciclos' }}
                     </h2>
+                    @if($ciclo)
+                        @if($ciclo->status && $ciclo->data_inicio <= now() && $ciclo->data_fim >= now())
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-sm">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ciclo Ativo
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-sm">
+                                <i class="ph-bold ph-clock-counter-clockwise text-xs"></i> Último Ciclo Registado
+                            </span>
+                        @endif
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-sm">
+                            <i class="ph-bold ph-globe text-xs"></i> Geral (Todos os Ciclos)
+                        </span>
+                    @endif
                 </div>
 
                 {{-- Direita: Busca e Ordenação --}}
@@ -43,10 +59,37 @@
             </div>
 
             {{-- LINHA INFERIOR: Chips e Ações de Top X --}}
-            <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full border-t border-gray-100 dark:border-gray-800 pt-4 gap-4"
+            <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full border-t border-gray-100 dark:border-gray-800 pt-4 gap-4 relative z-30 overflow-visible"
                  x-data="{ visible: [], allFilters: ['curso', 'unidade', 'data'], init() { if ($wire.filtroCurso) this.visible.push('curso'); if ($wire.filtroUnidade) this.visible.push('unidade'); if ($wire.filtroDataInicio || $wire.filtroDataFim) this.visible.push('data'); }, add(f) { if(!this.visible.includes(f)) this.visible.push(f); }, remove(f) { if (f === 'curso') $wire.set('filtroCurso', ''); if (f === 'unidade') $wire.set('filtroUnidade', ''); if (f === 'data') { $wire.set('filtroDataInicio', ''); $wire.set('filtroDataFim', ''); } this.visible = this.visible.filter(i => i !== f); }, get canAddMore() { return this.visible.length < this.allFilters.length; } }">
                 
-                <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-visible">
+                    
+                    {{-- CHIP FIXO: CICLO (com opção "Qualquer") --}}
+                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
+                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
+                        <select wire:model.live="cicloId" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[170px] truncate">
+                            <option value="">Qualquer</option>
+                            @foreach($ciclosDb as $cId => $cNome) 
+                                <option value="{{ $cId }}">{{ $cNome }}</option> 
+                            @endforeach
+                        </select>
+                        @if($ciclo)
+                            @if($ciclo->status && $ciclo->data_inicio <= now() && $ciclo->data_fim >= now())
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
+                                </span>
+                            @else
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                    Histórico
+                                </span>
+                            @endif
+                        @else
+                            <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                Geral
+                            </span>
+                        @endif
+                    </div>
+
                     {{-- Chip Dinâmico: Curso --}}
                     <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
@@ -83,21 +126,24 @@
                         <button @click="remove('data')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
                     </div>
 
-                    {{-- Dropdown Adicionar Filtro --}}
+                    {{-- Dropdown Adicionar Filtro (z-[100] garantindo sobreposição limpa) --}}
                     <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
                         <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
                             + Filtro
                         </button>
-                        <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 py-2" x-cloak>
-                            <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 flex items-center gap-3">
+                        <div x-show="open" 
+                             @click.away="open = false" 
+                             class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-[100] py-2" 
+                             x-cloak>
+                            <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
                                 <i class="ph-bold ph-graduation-cap text-gray-400 text-lg"></i> Curso
                             </button>
                             @if($unidadesDb->count() > 1)
-                            <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 flex items-center gap-3">
+                            <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
                                 <i class="ph-bold ph-buildings text-gray-400 text-lg"></i> Unidade
                             </button>
                             @endif
-                            <button x-show="!visible.includes('data')" @click="add('data'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 flex items-center gap-3">
+                            <button x-show="!visible.includes('data')" @click="add('data'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
                                 <i class="ph-bold ph-calendar text-gray-400 text-lg"></i> Intervalo de Datas
                             </button>
                         </div>
@@ -119,7 +165,7 @@
             </div>
         </div>
 
-        {{-- BARRA ESCURA DE AÇÕES EM LOTE (Exibe abaixo do card, 100% de largura) --}}
+        {{-- BARRA ESCURA DE AÇÕES EM LOTE --}}
         @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
             <div x-data="{ count: @entangle('selecionados').live }" x-show="count.length > 0" x-cloak 
                  class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all">
@@ -147,13 +193,17 @@
         
     </div>
 
-    <div class="flex-1 flex gap-4 overflow-hidden">
+    {{-- ÁREA DAS COLUNAS DO KANBAN --}}
+    <div class="flex-1 flex gap-4 overflow-hidden relative z-10">
         
         <div class="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar pb-4"
              x-data="{
                  initSortable() {
                      document.querySelectorAll('.kanban-coluna').forEach(el => {
-                         new Sortable(el, {
+                         if (el._sortable) {
+                             el._sortable.destroy();
+                         }
+                         el._sortable = new Sortable(el, {
                              group: 'crm-pipeline', 
                              animation: 150,
                              ghostClass: 'opacity-50',
@@ -167,15 +217,22 @@
                          });
                      });
                  }
-             }" x-init="initSortable()">
+             }" 
+             x-init="
+                 initSortable();
+                 document.addEventListener('livewire:navigated', () => initSortable());
+                 if (window.Livewire) {
+                     Livewire.hook('morph.updated', () => { initSortable(); });
+                 }
+             ">
              
             <div class="flex h-full gap-4 items-start w-max px-1">
-                @if($ciclo)
+                @if($colunas->isNotEmpty())
                     @foreach($colunas as $coluna)
-                        <div class="w-80 flex flex-col max-h-full bg-gray-100/50 border border-gray-200 rounded-xl overflow-hidden shrink-0">
+                        <div class="w-80 flex flex-col max-h-full bg-gray-100/50 border border-gray-200 dark:bg-gray-800/40 dark:border-gray-700 rounded-xl overflow-hidden shrink-0">
                             
-                            <div class="p-4 bg-gray-100 border-b border-gray-200 flex justify-between items-center shrink-0">
-                                <h3 class="font-bold text-gray-700 text-xs uppercase tracking-wide">{{ $coluna->nome }}</h3>
+                            <div class="p-4 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0">
+                                <h3 class="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wide">{{ $coluna->nome }}</h3>
                                 <span class="tag tag--small tag--outline tag--neutral shadow-sm">
                                     {{ isset($resumo[$coluna->id]['total']) ? $resumo[$coluna->id]['total'] : 0 }}
                                 </span>
@@ -206,17 +263,17 @@
                                             <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/80 rounded border border-gray-100 dark:border-gray-700 p-2">
                                                 <div class="flex items-center gap-1" title="Ranking Geral">
                                                     <i class="ph-fill ph-trophy text-ponkan-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? $inscricao->posicao_ranking_geral ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_geral ?? '-' }}º</span>
                                                 </div>
                                                 <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
                                                 <div class="flex items-center gap-1" title="Ranking na Unidade">
                                                     <i class="ph-fill ph-buildings text-blue-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_unidade ?? $inscricao->posicao_ranking_unidade ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_unidade ?? '-' }}º</span>
                                                 </div>
                                                 <div class="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
                                                 <div class="flex items-center gap-1" title="Ranking no Curso">
                                                     <i class="ph-fill ph-graduation-cap text-purpura-500 text-[11px]"></i>
-                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_curso ?? $inscricao->posicao_ranking_curso ?? '-' }}º</span>
+                                                    <span class="text-[9px] font-bold text-gray-600 dark:text-gray-300">{{ $inscricao->posicao_ranking_curso ?? '-' }}º</span>
                                                 </div>
                                             </div>
 
@@ -235,7 +292,7 @@
                                             <div class="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 dark:border-gray-700" onmousedown="event.stopPropagation()">
                                                 
                                                 <span class="text-[9px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide">
-                                                    <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at->diffForHumans(null, true, true) }}
+                                                    <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at ? $inscricao->updated_at->diffForHumans(null, true, true) : 'Recente' }}
                                                 </span>
                                                 
                                                 <div class="flex items-center gap-0.5">
@@ -268,36 +325,68 @@
                     @endforeach
                 @else
                     <div class="w-full flex items-center justify-center p-12 text-gray-400">
-                        Nenhum ciclo ativo cadastrado no sistema.
+                        Nenhuma etapa ou coluna encontrada para exibir.
                     </div>
                 @endif
             </div>
         </div>
 
-        @if($ciclo)
-            <div class="w-56 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
-                
-                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 mb-4 text-center">
-                    <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total</span>
-                    <span class="text-3xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
+        {{-- BARRA LATERAL: Relação de Vagas e Totalizadores --}}
+        <div class="w-64 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
+            
+            {{-- Card de Ocupação e Relação de Vagas --}}
+            @if(($relacaoVagas['total_vagas'] ?? 0) > 0)
+                <div class="border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl p-3.5 mb-3.5 shadow-sm">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1">
+                            <i class="ph-bold ph-graduation-cap"></i> Relação de Vagas
+                        </span>
+                        <span class="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-300">
+                            {{ $relacaoVagas['percentual_preenchido'] ?? 0 }}%
+                        </span>
+                    </div>
+
+                    <div class="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                        {{ number_format($relacaoVagas['vagas_ocupadas'] ?? 0, 0, ',', '.') }} 
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">/ {{ number_format($relacaoVagas['total_vagas'] ?? 0, 0, ',', '.') }}</span>
+                    </div>
+
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2.5 overflow-hidden">
+                        <div class="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: {{ $relacaoVagas['percentual_preenchido'] ?? 0 }}%"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-2 pt-1 border-t border-indigo-100/80 dark:border-indigo-900/40">
+                        <span>Restantes: <strong class="text-gray-700 dark:text-gray-300">{{ number_format($relacaoVagas['saldo_disponivel'] ?? 0, 0, ',', '.') }}</strong></span>
+                        @if(($relacaoVagas['total_vagas'] ?? 0) > 0 && $totalInscricoes > 0)
+                            <span>C/V: <strong class="text-indigo-600 dark:text-indigo-400">{{ round($totalInscricoes / max(1, $relacaoVagas['total_vagas']), 1) }}</strong></span>
+                        @endif
+                    </div>
                 </div>
-                
-                <div class="space-y-0 flex-1 border-t border-gray-200 dark:border-gray-700">
-                    @foreach($resumo as $id => $dado)
-                        <div class="flex justify-between items-center text-sm py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition px-1">
-                            <span class="font-bold text-gray-600 dark:text-gray-400 text-[10px] uppercase truncate w-32" title="{{ $dado['nome'] }}">{{ $dado['nome'] }}</span>
-                            <span class="font-black text-gray-800 dark:text-gray-300 text-xs">{{ number_format($dado['total'], 0, ',', '.') }}</span>
-                        </div>
-                    @endforeach
-                </div>
+            @endif
+
+            {{-- Total Geral de Inscritos --}}
+            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 mb-4 text-center bg-white/40 dark:bg-gray-800/40">
+                <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total de Candidatos</span>
+                <span class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
             </div>
-        @endif
+            
+            {{-- Distribuição por Status do Pipeline --}}
+            <div class="space-y-0 flex-1 border-t border-gray-200 dark:border-gray-700">
+                @foreach($resumo as $id => $dado)
+                    <div class="flex justify-between items-center text-sm py-2.5 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition px-1">
+                        <span class="font-bold text-gray-600 dark:text-gray-400 text-[10px] uppercase truncate w-32" title="{{ $dado['nome'] }}">{{ $dado['nome'] }}</span>
+                        <span class="font-black text-gray-800 dark:text-gray-300 text-xs">{{ number_format($dado['total'], 0, ',', '.') }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
     </div>
 
+    {{-- MODAL ANTI-SPAM --}}
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="card !w-full !max-w-2xl !p-0">
+            <div class="card !w-full !max-w-2xl !p-0 shadow-2xl">
                 <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-pitaya-50 dark:bg-pitaya-900/20 w-full">
                     <h3 class="text-lg font-bold text-pitaya-700 dark:text-pitaya-400 flex items-center gap-2">
                         <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
@@ -306,8 +395,8 @@
                 </div>
                 
                 <div class="p-6 overflow-y-auto custom-scrollbar w-full">
-                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium">
-                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium leading-relaxed">
+                        O sistema detetou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -341,7 +430,7 @@
                     <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium">
                         Cancelar Tudo
                     </button>
-                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 hover:!bg-pitaya-700">
+                    <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-pitaya-600 hover:!bg-pitaya-700 border-none">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
                     </button>
                 </div>

@@ -5,6 +5,7 @@ namespace App\Modules\Website\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\WithFileUploads;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -17,21 +18,23 @@ use App\Models\Curso;
 class Inscricao extends Component
 {
     use \App\Traits\WithCepConsulta;
+    use WithFileUploads;
 
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
     public $inscricaoId = null;
     public $cicloAtivoId = null;
-    public $inscricoesAbertas = false;
+    public bool $inscricoesAbertas = false;
 
     public $nome, $nome_social, $cpf, $email, $celular, $data_nascimento, $cep, $logradouro, $bairro, $cidade, $estado, $numero, $complemento, $unidade, $turno, $curso, $natureza_deficiencia;
     public $possui_deficiencia = 'nao';
     public $possui_nome_social = 'nao';
-    public $autorizacao_uso_infos = false;
+    public bool $autorizacao_uso_infos = false;
 
-    public $temVagasDisponiveis = true;
+    public bool $temVagasDisponiveis = true;
     public $camposDinamicos = [];
-    public $respostas = [];
+    public array $respostas = [];
+    public array $uploads = [];
 
     public array $unidadesDisponiveis = [];
     public array $turnosDisponiveis = [];
@@ -40,7 +43,7 @@ class Inscricao extends Component
     public array $formSettings = [];
     public bool $use_vacancy_limit = false; 
 
-    // NOVAS VARIÁVEIS PARA CAPTAÇÃO DE INTERESSE
+    // VARIÁVEIS PARA CAPTAÇÃO DE INTERESSE (LISTA DE ESPERA / LEADS)
     public bool $deseja_informar = false;
     public $unidade_interesse = null;
     public $curso_interesse = null;
@@ -73,7 +76,12 @@ class Inscricao extends Component
 
             foreach ($this->camposDinamicos as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
-                    $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz', 'social']) ? [] : '';
+                    $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                    if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
+                        $this->respostas[$campo->name] = [];
+                    } else {
+                        $this->respostas[$campo->name] = '';
+                    }
                 }
             }
 
@@ -84,9 +92,7 @@ class Inscricao extends Component
                     $this->inscricaoId = $inscricaoRetomada->id;
                     $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                     
-                    // Lógica de Retoma: Bloqueia se a inscrição já estiver concluída (99) ou na Lista de Espera (100)
                     if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
-                        // Lança para o ecrã final correspondente
                         $this->etapaAtual = $inscricaoRetomada->etapa_atual; 
                         session()->forget('inscricao_retomada_id');
                         return;
@@ -115,11 +121,8 @@ class Inscricao extends Component
                     $this->curso = $inscricaoRetomada->curso_id;
                     $this->turno = $inscricaoRetomada->turno_id;
 
-                    // RECUPERA DADOS DE INTERESSE
                     $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id 
-                        ? $inscricaoRetomada->unidade_interesse_id 
-                        : null;
+                    $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id ?: null;
                     $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                     $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -162,14 +165,11 @@ class Inscricao extends Component
                 ->first();
 
             if ($inscricaoRetomada) {
-                // Lógica de Retoma: Bloqueia se a inscrição já estiver concluída (99 = Sucesso) ou na Lista de Espera (100)
                 if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
                     $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada ou em lista de espera neste ciclo.');
                     return;
                 }
 
-                // Se passou da verificação acima, significa que está numa etapa incompleta (< totalEtapas)
-                // O sistema prossegue e pré-preenche os dados...
                 $this->inscricaoId = $inscricaoRetomada->id;
                 $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
                 $this->nome = $inscricaoRetomada->nome;
@@ -193,7 +193,7 @@ class Inscricao extends Component
                 $this->turno = $inscricaoRetomada->turno_id;
 
                 $this->deseja_informar = (bool) $inscricaoRetomada->deseja_informar;
-                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id ? $inscricaoRetomada->unidade_interesse_id : null;
+                $this->unidade_interesse = $inscricaoRetomada->unidade_interesse_id ?: null;
                 $this->curso_interesse = $inscricaoRetomada->curso_interesse_id;
                 $this->turno_interesse = $inscricaoRetomada->turno_interesse_id;
 
@@ -205,13 +205,12 @@ class Inscricao extends Component
                 }
 
                 $this->restaurarDeDadosSalvos();
-
                 $this->dispatch('sucesso', msg: 'Encontramos uma inscrição em andamento! Recuperamos seus dados de onde você parou.');
             }
         }
     }
 
-    private function getOfertasValidas()
+    private function getOfertasValidas(): ?array
     {
         if (!$this->use_vacancy_limit) return null;
 
@@ -220,7 +219,7 @@ class Inscricao extends Component
         $ocupadas = InscricaoModel::selectRaw('curso_id, unidade_id, turno_id, count(*) as total')
             ->where('ciclo_id', $this->cicloAtivoId)
             ->whereHas('statusInscricao', function($q) {
-                $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado']);
+                $q->whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado', 'Matriculado']);
             })
             ->groupBy('curso_id', 'unidade_id', 'turno_id')
             ->get()
@@ -253,9 +252,11 @@ class Inscricao extends Component
                 $regras['turno_interesse'] = 'required';
             }
         }
+
         if ($etapa === $this->totalEtapas) {
             $regras['autorizacao_uso_infos'] = 'accepted';
         }
+
         if ($this->camposDinamicos) {
             foreach ($this->camposDinamicos->where('etapa', $etapa) as $campo) {
                 if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
@@ -280,6 +281,37 @@ class Inscricao extends Component
                     if (!$condicaoAtendida) continue; 
                 }
 
+                if ($campo->tipo === 'file') {
+                    $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                    $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+                    $maxKb = ((int)($cfg['max_size_mb'] ?? 10)) * 1024;
+                    $exts = !empty($cfg['extensoes_permitidas']) ? str_replace(' ', '', $cfg['extensoes_permitidas']) : null;
+
+                    $baseRule = ['file', "max:{$maxKb}"];
+                    if ($exts) {
+                        $baseRule[] = "mimes:{$exts}";
+                    }
+
+                    $jaPossuiArquivo = !empty($this->respostas[$campo->name]);
+
+                    if ($aceitaMultiplos) {
+                        if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                            $regras['uploads.' . $campo->name] = 'required|array|min:1';
+                        } else {
+                            $regras['uploads.' . $campo->name] = 'nullable|array';
+                        }
+                        $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                    } else {
+                        if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                            $baseRule[] = 'required';
+                        } else {
+                            $baseRule[] = 'nullable';
+                        }
+                        $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                    }
+                    continue;
+                }
+
                 $ruleStr = [];
                 if ($campo->obrigatorio) $ruleStr[] = 'required';
                 else $ruleStr[] = 'nullable';
@@ -297,6 +329,53 @@ class Inscricao extends Component
         return $regras;
     }
 
+    public function updated($propertyName)
+    {
+        if (str_starts_with($propertyName, 'uploads.')) {
+            $regras = $this->regrasPorEtapa($this->etapaAtual);
+            if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
+                $this->validateOnly($propertyName, $regras, [
+                    'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
+                    'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
+                    'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
+                    'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
+                    'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                ]);
+            }
+            return;
+        }
+
+        $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
+        if (str_starts_with($propertyName, 'respostas.')) {
+            $this->validateOnly($propertyName, $regrasFinais, [
+                'respostas.*.required' => 'Este campo é obrigatório.',
+            ]);
+        } elseif (array_key_exists($propertyName, $regrasFinais)) {
+            $this->validateOnly($propertyName, $regrasFinais);
+        }
+    }
+
+    public function removerArquivo(string $campoName, $index = null)
+    {
+        if (isset($this->respostas[$campoName])) {
+            if ($index !== null && is_array($this->respostas[$campoName])) {
+                unset($this->respostas[$campoName][$index]);
+                $this->respostas[$campoName] = array_values($this->respostas[$campoName]);
+            } else {
+                $this->respostas[$campoName] = '';
+            }
+        }
+
+        if (isset($this->uploads[$campoName])) {
+            if ($index !== null && is_array($this->uploads[$campoName])) {
+                unset($this->uploads[$campoName][$index]);
+                $this->uploads[$campoName] = array_values($this->uploads[$campoName]);
+            } else {
+                unset($this->uploads[$campoName]);
+            }
+        }
+    }
+
     public function avancarEtapa()
     {
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
@@ -305,8 +384,35 @@ class Inscricao extends Component
             'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos.',
             'respostas.*.required' => 'Este campo é obrigatório.',
             'curso_interesse.required' => 'Obrigatório caso deseje informar.',
-            'turno_interesse.required' => 'Obrigatório caso deseje informar.'
+            'turno_interesse.required' => 'Obrigatório caso deseje informar.',
+            'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
+            'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
+            'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
+            'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
+            'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
         ]);
+
+        // Processa o armazenamento dos uploads da etapa atual
+        foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+            if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+
+                if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                    $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                    foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                        if ($arquivo) {
+                            $caminhos[] = $arquivo->store('inscricoes/documentos', 'public');
+                        }
+                    }
+                    $this->respostas[$campoFile->name] = $caminhos;
+                } else {
+                    $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('inscricoes/documentos', 'public');
+                }
+
+                unset($this->uploads[$campoFile->name]);
+            }
+        }
 
         if ($this->etapaAtual === 1 && $this->temVagasDisponiveis && $this->use_vacancy_limit) {
             $ofertasValidas = $this->getOfertasValidas();
@@ -326,11 +432,12 @@ class Inscricao extends Component
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
                 
-                $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
+                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
                 if ($inscricaoDB) {
-                    $inscricaoDB->update(['etapa_atual' => 100]);
-                    $inscricaoDB->update(['data_inscricao' => date('Y-m-d H:i:s')]);
-                    
+                    $inscricaoDB->update([
+                        'etapa_atual' => 100,
+                        'data_inscricao' => now()
+                    ]);
                 }
                 
                 $this->dispatch('inscricao-concluida'); 
@@ -343,16 +450,14 @@ class Inscricao extends Component
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            $inscricaoDB = \App\Models\Inscricao::find($this->inscricaoId);
+            $inscricaoDB = InscricaoModel::find($this->inscricaoId);
             if ($inscricaoDB) {
                 $inscricaoDB->update(['etapa_atual' => 99]);
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
             }
 
             $this->etapaAtual = 99; 
-            
             $this->atualizarRankingInstantaneo();
-
             $this->dispatch('inscricao-concluida');
         }
     }
@@ -423,26 +528,20 @@ class Inscricao extends Component
             'autorizacao_uso_infos' => $this->autorizacao_uso_infos ? 1 : 0,
             'dados_dinamicos' => $this->respostas, 
             'slug' => Str::slug($this->nome),
-            'data_inscricao' => date('Y-m-d H:i:s'),
+            'data_inscricao' => now(),
             'deseja_informar' => $this->deseja_informar ? 1 : 0,
-            'unidade_interesse_id' => $this->unidade_interesse ? $this->unidade_interesse : null,
+            'unidade_interesse_id' => $this->unidade_interesse ?: null,
             'curso_interesse_id' => $this->curso_interesse,
             'turno_interesse_id' => $this->turno_interesse,
         ];
 
-        // NOVA LÓGICA DE DISTRIBUIÇÃO DE STATUS:
         if ($statusForcado) {
-            // Mantém a possibilidade de forçar um status externo (ex: 'Lead' para lista de espera)
             $statusDb = \App\Models\StatusInscricao::where('nome', ucfirst($statusForcado))->first();
             $dados['status_inscricao_id'] = $statusDb ? $statusDb->id : 1;
-            
         } elseif ($this->etapaAtual === $this->totalEtapas) {
-            // Inscrição Finalizada: Procura no funil do Ciclo qual é a porta de entrada (Etapa 1 do CRM)
             $ciclo = Ciclo::find($this->cicloAtivoId);
             $dados['status_inscricao_id'] = $ciclo ? $ciclo->getStatusInicialId() : 1;
-            
         } else {
-            // Inscrição em Andamento: Marca com o novo status criado no Seeder
             $statusIncompleto = \App\Models\StatusInscricao::where('nome', 'Inscrição Incompleta')->first();
             $dados['status_inscricao_id'] = $statusIncompleto ? $statusIncompleto->id : 1;
         }
@@ -493,25 +592,20 @@ class Inscricao extends Component
         ];
     }
 
-    public function voltarEtapa() { if ($this->etapaAtual > 1) $this->etapaAtual--; }
-
-    public function updated($propertyName)
+    public function voltarEtapa()
     {
-        $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
-        if (str_starts_with($propertyName, 'respostas.')) {
-            $this->validateOnly($propertyName, $regrasFinais);
-        } elseif (array_key_exists($propertyName, $regrasFinais)) {
-            $this->validateOnly($propertyName, $regrasFinais);
+        if ($this->etapaAtual > 1) {
+            $this->etapaAtual--;
         }
     }
 
-    public function updatedDataNascimento() { 
-        if($this->data_nascimento < date('Y-m-d')){
+    public function updatedDataNascimento()
+    { 
+        if ($this->data_nascimento < date('Y-m-d')) {
             $this->atualizarDisponibilidade(); 
         } else {
             $this->dispatch('erro', msg: 'A data de nascimento precisa ser menor do que a data atual.');
         }
-        
     }
 
     public function atualizarDisponibilidade()
@@ -526,7 +620,7 @@ class Inscricao extends Component
 
         if (!$this->estado || !$this->data_nascimento) return;
 
-        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
+        $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         
         $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
@@ -541,7 +635,7 @@ class Inscricao extends Component
 
         $unidadesDisponiveisList = collect();
         
-        foreach($ofertasDisponiveis as $oferta) {
+        foreach ($ofertasDisponiveis as $oferta) {
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true], true)) continue;
             
@@ -583,7 +677,7 @@ class Inscricao extends Component
 
         if (!$unidadeId || !$this->data_nascimento) return;
 
-        $idade = \Carbon\Carbon::parse($this->data_nascimento)->age;
+        $idade = Carbon::parse($this->data_nascimento)->age;
         $ofertasValidas = $this->getOfertasValidas();
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
 
@@ -660,7 +754,7 @@ class Inscricao extends Component
         }
     }
 
-    private function calcularPontuacaoAutomatica() 
+    private function calcularPontuacaoAutomatica(): array 
     {
         $scoreBase = 0;
         $scoreBonus = 0;
@@ -693,8 +787,8 @@ class Inscricao extends Component
         };
 
         $obterResposta = function($campo) {
-            if ($campo === 'idade' && !empty($this->data_nascimento)) return \Carbon\Carbon::parse($this->data_nascimento)->age . ' anos';
-            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? \App\Models\Curso::find($this->curso)->nome ?? 'Curso não informado';
+            if ($campo === 'idade' && !empty($this->data_nascimento)) return Carbon::parse($this->data_nascimento)->age . ' anos';
+            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? Curso::find($this->curso)->nome ?? 'Curso não informado';
             if ($campo === 'turno_id') return $this->turnosDisponiveis[$this->turno] ?? \App\Modules\Turno\Domain\Models\Turno::find($this->turno)->nome ?? 'Turno não informado';
             if ($campo === 'unidade_id') return $this->unidadesDisponiveis[$this->unidade] ?? \App\Modules\Unidade\Domain\Models\Unidade::find($this->unidade)->nome ?? 'Unidade não informada';
             if ($campo === 'estado') return $this->estado ?? 'Estado não informado';
@@ -715,7 +809,7 @@ class Inscricao extends Component
             $valorResposta = null;
 
             if ($campo === 'idade' && !empty($this->data_nascimento)) {
-                $valorResposta = \Carbon\Carbon::parse($this->data_nascimento)->age;
+                $valorResposta = Carbon::parse($this->data_nascimento)->age;
             } elseif ($campo === 'curso_id') {
                 $valorResposta = $this->curso;
             } elseif ($campo === 'turno_id') {
@@ -778,7 +872,6 @@ class Inscricao extends Component
             if ($tipo !== 'padrao' && $avaliarCondicao($regra)) {
                 $multiplicador = (float) ($regra['pontos'] ?? 0);
                 $pontosGanhos = 0;
-                $motivo = "";
 
                 if ($tipo === 'bonus_por_acerto') {
                     $pontosGanhos = $multiplicador * $acertosPadrao; 
@@ -790,7 +883,6 @@ class Inscricao extends Component
 
                 if ($pontosGanhos > 0) {
                     $scoreBonus += $pontosGanhos;
-                    
                     $campoAvaliado = $escopo === 'todos' ? 'Regra Global' : ($regra['campo'] ?? 'Regra Específica');
                     
                     $valorEncontradoEspecial = $obterResposta($regra['campo'] ?? '');
@@ -801,7 +893,7 @@ class Inscricao extends Component
                         'campo_avaliado' => $campoAvaliado, 
                         'resposta_dada' => $respostaDadaEspecial, 
                         'pontos_ganhos' => $pontosGanhos, 
-                        'condicao' => $motivo
+                        'condicao' => $motivo ?? ''
                     ];
                 }
             }
@@ -821,11 +913,10 @@ class Inscricao extends Component
     {
         $unidadesInteresseDb = collect();
         if ($this->estado) {
-            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])
-                                    ->get();
+            $unidadesInteresseDb = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->get();
         }
         
-        $cursosInteresseDb = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->get();
+        $cursosInteresseDb = Curso::whereIn('status', ['Ativo', 'ativo', '1', 1, true])->get();
         $turnosInteresseDb = \App\Modules\Turno\Domain\Models\Turno::all(); 
 
         return view('livewire.website.inscricao', [

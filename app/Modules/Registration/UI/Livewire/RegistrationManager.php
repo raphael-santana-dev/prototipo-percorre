@@ -9,11 +9,18 @@ use Livewire\Attributes\On;
 use App\Models\Inscricao;
 use App\Models\Ciclo;
 use App\Models\Etapa;
+use App\Models\ConfiguracaoGeral;
+use App\Models\StatusInscricao;
+use App\Models\OfertaVaga;
+use App\Models\SystemTask;
+use App\Models\Solicitacao;
+use App\Models\User;
 use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Str;
 use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Bus;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
@@ -36,6 +43,11 @@ class RegistrationManager extends Component
     public array $selecionadas = []; 
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
+
+    public bool $modalSolicitarAlteracaoAberto = false;
+    public string $justificativaSolicitacao = '';
+    public string $statusDesejadoSolicitacao = '';
+    public array $inscricoesParaSolicitar = [];
 
     public bool $modalSelecaoAvancadaAberto = false;
     public int $selecaoQtd = 40;
@@ -68,11 +80,35 @@ class RegistrationManager extends Component
 
         $this->permiteGrid = true;
 
-        $cicloAtivo = Ciclo::where('status', true)->latest()->first();
-        if ($cicloAtivo) {
-            $this->filtroCiclo = $cicloAtivo->id;
-            $this->ciclo_id = $cicloAtivo->id; 
+        // Regra de Ciclo Ativo vs. Último Ciclo Cadastrado
+        $cicloPadrao = $this->obterCicloPadrao();
+        if ($cicloPadrao) {
+            $this->filtroCiclo = $cicloPadrao->id;
+            $this->ciclo_id = $cicloPadrao->id; 
         }
+    }
+
+    protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
+    {
+        // 1. Se um ID específico foi fornecido via filtro ou URL
+        if ($cicloId) {
+            return Ciclo::find($cicloId);
+        }
+
+        $agora = now();
+
+        // 2. Procura pelo Ciclo Ativo vigente
+        $cicloAtivo = Ciclo::where('status', true)
+            ->where('data_inicio', '<=', $agora)
+            ->where('data_fim', '>=', $agora)
+            ->first();
+
+        if ($cicloAtivo) {
+            return $cicloAtivo;
+        }
+
+        // 3. Fallback: Se não houver ciclo ativo, obtém o último ciclo cadastrado
+        return Ciclo::latest('id')->first();
     }
 
     public function abrirModalMoverCiclo()
@@ -89,8 +125,7 @@ class RegistrationManager extends Component
 
         $this->validate(['cicloDestinoId' => 'required|exists:ciclos,id']);
         
-        // Move as inscrições em lote para o novo Ciclo Operacional
-        \App\Models\Inscricao::whereIn('id', $this->selecionadas)->update(['ciclo_id' => $this->cicloDestinoId]);
+        Inscricao::whereIn('id', $this->selecionadas)->update(['ciclo_id' => $this->cicloDestinoId]);
         
         $this->modalMoverCicloAberto = false;
         $this->desmarcarTodas();
@@ -99,11 +134,11 @@ class RegistrationManager extends Component
 
     private function getVagasConfig()
     {
-        $regra = \App\Models\ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
-        $statusJson = \App\Models\ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
+        $regra = ConfiguracaoGeral::where('chave', 'regra_ocupacao_vaga')->value('valor') ?? 'por_status';
+        $statusJson = ConfiguracaoGeral::where('chave', 'status_ocupacao_vaga')->value('valor');
         $statusIds = $statusJson ? json_decode($statusJson, true) : [];
         if (empty($statusIds)) {
-            $statusIds = \App\Models\StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado'])->pluck('id')->toArray();
+            $statusIds = StatusInscricao::whereIn('nome', ['Aprovado', 'aprovado', 'Selecionado', 'selecionado', 'Matriculado'])->pluck('id')->toArray();
         }
         return ['regra' => $regra, 'status_ids' => $statusIds];
     }
@@ -123,7 +158,8 @@ class RegistrationManager extends Component
         $this->resetErrorBag();
     }
 
-    public function abrirModal() {
+    public function abrirModal()
+    {
         abort_if(!feature('inscricao.criar'), 403, 'O módulo de cadastro de inscrição está temporariamente desativado no sistema.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.criar'), 403, 'Sem permissão');
 
@@ -146,7 +182,7 @@ class RegistrationManager extends Component
 
         $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf);
 
-        if (\App\Models\Inscricao::where('cpf', $cpfLimpo)->exists()) {
+        if (Inscricao::where('cpf', $cpfLimpo)->exists()) {
             $this->addError('cpf', 'Este CPF já está cadastrado no sistema.');
             return;
         }
@@ -164,20 +200,20 @@ class RegistrationManager extends Component
         ];
 
         if (auth()->user()->hasRole('dev|admin') || auth()->user()->can('inscricao.aprovar')) {
-            $inscricao = \App\Models\Inscricao::create($payload);
+            $inscricao = Inscricao::create($payload);
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
             $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
         } else {
-            $solicitacao = \App\Models\Solicitacao::create([
+            $solicitacao = Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
-                'solicitante_type' => \App\Models\User::class,
+                'solicitante_type' => User::class,
                 'solicitante_id' => auth()->id(),
                 'justificativa' => "Cadastro inserido por " . auth()->user()->name . ". Aguardando análise para liberação oficial.",
                 'status' => 'pendente',
                 'payload' => $payload
             ]);
 
-            $emailSistema = \App\Models\ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
+            $emailSistema = ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
             
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.solicitacao_cadastro', $emailSistema, [
                 'nome_solicitante' => auth()->user()->name,
@@ -359,12 +395,11 @@ class RegistrationManager extends Component
         ]);
     }
 
-
     public function showQuickView(int $id)
     {
         $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'statusInscricao'])->findOrFail($id);
         
-        $statusDisponiveis = \App\Models\StatusInscricao::orderBy('nome')->get();
+        $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
         
         $botoesAcao = '<div class="mt-2 relative">';
         $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
@@ -379,12 +414,38 @@ class RegistrationManager extends Component
         $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
         $botoesAcao .= '</div>';
 
+        // Renderização Inteligente dos Dados Dinâmicos com Suporte a Arquivos e Anexos
         $detalhesDinamicos = '';
-        if($inscricao->dados_dinamicos) {
+        if ($inscricao->dados_dinamicos && is_array($inscricao->dados_dinamicos)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-            foreach($inscricao->dados_dinamicos as $chave => $valor) {
-                $valorFormatado = is_array($valor) ? implode(', ', $valor) : $valor;
-                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700"><span class="block text-[10px] uppercase text-gray-500 font-bold">'.str_replace('_', ' ', $chave).'</span><span class="text-sm font-medium text-gray-900 dark:text-gray-200">'.($valorFormatado ?: '-').'</span></div>';
+            
+            $renderValor = function($v) {
+                if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
+                    $url = asset('storage/' . $v);
+                    $nomeArquivo = basename($v);
+                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $v);
+                    
+                    if ($isImagem) {
+                        return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
+                    }
+                    return '<a href="'.$url.'" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
+                }
+                return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+            };
+
+            foreach ($inscricao->dados_dinamicos as $chave => $valor) {
+                $htmlConteudo = '';
+                if (is_array($valor)) {
+                    $itens = array_map($renderValor, $valor);
+                    $htmlConteudo = '<div class="flex flex-col gap-1">' . implode('', $itens) . '</div>';
+                } else {
+                    $htmlConteudo = $renderValor($valor);
+                }
+
+                $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2.5 rounded border border-gray-100 dark:border-gray-700">'
+                    . '<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">' . str_replace('_', ' ', $chave) . '</span>'
+                    . '<span class="text-sm font-medium text-gray-900 dark:text-gray-200">' . ($htmlConteudo ?: '-') . '</span>'
+                    . '</div>';
             }
             $detalhesDinamicos .= '</div>';
         } else {
@@ -430,7 +491,7 @@ class RegistrationManager extends Component
             $curso_id = $partes[1];
             $turno_id = $partes[2];
 
-            $oferta = \App\Models\OfertaVaga::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+            $oferta = OfertaVaga::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
                 ->where('unidade_id', $unidade_id)
                 ->where('curso_id', $curso_id)
                 ->where('turno_id', $turno_id)
@@ -441,7 +502,7 @@ class RegistrationManager extends Component
                 continue;
             }
 
-            $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
+            $queryOcupadas = Inscricao::where('ciclo_id', $this->filtroCiclo ?? $grupoInscricoes->first()->ciclo_id)
                 ->where('unidade_id', $unidade_id)
                 ->where('curso_id', $curso_id)
                 ->where('turno_id', $turno_id)
@@ -483,6 +544,13 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
+
+        $insc = Inscricao::find($id);
+        if ($insc && $insc->ciclo && $insc->ciclo->bloqueado) {
+            $this->dispatch('erro', msg: 'O ciclo desta inscrição está bloqueado para edições diretas.');
+            return;
+        }
+
         $inscricao = Inscricao::with('curso')->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
             $this->dispatch('erro', msg: 'O candidato já está neste status!');
@@ -493,6 +561,70 @@ class RegistrationManager extends Component
         if ($inscricoesProcessar->isEmpty()) return;
 
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
+    }
+
+    public function abrirModalSolicitacao()
+    {
+        if (count($this->selecionadas) === 0) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para solicitar alteração.');
+            return;
+        }
+
+        $this->inscricoesParaSolicitar = $this->selecionadas;
+        $this->justificativaSolicitacao = '';
+        $this->statusDesejadoSolicitacao = '';
+        $this->modalSolicitarAlteracaoAberto = true;
+    }
+
+    public function removerDaSolicitacao($id)
+    {
+        $this->inscricoesParaSolicitar = array_values(array_diff($this->inscricoesParaSolicitar, [(string)$id, (int)$id]));
+        if (count($this->inscricoesParaSolicitar) === 0) {
+            $this->modalSolicitarAlteracaoAberto = false;
+        }
+    }
+
+    public function enviarSolicitacaoAlteracao()
+    {
+        $this->validate([
+            'justificativaSolicitacao' => 'required|string|min:10',
+            'statusDesejadoSolicitacao' => 'required|exists:status_inscricoes,id',
+            'inscricoesParaSolicitar' => 'required|array|min:1',
+        ], [
+            'justificativaSolicitacao.required' => 'A justificativa é obrigatória.',
+            'justificativaSolicitacao.min' => 'A justificativa deve conter pelo menos 10 caracteres.',
+            'statusDesejadoSolicitacao.required' => 'Selecione o status desejado para as inscrições.',
+        ]);
+
+        $statusNovo = StatusInscricao::find($this->statusDesejadoSolicitacao);
+        $qtd = count($this->inscricoesParaSolicitar);
+
+        Solicitacao::create([
+            'tema' => 'alteracao_status_ciclo_bloqueado',
+            'solicitante_type' => User::class,
+            'solicitante_id' => auth()->id(),
+            'justificativa' => $this->justificativaSolicitacao,
+            'status' => 'pendente',
+            'payload' => [
+                'inscricoes_ids' => $this->inscricoesParaSolicitar,
+                'novo_status_id' => (int) $this->statusDesejadoSolicitacao,
+                'novo_status_nome' => $statusNovo?->nome,
+                'ciclo_id' => $this->filtroCiclo,
+                'quantidade' => $qtd,
+            ]
+        ]);
+
+        $emailSistema = ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
+        \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.solicitacao_alteracao', $emailSistema, [
+            'nome_solicitante' => auth()->user()->name,
+            'quantidade' => $qtd,
+            'status_desejado' => $statusNovo?->nome,
+            'justificativa' => $this->justificativaSolicitacao,
+        ]);
+
+        $this->modalSolicitarAlteracaoAberto = false;
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: "Solicitação de alteração para {$qtd} inscrições enviada para aprovação!");
     }
 
     public function selecionarQuantidade($quantidade)
@@ -521,28 +653,32 @@ class RegistrationManager extends Component
         $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
     }
 
-    public function abrirModalSelecaoAvancada() { $this->modalSelecaoAvancadaAberto = true; }
+    public function abrirModalSelecaoAvancada()
+    {
+        $this->modalSelecaoAvancadaAberto = true;
+    }
 
     public function executarSelecaoAvancada()
     {
         $this->validate(['selecaoQtd' => 'required|integer|min:1']);
         
-        if (empty($this->filtroCiclo)) {
-            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior antes de utilizar a seleção avançada.');
+        $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        if (empty($cicloIdReferencia)) {
+            $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo no filtro superior antes de utilizar a seleção avançada.');
             return;
         }
 
         $idsSelecionados = [];
 
         if ($this->selecaoPreencherVagas) {
-            $queryOfertas = \App\Models\OfertaVaga::query();
-            $queryOfertas->where('ciclo_id', $this->filtroCiclo);
+            $queryOfertas = OfertaVaga::query()->where('ciclo_id', $cicloIdReferencia);
             $config = $this->getVagasConfig();
 
             foreach ($queryOfertas->get() as $oferta) {
                 if ($oferta->vagas <= 0) continue;
                 
-                $queryOcupadas = \App\Models\Inscricao::where('ciclo_id', $oferta->ciclo_id)
+                $queryOcupadas = Inscricao::where('ciclo_id', $oferta->ciclo_id)
                     ->where('unidade_id', $oferta->unidade_id)
                     ->where('curso_id', $oferta->curso_id)
                     ->where('turno_id', $oferta->turno_id);
@@ -602,7 +738,10 @@ class RegistrationManager extends Component
         $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições capturadas com as regras avançadas.');
     }
 
-    public function desmarcarTodas() { $this->selecionadas = []; }
+    public function desmarcarTodas()
+    {
+        $this->selecionadas = [];
+    }
 
     public function abrirModalLote()
     {
@@ -629,6 +768,14 @@ class RegistrationManager extends Component
     public function alterarStatusLoteRapido($statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
+        
+        $cicloRef = !empty($this->filtroCiclo) ? Ciclo::find($this->filtroCiclo) : null;
+        
+        if ($cicloRef && $cicloRef->bloqueado) {
+            $this->dispatch('erro', msg: 'Este ciclo está bloqueado. As alterações diretas estão suspensas; utilize a opção "Solicitar Alteração".');
+            return;
+        }
+
         if (count($this->selecionadas) === 0) return;
         
         $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
@@ -657,8 +804,8 @@ class RegistrationManager extends Component
 
     private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
-        $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+        $statusNovo = StatusInscricao::find($statusId);
+        $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
         $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
 
         $conflitos = [];
@@ -678,7 +825,6 @@ class RegistrationManager extends Component
 
         if (count($conflitos) > 0) {
             $this->conflitosAntiSpam = $conflitos;
-            
             $this->acaoPendenteStatusId = $statusId;
             $this->acaoPendenteIds = $idsValidos;
             $this->acaoPendenteNomeStatus = $statusNovo->nome;
@@ -723,12 +869,12 @@ class RegistrationManager extends Component
 
     private function executarMudancaStatusFinal($ids, $statusId)
     {
-        $statusNovo = \App\Models\StatusInscricao::find($statusId);
+        $statusNovo = StatusInscricao::find($statusId);
         $qtd = count($ids);
         
         if ($qtd <= 5) {
             $inscricoes = Inscricao::whereIn('id', $ids)->get();
-            $eventoGatilho = 'inscricao.status.' . \Illuminate\Support\Str::slug($statusNovo->nome, '_');
+            $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
 
             foreach ($inscricoes as $insc) {
                 $insc->status_inscricao_id = $statusId;
@@ -743,7 +889,7 @@ class RegistrationManager extends Component
                 $this->showQuickView($ids[0]);
             }
         } else {
-            $tracking = \App\Models\SystemTask::create([
+            $tracking = SystemTask::create([
                 'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
                 'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
             ]);
@@ -784,7 +930,7 @@ class RegistrationManager extends Component
             return;
         }
 
-        $tracking = \App\Models\SystemTask::create([
+        $tracking = SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'exportacao',
@@ -805,27 +951,29 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
-        if (empty($this->filtroCiclo)) {
+        $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        if (empty($cicloIdReferencia)) {
             $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para recalcular a pontuação.');
             return;
         }
 
-        $ciclo = Ciclo::find($this->filtroCiclo);
+        $ciclo = Ciclo::find($cicloIdReferencia);
         $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
 
-        $trackingScore = \App\Models\SystemTask::create([
+        $trackingScore = SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
             'arquivo_nome' => '1/2: Recálculo de Pontuação (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        $trackingRank = \App\Models\SystemTask::create([
+        $trackingRank = SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => '2/2: Geração de Ranking (' . $nomeCiclo . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        \Illuminate\Support\Facades\Bus::chain([
-            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $this->filtroCiclo),
-            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->filtroCiclo)
+        Bus::chain([
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $cicloIdReferencia),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $cicloIdReferencia)
         ])->dispatch();
         
         $this->dispatch('sucesso', msg: "Processamento iniciado para o ciclo selecionado! Acompanhe no Gerenciador de Integrações.");
@@ -836,20 +984,22 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
-        if (empty($this->filtroCiclo)) {
+        $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        if (empty($cicloIdReferencia)) {
             $this->dispatch('erro', msg: 'Por favor, selecione um Ciclo específico no filtro superior para gerar o ranking.');
             return;
         }
 
-        $ciclo = Ciclo::find($this->filtroCiclo);
+        $ciclo = Ciclo::find($cicloIdReferencia);
         $nomeCiclo = $ciclo ? $ciclo->nome : 'Ciclo Filtrado';
 
-        $tracking = \App\Models\SystemTask::create([
+        $tracking = SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
             'arquivo_nome' => 'Geração de Ranking: ' . $nomeCiclo, 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->filtroCiclo))->afterResponse();
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $cicloIdReferencia))->afterResponse();
         
         $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado para o ciclo selecionado. Acompanhe no Gerenciador de Integrações.");
     }
@@ -882,13 +1032,9 @@ class RegistrationManager extends Component
     {
         $this->reset(['filtroNome', 'filtroStatus', 'filtroUnidade', 'filtroTurno', 'filtroCurso', 'filtroEtapa']);
         
-        // Mantém o Ciclo sempre fixado no ativo mais recente, ao invés de resetar para nulo
-        $cicloAtivo = Ciclo::where('status', true)->latest()->first();
-        if ($cicloAtivo) {
-            $this->filtroCiclo = $cicloAtivo->id;
-        } else {
-            $this->filtroCiclo = '';
-        }
+        // Retoma o ciclo padrão (ativo ou último cadastrado)
+        $cicloPadrao = $this->obterCicloPadrao();
+        $this->filtroCiclo = $cicloPadrao ? $cicloPadrao->id : '';
 
         $this->resetPage();
     }
@@ -910,13 +1056,9 @@ class RegistrationManager extends Component
 
     public function selecionarTop($quantidade)
     {
-        // Certifique-se de pegar a mesma base query que render() utiliza
-        $query = Inscricao::query();
+        $query = (clone $this->obterQueryFiltrada());
         
-        // Exemplo simplificado (aplique os seus if's de filtro $this->filtro... aqui)
-        if (!empty($this->filtroCiclo)) $query->where('ciclo_id', $this->filtroCiclo);
-        
-        $ids = $query->orderByRaw('posicao_ranking_geral NULLS LAST')
+        $ids = $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST')
                      ->orderBy('pontuacao_total', 'desc')
                      ->limit($quantidade)
                      ->pluck('id')
@@ -930,6 +1072,12 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
+        $cicloRef = !empty($this->filtroCiclo) ? Ciclo::find($this->filtroCiclo) : null;
+        if ($cicloRef && $cicloRef->bloqueado) {
+            $this->dispatch('erro', msg: 'Este ciclo está bloqueado. Solicite a alteração com justificativa.');
+            return;
+        }
+
         if (count($this->selecionadas) === 0) {
             $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para avançar.');
             return;
@@ -937,7 +1085,7 @@ class RegistrationManager extends Component
         
         $qtd = count($this->selecionadas);
 
-        $tracking = \App\Models\SystemTask::create([
+        $tracking = SystemTask::create([
             'user_id' => auth()->id(),
             'tipo' => 'inscricoes',
             'operacao' => 'atualizacao_lote',
@@ -968,19 +1116,21 @@ class RegistrationManager extends Component
 
         $totalGeral = (clone $queryBase)->count();
 
-        // 2. Busca do total de vagas da OfertaVaga baseada nos filtros
-        $totalVagasQuery = \App\Models\OfertaVaga::query();
-        if (!empty($this->filtroCiclo)) $totalVagasQuery->where('ciclo_id', $this->filtroCiclo);
+        // 2. Busca do total de vagas da OfertaVaga baseada no ciclo filtrado ou ciclo padrão
+        $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        $totalVagasQuery = OfertaVaga::query();
+        if (!empty($cicloIdReferencia)) $totalVagasQuery->where('ciclo_id', $cicloIdReferencia);
         if (!empty($this->filtroUnidade)) $totalVagasQuery->where('unidade_id', $this->filtroUnidade);
         if (!empty($this->filtroTurno)) $totalVagasQuery->where('turno_id', $this->filtroTurno);
         if (!empty($this->filtroCurso)) $totalVagasQuery->where('curso_id', $this->filtroCurso);
         $totalVagas = $totalVagasQuery->sum('vagas') ?? 0;
 
-        // 3. Busca dos status que deverão ser desenhados (relacionados ao ciclo ou gerais se nenhum filtrado)
-        $statusQuery = \App\Models\StatusInscricao::query();
-        if (!empty($this->filtroCiclo)) {
+        // 3. Busca dos status que deverão ser desenhados (relacionados ao ciclo ou gerais)
+        $statusQuery = StatusInscricao::query();
+        if (!empty($cicloIdReferencia)) {
             $statusQuery->join('ciclo_status_inscricao', 'status_inscricoes.id', '=', 'ciclo_status_inscricao.status_inscricao_id')
-                        ->where('ciclo_status_inscricao.ciclo_id', $this->filtroCiclo)
+                        ->where('ciclo_status_inscricao.ciclo_id', $cicloIdReferencia)
                         ->orderBy('ciclo_status_inscricao.ordem')
                         ->select('status_inscricoes.*');
         } else {
@@ -989,12 +1139,12 @@ class RegistrationManager extends Component
         
         $statusesDb = $statusQuery->get();
         if ($statusesDb->isEmpty()) {
-            $statusesDb = \App\Models\StatusInscricao::orderBy('nome')->get();
+            $statusesDb = StatusInscricao::orderBy('nome')->get();
         }
 
         // 4. Monta o Array detalhado para o Componente de Progresso Customizado
         $statusesArray = [];
-        foreach($statusesDb as $st) {
+        foreach ($statusesDb as $st) {
             $total = $statusCounts[$st->nome] ?? 0;
             $percent = $totalVagas > 0 ? round(($total / $totalVagas) * 100, 1) : 0;
             $statusesArray[] = [
@@ -1006,10 +1156,13 @@ class RegistrationManager extends Component
             ];
         }
 
+        $candidatosPorVaga = $totalVagas > 0 ? round($totalGeral / $totalVagas, 1) : 0;
+
         $metricas = [
             'is_progress_view' => true,
             'total_inscritos' => $totalGeral,
             'total_vagas' => $totalVagas,
+            'candidatos_por_vaga' => $candidatosPorVaga,
             'statuses' => $statusesArray
         ];
 
@@ -1027,14 +1180,14 @@ class RegistrationManager extends Component
         $inscricoes = $queryBase->paginate($this->porPagina);
 
         $etapasDb = [];
-        if (!empty($this->filtroCiclo)) {
-            $etapasDb = Etapa::where('ciclo_id', $this->filtroCiclo)->orderBy('numero', 'asc')->pluck('nome', 'numero')->toArray();
+        if (!empty($cicloIdReferencia)) {
+            $etapasDb = Etapa::where('ciclo_id', $cicloIdReferencia)->orderBy('numero', 'asc')->pluck('nome', 'numero')->toArray();
         }
 
         $dropdowns = Cache::remember('filtros_registration_arr', 3600, function() {
             return [
-                'status' => \App\Models\StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
-                'ciclos' => \App\Models\Ciclo::orderBy('id', 'desc')->pluck('nome', 'id')->toArray(),
+                'status' => StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'ciclos' => Ciclo::orderBy('id', 'desc')->pluck('nome', 'id')->toArray(),
                 'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->pluck('nome', 'id')->toArray(),
                 'turnos' => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray(),
                 'cursos' => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->pluck('nome', 'id')->toArray(),
@@ -1042,8 +1195,8 @@ class RegistrationManager extends Component
         });
 
         $statusDbView = [];
-        if (!empty($this->filtroCiclo)) {
-            $cicloAtual = Ciclo::with('statusPipeline')->find($this->filtroCiclo);
+        if (!empty($cicloIdReferencia)) {
+            $cicloAtual = Ciclo::with('statusPipeline')->find($cicloIdReferencia);
             if ($cicloAtual && $cicloAtual->statusPipeline->isNotEmpty()) {
                 $statusDbView = $cicloAtual->statusPipeline->pluck('nome', 'id')->toArray();
             } else {
@@ -1053,11 +1206,15 @@ class RegistrationManager extends Component
             $statusDbView = $dropdowns['status'];
         }
 
+        $cicloAtualModel = !empty($cicloIdReferencia) ? Ciclo::find($cicloIdReferencia) : null;
+        $cicloBloqueado = $cicloAtualModel ? (bool)$cicloAtualModel->bloqueado : false;
+
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'etapasDb' => $etapasDb,
-            'statusInscricoesDb' => $statusDbView, // Array Dinâmico!
+            'cicloBloqueado' => $cicloBloqueado,
+            'statusInscricoesDb' => $statusDbView,
             'ciclosDb' => $dropdowns['ciclos'],
             'unidadesDb' => $dropdowns['unidades'],
             'turnosDb' => $dropdowns['turnos'],
