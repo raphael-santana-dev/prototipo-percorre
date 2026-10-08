@@ -360,6 +360,19 @@ class PeriodManager extends Component
         $this->dispatch('sucesso', msg: 'Ciclo eliminado com sucesso!');
     }
 
+    public function toggleBloqueio(int $id)
+    {
+        abort_if(!feature('ciclo.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+
+        $ciclo = Ciclo::findOrFail($id);
+        $ciclo->bloqueado = !$ciclo->bloqueado;
+        $ciclo->save();
+
+        $msg = $ciclo->bloqueado ? 'Ciclo bloqueado! Inscrições congeladas para alteração direta.' : 'Ciclo desbloqueado com sucesso!';
+        $this->dispatch('sucesso', msg: $msg);
+    }
+
     public function duplicar(int $id)
     {
         abort_if(!feature('ciclo.criar'), 403);
@@ -429,6 +442,7 @@ class PeriodManager extends Component
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
             ['key' => 'meta', 'label' => 'Captação (Meta)', 'sortable' => false, 'class' => 'text-center'], // Nova coluna
             ['key' => 'ocupacao', 'label' => 'Ocupação (Vagas)', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'bloqueado', 'label' => 'Bloqueio', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];

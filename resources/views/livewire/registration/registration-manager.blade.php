@@ -229,7 +229,18 @@
                             <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
                         </div>
                         
-                        <div class="flex flex-wrap items-center justify-end gap-3 w-full lg:w-auto">
+                        @if($cicloBloqueado)
+                            {{-- MODO CICLO BLOQUEADO: APENAS SOLICITAR ALTERAÇÃO --}}
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
+                                    <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
+                                </span>
+                                <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                                    <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
+                                </button>
+                            </div>
+                        @else
+                            {{-- MODO NORMAL: ALTERAÇÕES DIRETAS --}}
                             <div class="flex items-center gap-2 w-full sm:w-auto">
                                 <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
                                     <option value="">Alterar status para...</option>
@@ -251,7 +262,7 @@
                             <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
                                 <i class="ph-bold ph-list-dashes text-lg"></i>
                             </button>
-                        </div>
+                        @endif
                     </div>
                     @endif
                 @endif
@@ -714,6 +725,102 @@
                     <button type="button" wire:click="$set('modalMoverCicloAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button type="button" wire:click="moverCicloLote" class="btn btn--primary btn--medium bg-blue-600 hover:bg-blue-700 border-none">
                         Confirmar Transferência
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL SOLICITAR ALTERAÇÃO (CICLO BLOQUEADO) --}}
+    @if($modalSolicitarAlteracaoAberto)
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="card !w-full !max-w-2xl !p-0 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-amber-50 dark:bg-amber-950/30">
+                    <div>
+                        <h3 class="text-base font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                            <i class="ph-fill ph-lock-key text-xl text-amber-600"></i> Solicitar Alteração em Ciclo Bloqueado
+                        </h3>
+                        <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                            O ciclo atual está bloqueado. As alterações solicitadas serão submetidas para aprovação da coordenação.
+                        </p>
+                    </div>
+                    <button wire:click="$set('modalSolicitarAlteracaoAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-white transition">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">
+                            Novo Status Desejado <span class="text-red-500">*</span>
+                        </label>
+                        <select wire:model="statusDesejadoSolicitacao" class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                            <option value="">Selecione o status de destino...</option>
+                            @foreach($statusInscricoesDb as $id => $nome)
+                                <option value="{{ $id }}">{{ $nome }}</option>
+                            @endforeach
+                        </select>
+                        @error('statusDesejadoSolicitacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">
+                            Justificativa da Alteração <span class="text-red-500">*</span>
+                        </label>
+                        <textarea wire:model="justificativaSolicitacao" rows="3" placeholder="Explique o motivo da alteração das inscrições neste ciclo bloqueado..." class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-white"></textarea>
+                        @error('justificativaSolicitacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                Inscrições Selecionadas ({{ count($inscricoesParaSolicitar) }})
+                            </label>
+                            <span class="text-[11px] text-gray-400">Pode remover itens individuais abaixo se necessário</span>
+                        </div>
+                        
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
+                            <table class="w-full text-left text-xs whitespace-nowrap">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 border-b border-gray-200 dark:border-gray-800">
+                                    <tr>
+                                        <th class="p-2.5">Candidato</th>
+                                        <th class="p-2.5">Curso / Unidade</th>
+                                        <th class="p-2.5 text-right">Remover</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @php
+                                        $inscricoesModal = \App\Models\Inscricao::with(['curso', 'unidade'])->whereIn('id', $inscricoesParaSolicitar)->get();
+                                    @endphp
+                                    @foreach($inscricoesModal as $item)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40" wire:key="solicitar-item-{{ $item->id }}">
+                                            <td class="p-2.5">
+                                                <div class="font-bold text-gray-900 dark:text-white">{{ $item->nome }}</div>
+                                                <div class="text-[10px] text-gray-400">{{ $item->cpf }}</div>
+                                            </td>
+                                            <td class="p-2.5">
+                                                <div class="text-gray-700 dark:text-gray-300">{{ $item->curso->nome ?? '-' }}</div>
+                                                <div class="text-[10px] text-gray-400">{{ $item->unidade->nome ?? '-' }}</div>
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <button type="button" wire:click="removerDaSolicitacao({{ $item->id }})" class="text-red-500 hover:text-red-700 p-1" title="Remover desta solicitação">
+                                                    <i class="ph-bold ph-trash text-sm"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+                    <button type="button" wire:click="$set('modalSolicitarAlteracaoAberto', false)" class="btn btn--secondary btn--medium">
+                        Cancelar
+                    </button>
+                    <button type="button" wire:click="enviarSolicitacaoAlteracao" class="btn btn--primary btn--medium bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Submeter Solicitação
                     </button>
                 </div>
             </div>

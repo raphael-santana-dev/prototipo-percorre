@@ -44,6 +44,11 @@ class RegistrationManager extends Component
     public bool $modalLoteAberto = false;
     public $novoStatusId = '';
 
+    public bool $modalSolicitarAlteracaoAberto = false;
+    public string $justificativaSolicitacao = '';
+    public string $statusDesejadoSolicitacao = '';
+    public array $inscricoesParaSolicitar = [];
+
     public bool $modalSelecaoAvancadaAberto = false;
     public int $selecaoQtd = 40;
     public string $selecaoBase = 'pontuacao';
@@ -539,6 +544,13 @@ class RegistrationManager extends Component
     public function alterarStatusQuickView($id, $statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
+
+        $insc = Inscricao::find($id);
+        if ($insc && $insc->ciclo && $insc->ciclo->bloqueado) {
+            $this->dispatch('erro', msg: 'O ciclo desta inscrição está bloqueado para edições diretas.');
+            return;
+        }
+
         $inscricao = Inscricao::with('curso')->find($id);
         if ($inscricao && $inscricao->status_inscricao_id == $statusId) {
             $this->dispatch('erro', msg: 'O candidato já está neste status!');
@@ -549,6 +561,70 @@ class RegistrationManager extends Component
         if ($inscricoesProcessar->isEmpty()) return;
 
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, false);
+    }
+
+    public function abrirModalSolicitacao()
+    {
+        if (count($this->selecionadas) === 0) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para solicitar alteração.');
+            return;
+        }
+
+        $this->inscricoesParaSolicitar = $this->selecionadas;
+        $this->justificativaSolicitacao = '';
+        $this->statusDesejadoSolicitacao = '';
+        $this->modalSolicitarAlteracaoAberto = true;
+    }
+
+    public function removerDaSolicitacao($id)
+    {
+        $this->inscricoesParaSolicitar = array_values(array_diff($this->inscricoesParaSolicitar, [(string)$id, (int)$id]));
+        if (count($this->inscricoesParaSolicitar) === 0) {
+            $this->modalSolicitarAlteracaoAberto = false;
+        }
+    }
+
+    public function enviarSolicitacaoAlteracao()
+    {
+        $this->validate([
+            'justificativaSolicitacao' => 'required|string|min:10',
+            'statusDesejadoSolicitacao' => 'required|exists:status_inscricoes,id',
+            'inscricoesParaSolicitar' => 'required|array|min:1',
+        ], [
+            'justificativaSolicitacao.required' => 'A justificativa é obrigatória.',
+            'justificativaSolicitacao.min' => 'A justificativa deve conter pelo menos 10 caracteres.',
+            'statusDesejadoSolicitacao.required' => 'Selecione o status desejado para as inscrições.',
+        ]);
+
+        $statusNovo = StatusInscricao::find($this->statusDesejadoSolicitacao);
+        $qtd = count($this->inscricoesParaSolicitar);
+
+        Solicitacao::create([
+            'tema' => 'alteracao_status_ciclo_bloqueado',
+            'solicitante_type' => User::class,
+            'solicitante_id' => auth()->id(),
+            'justificativa' => $this->justificativaSolicitacao,
+            'status' => 'pendente',
+            'payload' => [
+                'inscricoes_ids' => $this->inscricoesParaSolicitar,
+                'novo_status_id' => (int) $this->statusDesejadoSolicitacao,
+                'novo_status_nome' => $statusNovo?->nome,
+                'ciclo_id' => $this->filtroCiclo,
+                'quantidade' => $qtd,
+            ]
+        ]);
+
+        $emailSistema = ConfiguracaoGeral::where('chave', 'email_sistema')->value('valor') ?? 'admin@percorre.com';
+        \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.solicitacao_alteracao', $emailSistema, [
+            'nome_solicitante' => auth()->user()->name,
+            'quantidade' => $qtd,
+            'status_desejado' => $statusNovo?->nome,
+            'justificativa' => $this->justificativaSolicitacao,
+        ]);
+
+        $this->modalSolicitarAlteracaoAberto = false;
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: "Solicitação de alteração para {$qtd} inscrições enviada para aprovação!");
     }
 
     public function selecionarQuantidade($quantidade)
@@ -692,6 +768,14 @@ class RegistrationManager extends Component
     public function alterarStatusLoteRapido($statusId)
     {
         abort_if(!feature('inscricao.editar'), 403);
+        
+        $cicloRef = !empty($this->filtroCiclo) ? Ciclo::find($this->filtroCiclo) : null;
+        
+        if ($cicloRef && $cicloRef->bloqueado) {
+            $this->dispatch('erro', msg: 'Este ciclo está bloqueado. As alterações diretas estão suspensas; utilize a opção "Solicitar Alteração".');
+            return;
+        }
+
         if (count($this->selecionadas) === 0) return;
         
         $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
@@ -988,6 +1072,12 @@ class RegistrationManager extends Component
         abort_if(!feature('inscricao.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
+        $cicloRef = !empty($this->filtroCiclo) ? Ciclo::find($this->filtroCiclo) : null;
+        if ($cicloRef && $cicloRef->bloqueado) {
+            $this->dispatch('erro', msg: 'Este ciclo está bloqueado. Solicite a alteração com justificativa.');
+            return;
+        }
+
         if (count($this->selecionadas) === 0) {
             $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição para avançar.');
             return;
@@ -1116,10 +1206,14 @@ class RegistrationManager extends Component
             $statusDbView = $dropdowns['status'];
         }
 
+        $cicloAtualModel = !empty($cicloIdReferencia) ? Ciclo::find($cicloIdReferencia) : null;
+        $cicloBloqueado = $cicloAtualModel ? (bool)$cicloAtualModel->bloqueado : false;
+
         return view('livewire.registration.registration-manager', [
             'registros' => $inscricoes,
             'metricas' => $metricas,
             'etapasDb' => $etapasDb,
+            'cicloBloqueado' => $cicloBloqueado,
             'statusInscricoesDb' => $statusDbView,
             'ciclosDb' => $dropdowns['ciclos'],
             'unidadesDb' => $dropdowns['unidades'],

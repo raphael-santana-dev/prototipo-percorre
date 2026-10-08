@@ -233,6 +233,19 @@
                     </div>
                 </td>
                 
+                <td class="px-4 py-1.5 whitespace-nowrap text-center">
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded-lg border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Ciclo Bloqueado (Clique para desbloquear)' : 'Ciclo Desbloqueado (Clique para bloquear)' }}">
+                            <i class="text-base ph-bold {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
+                        </button>
+                    @else
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $ciclo->bloqueado ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500' }}">
+                            <i class="ph-bold {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
+                            {{ $ciclo->bloqueado ? 'Bloqueado' : 'Aberto' }}
+                        </span>
+                    @endif
+                </td>
+
                 <td class="px-4 py-1.5 whitespace-nowrap">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <div class="flex items-center gap-2">
