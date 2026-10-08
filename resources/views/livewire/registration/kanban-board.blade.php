@@ -9,7 +9,7 @@
             {{-- LINHA SUPERIOR: Título, Busca e Ordenação --}}
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full gap-4">
                 
-                {{-- Esquerda: Título com Distintivo de Ciclo Ativo / Último Registado --}}
+                {{-- Esquerda: Título com Distintivo de Ciclo Ativo / Último Registrado --}}
                 <div class="flex items-center gap-3 w-full lg:w-auto shrink-0 flex-wrap">
                     <h2 class="t-heading-small text-gray-900 dark:text-white flex items-center gap-2 whitespace-nowrap">
                         <i class="ph-fill ph-kanban text-purpura-500"></i> Fluxo: {{ $ciclo->nome ?? 'Nenhum Ciclo Encontrado' }}
@@ -58,6 +58,27 @@
                  x-data="{ visible: [], allFilters: ['curso', 'unidade', 'data'], init() { if ($wire.filtroCurso) this.visible.push('curso'); if ($wire.filtroUnidade) this.visible.push('unidade'); if ($wire.filtroDataInicio || $wire.filtroDataFim) this.visible.push('data'); }, add(f) { if(!this.visible.includes(f)) this.visible.push(f); }, remove(f) { if (f === 'curso') $wire.set('filtroCurso', ''); if (f === 'unidade') $wire.set('filtroUnidade', ''); if (f === 'data') { $wire.set('filtroDataInicio', ''); $wire.set('filtroDataFim', ''); } this.visible = this.visible.filter(i => i !== f); }, get canAddMore() { return this.visible.length < this.allFilters.length; } }">
                 
                 <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    {{-- CHIP FIXO: CICLO --}}
+                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
+                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
+                        <select wire:model.live="cicloId" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[170px] truncate">
+                            @foreach($ciclosDb as $cId => $cNome) 
+                                <option value="{{ $cId }}">{{ $cNome }}</option> 
+                            @endforeach
+                        </select>
+                        @if($ciclo)
+                            @if($ciclo->status && $ciclo->data_inicio <= now() && $ciclo->data_fim >= now())
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
+                                </span>
+                            @else
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                    Histórico
+                                </span>
+                            @endif
+                        @endif
+                    </div>
+
                     {{-- Chip Dinâmico: Curso --}}
                     <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
@@ -164,7 +185,10 @@
              x-data="{
                  initSortable() {
                      document.querySelectorAll('.kanban-coluna').forEach(el => {
-                         new Sortable(el, {
+                         if (el._sortable) {
+                             el._sortable.destroy();
+                         }
+                         el._sortable = new Sortable(el, {
                              group: 'crm-pipeline', 
                              animation: 150,
                              ghostClass: 'opacity-50',
@@ -178,7 +202,14 @@
                          });
                      });
                  }
-             }" x-init="initSortable()">
+             }" 
+             x-init="
+                 initSortable();
+                 document.addEventListener('livewire:navigated', () => initSortable());
+                 if (window.Livewire) {
+                     Livewire.hook('morph.updated', () => { initSortable(); });
+                 }
+             ">
              
             <div class="flex h-full gap-4 items-start w-max px-1">
                 @if($ciclo)
@@ -246,7 +277,7 @@
                                             <div class="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 dark:border-gray-700" onmousedown="event.stopPropagation()">
                                                 
                                                 <span class="text-[9px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide">
-                                                    <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at->diffForHumans(null, true, true) }}
+                                                    <i class="ph-fill ph-clock text-gray-300"></i> {{ $inscricao->updated_at ? $inscricao->updated_at->diffForHumans(null, true, true) : 'Recente' }}
                                                 </span>
                                                 
                                                 <div class="flex items-center gap-0.5">
