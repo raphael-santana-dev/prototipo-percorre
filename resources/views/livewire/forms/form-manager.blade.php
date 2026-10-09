@@ -84,9 +84,6 @@
                             <i class="text-lg ph ph-eye"></i>
                         </a>
 
-                        <button wire:click="duplicar({{ $form->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Duplicar"><i class="text-lg ph ph-copy"></i></button>
-
-
                         @if($form->tipo === 'aprendizagem')
                             <a href="{{ route('aprendizagem.index') }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Gerenciar no Ciclo de Aprendizagem">
                                 <i class="text-lg ph ph-tree-structure"></i>
@@ -161,9 +158,8 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            
                             <a href="{{ route('formularios.show', $form->id) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Acessar Detalhes"><i class="text-lg ph ph-eye"></i></a>
-
+                            
                             @if($form->tipo === 'aprendizagem')
                                 <a href="{{ route('aprendizagem.index') }}" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Gerenciar no Ciclo"><i class="text-lg ph ph-tree-structure"></i></a>
                             @else
