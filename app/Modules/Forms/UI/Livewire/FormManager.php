@@ -77,6 +77,34 @@ class FormManager extends Component
         $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe no Gerenciador (I/O).');
     }
 
+    // TODO
+    
+    public function duplicar(int $id)
+    {
+        abort_if(!feature('formulario.criar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
+
+        $formOriginal = Formulario::with(['campos'])->findOrFail($id);
+
+        // Clona os dados do formulário (incluindo JSONs de permissão e IDs de unidade/curso)
+        $novoForm = $formOriginal->replicate();
+        $novoForm->titulo = $formOriginal->titulo . ' (Cópia)';
+        $novoForm->slug = Str::slug($novoForm->titulo) . '-' . Str::random(5);
+        $novoForm->status = false;
+        $novoForm->save();
+
+        // Clona os campos dinâmicos vinculados ao formulário
+        foreach ($formOriginal->campos as $campo) {
+            $novoCampo = $campo->replicate();
+            $novoCampo->formulario_id = $novoForm->id;
+            $novoCampo->ciclo_id = null;
+            $novoCampo->save();
+        }
+
+        $this->dispatch('sucesso', msg: 'Formulário e seus campos foram duplicados com sucesso!');
+    }
+
+
     public function abrirModal($id = null)
     {
         $this->reset(['formId', 'titulo', 'descricao', 'status', 'data_inicio', 'data_fim', 'acesso_livre', 'apenas_estudantes', 'exigir_email', 'roles_permitidas', 'users_permitidos', 'unidades_permitidas', 'cursos_permitidos', 'turnos_permitidas']);
