@@ -5,6 +5,23 @@
         <p class="mt-2 text-slate-600 dark:text-slate-400">Bem-vindo de volta, {{ explode(' ', $student->name)[0] }}! Acompanhe o seu progresso abaixo.</p>
     </div>
 
+    @if($documentosPendentes)
+        <div class="mb-8 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800/50 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center shrink-0">
+                    <i class="ph-fill ph-warning-circle text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-orange-900 dark:text-orange-300">Ação Necessária: Envio de Documentos</h2>
+                    <p class="text-sm text-orange-700 dark:text-orange-400 mt-0.5">A sua inscrição requer o envio de documentação para prosseguir. Envie os arquivos de forma segura pelo portal.</p>
+                </div>
+            </div>
+            <a href="{{ route('student.student.documentos') }}" wire:navigate class="shrink-0 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-2">
+                <i class="ph-bold ph-folder-open"></i> Enviar Documentação
+            </a>
+        </div>
+    @endif
+
     @if(count($formulariosPendentes) > 0)
         <div class="mb-8">
             <h2 class="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">

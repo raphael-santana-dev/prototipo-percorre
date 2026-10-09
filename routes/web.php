@@ -166,5 +166,6 @@ Route::prefix('empresa')->name('company.')->middleware('auth:company')->group(fu
 Route::prefix('alunos')->name('student.')->middleware('auth:student')->group(function () {
     Route::get('/solicitacoes', \App\Modules\Student\UI\Livewire\MinhasSolicitacoes::class)->name('solicitacoes');
     Route::get('/dashboard', StudentDashboard::class)->name('dashboard');
+    Route::get('/meus-documentos', \App\Modules\Student\UI\Livewire\DocumentManager::class)->name('student.documentos');
     Route::get('/meu-perfil', \App\Modules\Student\UI\Livewire\ProfileManager::class)->name('profile');
 });

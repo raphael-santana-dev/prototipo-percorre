@@ -118,11 +118,21 @@ class Dashboard extends Component
             ->latest()
             ->get();
 
+        $documentosPendentes = false;
+
+        if ($inscricaoAtual && $inscricaoAtual->etapa_atual < 2) {
+            $temDocumentos = \App\Modules\Matricula\Domain\Models\DocumentoExigido::where('ciclo_id', $inscricaoAtual->ciclo_id)->exists();
+            if ($temDocumentos) {
+                $documentosPendentes = true;
+            }
+        }
+
         return view('livewire.student.dashboard.dashboard', [
             'student' => $student,
             'inscricao' => $inscricaoAtual,
             'historicoInscricoes' => $historicoInscricoes,
             'formulariosPendentes' => $formulariosPendentes,
+            'documentosPendentes' => $documentosPendentes,
             'minhasSolicitacoes' => $minhasSolicitacoes,
             'unidadesDb' => Unidade::whereIn('status', ['Ativa', '1', true])->get(),
             'cursosDb' => Curso::whereIn('status', ['Ativo', '1', true])->get(),

@@ -108,6 +108,7 @@ class AppServiceProvider extends ServiceProvider
         
         Livewire::component('forms.response-details', \App\Modules\Forms\UI\Livewire\ResponseDetails::class);
         Livewire::component('student.minhas-solicitacoes', \App\Modules\Student\UI\Livewire\MinhasSolicitacoes::class);
+        Livewire::component('student.documentos', \App\Modules\Student\UI\Livewire\DocumentManager::class);
         Livewire::component('admin.notification-badge', \App\Modules\Admin\UI\Livewire\NotificationBadge::class);
 
         Livewire::component('forms.form-manager', \App\Modules\Forms\UI\Livewire\FormManager::class);

@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
             InscricaoRecebidaTemplateSeeder::class,
             InscricoesSeeder::class,
             ConteudoSeeder::class,
-            CentroCustosSeeder::class,
+            CentroCustoSeeder::class,
             NaturezaSeeder::class,
             TarefasAclSeeder::class,
         ]);

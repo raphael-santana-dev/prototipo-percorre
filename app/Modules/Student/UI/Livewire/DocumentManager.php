@@ -6,8 +6,6 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Computed;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Livewire\WithFileUploads;
 use App\Models\Inscricao;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
@@ -16,17 +14,10 @@ use App\Modules\Matricula\Services\AiValidationService;
 use Illuminate\Support\Facades\Storage;
 
 #[Layout('components.layouts.student-app')]
-#[Title('Meu Perfil - Portal do Estudante')]
-class ProfileManager extends Component
+#[Title('Envio de Documentos - Portal do Estudante')]
+class DocumentManager extends Component
 {
     use WithFileUploads;
-
-    public string $name = '';
-    public string $email = '';
-
-    public string $current_password = '';
-    public string $new_password = '';
-    public string $new_password_confirmation = '';
 
     public array $uploads = [];
     public array $uploadsLote = [];
@@ -35,11 +26,6 @@ class ProfileManager extends Component
 
     public function mount()
     {
-        $student = auth('student')->user();
-        
-        $this->name = $student->name;
-        $this->email = $student->email;
-
         $this->carregarStatusArquivos();
     }
 
@@ -72,7 +58,7 @@ class ProfileManager extends Component
             ->get()
             ->keyBy('documento_exigido_id');
 
-        $docsExigidos = DocumentoExigido::where('ciclo_id', $inscricao->ciclo_id)->get();
+        $docsExigidos = $this->documentosExigidos;
 
         foreach ($docsExigidos as $doc) {
             if ($documentosSalvos->has($doc->id)) {
@@ -100,7 +86,7 @@ class ProfileManager extends Component
         $this->validate([
             "uploads.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp|max:10240'
         ], [
-            "uploads.{$documentoExigidoId}.mimes" => 'Apenas ficheiros JPEG, PNG e WebP são aceitos.',
+            "uploads.{$documentoExigidoId}.mimes" => 'Apenas arquivos JPEG, PNG e WebP são aceitos.',
             "uploads.{$documentoExigidoId}.max" => 'O tamanho máximo do documento é de 10MB.'
         ]);
 
@@ -204,7 +190,7 @@ class ProfileManager extends Component
         $this->uploadsLote = [];
         $this->carregarStatusArquivos();
         
-        $this->dispatch('lote-concluido', msg: "Processamento concluído: {$sucessos} documento(s) válido(s) e alocado(s). {$falhas} ignorado(s) ou inválido(s).");
+        $this->dispatch('lote-concluido', msg: "Processamento concluído: {$sucessos} válidos e alocados. {$falhas} inválidos.");
     }
 
     public function finalizarMatricula()
@@ -223,57 +209,12 @@ class ProfileManager extends Component
             $this->inscricaoAtual->update(['etapa_atual' => 2]);
         }
         
-        $this->documentacaoConcluida = true;
-        $this->dispatch('sucesso', msg: 'A sua documentação foi enviada com sucesso para a secretaria!');
-    }
-
-    public function updateProfile()
-    {
-        abort_if(!feature('estudante.perfil'), 403, 'A edição de dados está temporariamente suspensa.');
-        $student = auth('student')->user();
-
-        $this->validate([
-            'name' => ['required', 'string', 'min:3', 'max:255'],
-            'email' => ['required', 'email', Rule::unique('students', 'email')->ignore($student->id)],
-        ]);
-
-        $student->update([
-            'name' => $this->name,
-            'email' => strtolower($this->email),
-        ]);
-
-        $this->dispatch('profile-updated');
-        $this->dispatch('sucesso', msg: 'Os seus dados foram atualizados com sucesso!');
-    }
-
-    public function updatePassword()
-    {
-        abort_if(!feature('estudante.perfil'), 403, 'A alteração de senha está temporariamente suspensa.');
-        
-        $this->validate([
-            'current_password' => ['required', 'string'],
-            'new_password' => ['required', 'string', 'min:6', 'confirmed'],
-        ], [
-            'new_password.confirmed' => 'A confirmação de nova senha não confere.',
-        ]);
-
-        $student = auth('student')->user();
-
-        if (!Hash::check($this->current_password, $student->password)) {
-            $this->addError('current_password', 'A senha atual está incorreta.');
-            return;
-        }
-
-        $student->update([
-            'password' => Hash::make($this->new_password)
-        ]);
-
-        $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
-        $this->dispatch('sucesso', msg: 'Senha alterada com segurança!');
+        session()->flash('sucesso', 'Sua documentação foi enviada com sucesso para a secretaria!');
+        return redirect()->route('student.dashboard');
     }
 
     public function render()
     {
-        return view('livewire.student.profile-manager');
+        return view('livewire.student.document-manager');
     }
 }
