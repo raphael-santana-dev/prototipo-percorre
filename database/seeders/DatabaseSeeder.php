@@ -36,6 +36,9 @@ class DatabaseSeeder extends Seeder
             InscricaoRecebidaTemplateSeeder::class,
             InscricoesSeeder::class,
             ConteudoSeeder::class,
+            CentroCustosSeeder::class,
+            NaturezaSeeder::class,
+            TarefasAclSeeder::class,
         ]);
     }
 }
