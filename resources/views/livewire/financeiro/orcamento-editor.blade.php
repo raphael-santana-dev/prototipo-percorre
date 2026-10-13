@@ -1,5 +1,5 @@
 <div class="font-sans flex flex-col transition-all duration-300 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden" 
-     x-data="{ timelineAberta: false, modoExpandido: false, navbarOculta: false }" 
+     x-data="{ false, modoExpandido: false, navbarOculta: false }" 
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
      @item-adicionado.window="setTimeout(() => { if($refs.tableContainer) $refs.tableContainer.scrollTo({top: $refs.tableContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
      @comentario-adicionado.window="setTimeout(() => { if($refs.chatContainer) $refs.chatContainer.scrollTo({top: $refs.chatContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
@@ -57,10 +57,6 @@
                 </button>
             </div>
 
-            <button @click="timelineAberta = !timelineAberta" class="btn btn--secondary btn--small !text-gray-700 !border-gray-300 hover:!bg-gray-100 shadow-sm" :class="timelineAberta ? 'bg-gray-200' : ''">
-                <i class="ph-bold ph-clock-counter-clockwise"></i> <span class="hidden sm:inline">Histórico</span>
-            </button>
-
             @if(!$isLockedGlobal)
                 <button wire:click="salvarOrcamento" class="btn btn--secondary btn--small !text-emerald-700 !border-emerald-300 hover:!bg-emerald-50">
                     <i class="ph-bold ph-floppy-disk"></i> Salvar
@@ -85,7 +81,7 @@
     {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR --}}
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50">
         
-        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative" :class="timelineAberta ? 'pr-[340px]' : ''">
+        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative">
             
             {{-- BARRA DE AÇÕES DA PLANILHA (Excluir Lote e Comentários) --}}
             <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center justify-between shrink-0 z-10 relative" x-data="{ temSelecao: @entangle('itensSelecionados').live }">
@@ -243,74 +239,6 @@
                 </table>
             </div>
         </div>
-
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E SOLICITAÇÕES --}}
-        <div x-show="timelineAberta" x-transition x-cloak class="w-[340px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[70] transition-transform">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
-                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition" title="Fechar Histórico"><i class="ph-bold ph-x text-lg"></i></button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
-                <div class="absolute left-7 top-4 bottom-4 w-px bg-gray-200"></div>
-                @php
-                    $todasAvaliacoes = collect();
-                    foreach($itensOrcamento as $itemLinha) {
-                        if(!empty($itemLinha['avaliacoes'])) {
-                            foreach($itemLinha['avaliacoes'] as $aval) {
-                                $avalArray = is_array($aval) ? $aval : $aval->toArray();
-                                $avalArray['natureza_codigo'] = $itemLinha['natureza_codigo'];
-                                $avalArray['natureza_descricao'] = $itemLinha['natureza_nome'];
-                                $todasAvaliacoes->push($avalArray);
-                            }
-                        }
-                    }
-                    if(!empty($orcamento->logsGerais)) {
-                        foreach($orcamento->logsGerais as $aval) {
-                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
-                            $avalArray['natureza_codigo'] = 'GERAL';
-                            $avalArray['natureza_descricao'] = 'Ação Global do Centro de Custo';
-                            $todasAvaliacoes->push($avalArray);
-                        }
-                    }
-                    $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
-                @endphp
-
-                @forelse($todasAvaliacoes as $aval)
-                    @php 
-                        $cor = match($aval['status_aplicado']) { 
-                            'Aprovado', 'Reabertura Aprovada' => 'bg-emerald-500', 
-                            'Aprovado com ressalvas', 'Pedido de Reabertura' => 'bg-yellow-500', 
-                            'Reprovado', 'Reabertura Negada' => 'bg-red-500', 
-                            'Edição Pós-Aprovação' => 'bg-blue-500',
-                            default => 'bg-gray-500' 
-                        }; 
-                    @endphp
-                    <div class="relative pl-7 mb-6">
-                        <div class="absolute w-3 h-3 rounded-full {{ $cor }} border-2 border-white left-[-6px] top-1 shadow-sm"></div>
-                        <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Usuário' }}</span>
-                                <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m/Y H:i') }}</span>
-                            </div>
-                            <div class="flex flex-col gap-0.5 mb-2">
-                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
-                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] }}">{{ $aval['natureza_codigo'] }} {{ $aval['natureza_codigo'] !== 'GERAL' ? '- ' . $aval['natureza_descricao'] : '' }}</span>
-                            </div>
-                            @if(!empty($aval['comentario']))
-                                <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
-                            @endif
-                        </div>
-                    </div>
-                @empty
-                    <div class="text-center py-10 relative z-10">
-                        <i class="ph-fill ph-chat-slash text-4xl text-gray-300 mb-2"></i>
-                        <p class="text-xs font-bold text-gray-400 uppercase">Nenhum log registado.</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
-
     </div>
 
     {{-- MODAL CADASTRAR NOVA NATUREZA --}}

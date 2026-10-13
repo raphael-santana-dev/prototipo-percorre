@@ -1,6 +1,7 @@
 <div class="font-sans flex flex-col transition-all duration-300 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden" 
-     x-data="{ timelineAberta: true, modoExpandido: false, navbarOculta: false }" 
+     x-data="{ modoExpandido: false, navbarOculta: false }" 
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
+     @comentario-adicionado.window="setTimeout(() => { if($refs.chatContainer) $refs.chatContainer.scrollTo({top: $refs.chatContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
     
     <style>
@@ -48,14 +49,10 @@
                     <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
                 </button>
             </div>
-
-            <button @click="timelineAberta = !timelineAberta" class="btn btn--secondary btn--small !text-gray-700 !border-gray-300 hover:!bg-gray-100 shadow-sm" :class="timelineAberta ? 'bg-gray-200' : ''">
-                <i class="ph-bold ph-sidebar-simple"></i> <span class="hidden sm:inline">Painel de Decisão</span>
-            </button>
         </div>
     </div>
 
-    {{-- ALERTA DE PEDIDO DE REABERTURA (SÓ APARECE SE REABERTURA FOR SOLICITADA) --}}
+    {{-- ALERTA DE PEDIDO DE REABERTURA --}}
     @if($orcamento->reabertura_solicitada)
         <div class="bg-orange-50 border-b border-orange-200 p-4 flex justify-between items-center z-[55] relative shrink-0">
             <div>
@@ -66,24 +63,53 @@
         </div>
     @endif
 
-    {{-- ÁREA DINÂMICA: PLANILHA + SIDEBAR --}}
+    {{-- ÁREA DINÂMICA: PLANILHA --}}
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50">
         
-        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative bg-white" :class="timelineAberta ? 'pr-[380px]' : ''">
+        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative bg-white">
             
-            <div class="p-3 bg-white border-b border-gray-200 shadow-sm flex items-center gap-3 shrink-0 z-10 relative">
-                <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa do Gestor:</label>
-                <div class="w-full text-sm bg-gray-50 px-3 py-1.5 text-gray-600 italic border border-gray-200 rounded-md">
-                    {{ $orcamento->descricao_despesa ?: 'Nenhuma observação geral enviada pelo Gestor.' }}
+            {{-- BARRA DE AÇÕES DA PLANILHA (Lote e Chat) --}}
+            <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center justify-between shrink-0 z-10 relative" x-data="{ temSelecao: @entangle('itensSelecionados').live }">
+                <div class="flex items-center gap-3 w-full max-w-2xl">
+                    <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa Global:</label>
+                    <div class="w-full text-sm bg-gray-50 px-3 py-1.5 text-gray-600 italic border border-gray-200 rounded-md truncate" title="{{ $orcamento->descricao_despesa }}">
+                        {{ $orcamento->descricao_despesa ?: 'Nenhuma observação enviada pelo Gestor.' }}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    @php
+                        $totalPendentes = $orcamento->itens->whereIn('status', ['Criado', 'Corrigido'])->count();
+                        $qtdSelecionados = count($itensSelecionados);
+                    @endphp
+                    @if($totalPendentes > 0 && !$orcamento->reabertura_solicitada)
+                        <template x-if="temSelecao && Object.keys(temSelecao).length > 0">
+                            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 mr-2">
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado')" class="px-2 py-1.5 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[10px] font-bold hover:bg-emerald-50 transition">Aprovar Sel. (<span x-text="Object.keys(temSelecao).length"></span>)</button>
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Reprovado')" class="px-2 py-1.5 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[10px] font-bold hover:bg-red-50 transition">Reprovar Sel. (<span x-text="Object.keys(temSelecao).length"></span>)</button>
+                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado com ressalvas')" class="px-2 py-1.5 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded text-[10px] font-bold hover:bg-yellow-50 transition">Ressalvas Sel.</button>
+                            </div>
+                        </template>
+                        <template x-if="!temSelecao || Object.keys(temSelecao).length === 0">
+                            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 mr-2">
+                                <button wire:click="abrirModalAvaliacaoRestantes('Aprovado')" class="px-2 py-1.5 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[10px] font-bold hover:bg-emerald-50 transition">Aprovar Tudo ({{ $totalPendentes }})</button>
+                                <button wire:click="abrirModalAvaliacaoRestantes('Reprovado')" class="px-2 py-1.5 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[10px] font-bold hover:bg-red-50 transition">Reprovar Tudo ({{ $totalPendentes }})</button>
+                            </div>
+                        </template>
+                    @endif
+
+                    <button @click="$wire.set('drawerComentariosAberto', true)" class="btn btn--secondary btn--small !text-blue-600 !border-blue-200 hover:!bg-blue-50 shadow-sm flex items-center gap-2">
+                        <i class="ph-bold ph-chats-teardrop text-lg"></i> Histórico / Chat
+                    </button>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-auto custom-scrollbar relative">
+            <div x-ref="tableContainer" class="flex-1 overflow-auto custom-scrollbar relative">
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
-                            <th class="w-[80px] min-w-[80px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">
-                                <div class="flex items-center justify-center gap-2">
+                            <th class="w-[80px] min-w-[80px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                <div class="flex items-center gap-2">
                                     <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer" title="Selecionar todos os pendentes">
                                     <span>ID</span>
                                 </div>
@@ -231,113 +257,125 @@
                 </table>
             </div>
         </div>
-
-        {{-- BARRA LATERAL: TIMELINE DE APROVAÇÕES E AÇÕES EM LOTE --}}
-        <div x-show="timelineAberta" x-transition x-cloak class="w-[380px] bg-white border-l border-gray-300 shadow-[rgba(0,0,0,0.15)_0px_0px_20px] flex flex-col absolute right-0 top-0 bottom-0 z-[60] transition-transform">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Histórico / Logs</h3>
-                <button @click="timelineAberta = false" class="text-gray-400 hover:text-gray-700 transition" title="Fechar Painel"><i class="ph-bold ph-x text-lg"></i></button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
-                <div class="absolute left-7 top-4 bottom-4 w-px bg-gray-200"></div>
-                @php
-                    $todasAvaliacoes = collect();
-                    foreach($orcamento->itens as $itemLinha) {
-                        foreach($itemLinha->avaliacoes as $aval) {
-                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
-                            $avalArray['natureza_codigo'] = $itemLinha->natureza_codigo;
-                            $avalArray['natureza_descricao'] = $itemLinha->descricao;
-                            $todasAvaliacoes->push($avalArray);
-                        }
-                    }
-                    if(!empty($orcamento->logsGerais)) {
-                        foreach($orcamento->logsGerais as $aval) {
-                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
-                            $avalArray['natureza_codigo'] = 'GERAL';
-                            $avalArray['natureza_descricao'] = 'Ação Global do Centro de Custo';
-                            $todasAvaliacoes->push($avalArray);
-                        }
-                    }
-                    $todasAvaliacoes = $todasAvaliacoes->sortByDesc('created_at');
-                @endphp
-
-                @forelse($todasAvaliacoes as $aval)
-                    @php 
-                        $cor = match($aval['status_aplicado']) { 
-                            'Aprovado', 'Reabertura Aprovada' => 'bg-emerald-500', 
-                            'Aprovado com ressalvas', 'Pedido de Reabertura' => 'bg-yellow-500', 
-                            'Reprovado', 'Reabertura Negada' => 'bg-red-500', 
-                            'Edição Pós-Aprovação' => 'bg-blue-500',
-                            default => 'bg-gray-500' 
-                        }; 
-                    @endphp
-                    <div class="relative pl-8 mb-6">
-                        <div class="absolute w-3 h-3 rounded-full {{ $cor }} border-2 border-white left-[-6px] top-1 shadow-sm"></div>
-                        <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="text-xs font-black text-gray-900">{{ $aval['user_nome'] ?? 'Usuário' }}</span>
-                                <span class="text-[9px] font-bold text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'])->format('d/m/Y H:i') }}</span>
-                            </div>
-                            <div class="flex flex-col gap-0.5 mb-2">
-                                <span class="text-[10px] font-bold uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : (in_array($aval['status_aplicado'], ['Edição Pós-Aprovação']) ? 'text-blue-600' : 'text-emerald-600') }}">{{ $aval['status_aplicado'] }}</span>
-                                <span class="text-[9px] text-gray-500 font-medium leading-tight" title="{{ $aval['natureza_descricao'] ?? '' }}">{{ $aval['natureza_codigo'] ?? '' }} {{ !empty($aval['natureza_descricao']) ? '- ' . $aval['natureza_descricao'] : '' }}</span>
-                            </div>
-                            @if(!empty($aval['comentario']))
-                                <p class="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 italic">"{{ $aval['comentario'] }}"</p>
-                            @endif
-                        </div>
-                    </div>
-                @empty
-                    <div class="text-center py-10 relative z-10">
-                        <i class="ph-fill ph-chat-slash text-4xl text-gray-300 mb-2"></i>
-                        <p class="text-xs font-bold text-gray-400 uppercase">Nenhuma avaliação.</p>
-                    </div>
-                @endforelse
-            </div>
-
-            {{-- PAINEL INTELIGENTE DE DECISÃO EM LOTE --}}
-            @php
-                $totalPendentes = $orcamento->itens->whereIn('status', ['Criado', 'Corrigido'])->count();
-                $qtdSelecionados = count($itensSelecionados);
-                $qtdRestantes = $totalPendentes - $qtdSelecionados;
-            @endphp
-
-            @if($totalPendentes > 0 && !$orcamento->reabertura_solicitada)
-                <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex flex-col gap-4">
-                    
-                    @if($qtdSelecionados > 0)
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
-                                Selecionados ({{ $qtdSelecionados }})
-                            </p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado')" class="py-2 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[11px] font-bold hover:bg-emerald-50 transition">Aprovar</button>
-                                <button wire:click="abrirModalAvaliacaoSelecionados('Reprovado')" class="py-2 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[11px] font-bold hover:bg-red-50 transition">Reprovar</button>
-                                <button wire:click="abrirModalAvaliacaoSelecionados('Aprovado com ressalvas')" class="col-span-2 py-2 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded text-[11px] font-bold hover:bg-yellow-50 transition">Ressalvas (Selecionados)</button>
-                            </div>
-                        </div>
-                    @endif
-                    
-                    @if($qtdRestantes > 0)
-                        <div class="{{ $qtdSelecionados > 0 ? 'border-t border-gray-200 pt-4' : '' }}">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">
-                                {{ $qtdSelecionados > 0 ? 'Restantes' : 'Todos os Pendentes' }} ({{ $qtdRestantes }})
-                            </p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button wire:click="abrirModalAvaliacaoRestantes('Aprovado')" class="py-2 bg-white text-emerald-700 border border-emerald-200 shadow-sm rounded text-[11px] font-bold hover:bg-emerald-50 transition">Aprovar Restantes</button>
-                                <button wire:click="abrirModalAvaliacaoRestantes('Reprovado')" class="py-2 bg-white text-red-700 border border-red-200 shadow-sm rounded text-[11px] font-bold hover:bg-red-50 transition">Reprovar Restantes</button>
-                                <button wire:click="abrirModalAvaliacaoRestantes('Aprovado com ressalvas')" class="col-span-2 py-2 bg-white text-yellow-700 border border-yellow-200 shadow-sm rounded text-[11px] font-bold hover:bg-yellow-50 transition">Ressalvas (Restantes)</button>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            @endif
-        </div>
-
     </div>
 
-    {{-- MODAL DE COMENTÁRIO DO APROVADOR (Opcional) --}}
+    {{-- NAVIGATION DRAWER: COMENTÁRIOS / CHAT --}}
+    <div class="relative z-[150]" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="$wire.drawerComentariosAberto" x-cloak>
+        <div x-show="$wire.drawerComentariosAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+        <div class="fixed inset-0 overflow-hidden">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    <div x-show="$wire.drawerComentariosAberto" 
+                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:enter-start="translate-x-full" 
+                         x-transition:enter-end="translate-x-0" 
+                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:leave-start="translate-x-0" 
+                         x-transition:leave-end="translate-x-full" 
+                         class="pointer-events-auto w-screen max-w-md" @click.away="$wire.set('drawerComentariosAberto', false)">
+                         
+                        <div class="flex h-full flex-col bg-white shadow-2xl">
+                            <div class="bg-gray-900 px-4 py-6 sm:px-6 shrink-0 flex items-center justify-between">
+                                <h2 class="text-base font-bold leading-6 text-white flex items-center gap-2" id="slide-over-title">
+                                    <i class="ph-fill ph-chats-teardrop text-xl"></i> Histórico de Comentários
+                                </h2>
+                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-white focus:outline-none transition">
+                                    <span class="absolute -inset-2.5"></span>
+                                    <i class="ph-bold ph-x text-xl"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex-1 overflow-y-auto p-4 sm:px-6 bg-[#efeae2] relative flex flex-col" 
+                                 x-ref="chatContainer" 
+                                 x-init="$watch('$wire.drawerComentariosAberto', val => { if(val) setTimeout(() => $el.scrollTop = $el.scrollHeight, 100) })">
+                                 
+                                @php
+                                    $todasAvaliacoes = collect();
+                                    foreach($orcamento->itens as $itemLinha) {
+                                        if(!empty($itemLinha->avaliacoes)) {
+                                            foreach($itemLinha->avaliacoes as $aval) {
+                                                $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                                                $avalArray['natureza_codigo'] = $itemLinha->natureza_codigo;
+                                                $avalArray['natureza_descricao'] = $itemLinha->natureza ? $itemLinha->natureza->descricao : '';
+                                                $todasAvaliacoes->push($avalArray);
+                                            }
+                                        }
+                                    }
+                                    if(!empty($orcamento->logsGerais)) {
+                                        foreach($orcamento->logsGerais as $aval) {
+                                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                                            $avalArray['natureza_codigo'] = 'GERAL';
+                                            $avalArray['natureza_descricao'] = 'Ação Global do Orçamento';
+                                            $todasAvaliacoes->push($avalArray);
+                                        }
+                                    }
+                                    $todasAvaliacoes = $todasAvaliacoes->sortBy('created_at');
+                                @endphp
+
+                                <div class="flex flex-col gap-3 pb-4">
+                                    <div class="text-center bg-[#fffbeb] text-yellow-800 text-[10px] py-1.5 px-3 rounded-lg mx-auto mb-2 shadow-sm font-medium w-max max-w-full">
+                                        <i class="ph-fill ph-lock-key"></i> As avaliações e comentários são registados permanentemente.
+                                    </div>
+
+                                    @foreach($todasAvaliacoes as $aval)
+                                        @php
+                                            $isMeu = ($aval['user_id'] == auth()->id());
+                                            $isComentarioPuro = ($aval['tipo_evento'] === 'comentario_chat');
+                                        @endphp
+
+                                        <div class="flex flex-col max-w-[85%] {{ $isMeu ? 'self-end' : 'self-start' }}">
+                                            <div class="p-2.5 shadow-sm relative {{ $isMeu ? 'bg-[#d9fdd3] rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-sm' : 'bg-white rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-sm' }}">
+                                                
+                                                @if($isMeu)
+                                                    <div class="absolute right-[-6px] top-0 w-0 h-0 border-l-[8px] border-l-[#d9fdd3] border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
+                                                @else
+                                                    <div class="absolute left-[-6px] top-0 w-0 h-0 border-r-[8px] border-r-white border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
+                                                @endif
+
+                                                <div class="flex items-baseline justify-between gap-4 mb-1">
+                                                    <span class="text-[10px] font-black {{ $isMeu ? 'text-emerald-700' : 'text-blue-600' }}">{{ $isMeu ? 'Eu (Diretoria)' : ($aval['user_nome'] ?? 'Usuário') }}</span>
+                                                </div>
+
+                                                @if(!$isComentarioPuro)
+                                                    <div class="mb-1.5 text-[10px] font-bold text-gray-700 bg-black/5 px-2 py-1 rounded border border-black/5">
+                                                        <span class="uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
+                                                        @if($aval['natureza_codigo'] !== 'GERAL')
+                                                            <br><span class="text-[9px] font-medium text-gray-500">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
+                                                        @endif
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($aval['comentario']))
+                                                    <p class="text-xs text-gray-800 whitespace-pre-wrap leading-snug">{{ $aval['comentario'] }}</p>
+                                                @endif
+                                                
+                                                <div class="text-right mt-1">
+                                                    <span class="text-[9px] font-medium text-gray-500/80">{{ \Carbon\Carbon::parse($aval['created_at'])->format('H:i') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
+                                <form wire:submit.prevent="adicionarComentarioGlobal" class="flex items-end gap-2">
+                                    <textarea wire:model="novoComentario" rows="1" class="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 resize-none py-3" placeholder="Digite uma mensagem/comentário..."></textarea>
+                                    <button type="submit" class="h-11 w-11 shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition transform hover:scale-105" title="Enviar Mensagem">
+                                        <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
+                                    </button>
+                                </form>
+                                @error('novoComentario') <span class="text-red-500 text-[10px] font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- MODAIS DE APROVAÇÃO, REABERTURA, ETC --}}
     @if($modalAvaliacaoAberto)
         <div class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
@@ -362,7 +400,6 @@
         </div>
     @endif
 
-    {{-- MODAL DE RESPOSTA AO PEDIDO DE REABERTURA --}}
     @if($modalAprovarReaberturaAberto)
         <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200">
