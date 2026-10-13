@@ -68,8 +68,6 @@
                         <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Dashboard</div>
                     </a>
 
-                    @if(feature('financeiro.orcamentos.listagem') && auth()->user()->can('financeiro.orcamentos.listagem'))
-                        @canany(['financeiro.orcamentos.listagem'])
                         <div x-data="{ open: false }" class="relative group whitespace-nowrap">
                             <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
                                 <div class="flex items-center gap-3">
@@ -92,8 +90,6 @@
                                 <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
                             </div>
                         </div>
-                        @endcanany
-                    @endif
 
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
@@ -357,8 +353,7 @@
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
                             </a>
                             
-                            @if(feature('financeiro.orcamentos.listagem') && auth()->user()->can('financeiro.orcamentos.listagem'))
-                                @canany(['financeiro.orcamentos.listagem'])
+                            
                                 <div x-data="{ open: false }" @click.away="open = false" class="relative">
                                     <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                         <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
@@ -370,8 +365,7 @@
                                         <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
                                     </div>
                                 </div>
-                                @endcanany
-                            @endif
+                                
 
                             @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -530,9 +524,7 @@
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                         <i class="text-lg ph ph-squares-four"></i> Dashboard
                     </a>
-
-                    @if(feature('financeiro.orcamentos.listagem') && auth()->user()->can('financeiro.orcamentos.listagem'))
-                    @canany(['financeiro.orcamentos.listagem'])
+                    
                     <div x-data="{ open: false }" class="space-y-1">
                         <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
                             <div class="flex items-center gap-3"><i class="text-lg ph ph-receipt"></i> Financeiro</div>
@@ -545,8 +537,6 @@
                             <a href="{{ route('financeiro.naturezas') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Naturezas</a>
                         </div>
                     </div>
-                    @endcanany
-                    @endif
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                     <div x-data="{ open: false }" class="space-y-1">

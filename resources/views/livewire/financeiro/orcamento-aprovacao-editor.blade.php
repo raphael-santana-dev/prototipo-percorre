@@ -39,13 +39,13 @@
             </div>
 
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
-                <button @click="modoExpandido = !modoExpandido" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Tela">
+                <button @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Tela">
                     <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
                 </button>
                 <button x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 text-gray-900' : ''" title="Ocultar Navbar do Sistema">
                     <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
-                    <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Menus Ocultos' : 'Ocultar Menus'"></span>
+                    <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
                 </button>
             </div>
 
@@ -82,13 +82,15 @@
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
-                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                <div class="flex items-center gap-2">
+                            <th class="w-[80px] min-w-[80px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">
+                                <div class="flex items-center justify-center gap-2">
                                     <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer" title="Selecionar todos os pendentes">
-                                    <span>Natureza Financeira</span>
+                                    <span>ID</span>
                                 </div>
                             </th>
-                            <th class="w-[200px] min-w-[200px] sticky left-[300px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Anotações da Linha</th>
+                            <th class="w-[100px] min-w-[100px] sticky left-[80px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">Código</th>
+                            <th class="w-[250px] min-w-[250px] sticky left-[180px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nome da Natureza</th>
+                            <th class="w-[220px] min-w-[220px] sticky left-[430px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Observações</th>
                             
                             @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
                             @foreach($meses as $mes)
@@ -114,29 +116,38 @@
                             @endphp
                             <tr class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50">
                                 
-                                <td class="sticky left-0 z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    <div class="flex items-start gap-2 mt-1 px-1 w-[280px]">
+                                <td class="sticky left-0 z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <div class="flex items-center justify-center gap-2 mt-1 px-1">
                                         @if(in_array($item->status, ['Criado', 'Corrigido']))
-                                            <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $item->id }}" class="mt-0.5 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                                        @else
-                                            <div class="w-4 mt-0.5"></div>
+                                            <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $item->id }}" class="rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                                         @endif
-                                        
-                                        <div class="flex flex-col w-full overflow-hidden">
-                                            <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->descricao }}">{{ $item->descricao }}</span>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <span class="text-[10px] font-mono text-gray-500">{{ $item->natureza_codigo ?: 'N/D' }}</span>
-                                                @if($item->status === 'Corrigido')
-                                                    <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
-                                                @endif
-                                            </div>
-                                        </div>
+                                        <span class="text-xs font-bold text-gray-600">{{ $item->id }}</span>
                                     </div>
                                 </td>
 
-                                <td class="sticky left-[300px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    <div class="w-full min-w-[180px] h-full px-2 py-2 text-[11px] text-gray-600 truncate bg-transparent" title="{{ $item->descricao }}">
-                                        {{ $item->descricao ?: '-' }}
+                                <td class="sticky left-[80px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <span class="text-xs font-mono font-bold text-gray-800 mt-1 block">{{ $item->natureza_codigo ?: 'N/D' }}</span>
+                                </td>
+
+                                <td class="sticky left-[180px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <div class="flex flex-col mt-1 w-full overflow-hidden">
+                                        <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item->natureza ? $item->natureza->descricao : 'N/D' }}">{{ $item->natureza ? $item->natureza->descricao : 'N/D' }}</span>
+                                        @if($item->status === 'Corrigido')
+                                            <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm w-max mt-1"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
+                                        @endif
+                                    </div>
+                                </td>
+
+                                <td class="sticky left-[430px] z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    @php
+                                        $natNome = $item->natureza ? $item->natureza->descricao : 'Natureza Importada (API)';
+                                        $obs = trim($item->descricao);
+                                        if ($obs === $natNome || $obs === 'Natureza Importada' || $obs === 'Natureza Importada (API)' || $obs === '') {
+                                            $obs = '-';
+                                        }
+                                    @endphp
+                                    <div class="w-full text-[11px] text-gray-600 bg-transparent line-clamp-3 mt-1" title="{{ $obs }}">
+                                        {{ $obs }}
                                     </div>
                                 </td>
 
@@ -207,7 +218,7 @@
                             foreach($meses as $sigla) $totaisMensais[$sigla] = $orcamento->itens->sum("valor_$sigla");
                         @endphp
                         <tr>
-                            <td colspan="2" class="border-t-2 border-b border-r border-gray-400 p-3 sticky left-0 bottom-0 z-[50] bg-gray-200 text-left shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                            <td colspan="4" class="border-t-2 border-b border-r border-gray-400 p-3 sticky left-0 bottom-0 z-[50] bg-gray-200 text-left shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                 <span class="text-[11px] font-black text-gray-800 uppercase tracking-widest pl-2">Total Solicitado</span>
                             </td>
                             @foreach($meses as $sigla)

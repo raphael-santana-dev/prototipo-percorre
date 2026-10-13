@@ -66,10 +66,25 @@ class OrcamentoEditor extends Component
     private function carregarItens()
     {
         $this->itensOrcamento = [];
+        
         foreach ($this->orcamento->itens as $item) {
+            
+            $natObj = $item->natureza;
+            $natNome = $natObj ? $natObj->descricao : 'Natureza Importada (API)';
+
+            // Observações da linha iniciam vazias se não houver anotação customizada
+            $obs = trim($item->descricao);
+            if ($obs === $natNome || $obs === 'Natureza Importada' || $obs === 'Natureza Importada (API)' || $obs === '') {
+                $obs = '';
+            }
+
             $this->itensOrcamento[] = [
-                'id' => $item->id, 'natureza_codigo' => $item->natureza_codigo, 'descricao' => $item->descricao,
-                'status' => $item->status, 'avaliacoes' => $item->avaliacoes,
+                'id' => $item->id, 
+                'natureza_codigo' => $item->natureza_codigo, 
+                'natureza_nome' => $natNome,
+                'descricao' => $obs,
+                'status' => $item->status, 
+                'avaliacoes' => $item->avaliacoes,
                 'previsto_jan' => $item->previsto_jan, 'valor_jan' => $item->valor_jan,
                 'previsto_fev' => $item->previsto_fev, 'valor_fev' => $item->valor_fev,
                 'previsto_mar' => $item->previsto_mar, 'valor_mar' => $item->valor_mar,
@@ -148,7 +163,7 @@ class OrcamentoEditor extends Component
 
     public function adicionarItem() {
         $this->itensOrcamento[] = [
-            'id' => null, 'natureza_codigo' => '', 'descricao' => '', 'status' => 'Criado', 'avaliacoes' => [],
+            'id' => null, 'natureza_codigo' => '', 'natureza_nome' => '', 'descricao' => '', 'status' => 'Criado', 'avaliacoes' => [],
             'previsto_jan' => 0, 'valor_jan' => 0, 'previsto_fev' => 0, 'valor_fev' => 0,
             'previsto_mar' => 0, 'valor_mar' => 0, 'previsto_abr' => 0, 'valor_abr' => 0,
             'previsto_mai' => 0, 'valor_mai' => 0, 'previsto_jun' => 0, 'valor_jun' => 0,
@@ -156,6 +171,16 @@ class OrcamentoEditor extends Component
             'previsto_set' => 0, 'valor_set' => 0, 'previsto_out' => 0, 'valor_out' => 0,
             'previsto_nov' => 0, 'valor_nov' => 0, 'previsto_dez' => 0, 'valor_dez' => 0,
         ];
+    }
+
+    public function updatedItensOrcamento($value, $name)
+    {
+        if (str_ends_with($name, '.natureza_codigo')) {
+            $parts = explode('.', $name);
+            $index = $parts[1];
+            $nat = Natureza::where('codigo', $value)->first();
+            $this->itensOrcamento[$index]['natureza_nome'] = $nat ? $nat->descricao : 'Natureza não encontrada';
+        }
     }
 
     public function removerItem($index) {
@@ -209,10 +234,14 @@ class OrcamentoEditor extends Component
         if (!empty($this->itensRemovidos)) OrcamentoItem::whereIn('id', $this->itensRemovidos)->delete();
 
         foreach ($this->itensOrcamento as $dataItem) {
-            $descricao = trim($dataItem['descricao']);
-            if (empty($dataItem['id'])) {
+            $observacao = trim($dataItem['descricao']);
+            $naturezaNome = $dataItem['natureza_nome'] ?? '';
+            
+            $descricaoParaSalvar = $observacao !== '' ? $observacao : $naturezaNome;
+            
+            if (empty($descricaoParaSalvar)) {
                 $naturezaDB = Natureza::where('codigo', $dataItem['natureza_codigo'])->first();
-                $descricao = $naturezaDB ? $naturezaDB->descricao : $descricao;
+                $descricaoParaSalvar = $naturezaDB ? $naturezaDB->descricao : 'Natureza Importada';
             }
 
             $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas'])) ? 'Corrigido' : ($dataItem['status'] ?? 'Criado');
@@ -220,7 +249,9 @@ class OrcamentoEditor extends Component
             OrcamentoItem::updateOrCreate(
                 ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamento->id],
                 [
-                    'natureza_codigo' => trim($dataItem['natureza_codigo']), 'descricao' => $descricao, 'status' => $statusItem,
+                    'natureza_codigo' => trim($dataItem['natureza_codigo']), 
+                    'descricao' => $descricaoParaSalvar, 
+                    'status' => $statusItem,
                     'previsto_jan' => empty($dataItem['previsto_jan']) ? 0 : (float) $dataItem['previsto_jan'], 'valor_jan' => empty($dataItem['valor_jan']) ? 0 : (float) $dataItem['valor_jan'],
                     'previsto_fev' => empty($dataItem['previsto_fev']) ? 0 : (float) $dataItem['previsto_fev'], 'valor_fev' => empty($dataItem['valor_fev']) ? 0 : (float) $dataItem['valor_fev'],
                     'previsto_mar' => empty($dataItem['previsto_mar']) ? 0 : (float) $dataItem['previsto_mar'], 'valor_mar' => empty($dataItem['valor_mar']) ? 0 : (float) $dataItem['valor_mar'],

@@ -45,14 +45,13 @@
             </div>
 
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
-                <button @click="modoExpandido = !modoExpandido" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Área de Trabalho">
+                <button @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white shadow-sm text-purpura-600' : 'text-gray-600 hover:text-gray-900'" title="Expandir Tela">
                     <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
                 </button>
-                
                 <button x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 text-gray-900' : ''" title="Ocultar Navbar do Sistema">
                     <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
-                    <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Menus Ocultos' : 'Ocultar Menus'"></span>
+                    <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
                 </button>
             </div>
 
@@ -68,7 +67,6 @@
                     <i class="ph-bold ph-paper-plane-tilt"></i> <span class="hidden sm:inline">Enviar</span>
                 </button>
             @else
-                {{-- LÓGICA DE REABERTURA (QUANDO BLOQUEADO) --}}
                 @if($orcamento->reabertura_solicitada)
                     <span class="btn btn--small bg-orange-100 text-orange-700 border border-orange-200 cursor-not-allowed opacity-80" title="Aguardando a resposta da Diretoria">
                         <i class="ph-bold ph-hourglass-high animate-pulse"></i> Reabertura Solicitada
@@ -96,8 +94,10 @@
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
-                            <th class="w-[300px] min-w-[300px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Natureza Financeira</th>
-                            <th class="w-[200px] min-w-[200px] sticky left-[300px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Observações da Linha</th>
+                            <th class="w-[60px] min-w-[60px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">ID</th>
+                            <th class="w-[100px] min-w-[100px] sticky left-[60px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center">Código</th>
+                            <th class="w-[250px] min-w-[250px] sticky left-[160px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nome da Natureza</th>
+                            <th class="w-[200px] min-w-[200px] sticky left-[410px] top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Observações</th>
                             
                             @php $meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; @endphp
                             @foreach($meses as $mes)
@@ -121,31 +121,39 @@
                             @endphp
                             
                             <tr class="group hover:bg-blue-50 transition-colors {{ $classeCursor }}" {!! $eventoDuploClique !!} title="{{ $tooltipMsg }}">
-                                <td class="sticky left-0 z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors">
-                                    @if(!empty($item['id']))
-                                        <div class="flex flex-col mt-1 w-[280px]">
-                                            <span class="text-xs font-bold text-gray-900 truncate w-full" title="{{ $item['descricao'] }}">{{ $item['descricao'] }}</span>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <span class="text-[10px] font-mono text-gray-500">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
-                                                @if($item['status'] === 'Reprovado') <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Reprovado</span>
-                                                @elseif($item['status'] === 'Aprovado com ressalvas') <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Ressalvas</span>
-                                                @elseif($item['status'] === 'Aprovado') <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 uppercase rounded shadow-sm" title="Aprovado pela Diretoria. Duplo clique na linha para desbloquear."><i class="ph-bold ph-lock-key mr-0.5"></i> Aprovado</span>
-                                                @elseif($item['status'] === 'Corrigido') <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Re-Analisar</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @else
-                                        <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-[280px] text-xs font-bold text-gray-800 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 mt-1 bg-white">
-                                            <option value="">Selecione Natureza...</option>
+                                
+                                <td class="sticky left-0 z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <span class="text-xs font-bold text-gray-600 mt-1 block">{{ $item['id'] ?? 'NOVO' }}</span>
+                                </td>
+
+                                <td class="sticky left-[60px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    @if(empty($item['id']))
+                                        <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-[10px] font-bold text-gray-800 border-gray-300 rounded shadow-sm focus:border-emerald-500 p-1.5 mt-1 bg-white">
+                                            <option value="">CÓDIGO...</option>
                                             @foreach($todasNaturezas as $nat)
-                                                <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
+                                                <option value="{{ $nat->codigo }}">{{ $nat->codigo }}</option>
                                             @endforeach
                                         </select>
+                                    @else
+                                        <span class="text-xs font-mono font-bold text-gray-800 mt-1 block">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
                                     @endif
                                 </td>
 
-                                <td class="sticky left-[300px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full min-w-[180px] text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1.5 resize-none bg-white {{ $classeCursor }}" placeholder="Anotações para a diretoria..." @if($isLockedGlobal || $isLinhaAprovada) disabled @endif></textarea>
+                                <td class="sticky left-[160px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <div class="flex flex-col mt-1 w-full overflow-hidden">
+                                        <span class="text-xs font-bold text-gray-900 truncate" title="{{ $item['natureza_nome'] ?? '' }}">{{ $item['natureza_nome'] ?? 'Aguardando seleção...' }}</span>
+                                        <div class="flex items-center gap-1 mt-1 flex-wrap">
+                                            @if($item['status'] === 'Reprovado') <span class="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Reprovado</span>
+                                            @elseif($item['status'] === 'Aprovado com ressalvas') <span class="text-[8px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 uppercase rounded shadow-sm">Ressalvas</span>
+                                            @elseif($item['status'] === 'Aprovado') <span class="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 uppercase rounded shadow-sm" title="Aprovado pela Diretoria. Duplo clique na linha para desbloquear."><i class="ph-bold ph-lock-key mr-0.5"></i> Aprovado</span>
+                                            @elseif($item['status'] === 'Corrigido') <span class="text-[8px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 uppercase flex items-center gap-1 rounded shadow-sm"><i class="ph-bold ph-arrows-clockwise"></i> Corrigido</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="sticky left-[410px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                    <textarea wire:model="itensOrcamento.{{ $index }}.descricao" rows="2" class="w-full text-[11px] text-gray-600 border-gray-300 rounded shadow-sm focus:border-emerald-500 p-1.5 resize-none bg-white {{ $classeCursor }}" placeholder="Anotações da linha..." @if($isLockedGlobal || $isLinhaAprovada) disabled @endif></textarea>
                                 </td>
 
                                 @php $totalLinha = 0; @endphp
@@ -205,7 +213,7 @@
                             foreach($meses as $sigla) $totaisMensais[$sigla] = collect($itensOrcamento)->sum("valor_$sigla");
                         @endphp
                         <tr>
-                            <td colspan="2" class="border-t-2 border-b border-r border-gray-400 p-3 sticky left-0 bottom-0 z-[50] bg-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                            <td colspan="4" class="border-t-2 border-b border-r border-gray-400 p-3 sticky left-0 bottom-0 z-[50] bg-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[11px] font-black text-gray-800 uppercase tracking-widest pl-1">Totais Calculados</span>
                                     @if(!$isLockedGlobal)
@@ -240,7 +248,7 @@
                             foreach($itemLinha['avaliacoes'] as $aval) {
                                 $avalArray = is_array($aval) ? $aval : $aval->toArray();
                                 $avalArray['natureza_codigo'] = $itemLinha['natureza_codigo'];
-                                $avalArray['natureza_descricao'] = $itemLinha['descricao'];
+                                $avalArray['natureza_descricao'] = $itemLinha['natureza_nome'];
                                 $todasAvaliacoes->push($avalArray);
                             }
                         }
