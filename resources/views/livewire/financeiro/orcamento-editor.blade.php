@@ -61,7 +61,7 @@
 
             @if(!$isLockedGlobal)
                 <button wire:click="salvarOrcamento" class="btn btn--secondary btn--small !text-emerald-700 !border-emerald-300 hover:!bg-emerald-50">
-                    <i class="ph-bold ph-floppy-disk"></i> Guardar
+                    <i class="ph-bold ph-floppy-disk"></i> Salvar
                 </button>
                 <button wire:click="finalizarOrcamento" class="btn btn--primary btn--small shadow-sm" onclick="confirm('Submeter para aprovação da Diretoria?') || event.stopImmediatePropagation()">
                     <i class="ph-bold ph-paper-plane-tilt"></i> <span class="hidden sm:inline">Enviar</span>
@@ -85,9 +85,19 @@
         
         <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 relative" :class="timelineAberta ? 'pr-[340px]' : ''">
             
-            <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center gap-3 shrink-0 z-10 relative">
-                <label class="text-xs font-bold text-gray-700 uppercase whitespace-nowrap shrink-0">Justificativa Global:</label>
-                <input type="text" wire:model="justificativaGeral" placeholder="Motivo ou observações gerais de todo o Centro de Custo..." class="w-full text-sm border-gray-300 rounded-md bg-gray-50 focus:ring-1 focus:ring-emerald-500 px-3 py-1.5" @if($isLockedGlobal) disabled @endif>
+            {{-- BARRA DE AÇÕES DA PLANILHA (Excluir Lote e Comentários) --}}
+            <div class="p-3 bg-white border-b border-gray-300 shadow-sm flex items-center justify-between shrink-0 z-10 relative" x-data="{ temSelecao: @entangle('itensSelecionados').live }">
+                <div class="flex items-center gap-3">
+                    <template x-if="temSelecao && Object.keys(temSelecao).length > 0">
+                        <button wire:click="removerItensSelecionados" class="btn btn--small !bg-red-50 !text-red-600 border border-red-200 hover:!bg-red-100 shadow-sm flex items-center gap-2 transition" onclick="confirm('Tem certeza que deseja remover os itens selecionados?') || event.stopImmediatePropagation()">
+                            <i class="ph-bold ph-trash"></i> Remover Selecionados (<span x-text="Object.keys(temSelecao).length"></span>)
+                        </button>
+                    </template>
+                </div>
+                
+                <button @click="$wire.set('drawerComentariosAberto', true)" class="btn btn--secondary btn--small !text-blue-600 !border-blue-200 hover:!bg-blue-50 shadow-sm flex items-center gap-2">
+                    <i class="ph-bold ph-chat-teardrop-text"></i> + Comentário
+                </button>
             </div>
 
             <div class="flex-1 overflow-auto custom-scrollbar relative bg-white">
@@ -347,10 +357,62 @@
         </div>
     @endif
 
-    {{-- BOTÃO FLUTUANTE (NOVA NATUREZA) --}}
+    {{-- BOTÃO FLUTUANTE (SALVAR) --}}
     @if(!$isLockedGlobal)
-        <button wire:click="abrirModalNovaNatureza" class="fixed bottom-6 right-6 z-[40] flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-gray-800 hover:bg-black text-white transition-transform transform hover:scale-105" title="Criar Natureza Inexistente">
-            <i class="ph-bold ph-plus text-xl"></i>
+        <button wire:click="salvarOrcamento" class="fixed bottom-6 right-6 z-[40] flex items-center justify-center w-14 h-14 rounded-full shadow-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-transform transform hover:scale-105" title="Salvar Orçamento">
+            <i class="ph-bold ph-floppy-disk text-2xl"></i>
         </button>
     @endif
+
+    {{-- NAVIGATION DRAWER: COMENTÁRIOS / CHAT --}}
+    <div class="relative z-[150]" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="$wire.drawerComentariosAberto" x-cloak>
+        <!-- Fundo escuro (Overlay) -->
+        <div x-show="$wire.drawerComentariosAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+        <div class="fixed inset-0 overflow-hidden">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    <!-- Painel lateral (Drawer) -->
+                    <div x-show="$wire.drawerComentariosAberto" 
+                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:enter-start="translate-x-full" 
+                         x-transition:enter-end="translate-x-0" 
+                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" 
+                         x-transition:leave-start="translate-x-0" 
+                         x-transition:leave-end="translate-x-full" 
+                         class="pointer-events-auto w-screen max-w-md" @click.away="$wire.set('drawerComentariosAberto', false)">
+                         
+                        <div class="flex h-full flex-col bg-white shadow-2xl">
+                            <!-- Cabeçalho do Drawer -->
+                            <div class="bg-gray-900 px-4 py-6 sm:px-6 shrink-0 flex items-center justify-between">
+                                <h2 class="text-base font-bold leading-6 text-white flex items-center gap-2" id="slide-over-title">
+                                    <i class="ph-fill ph-chats-teardrop text-xl"></i> Comentários do Orçamento
+                                </h2>
+                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-white focus:outline-none transition">
+                                    <span class="absolute -inset-2.5"></span>
+                                    <i class="ph-bold ph-x text-xl"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Corpo (onde virá o chat na próxima etapa) -->
+                            <div class="flex-1 overflow-y-auto p-4 sm:px-6 bg-[#efeae2] relative flex flex-col" id="chat-container">
+                                <!-- O CONTEÚDO DO CHAT ENTRARÁ AQUI NA ETAPA 5 -->
+                            </div>
+
+                            <!-- Rodapé (Campo de digitar) -->
+                            <div class="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
+                                <form wire:submit.prevent="adicionarComentarioGlobal" class="flex items-end gap-2">
+                                    <textarea wire:model="novoComentario" rows="1" class="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 resize-none py-3" placeholder="Digite uma mensagem..."></textarea>
+                                    <button type="submit" class="h-11 w-11 shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition transform hover:scale-105" title="Enviar Mensagem">
+                                        <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
+                                    </button>
+                                </form>
+                                @error('novoComentario') <span class="text-red-500 text-[10px] font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -18,6 +18,9 @@ class OrcamentoEditor extends Component
     public string $justificativaGeral = '';
     public array $itensOrcamento = [];
     public array $itensRemovidos = [];
+
+    public string $novoComentario = '';
+    public bool $drawerComentariosAberto = false;
     
     public bool $modalNovaNaturezaAberto = false;
     public string $novaNaturezaDescricao = '';
@@ -171,6 +174,8 @@ class OrcamentoEditor extends Component
             'previsto_set' => 0, 'valor_set' => 0, 'previsto_out' => 0, 'valor_out' => 0,
             'previsto_nov' => 0, 'valor_nov' => 0, 'previsto_dez' => 0, 'valor_dez' => 0,
         ];
+
+        $this->dispatch('item-adicionado');
     }
 
     public function updatedItensOrcamento($value, $name)
@@ -188,6 +193,42 @@ class OrcamentoEditor extends Component
         unset($this->itensOrcamento[$index]);
         $this->itensOrcamento = array_values($this->itensOrcamento); 
         if (empty($this->itensOrcamento)) $this->adicionarItem(); 
+    }
+
+    public function removerItensSelecionados()
+    {
+        if (empty($this->itensSelecionados)) {
+            $this->dispatch('erro', msg: 'Nenhum item selecionado para remoção.');
+            return;
+        }
+
+        // Filtra os itens mantendo apenas os que NÃO estão selecionados
+        $itensRestantes = [];
+        
+        foreach ($this->itensOrcamento as $index => $item) {
+            // Verifica se o ID do item ou um ID temporário (para itens não salvos) está na seleção
+            $identificador = $item['id'] ?? 'novo_'.$index;
+            
+            if (in_array((string)$identificador, $this->itensSelecionados)) {
+                // Se tem ID no banco, marca para remoção definitiva ao salvar
+                if (!empty($item['id'])) {
+                    $this->itensRemovidos[] = $item['id'];
+                }
+            } else {
+                $itensRestantes[] = $item;
+            }
+        }
+
+        $this->itensOrcamento = $itensRestantes;
+        $this->itensSelecionados = []; // Limpa a seleção
+        $this->selecionarTudo = false;
+
+        // Se apagar todas as linhas, adiciona uma vazia por padrão
+        if (empty($this->itensOrcamento)) {
+            $this->adicionarItem();
+        }
+
+        $this->dispatch('sucesso', msg: 'Itens removidos da planilha. Lembre-se de Salvar para confirmar.');
     }
 
     public function abrirModalNovaNatureza()
@@ -275,6 +316,31 @@ class OrcamentoEditor extends Component
     }
 
     public function voltar() { return redirect()->route('financeiro.orcamentos'); }
+
+    public function adicionarComentarioGlobal()
+    {
+        // Valida se o comentário não está vazio
+        $this->validate(
+            ['novoComentario' => 'required|string|min:2'],
+            ['novoComentario.required' => 'Digite uma mensagem antes de enviar.']
+        );
+
+        // Cria o registro na tabela de avaliações (nosso histórico)
+        OrcamentoAvaliacao::create([
+            'orcamento_id' => $this->orcamento->id,
+            'user_id' => auth()->id(),
+            'user_nome' => auth()->user()->name,
+            'status_aplicado' => 'Comentário Geral',
+            'comentario' => trim($this->novoComentario),
+            'tipo_evento' => 'comentario_chat'
+        ]);
+
+        $this->novoComentario = ''; // Limpa o campo após o envio
+        $this->orcamento->refresh(); // Atualiza os relacionamentos para trazer o novo comentário
+        
+        // Dispara um evento para o front-end (usaremos isso para rolar o chat para a última mensagem)
+        $this->dispatch('comentario-adicionado'); 
+    }
 
     public function render()
     {
