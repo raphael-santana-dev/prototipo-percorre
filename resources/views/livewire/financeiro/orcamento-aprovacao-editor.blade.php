@@ -109,7 +109,7 @@
                     <thead>
                         <tr>
                             <th class="w-[80px] min-w-[80px] sticky left-0 top-0 z-[50] bg-gray-100 p-3 text-[10px] font-black text-gray-700 uppercase tracking-wider border-b border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center justify-center gap-2">
                                     <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer" title="Selecionar todos os pendentes">
                                     <span>ID</span>
                                 </div>
@@ -140,7 +140,7 @@
                                     default => 'bg-white'
                                 };
                             @endphp
-                            <tr class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50">
+                            <tr wire:key="linha-aprovacao-{{ $item->id }}" class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50">
                                 
                                 <td class="sticky left-0 z-[30] {{ $bgRowSolid }} group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <div class="flex items-center justify-center gap-2 mt-1 px-1">
@@ -266,6 +266,7 @@
         <div class="fixed inset-0 overflow-hidden">
             <div class="absolute inset-0 overflow-hidden">
                 <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    <!-- Painel lateral (Drawer) com Responsividade Mobile -->
                     <div x-show="$wire.drawerComentariosAberto" 
                          x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" 
                          x-transition:enter-start="translate-x-full" 
@@ -273,20 +274,22 @@
                          x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" 
                          x-transition:leave-start="translate-x-0" 
                          x-transition:leave-end="translate-x-full" 
-                         class="pointer-events-auto w-screen max-w-md" @click.away="$wire.set('drawerComentariosAberto', false)">
+                         class="pointer-events-auto w-screen max-w-md h-[100dvh] sm:h-full flex flex-col" @click.away="$wire.set('drawerComentariosAberto', false)">
                          
-                        <div class="flex h-full flex-col bg-white shadow-2xl">
-                            <div class="bg-gray-900 px-4 py-6 sm:px-6 shrink-0 flex items-center justify-between">
+                        <div class="flex flex-col h-full bg-white shadow-2xl overflow-hidden">
+                            <!-- Cabeçalho do Drawer -->
+                            <div class="bg-gray-900 px-4 py-5 sm:px-6 shrink-0 flex items-center justify-between">
                                 <h2 class="text-base font-bold leading-6 text-white flex items-center gap-2" id="slide-over-title">
                                     <i class="ph-fill ph-chats-teardrop text-xl"></i> Histórico de Comentários
                                 </h2>
-                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-white focus:outline-none transition">
+                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-white focus:outline-none transition p-2 -mr-2">
                                     <span class="absolute -inset-2.5"></span>
                                     <i class="ph-bold ph-x text-xl"></i>
                                 </button>
                             </div>
                             
-                            <div class="flex-1 overflow-y-auto p-4 sm:px-6 bg-[#efeae2] relative flex flex-col" 
+                            <!-- Corpo do Chat -->
+                            <div class="flex-1 overflow-y-auto overscroll-contain p-3 sm:px-6 bg-[#efeae2] relative flex flex-col" 
                                  x-ref="chatContainer" 
                                  x-init="$watch('$wire.drawerComentariosAberto', val => { if(val) setTimeout(() => $el.scrollTop = $el.scrollHeight, 100) })">
                                  
@@ -313,8 +316,8 @@
                                     $todasAvaliacoes = $todasAvaliacoes->sortBy('created_at');
                                 @endphp
 
-                                <div class="flex flex-col gap-3 pb-4">
-                                    <div class="text-center bg-[#fffbeb] text-yellow-800 text-[10px] py-1.5 px-3 rounded-lg mx-auto mb-2 shadow-sm font-medium w-max max-w-full">
+                                <div class="flex flex-col gap-3 pb-2 sm:pb-4">
+                                    <div class="text-center bg-[#fffbeb] text-yellow-800 text-[10px] py-1.5 px-3 rounded-lg mx-auto mb-2 shadow-sm font-medium w-max max-w-full leading-tight">
                                         <i class="ph-fill ph-lock-key"></i> As avaliações e comentários são registados permanentemente.
                                     </div>
 
@@ -324,7 +327,7 @@
                                             $isComentarioPuro = ($aval['tipo_evento'] === 'comentario_chat');
                                         @endphp
 
-                                        <div class="flex flex-col max-w-[85%] {{ $isMeu ? 'self-end' : 'self-start' }}">
+                                        <div class="flex flex-col max-w-[90%] sm:max-w-[85%] {{ $isMeu ? 'self-end' : 'self-start' }}">
                                             <div class="p-2.5 shadow-sm relative {{ $isMeu ? 'bg-[#d9fdd3] rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-sm' : 'bg-white rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-sm' }}">
                                                 
                                                 @if($isMeu)
@@ -359,14 +362,15 @@
                                 </div>
                             </div>
 
-                            <div class="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
+                            <!-- Rodapé (Campo de digitar) ajustado para o teclado -->
+                            <div class="p-3 sm:p-4 border-t border-gray-200 bg-gray-50 shrink-0 pb-safe">
                                 <form wire:submit.prevent="adicionarComentarioGlobal" class="flex items-end gap-2">
-                                    <textarea wire:model="novoComentario" rows="1" class="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 resize-none py-3" placeholder="Digite uma mensagem/comentário..."></textarea>
+                                    <textarea wire:model="novoComentario" @keydown.enter.prevent="$wire.adicionarComentarioGlobal()" rows="1" class="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 resize-none py-3 px-4" placeholder="Digite uma mensagem/comentário..."></textarea>
                                     <button type="submit" class="h-11 w-11 shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition transform hover:scale-105" title="Enviar Mensagem">
                                         <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
                                     </button>
                                 </form>
-                                @error('novoComentario') <span class="text-red-500 text-[10px] font-bold block mt-1">{{ $message }}</span> @enderror
+                                @error('novoComentario') <span class="text-red-500 text-[10px] font-bold block mt-1 px-1">{{ $message }}</span> @enderror
                             </div>
                         </div>
                     </div>
@@ -394,7 +398,10 @@
                 @error('comentarioAvaliacao') <span class="text-red-500 text-xs font-bold mt-1 block">{{ $message }}</span> @enderror
                 <div class="flex justify-end gap-3 mt-6">
                     <button wire:click="$set('modalAvaliacaoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="confirmarAvaliacao" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm">Confirmar Decisão</button>
+                    <button wire:click="confirmarAvaliacao" wire:loading.attr="disabled" wire:target="confirmarAvaliacao" class="btn btn--primary btn--medium bg-gray-900 hover:bg-black border-none shadow-sm disabled:opacity-50">
+                        <span wire:loading.remove wire:target="confirmarAvaliacao">Confirmar Decisão</span>
+                        <span wire:loading wire:target="confirmarAvaliacao"><i class="ph-bold ph-spinner animate-spin"></i> Processando...</span>
+                    </button>
                 </div>
             </div>
         </div>

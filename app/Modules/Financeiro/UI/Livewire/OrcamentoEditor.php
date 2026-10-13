@@ -19,6 +19,9 @@ class OrcamentoEditor extends Component
     public array $itensOrcamento = [];
     public array $itensRemovidos = [];
 
+    public array $itensSelecionados = [];
+    public bool $selecionarTudo = false;
+
     public string $novoComentario = '';
     public bool $drawerComentariosAberto = false;
     
@@ -287,13 +290,17 @@ class OrcamentoEditor extends Component
 
             $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas'])) ? 'Corrigido' : ($dataItem['status'] ?? 'Criado');
 
+            // Garante que o ID enviado para a base de dados é estritamente numérico ou nulo.
+            // Ignora qualquer ID em formato de string como "novo_0" gerado pelo frontend.
+            $idReal = (!empty($dataItem['id']) && is_numeric($dataItem['id'])) ? (int) $dataItem['id'] : null;
+
             OrcamentoItem::updateOrCreate(
-                ['id' => $dataItem['id'], 'orcamento_id' => $this->orcamento->id],
+                ['id' => $idReal, 'orcamento_id' => $this->orcamento->id],
                 [
                     'natureza_codigo' => trim($dataItem['natureza_codigo']), 
                     'descricao' => $descricaoParaSalvar, 
                     'status' => $statusItem,
-                    'previsto_jan' => empty($dataItem['previsto_jan']) ? 0 : (float) $dataItem['previsto_jan'], 'valor_jan' => empty($dataItem['valor_jan']) ? 0 : (float) $dataItem['valor_jan'],
+                    'previsto_jan' => empty($dataItem['previsto_jan']) ? 0 : (float) $dataItem['previsto_jan'],                   
                     'previsto_fev' => empty($dataItem['previsto_fev']) ? 0 : (float) $dataItem['previsto_fev'], 'valor_fev' => empty($dataItem['valor_fev']) ? 0 : (float) $dataItem['valor_fev'],
                     'previsto_mar' => empty($dataItem['previsto_mar']) ? 0 : (float) $dataItem['previsto_mar'], 'valor_mar' => empty($dataItem['valor_mar']) ? 0 : (float) $dataItem['valor_mar'],
                     'previsto_abr' => empty($dataItem['previsto_abr']) ? 0 : (float) $dataItem['previsto_abr'], 'valor_abr' => empty($dataItem['valor_abr']) ? 0 : (float) $dataItem['valor_abr'],
@@ -340,6 +347,22 @@ class OrcamentoEditor extends Component
         
         // Dispara um evento para o front-end (usaremos isso para rolar o chat para a última mensagem)
         $this->dispatch('comentario-adicionado'); 
+    }
+
+    public function updatedSelecionarTudo($value)
+    {
+        if ($value) {
+            // Seleciona todos os itens que estão criados ou corrigidos
+            $selecionados = [];
+            foreach ($this->itensOrcamento as $index => $item) {
+                if (in_array($item['status'], ['Criado', 'Corrigido'])) {
+                    $selecionados[] = (string) ($item['id'] ?? 'novo_'.$index);
+                }
+            }
+            $this->itensSelecionados = $selecionados;
+        } else {
+            $this->itensSelecionados = [];
+        }
     }
 
     public function render()

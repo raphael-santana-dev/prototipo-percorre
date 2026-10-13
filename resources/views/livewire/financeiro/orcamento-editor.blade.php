@@ -5,7 +5,31 @@
      @comentario-adicionado.window="setTimeout(() => { if($refs.chatContainer) $refs.chatContainer.scrollTo({top: $refs.chatContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
 
+    <!-- Inclusão do jQuery e Select2 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <style>
+        /* Estilos para o Select2 encaixar no design Tailwind da tabela */
+        .select2-container .select2-selection--single {
+            height: 34px !important;
+            border-color: #d1d5db !important;
+            border-radius: 0.375rem !important;
+            display: flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px !important;
+        }
+        .select2-dropdown {
+            font-size: 11px !important;
+            font-weight: bold;
+            z-index: 9999 !important; /* Para não ficar escondido nas colunas sticky */
+        }
         body.modo-expandido main > div > div.max-w-7xl { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main { overflow: hidden !important; display: flex; flex-direction: column; }
@@ -128,20 +152,32 @@
                                 $tooltipMsg = ($isLinhaAprovada && !$isLockedGlobal) ? "Duplo clique para solicitar desbloqueio desta linha" : "";
                             @endphp
                             
-                            <tr class="group hover:bg-blue-50 transition-colors {{ $classeCursor }}" {!! $eventoDuploClique !!} title="{{ $tooltipMsg }}">
-                                
+                            <tr wire:key="linha-orcamento-{{ $item['id'] ?? 'novo-'.$index }}" class="group transition-colors {{ $bgRowSolid }} hover:bg-blue-50 {{ $classeCursor }}" {!! $eventoDuploClique !!} title="{{ $tooltipMsg }}">                                
                                 <td class="sticky left-0 z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     <span class="text-xs font-bold text-gray-600 mt-1 block">{{ $item['id'] ?? 'NOVO' }}</span>
                                 </td>
 
+                                <!-- Coluna 2: Código (Com Select2) -->
                                 <td class="sticky left-[60px] z-[30] bg-white group-hover:bg-blue-50 border-b border-r border-gray-300 p-2 text-center align-top transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                     @if(empty($item['id']))
-                                        <select wire:model="itensOrcamento.{{ $index }}.natureza_codigo" class="w-full text-[10px] font-bold text-gray-800 border-gray-300 rounded shadow-sm focus:border-emerald-500 p-1.5 mt-1 bg-white">
-                                            <option value="">CÓDIGO...</option>
-                                            @foreach($todasNaturezas as $nat)
-                                                <option value="{{ $nat->codigo }}">{{ $nat->codigo }}</option>
-                                            @endforeach
-                                        </select>
+                                        <div wire:ignore>
+                                            <select x-init="
+                                                        $($el).select2({ 
+                                                            placeholder: 'Pesquisar...', 
+                                                            width: '100%' 
+                                                        });
+                                                        $($el).on('change', function() {
+                                                            // Força o Livewire a reconhecer a alteração feita pelo jQuery/Select2
+                                                            $wire.set('itensOrcamento.{{ $index }}.natureza_codigo', $(this).val());
+                                                        });
+                                                    "
+                                                    class="w-full text-[10px] font-bold text-gray-800 border-gray-300 rounded shadow-sm focus:border-emerald-500 bg-white">
+                                                <option value="">Pesquisar...</option>
+                                                @foreach($todasNaturezas as $nat)
+                                                    <option value="{{ $nat->codigo }}">{{ $nat->codigo }} - {{ $nat->descricao }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     @else
                                         <span class="text-xs font-mono font-bold text-gray-800 mt-1 block">{{ $item['natureza_codigo'] ?: 'N/D' }}</span>
                                     @endif
