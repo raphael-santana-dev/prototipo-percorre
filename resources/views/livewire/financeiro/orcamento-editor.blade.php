@@ -1,8 +1,10 @@
 <div class="font-sans flex flex-col transition-all duration-300 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden" 
      x-data="{ timelineAberta: false, modoExpandido: false, navbarOculta: false }" 
      x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
+     @item-adicionado.window="setTimeout(() => { if($refs.tableContainer) $refs.tableContainer.scrollTo({top: $refs.tableContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
+     @comentario-adicionado.window="setTimeout(() => { if($refs.chatContainer) $refs.chatContainer.scrollTo({top: $refs.chatContainer.scrollHeight, behavior: 'smooth'}) }, 100)"
      :class="modoExpandido ? 'h-full border-none rounded-none' : 'min-h-[600px] h-[calc(100vh-180px)]'">
-    
+
     <style>
         body.modo-expandido main > div > div.max-w-7xl { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
@@ -100,7 +102,7 @@
                 </button>
             </div>
 
-            <div class="flex-1 overflow-auto custom-scrollbar relative bg-white">
+            <div x-ref="tableContainer" class="flex-1 overflow-auto custom-scrollbar relative bg-white">
                 <table class="w-full text-left whitespace-nowrap min-w-[2100px] border-separate border-spacing-0 border-t border-l border-gray-300">
                     <thead>
                         <tr>
@@ -394,9 +396,80 @@
                                 </button>
                             </div>
                             
-                            <!-- Corpo (onde virá o chat na próxima etapa) -->
-                            <div class="flex-1 overflow-y-auto p-4 sm:px-6 bg-[#efeae2] relative flex flex-col" id="chat-container">
-                                <!-- O CONTEÚDO DO CHAT ENTRARÁ AQUI NA ETAPA 5 -->
+                            <!-- Corpo do Chat (Estilo WhatsApp) -->
+                            <div class="flex-1 overflow-y-auto p-4 sm:px-6 bg-[#efeae2] relative flex flex-col" 
+                                 x-ref="chatContainer" 
+                                 x-init="$watch('$wire.drawerComentariosAberto', val => { if(val) setTimeout(() => $el.scrollTop = $el.scrollHeight, 100) })">
+                                 
+                                @php
+                                    $todasAvaliacoes = collect();
+                                    foreach($itensOrcamento as $itemLinha) {
+                                        if(!empty($itemLinha['avaliacoes'])) {
+                                            foreach($itemLinha['avaliacoes'] as $aval) {
+                                                $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                                                $avalArray['natureza_codigo'] = $itemLinha['natureza_codigo'];
+                                                $avalArray['natureza_descricao'] = $itemLinha['natureza_nome'] ?? '';
+                                                $todasAvaliacoes->push($avalArray);
+                                            }
+                                        }
+                                    }
+                                    if(!empty($orcamento->logsGerais)) {
+                                        foreach($orcamento->logsGerais as $aval) {
+                                            $avalArray = is_array($aval) ? $aval : $aval->toArray();
+                                            $avalArray['natureza_codigo'] = 'GERAL';
+                                            $avalArray['natureza_descricao'] = 'Ação Global do Orçamento';
+                                            $todasAvaliacoes->push($avalArray);
+                                        }
+                                    }
+                                    // WhatsApp ordena do mais antigo (topo) para o mais recente (fundo)
+                                    $todasAvaliacoes = $todasAvaliacoes->sortBy('created_at');
+                                @endphp
+
+                                <div class="flex flex-col gap-3 pb-4">
+                                    <div class="text-center bg-[#fffbeb] text-yellow-800 text-[10px] py-1.5 px-3 rounded-lg mx-auto mb-2 shadow-sm font-medium w-max max-w-full">
+                                        <i class="ph-fill ph-lock-key"></i> As mensagens deste orçamento são guardadas de forma segura no histórico da filial.
+                                    </div>
+
+                                    @foreach($todasAvaliacoes as $aval)
+                                        @php
+                                            $isMeu = ($aval['user_id'] == auth()->id());
+                                            $isComentarioPuro = ($aval['tipo_evento'] === 'comentario_chat');
+                                        @endphp
+
+                                        <div class="flex flex-col max-w-[85%] {{ $isMeu ? 'self-end' : 'self-start' }}">
+                                            <div class="p-2.5 shadow-sm relative {{ $isMeu ? 'bg-[#d9fdd3] rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-sm' : 'bg-white rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-sm' }}">
+                                                
+                                                {{-- Setinha do balão estilo WhatsApp --}}
+                                                @if($isMeu)
+                                                    <div class="absolute right-[-6px] top-0 w-0 h-0 border-l-[8px] border-l-[#d9fdd3] border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
+                                                @else
+                                                    <div class="absolute left-[-6px] top-0 w-0 h-0 border-r-[8px] border-r-white border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
+                                                @endif
+
+                                                <div class="flex items-baseline justify-between gap-4 mb-1">
+                                                    <span class="text-[10px] font-black {{ $isMeu ? 'text-emerald-700' : 'text-blue-600' }}">{{ $isMeu ? 'Eu' : ($aval['user_nome'] ?? 'Usuário') }}</span>
+                                                </div>
+
+                                                @if(!$isComentarioPuro)
+                                                    <div class="mb-1.5 text-[10px] font-bold text-gray-700 bg-black/5 px-2 py-1 rounded border border-black/5">
+                                                        <span class="uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
+                                                        @if($aval['natureza_codigo'] !== 'GERAL')
+                                                            <br><span class="text-[9px] font-medium text-gray-500">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
+                                                        @endif
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($aval['comentario']))
+                                                    <p class="text-xs text-gray-800 whitespace-pre-wrap leading-snug">{{ $aval['comentario'] }}</p>
+                                                @endif
+                                                
+                                                <div class="text-right mt-1">
+                                                    <span class="text-[9px] font-medium text-gray-500/80">{{ \Carbon\Carbon::parse($aval['created_at'])->format('H:i') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
 
                             <!-- Rodapé (Campo de digitar) -->
