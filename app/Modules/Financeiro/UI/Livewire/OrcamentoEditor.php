@@ -5,10 +5,15 @@ namespace App\Modules\Financeiro\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
+use App\Mail\OrcamentoFinalizadoMail;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
 use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
+use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
 #[Title('Edição de Orçamento - Excel View')]
@@ -272,8 +277,15 @@ class OrcamentoEditor extends Component
         $this->dispatch('sucesso', msg: "Natureza {$codigoAleatorio} cadastrada com sucesso!");
     }
 
-    public function salvarOrcamento() { $this->processarGravacao('Em elaboração', 'Planilha guardada como rascunho com sucesso!'); }
-    public function finalizarOrcamento() { $this->processarGravacao('Finalizado', 'Orçamento submetido para aprovação da Diretoria!'); }
+    public function salvarOrcamento()
+    {
+        $this->processarGravacao('Em elaboração', 'Planilha guardada como rascunho com sucesso!');
+    }
+
+    public function finalizarOrcamento()
+    {
+        $this->processarGravacao('Finalizado', 'Orçamento finalizado, sincronizado com o Protheus e notificado por e-mail!');
+    }
 
     private function processarGravacao($statusDesejado, $mensagemSucesso)
     {
@@ -289,7 +301,9 @@ class OrcamentoEditor extends Component
             }
         }
 
-        $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamento->status, ['Criado', 'Reprovado'])) ? $this->orcamento->status : $statusDesejado;
+        $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamento->status, ['Criado', 'Reprovado']))
+            ? $this->orcamento->status
+            : $statusDesejado;
         
         $dadosUpdate = ['descricao_despesa' => $this->justificativaGeral, 'status' => $novoStatus];
         if ($statusDesejado === 'Finalizado') {
@@ -314,7 +328,9 @@ class OrcamentoEditor extends Component
                 $descricaoParaSalvar = $naturezaDB ? $naturezaDB->descricao : 'Natureza Importada';
             }
 
-            $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas'])) ? 'Corrigido' : ($dataItem['status'] ?? 'Criado');
+            $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas']))
+                ? 'Corrigido'
+                : ($dataItem['status'] ?? 'Criado');
 
             $idReal = (!empty($dataItem['id']) && is_numeric($dataItem['id'])) ? (int) $dataItem['id'] : null;
 
@@ -340,10 +356,69 @@ class OrcamentoEditor extends Component
             );
         }
 
-        $this->dispatch('sucesso', msg: $mensagemSucesso);
-        if ($statusDesejado === 'Finalizado') { return redirect()->route('financeiro.orcamentos'); }
         $this->orcamento->refresh();
+
+        // Quando o orçamento é finalizado, dispara a consolidação para o Protheus e o e-mail para os administradores
+        if ($statusDesejado === 'Finalizado') {
+            $this->executarRotinasDeFinalizacao();
+            $this->dispatch('sucesso', msg: $mensagemSucesso);
+            return redirect()->route('financeiro.orcamentos');
+        }
+
+        $this->dispatch('sucesso', msg: $mensagemSucesso);
         $this->carregarItens();
+    }
+
+    /**
+     * Executa a sincronização simulada com a Tabela Intermediária do Protheus
+     * e dispara o e-mail de notificação para os usuários administradores.
+     */
+    private function executarRotinasDeFinalizacao(): void
+    {
+        // 1. Consolida e simula envio para a Tabela Intermediária do Protheus
+        try {
+            app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($this->orcamento);
+        } catch (\Throwable $e) {
+            Log::error("Erro ao consolidar orçamento #{$this->orcamento->id} para o Protheus: " . $e->getMessage());
+        }
+
+        // 2. Busca e-mails dos administradores / diretoria (permissão global)
+        try {
+            $destinatarios = collect();
+
+            if (method_exists(User::class, 'role')) {
+                try {
+                    $adminsRole = User::role(['admin', 'dev', 'diretoria'])->pluck('email');
+                    $destinatarios = $destinatarios->merge($adminsRole);
+                } catch (\Throwable) {
+                    // Ignora caso alguma role específica não exista no banco
+                }
+            }
+
+            if (method_exists(User::class, 'permission')) {
+                try {
+                    $adminsPerm = User::permission('financeiro.orcamentos.global')->pluck('email');
+                    $destinatarios = $destinatarios->merge($adminsPerm);
+                } catch (\Throwable) {
+                    // Ignora caso a permissão não esteja cadastrada no banco
+                }
+            }
+
+            $emails = $destinatarios->filter()->unique()->values()->toArray();
+
+            // Fallback para testes locais no Mailpit caso não haja outros admins cadastrados
+            if (empty($emails) && auth()->user()?->email) {
+                $emails = [auth()->user()->email];
+            }
+
+            if (!empty($emails)) {
+                Mail::to($emails)->send(
+                    new OrcamentoFinalizadoMail($this->orcamento, auth()->user()->name ?? 'Coordenador')
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::error("Erro ao enviar e-mail de finalização do orçamento #{$this->orcamento->id}: " . $e->getMessage());
+        }
     }
 
     public function voltar() { return redirect()->route('financeiro.orcamentos'); }
