@@ -98,8 +98,8 @@
                         </template>
                     @endif
 
-                    <button @click="$wire.set('drawerComentariosAberto', true)" class="btn btn--secondary btn--small !text-blue-600 !border-blue-200 hover:!bg-blue-50 shadow-sm flex items-center gap-2">
-                        <i class="ph-bold ph-chats-teardrop text-lg"></i> Histórico / Chat
+                    <button @click="$wire.set('drawerComentariosAberto', true)" class="btn btn--secondary btn--small !text-gray-700 !border-gray-300 hover:!bg-gray-100 shadow-sm flex items-center gap-2">
+                        <i class="ph-bold ph-chat-centered-text"></i> Histórico / Comentários
                     </button>
                 </div>
             </div>
@@ -259,14 +259,13 @@
         </div>
     </div>
 
-    {{-- NAVIGATION DRAWER: COMENTÁRIOS / CHAT --}}
+    {{-- NAVIGATION DRAWER: COMENTÁRIOS / EMPRESARIAL --}}
     <div class="relative z-[150]" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="$wire.drawerComentariosAberto" x-cloak>
         <div x-show="$wire.drawerComentariosAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
 
         <div class="fixed inset-0 overflow-hidden">
             <div class="absolute inset-0 overflow-hidden">
                 <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-                    <!-- Painel lateral (Drawer) com Responsividade Mobile -->
                     <div x-show="$wire.drawerComentariosAberto" 
                          x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" 
                          x-transition:enter-start="translate-x-full" 
@@ -277,19 +276,18 @@
                          class="pointer-events-auto w-screen max-w-md h-[100dvh] sm:h-full flex flex-col" @click.away="$wire.set('drawerComentariosAberto', false)">
                          
                         <div class="flex flex-col h-full bg-white shadow-2xl overflow-hidden">
-                            <!-- Cabeçalho do Drawer -->
-                            <div class="bg-gray-900 px-4 py-5 sm:px-6 shrink-0 flex items-center justify-between">
-                                <h2 class="text-base font-bold leading-6 text-white flex items-center gap-2" id="slide-over-title">
-                                    <i class="ph-fill ph-chats-teardrop text-xl"></i> Histórico de Comentários
+                            <!-- Cabeçalho do Drawer Minimalista -->
+                            <div class="bg-white border-b border-gray-200 px-5 py-4 sm:px-6 shrink-0 flex items-center justify-between">
+                                <h2 class="text-base font-bold leading-6 text-gray-900 flex items-center gap-2">
+                                    <i class="ph-bold ph-chat-centered-text text-xl text-gray-400"></i> Histórico do Orçamento
                                 </h2>
-                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-white focus:outline-none transition p-2 -mr-2">
-                                    <span class="absolute -inset-2.5"></span>
-                                    <i class="ph-bold ph-x text-xl"></i>
+                                <button type="button" @click="$wire.set('drawerComentariosAberto', false)" class="relative rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition p-2 -mr-2">
+                                    <i class="ph-bold ph-x text-lg"></i>
                                 </button>
                             </div>
                             
-                            <!-- Corpo do Chat -->
-                            <div class="flex-1 overflow-y-auto overscroll-contain p-3 sm:px-6 bg-[#efeae2] relative flex flex-col" 
+                            <!-- Corpo do Chat (Estilo Corporativo / Timeline) -->
+                            <div class="flex-1 overflow-y-auto overscroll-contain p-4 sm:px-6 bg-white relative flex flex-col gap-5" 
                                  x-ref="chatContainer" 
                                  x-init="$watch('$wire.drawerComentariosAberto', val => { if(val) setTimeout(() => $el.scrollTop = $el.scrollHeight, 100) })">
                                  
@@ -316,59 +314,63 @@
                                     $todasAvaliacoes = $todasAvaliacoes->sortBy('created_at');
                                 @endphp
 
-                                <div class="flex flex-col gap-3 pb-2 sm:pb-4">
-                                    <div class="text-center bg-[#fffbeb] text-yellow-800 text-[10px] py-1.5 px-3 rounded-lg mx-auto mb-2 shadow-sm font-medium w-max max-w-full leading-tight">
-                                        <i class="ph-fill ph-lock-key"></i> As avaliações e comentários são registados permanentemente.
-                                    </div>
+                                <div class="bg-gray-50 border border-gray-200 text-gray-600 text-[11px] p-3 rounded-md flex items-start gap-2 shadow-sm mb-2">
+                                    <i class="ph-fill ph-info text-gray-400 text-sm mt-0.5 shrink-0"></i>
+                                    <span>As mensagens e aprovações deste orçamento são guardadas de forma segura e não podem ser apagadas.</span>
+                                </div>
 
-                                    @foreach($todasAvaliacoes as $aval)
-                                        @php
-                                            $isMeu = ($aval['user_id'] == auth()->id());
-                                            $isComentarioPuro = ($aval['tipo_evento'] === 'comentario_chat');
-                                        @endphp
+                                @foreach($todasAvaliacoes as $aval)
+                                    @php
+                                        $isMeu = ($aval['user_id'] == auth()->id());
+                                        $isComentarioPuro = (($aval['tipo_evento'] ?? '') === 'comentario_chat');
+                                        $nomeDisplay = $isMeu ? 'Você (Diretoria)' : ($aval['user_nome'] ?? 'Usuário');
+                                    @endphp
 
-                                        <div class="flex flex-col max-w-[90%] sm:max-w-[85%] {{ $isMeu ? 'self-end' : 'self-start' }}">
-                                            <div class="p-2.5 shadow-sm relative {{ $isMeu ? 'bg-[#d9fdd3] rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-sm' : 'bg-white rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-sm' }}">
-                                                
-                                                @if($isMeu)
-                                                    <div class="absolute right-[-6px] top-0 w-0 h-0 border-l-[8px] border-l-[#d9fdd3] border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
-                                                @else
-                                                    <div class="absolute left-[-6px] top-0 w-0 h-0 border-r-[8px] border-r-white border-b-[8px] border-b-transparent border-t-[0px] border-t-transparent"></div>
-                                                @endif
-
-                                                <div class="flex items-baseline justify-between gap-4 mb-1">
-                                                    <span class="text-[10px] font-black {{ $isMeu ? 'text-emerald-700' : 'text-blue-600' }}">{{ $isMeu ? 'Eu (Diretoria)' : ($aval['user_nome'] ?? 'Usuário') }}</span>
-                                                </div>
-
+                                    <div class="flex gap-3 w-full">
+                                        <!-- Avatar Corporativo -->
+                                        <div class="shrink-0 mt-0.5">
+                                            <div class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">
+                                                {{ substr($nomeDisplay, 0, 2) }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Bloco da Mensagem -->
+                                        <div class="flex-1 min-w-0 flex flex-col">
+                                            <div class="flex items-baseline gap-2 mb-1">
+                                                <span class="text-xs font-bold text-gray-900">{{ $nomeDisplay }}</span>
+                                                <span class="text-[10px] font-medium text-gray-400">{{ \Carbon\Carbon::parse($aval['created_at'] ?? now())->format('d/m/Y H:i') }}</span>
+                                            </div>
+                                            
+                                            <div class="bg-gray-50 border border-gray-200 rounded-r-lg rounded-bl-lg p-3 shadow-sm">
                                                 @if(!$isComentarioPuro)
-                                                    <div class="mb-1.5 text-[10px] font-bold text-gray-700 bg-black/5 px-2 py-1 rounded border border-black/5">
-                                                        <span class="uppercase {{ in_array($aval['status_aplicado'], ['Reprovado','Reabertura Negada']) ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] }}</span>
-                                                        @if($aval['natureza_codigo'] !== 'GERAL')
-                                                            <br><span class="text-[9px] font-medium text-gray-500">{{ $aval['natureza_codigo'] }} - {{ $aval['natureza_descricao'] }}</span>
+                                                    <div class="mb-2 text-[10px] font-bold text-gray-700 bg-white px-2 py-1.5 rounded border border-gray-200 shadow-sm inline-block">
+                                                        <span class="uppercase {{ in_array($aval['status_aplicado'] ?? '', ['Reprovado','Reabertura Negada']) ? 'text-red-600' : 'text-emerald-600' }}">{{ $aval['status_aplicado'] ?? '' }}</span>
+                                                        @if(($aval['natureza_codigo'] ?? '') !== 'GERAL')
+                                                            <span class="mx-1 text-gray-300">•</span>
+                                                            <span class="text-[9px] font-medium text-gray-500">{{ $aval['natureza_codigo'] ?? '' }} - {{ $aval['natureza_descricao'] ?? '' }}</span>
                                                         @endif
                                                     </div>
                                                 @endif
 
                                                 @if(!empty($aval['comentario']))
-                                                    <p class="text-xs text-gray-800 whitespace-pre-wrap leading-snug">{{ $aval['comentario'] }}</p>
+                                                    <p class="text-[13px] text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $aval['comentario'] }}</p>
                                                 @endif
-                                                
-                                                <div class="text-right mt-1">
-                                                    <span class="text-[9px] font-medium text-gray-500/80">{{ \Carbon\Carbon::parse($aval['created_at'])->format('H:i') }}</span>
-                                                </div>
                                             </div>
                                         </div>
-                                    @endforeach
-                                </div>
+                                    </div>
+                                @endforeach
                             </div>
 
-                            <!-- Rodapé (Campo de digitar) ajustado para o teclado -->
-                            <div class="p-3 sm:p-4 border-t border-gray-200 bg-gray-50 shrink-0 pb-safe">
-                                <form wire:submit.prevent="adicionarComentarioGlobal" class="flex items-end gap-2">
-                                    <textarea wire:model="novoComentario" @keydown.enter.prevent="$wire.adicionarComentarioGlobal()" rows="1" class="w-full text-sm rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 resize-none py-3 px-4" placeholder="Digite uma mensagem/comentário..."></textarea>
-                                    <button type="submit" class="h-11 w-11 shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition transform hover:scale-105" title="Enviar Mensagem">
-                                        <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
-                                    </button>
+                            <!-- Rodapé Minimalista (Campo de digitar) -->
+                            <div class="p-4 border-t border-gray-200 bg-white shrink-0 pb-safe">
+                                <form wire:submit.prevent="adicionarComentarioGlobal" class="flex flex-col gap-2">
+                                    <textarea wire:model="novoComentario" @keydown.enter.prevent="$wire.adicionarComentarioGlobal()" rows="2" class="w-full text-[13px] rounded-md border-gray-300 shadow-sm focus:border-gray-900 focus:ring-gray-900 resize-none py-2 px-3" placeholder="Escreva uma observação..."></textarea>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <span class="text-[10px] text-gray-400">Pressione Enter para enviar</span>
+                                        <button type="submit" class="px-4 py-1.5 bg-gray-900 hover:bg-black text-white text-[11px] uppercase tracking-wider font-bold rounded-md shadow-sm transition-colors">
+                                            Add
+                                        </button>
+                                    </div>
                                 </form>
                                 @error('novoComentario') <span class="text-red-500 text-[10px] font-bold block mt-1 px-1">{{ $message }}</span> @enderror
                             </div>
