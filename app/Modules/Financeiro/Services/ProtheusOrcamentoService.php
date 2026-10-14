@@ -4,10 +4,11 @@ namespace App\Modules\Financeiro\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
-use Illuminate\Support\Facades\Storage;
+use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 
 class ProtheusOrcamentoService
 {
@@ -111,8 +112,9 @@ class ProtheusOrcamentoService
             ? $orcamento->centroCusto->nome 
             : 'Centro de Custo (' . $ccCodigo . ')';
 
-        // Agrupa por código de natureza caso existam linhas com a mesma natureza no orçamento
-        $itensAgrupados = $orcamento->itens->groupBy('natureza_codigo');
+        // Consolida apenas itens que não foram reprovados, agrupando por natureza
+        $itensValidos = $orcamento->itens->where('status', '!=', 'Reprovado');
+        $itensAgrupados = $itensValidos->groupBy('natureza_codigo');
         $linhasIntermediarias = [];
 
         foreach ($itensAgrupados as $codigoNatureza => $grupoItens) {
@@ -123,9 +125,8 @@ class ProtheusOrcamentoService
                 ? $natObj->descricao 
                 : 'Natureza Importada (' . $codigoNatureza . ')';
 
-            $categoria = $natObj->categoria ?? ($primeiroItem->categoria ?? 'Despesa Orçamentária');
+            $categoria = $orcamento->xcat ?: ($natObj->categoria ?? 'Despesa Orçamentária');
 
-            // Concatena as observações caso mais de uma linha da mesma natureza tenha anotações
             $descricoes = $grupoItens->pluck('descricao')
                 ->map(fn($d) => trim((string) $d))
                 ->filter()
@@ -135,12 +136,12 @@ class ProtheusOrcamentoService
             $linhasIntermediarias[] = [
                 'ano'                        => (int) $orcamento->ano,
                 'codigo_centro_custo'        => $ccCodigo,
-                'descricao_centro_custo'     => $ccDescricaoVirtual, // Campo virtual
+                'descricao_centro_custo'     => $ccDescricaoVirtual,
                 'codigo_natureza'            => trim((string) $codigoNatureza),
-                'descricao_natureza'         => $naturezaDescricaoVirtual, // Campo virtual
+                'descricao_natureza'         => $naturezaDescricaoVirtual,
                 'categoria'                  => $categoria,
                 'descricao_despesa'          => $descricoes ?: $naturezaDescricaoVirtual,
-                'status'                     => $orcamento->status, // Criado | Em elaboração | Finalizado
+                'status'                     => 'Finalizado', // Na Tabela Intermediária do Protheus o status final esperado é Finalizado
                 'valor_previsto_janeiro'     => round((float) $grupoItens->sum('valor_jan'), 2),
                 'valor_previsto_fevereiro'   => round((float) $grupoItens->sum('valor_fev'), 2),
                 'valor_previsto_marco'       => round((float) $grupoItens->sum('valor_mar'), 2),
@@ -162,45 +163,35 @@ class ProtheusOrcamentoService
                 'filial'               => $orcamento->filial,
                 'ano'                  => (int) $orcamento->ano,
                 'centro_custo'         => $ccCodigo,
-                'status_enviado'       => $orcamento->status,
-                'total_linhas'         => count($linhasIntermediarias),
-                'data_sincronizacao'   => now()->toIso8601String(),
-                'usuario_responsavel'  => auth()->user()->name ?? 'Sistema',
-                'codigo_user_protheus' => auth()->user()->codigo_protheus ?? null,
+                'status_orcamento_web' => $orcamento->status,
+                'total_naturezas'      => count($linhasIntermediarias),
+                'data_consolidacao'    => now()->toIso8601String(),
+                'aprovado_por'         => auth()->user()->name ?? 'Sistema',
             ],
             'tabela_intermediaria' => $linhasIntermediarias,
         ];
     }
 
     /**
-     * Simula o envio para o WebService do Protheus gravando o JSON em disco e no Log.
+     * Gera o payload consolidado e armazena na coluna dados_consolidados do Orçamento aprovado.
      */
     public function enviarParaProtheusSimulado(Orcamento $orcamento): array
     {
         $payload = $this->consolidarParaTabelaIntermediaria($orcamento);
 
-        // Grava o arquivo JSON em storage/app/protheus_sync/ para inspeção e documentação da API
-        $fileName = sprintf(
-            'protheus_sync/orcamento_cc_%s_ano_%s_id_%s.json',
-            $orcamento->ccusto,
-            $orcamento->ano,
-            $orcamento->id
-        );
+        // Salva diretamente na coluna dados_consolidados do banco (sem disparar loop de eventos)
+        $orcamento->updateQuietly([
+            'dados_consolidados' => $payload,
+        ]);
 
-        Storage::disk('local')->put(
-            $fileName,
-            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-        );
+        Log::info("[SIMULAÇÃO PROTHEUS] Tabela Intermediária consolidada após aprovação do Orçamento #{$orcamento->id}", $payload);
 
-        Log::info("[SIMULAÇÃO PROTHEUS] Tabela Intermediária atualizada para o Orçamento #{$orcamento->id}", $payload);
-
-        // Registra no histórico de auditoria do orçamento
         OrcamentoAvaliacao::create([
             'orcamento_id'    => $orcamento->id,
-            'user_id'         => auth()->id(),
+            'user_id'         => auth()->id() ?? 1,
             'user_nome'       => auth()->user()->name ?? 'Sistema',
-            'status_aplicado' => 'Sincronizado (Protheus Mock)',
-            'comentario'      => "Dados consolidados (" . count($payload['tabela_intermediaria']) . " naturezas) enviados para a Tabela Intermediária do Protheus. Arquivo gerado: storage/app/{$fileName}",
+            'status_aplicado' => 'Consolidado p/ Protheus',
+            'comentario'      => "Orçamento aprovado e consolidado (" . count($payload['tabela_intermediaria']) . " naturezas) para a Tabela Intermediária do Protheus.",
             'tipo_evento'     => 'integracao_protheus',
         ]);
 

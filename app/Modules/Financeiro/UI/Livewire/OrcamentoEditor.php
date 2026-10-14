@@ -13,7 +13,6 @@ use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
 use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
-use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
 #[Title('Edição de Orçamento - Excel View')]
@@ -37,7 +36,6 @@ class OrcamentoEditor extends Component
     public ?int $linhaParaDesbloquear = null;
     public string $justificativaDesbloqueio = '';
 
-    // --- VARIÁVEIS DE SOLICITAÇÃO DE REABERTURA ---
     public bool $modalReaberturaAberto = false;
     public string $motivoReabertura = '';
 
@@ -59,13 +57,11 @@ class OrcamentoEditor extends Component
 
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
         
-        // Verifica bloqueio base
         $this->isLockedGlobal = in_array($this->orcamento->status, ['Aprovado', 'Aprovado com ressalvas', 'Finalizado']);
         if (!auth()->user()->hasRole('dev|admin') && $this->orcamento->status === 'Finalizado') {
             $this->isLockedGlobal = true;
         }
 
-        // Verifica o Prazo de Edição (Se existir um prazo e ele já passou, bloqueia)
         if ($this->orcamento->prazo_edicao && now()->greaterThan($this->orcamento->prazo_edicao)) {
             $this->isLockedGlobal = true;
         }
@@ -79,11 +75,9 @@ class OrcamentoEditor extends Component
         $this->itensOrcamento = [];
         
         foreach ($this->orcamento->itens as $item) {
-            
             $natObj = $item->natureza;
             $natNome = $natObj ? $natObj->descricao : 'Natureza Importada (API)';
 
-            // Observações da linha iniciam vazias se não houver anotação customizada
             $obs = trim($item->descricao);
             if ($obs === $natNome || $obs === 'Natureza Importada' || $obs === 'Natureza Importada (API)' || $obs === '') {
                 $obs = '';
@@ -117,7 +111,6 @@ class OrcamentoEditor extends Component
         }
     }
 
-    // --- SOLICITAR REABERTURA GERAL ---
     public function solicitarReabertura()
     {
         $this->validate(['motivoReabertura' => 'required|string|min:5'], ['motivoReabertura.required' => 'O motivo é obrigatório.']);
@@ -141,7 +134,6 @@ class OrcamentoEditor extends Component
         $this->orcamento->refresh();
     }
 
-    // --- SOLICITAR DESBLOQUEIO DE LINHA ---
     public function solicitarDesbloqueio($index)
     {
         if (($this->itensOrcamento[$index]['status'] ?? 'Criado') !== 'Aprovado' || $this->isLockedGlobal) return;
@@ -284,7 +276,7 @@ class OrcamentoEditor extends Component
 
     public function finalizarOrcamento()
     {
-        $this->processarGravacao('Finalizado', 'Orçamento finalizado, sincronizado com o Protheus e notificado por e-mail!');
+        $this->processarGravacao('Finalizado', 'Orçamento finalizado e enviado para avaliação da Diretoria!');
     }
 
     private function processarGravacao($statusDesejado, $mensagemSucesso)
@@ -358,9 +350,9 @@ class OrcamentoEditor extends Component
 
         $this->orcamento->refresh();
 
-        // Quando o orçamento é finalizado, dispara a consolidação para o Protheus e o e-mail para os administradores
+        // Ao finalizar, dispara o e-mail apenas para usuários com permissão 'financeiro.orcamentos.avaliacao'
         if ($statusDesejado === 'Finalizado') {
-            $this->executarRotinasDeFinalizacao();
+            $this->notificarAvaliadoresPorEmail();
             $this->dispatch('sucesso', msg: $mensagemSucesso);
             return redirect()->route('financeiro.orcamentos');
         }
@@ -370,51 +362,24 @@ class OrcamentoEditor extends Component
     }
 
     /**
-     * Executa a sincronização simulada com a Tabela Intermediária do Protheus
-     * e dispara o e-mail de notificação para os usuários administradores.
+     * Envia e-mail exclusivamente para usuários com a permissão 'financeiro.orcamentos.avaliacao'.
      */
-    private function executarRotinasDeFinalizacao(): void
+    private function notificarAvaliadoresPorEmail(): void
     {
-        // 1. Consolida e simula envio para a Tabela Intermediária do Protheus
         try {
-            app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($this->orcamento);
-        } catch (\Throwable $e) {
-            Log::error("Erro ao consolidar orçamento #{$this->orcamento->id} para o Protheus: " . $e->getMessage());
-        }
-
-        // 2. Busca e-mails dos administradores / diretoria (permissão global)
-        try {
-            $destinatarios = collect();
-
-            if (method_exists(User::class, 'role')) {
-                try {
-                    $adminsRole = User::role(['admin', 'dev', 'diretoria'])->pluck('email');
-                    $destinatarios = $destinatarios->merge($adminsRole);
-                } catch (\Throwable) {
-                    // Ignora caso alguma role específica não exista no banco
-                }
-            }
-
-            if (method_exists(User::class, 'permission')) {
-                try {
-                    $adminsPerm = User::permission('financeiro.orcamentos.global')->pluck('email');
-                    $destinatarios = $destinatarios->merge($adminsPerm);
-                } catch (\Throwable) {
-                    // Ignora caso a permissão não esteja cadastrada no banco
-                }
-            }
-
-            $emails = $destinatarios->filter()->unique()->values()->toArray();
-
-            // Fallback para testes locais no Mailpit caso não haja outros admins cadastrados
-            if (empty($emails) && auth()->user()?->email) {
-                $emails = [auth()->user()->email];
-            }
+            $emails = User::permission('financeiro.orcamentos.avaliacao')
+                ->pluck('email')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
 
             if (!empty($emails)) {
                 Mail::to($emails)->send(
                     new OrcamentoFinalizadoMail($this->orcamento, auth()->user()->name ?? 'Coordenador')
                 );
+            } else {
+                Log::warning("Orçamento #{$this->orcamento->id} finalizado, mas nenhum usuário possui a permissão 'financeiro.orcamentos.avaliacao'.");
             }
         } catch (\Throwable $e) {
             Log::error("Erro ao enviar e-mail de finalização do orçamento #{$this->orcamento->id}: " . $e->getMessage());

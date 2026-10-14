@@ -25,11 +25,13 @@ class OrcamentoManager extends Component
     public array $breadcrumbs = [];
     public int $anoSimulacao = 2026;
 
+    // Controle do Modal de JSON Consolidado (Tabela Intermediária)
+    public bool $modalJsonAberto = false;
+    public string $jsonConsolidado = '';
+    public string $tituloOrcamentoJson = '';
+
     public function mount()
     {
-        // abort_if(!feature('financeiro.orcamentos.listagem'), 403);
-        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listagem'), 403);
-
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')], 
             ['label' => 'Financeiro', 'url' => '#'], 
@@ -47,12 +49,14 @@ class OrcamentoManager extends Component
         if ($nomePropriedade === 'anoSimulacao') session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
     }
 
-    public function limparFiltros() { 
+    public function limparFiltros()
+    { 
         $this->reset(['filtroAno', 'filtroFilial', 'filtroStatus', 'filtroCentroCusto']); 
         $this->resetPage(); 
     }
 
-    public function sincronizarProtheus() {
+    public function sincronizarProtheus()
+    {
         $resultado = ProtheusOrcamentoService::sincronizar();
         if ($resultado['sucesso']) $this->dispatch('sucesso', msg: $resultado['mensagem']); 
         else $this->dispatch('erro', msg: $resultado['mensagem']);
@@ -63,15 +67,48 @@ class OrcamentoManager extends Component
         return redirect()->route('financeiro.orcamentos.editor', $id);
     }
 
+    public function verJsonConsolidado($id)
+    {
+        $orcamento = Orcamento::with(['centroCusto', 'itens.natureza'])->findOrFail($id);
+
+        if (!in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas'])) {
+            $this->dispatch('erro', msg: 'Os dados consolidados só são gerados após a aprovação do orçamento.');
+            return;
+        }
+
+        // Caso o orçamento tenha sido aprovado antes da criação da coluna, gera e salva agora
+        $dados = $orcamento->dados_consolidados;
+        if (empty($dados)) {
+            $dados = app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($orcamento);
+        }
+
+        $ccNome = $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'S/ Vínculo';
+        $this->tituloOrcamentoJson = "Orçamento #{$orcamento->id} - C.C. {$orcamento->ccusto} ({$ccNome}) - Ano {$orcamento->ano}";
+        $this->jsonConsolidado = json_encode($dados, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $this->modalJsonAberto = true;
+    }
+
+    public function fecharModalJson()
+    {
+        $this->modalJsonAberto = false;
+        $this->jsonConsolidado = '';
+        $this->tituloOrcamentoJson = '';
+    }
+
     public function avancarAnoSimulacao()
     {
-        $anoAtual = $this->anoSimulacao; $proximoAno = $anoAtual + 1;
+        $anoAtual = $this->anoSimulacao;
+        $proximoAno = $anoAtual + 1;
         $orcamentosAtuais = Orcamento::with('itens')->where('ano', (string) $anoAtual)->get();
 
         foreach ($orcamentosAtuais as $orcamento) {
             $novoOrcamento = Orcamento::firstOrCreate(
                 ['chave_composta' => "{$orcamento->filial}_{$proximoAno}_{$orcamento->ccusto}"],
-                ['filial' => $orcamento->filial, 'ano' => (string) $proximoAno, 'ccusto' => $orcamento->ccusto, 'moeda' => $orcamento->moeda, 'cmoeda' => $orcamento->cmoeda, 'xcat' => $orcamento->xcat, 'descricao_despesa' => $orcamento->descricao_despesa, 'status' => 'Criado']
+                [
+                    'filial' => $orcamento->filial, 'ano' => (string) $proximoAno, 'ccusto' => $orcamento->ccusto,
+                    'moeda' => $orcamento->moeda, 'cmoeda' => $orcamento->cmoeda, 'xcat' => $orcamento->xcat,
+                    'descricao_despesa' => $orcamento->descricao_despesa, 'status' => 'Criado'
+                ]
             );
 
             if ($novoOrcamento->wasRecentlyCreated || $novoOrcamento->itens()->count() === 0) {
@@ -94,11 +131,13 @@ class OrcamentoManager extends Component
                 }
             }
         }
-        $this->anoSimulacao = $proximoAno; session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
+        $this->anoSimulacao = $proximoAno;
+        session(['ano_simulacao_orcamento' => $this->anoSimulacao]);
         $this->dispatch('sucesso', msg: "Ano avançado para {$this->anoSimulacao}! Valores fechados foram convertidos na Nova Base Prevista.");
     }
 
-    public function getHeadersProperty() {
+    public function getHeadersProperty()
+    {
         return [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true], 
             ['key' => 'ano', 'label' => 'Ano', 'sortable' => true, 'class' => 'text-center'],
@@ -111,7 +150,8 @@ class OrcamentoManager extends Component
         ];
     }
 
-    protected function obterQueryFiltrada() {
+    protected function obterQueryFiltrada()
+    {
         $query = Orcamento::with('centroCusto');
         if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) $query->whereIn('ccusto', auth()->user()->centros_de_custo->pluck('codigo')->toArray());
@@ -124,7 +164,8 @@ class OrcamentoManager extends Component
         return $query;
     }
 
-    public function render() {
+    public function render()
+    {
         $query = $this->obterQueryFiltrada();
         if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao); else $query->orderBy('id', 'desc');
         $orcamentos = $query->paginate($this->porPagina);

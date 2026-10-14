@@ -10,22 +10,22 @@
     </x-page-header>
 
     @if(isset($metricas))
-            <div class="mb-6 bg-gradient-to-r from-gray-900 to-purpura-900 rounded-xl p-5 shadow-lg border border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-white">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm shrink-0">
-                        <i class="ph ph-calendar text-2xl text-yellow-400"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg tracking-wide">Simulador Orçamentos</h3>
-                    </div>
+        <div class="mb-6 bg-gradient-to-r from-gray-900 to-purpura-900 rounded-xl p-5 shadow-lg border border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-white">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm shrink-0">
+                    <i class="ph ph-calendar text-2xl text-yellow-400"></i>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="bg-gray-800 text-white text-sm rounded-lg py-2 px-4">Ano: {{ $anoSimulacao }}</div>
-                    <button wire:click="avancarAnoSimulacao" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-lg text-sm  transition shadow-md flex items-center gap-2 whitespace-nowrap" onclick="confirm('Esta ação clonará a Base Prevista de TODOS os orçamentos para o próximo ano. Continuar?') || event.stopImmediatePropagation()">
-                        Avançar <i class="ph ph-arrow-right"></i>
-                    </button>
+                <div>
+                    <h3 class="text-lg tracking-wide">Simulador Orçamentos</h3>
                 </div>
             </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-gray-800 text-white text-sm rounded-lg py-2 px-4">Ano: {{ $anoSimulacao }}</div>
+                <button wire:click="avancarAnoSimulacao" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-lg text-sm transition shadow-md flex items-center gap-2 whitespace-nowrap" onclick="confirm('Esta ação clonará a Base Prevista de TODOS os orçamentos para o próximo ano. Continuar?') || event.stopImmediatePropagation()">
+                    Avançar <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+        </div>
 
         <div class="mb-6"><x-summary-cards :metricas="$metricas" /></div>
     @endif
@@ -42,6 +42,7 @@
                     <option value="Em elaboração">Em Elaboração</option>
                     <option value="Finalizado">Finalizado (Aguardando)</option>
                     <option value="Aprovado">Aprovado</option>
+                    <option value="Aprovado com ressalvas">Aprovado com Ressalvas</option>
                     <option value="Reprovado">Reprovado</option>
                 </select>
                 <button wire:click="limparFiltros" class="btn btn--secondary btn--small w-full h-[38px] bg-white"><i class="ph-bold ph-funnel-x"></i> Limpar Filtros</button>
@@ -55,10 +56,8 @@
                         <td class="px-4 py-1.5 t-label-12 text-gray-500">#{{ $orcamento->id }}</td>
                         <td class="px-4 py-1.5 t-body-14-semibold text-center">{{ $orcamento->ano }}</td>
                         <td class="px-4 py-1.5 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
-                        <td class="px-4 py-1.5">
-                            <span class="text-sm t-label-12 text-gray-900 dark:text-white block">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</span>
-                            <span class="text-xs t-label-12 font-medium text-purpura-600">C.C. {{ $orcamento->ccusto ?: '-' }}</span>
-                        </td>
+                        <td class="px-4 py-1.5 text-xs font-mono font-bold text-purpura-600">{{ $orcamento->ccusto ?: '-' }}</td>
+                        <td class="px-4 py-1.5 text-sm font-bold text-gray-900 dark:text-white">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</td>
                         <td class="px-4 py-1.5 text-center">
                             @php
                                 $statusColor = match($orcamento->status) {
@@ -72,15 +71,76 @@
                             @endphp
                             <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase border {{ $statusColor }} whitespace-nowrap">{{ $orcamento->status ?? 'Criado' }}</span>
                         </td>
-                        <td class="px-4 py-1.5 text-base font text-right text-gray-900 dark:text-white tracking-tight">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
+                        <td class="px-4 py-1.5 text-base font-bold text-right text-gray-900 dark:text-white tracking-tight">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
                         <td class="px-4 py-1.5 text-right">
-                            <button wire:click="editarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Abrir Planilha de Edição"><i class="text-lg ph ph-pencil-simple"></i></button>
+                            <div class="inline-flex items-center justify-end gap-1">
+                                @if(in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas']))
+                                    <button wire:click="verJsonConsolidado({{ $orcamento->id }})" 
+                                            class="p-1.5 text-emerald-600 transition-colors rounded hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-gray-700" 
+                                            title="Ver JSON Consolidado (Tabela Intermediária Protheus)">
+                                        <i class="text-lg ph-bold ph-brackets-curly"></i>
+                                    </button>
+                                @endif
+
+                                <button wire:click="editarOrcamento({{ $orcamento->id }})" 
+                                        class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" 
+                                        title="Abrir Planilha de Edição">
+                                    <i class="text-lg ph ph-pencil-simple"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-4 py-12 text-center text-gray-400">Nenhum orçamento encontrado.</td></tr>
+                    <tr><td colspan="8" class="px-4 py-12 text-center text-gray-400">Nenhum orçamento encontrado.</td></tr>
                 @endforelse
             </x-table>
         </div>
     </div>
+
+    {{-- MODAL DE VISUALIZAÇÃO DO JSON CONSOLIDADO (TABELA INTERMEDIÁRIA PROTHEUS) --}}
+    @if($modalJsonAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4"
+             x-data="{ copiado: false }">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh]">
+                
+                <!-- Cabeçalho do Modal -->
+                <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between shrink-0">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                            <i class="ph-bold ph-brackets-curly text-emerald-400 text-lg"></i>
+                            Payload Consolidado - Tabela Intermediária Protheus
+                        </h3>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ $tituloOrcamentoJson }}</p>
+                    </div>
+                    <button wire:click="fecharModalJson" class="text-gray-400 hover:text-white p-1.5 rounded-lg transition">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Corpo com o JSON Formatado -->
+                <div class="p-4 bg-gray-950 text-emerald-400 font-mono text-xs overflow-y-auto flex-1 custom-scrollbar">
+                    <pre class="whitespace-pre-wrap break-words leading-relaxed">{{ $jsonConsolidado }}</pre>
+                </div>
+
+                <!-- Rodapé do Modal -->
+                <div class="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
+                    <span class="text-[11px] text-gray-500">
+                        Registro gravado na coluna <code class="font-mono font-bold text-gray-700 dark:text-gray-300">orcamentos.dados_consolidados</code>
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button"
+                                @click="navigator.clipboard.writeText(@js($jsonConsolidado)); copiado = true; setTimeout(() => copiado = false, 2000)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition flex items-center gap-1.5 shadow-sm">
+                            <i class="ph-bold" :class="copiado ? 'ph-check text-emerald-600' : 'ph-copy'"></i>
+                            <span x-text="copiado ? 'Copiado!' : 'Copiar JSON'"></span>
+                        </button>
+                        <button type="button" wire:click="fecharModalJson" class="px-4 py-1.5 text-xs font-bold text-white bg-gray-900 hover:bg-black rounded-md transition shadow-sm">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    @endif
 </div>
