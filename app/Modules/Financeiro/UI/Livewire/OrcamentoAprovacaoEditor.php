@@ -16,6 +16,9 @@ class OrcamentoAprovacaoEditor extends Component
     public Orcamento $orcamento;
     public int $anoSimulacao = 2026;
 
+    public string $novoComentario = '';
+    public bool $drawerComentariosAberto = false;
+
     public bool $modalAvaliacaoAberto = false;
     public string $modoAvaliacao = 'unico'; 
     public ?int $linhaParaAvaliar = null;
@@ -140,6 +143,27 @@ class OrcamentoAprovacaoEditor extends Component
         $this->modalAprovarReaberturaAberto = false;
         $this->dispatch('sucesso', msg: 'Pedido de reabertura negado.');
         $this->orcamento->refresh();
+    }
+
+    public function adicionarComentarioGlobal()
+    {
+        $this->validate(
+            ['novoComentario' => 'required|string|min:2'],
+            ['novoComentario.required' => 'Digite uma mensagem antes de enviar.']
+        );
+
+        OrcamentoAvaliacao::create([
+            'orcamento_id' => $this->orcamento->id,
+            'user_id' => auth()->id(),
+            'user_nome' => auth()->user()->name,
+            'status_aplicado' => 'Comentário Geral',
+            'comentario' => trim($this->novoComentario),
+            'tipo_evento' => 'comentario_chat'
+        ]);
+
+        $this->novoComentario = '';
+        $this->orcamento->refresh();
+        $this->dispatch('comentario-adicionado'); 
     }
 
     public function render()
