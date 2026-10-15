@@ -23,8 +23,11 @@ class UserExtraPermissionManager extends Component
     public array $selectedPermissions = [];
     public array $expirations = [];
     public array $rolePermissions = [];
-
     public array $breadcrumbs = [];
+
+    // Filtros
+    public string $filtro_keyword = '';
+    public string $filtro_module = '';
 
     public function mount(int $userId)
     {
@@ -70,17 +73,24 @@ class UserExtraPermissionManager extends Component
         ];
     }
 
-    /**
-     * AUTO-SAVE: É disparado sempre que um Toggle é clicado
-     */
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_module', 'filtro_keyword'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_module', 'filtro_keyword']);
+        $this->resetPage();
+    }
+
     public function updatedSelectedPermissions()
     {
         $this->syncExtraPermissions();
     }
 
-    /**
-     * AUTO-SAVE: É disparado sempre que uma Data de Validade é preenchida ou apagada
-     */
     public function updatedExpirations()
     {
         $this->syncExtraPermissions();
@@ -99,7 +109,6 @@ class UserExtraPermissionManager extends Component
         foreach ($this->selectedPermissions as $permissionId) {
             if (!$permissionId) continue;
             
-            // Ignora permissões que já vêm nativas da Role
             if (in_array((int) $permissionId, $this->rolePermissions)) {
                 continue;
             }
@@ -121,13 +130,23 @@ class UserExtraPermissionManager extends Component
 
     public function render()
     {
-        // Utilizamos paginate(1000) para satisfazer o <x-table> e manter o array agrupado na view
-        $registros = Permission::orderBy('module')->orderBy('name')->paginate(1000);
+        $query = Permission::query()
+            ->when($this->filtro_module, fn($q) => $q->where('module', $this->filtro_module))
+            ->when($this->filtro_keyword, function($q) {
+                $q->where(function($subQ) {
+                    $subQ->where('name', 'ilike', "%{$this->filtro_keyword}%")
+                         ->orWhere('description', 'ilike', "%{$this->filtro_keyword}%");
+                });
+            });
+
+        $registros = $query->orderBy('module')->orderBy('name')->paginate(1000);
         $permissionsByModule = collect($registros->items())->groupBy('module');
+        $modulosDisponiveis = Permission::select('module')->distinct()->orderBy('module')->pluck('module');
 
         return view('livewire.corporate.user-extra-permission-manager', [
             'registros' => $registros,
-            'permissionsByModule' => $permissionsByModule
+            'permissionsByModule' => $permissionsByModule,
+            'modulosDisponiveis' => $modulosDisponiveis
         ]);
     }
 }

@@ -23,6 +23,10 @@ class RolePermissionManager extends Component
     public array $selectedPermissions = [];
     public array $breadcrumbs = [];
 
+    // Filtros
+    public string $filtro_keyword = '';
+    public string $filtro_module = '';
+
     public function mount(int $roleId)
     {
         abort_if(!feature('acl.role.permissoes'), 403);
@@ -53,17 +57,25 @@ class RolePermissionManager extends Component
         ];
     }
 
-    /**
-     * AUTO-SAVE: É disparado em tempo real sempre que um Toggle é clicado na View
-     */
+    public function updating($nomePropriedade)
+    {
+        if (in_array($nomePropriedade, ['filtro_module', 'filtro_keyword'])) {
+            $this->resetPage();
+        }
+    }
+
+    public function limparFiltros()
+    {
+        $this->reset(['filtro_module', 'filtro_keyword']);
+        $this->resetPage();
+    }
+
     public function updatedSelectedPermissions()
     {
         abort_if(!feature('acl.role.permissoes'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
 
         $role = Role::findOrFail($this->roleId);
-        
-        // Sincroniza o array exato de toggles ativados com a tabela pivô do Spatie ACL
         $role->syncPermissions($this->selectedPermissions);
 
         $this->dispatch('sucesso', msg: 'Permissões atualizadas e salvas automaticamente!');
@@ -71,14 +83,23 @@ class RolePermissionManager extends Component
 
     public function render()
     {
-        // Utilizamos paginate(1000) para satisfazer o <x-table> sem quebrar o agrupamento visual na tela
-        $registros = Permission::orderBy('module')->orderBy('name')->paginate(1000);
-        
+        $query = Permission::query()
+            ->when($this->filtro_module, fn($q) => $q->where('module', $this->filtro_module))
+            ->when($this->filtro_keyword, function($q) {
+                $q->where(function($subQ) {
+                    $subQ->where('name', 'ilike', "%{$this->filtro_keyword}%")
+                         ->orWhere('description', 'ilike', "%{$this->filtro_keyword}%");
+                });
+            });
+
+        $registros = $query->orderBy('module')->orderBy('name')->paginate(1000);
         $permissionsByModule = collect($registros->items())->groupBy('module');
+        $modulosDisponiveis = Permission::select('module')->distinct()->orderBy('module')->pluck('module');
 
         return view('livewire.acl.role-permission-manager', [
             'registros' => $registros,
-            'permissionsByModule' => $permissionsByModule
+            'permissionsByModule' => $permissionsByModule,
+            'modulosDisponiveis' => $modulosDisponiveis
         ]);
     }
 }
