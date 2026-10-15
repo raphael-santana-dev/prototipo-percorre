@@ -1,140 +1,174 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
 
-    <x-breadcrumb :items="$breadcrumbs" />
+    <x-page-header 
+        title="Gerenciamento de Features" 
+        icon="ph ph-toggle-right"
+        badge="Sistema"
+        :breadcrumbs="$breadcrumbs ?? []">
 
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <i class="ph ph-toggle-right text-purpura-500"></i> Gerenciamento de Features
-        </h2>
-        <button wire:click="abrirModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
-            <i class="ph ph-plus text-lg"></i> Nova Feature
-        </button>
-    </div>
+        <x-slot name="actions">
+            <button wire:click="abrirModal" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
+                <i class="ph-bold ph-plus"></i> Nova Feature
+            </button>
+        </x-slot>
+    </x-page-header>
 
-    <!-- Filtros -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-        <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-magnifying-glass text-purpura-500"></i> Palavra-chave
-            </label>
-            <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Buscar por nome ou descrição..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-        </div>
+    <x-table
+        :headers="$this->headers"
+        :registros="$registros"
+        :ordenacaoCampo="$ordenacaoCampo"
+        :ordenacaoDirecao="$ordenacaoDirecao"
+        :permiteGrid="$permiteGrid"
+        :modoExibicao="$modoExibicao">
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-squares-four text-purpura-500"></i> Módulo
-            </label>
-            <select wire:model.live="filtro_module" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos os Módulos</option>
-                @foreach($modulosDisponiveis as $modulo) 
-                    <option value="{{ $modulo }}">{{ ucfirst($modulo) }}</option> 
-                @endforeach
-            </select>
-        </div>
+        {{-- CAMPO DE BUSCA INLINE NA TABELA --}}
+        <x-slot name="search">
+            <div class="relative w-full">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input type="text" wire:model.live.debounce.500ms="filtro_keyword" placeholder="Buscar feature por nome ou descrição..." class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
+            </div>
+        </x-slot>
 
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <i class="ph ph-toggle-left text-purpura-500"></i> Status
-            </label>
-            <select wire:model.live="filtro_status" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
-                <option value="">Todos</option>
-                <option value="1">Apenas Ativos</option>
-                <option value="0">Apenas Inativos</option>
-            </select>
-        </div>
-    </div>
+        {{-- FILTROS EM FORMATO CHIPS --}}
+        <x-slot name="filters">
+            <div class="w-full flex flex-col gap-4">
+                <div wire:ignore.self x-data="{
+                    visible: [],
+                    allFilters: ['modulo', 'status'],
+                    init() {
+                        if ($wire.filtro_module && !this.visible.includes('modulo')) this.visible.push('modulo');
+                        if ($wire.filtro_status !== '' && !this.visible.includes('status')) this.visible.push('status');
+                    },
+                    add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
+                    remove(f) {
+                        if(f === 'modulo') $wire.set('filtro_module', '');
+                        if(f === 'status') $wire.set('filtro_status', '');
+                        this.visible = this.visible.filter(i => i !== f);
+                    },
+                    get canAddMore() { return this.visible.length < this.allFilters.length; }
+                }" class="flex flex-wrap items-center gap-2">
+                    
+                    {{-- Chip: Módulo --}}
+                    <div x-show="visible.includes('modulo')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Módulo</span>
+                        <select wire:model.live="filtro_module" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
+                            <option value="">Todos</option>
+                            @foreach($modulosDisponiveis as $modulo) <option value="{{ $modulo }}">{{ ucfirst($modulo) }}</option> @endforeach
+                        </select>
+                        <button @click="remove('modulo')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                    </div>
 
-    <!-- Tabela Matriz Compacta -->
-    <div class="bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                    <tr class="bg-gray-50 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700">
-                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-32">Módulo</th>
-                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-40">Submódulo</th>
-                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider min-w-[150px]">Descrição (Agrupada)</th>
-                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Features (Ações e Toggles)</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    @php
-                        $grouped = [];
-                        foreach($registros as $feature) {
-                            $parts = explode('.', $feature->name);
-                            $action = array_pop($parts); 
-                            
-                            $prefix = strtolower($feature->module) . '.';
-                            $subStr = str_starts_with($feature->name, $prefix) ? substr($feature->name, strlen($prefix)) : $feature->name;
-                            $subParts = explode('.', $subStr);
-                            array_pop($subParts);
-                            
-                            $subName = count($subParts) > 0 ? implode(' ', $subParts) : 'Geral';
-                            $feature->action_label = $action;
-                            $grouped[$feature->module][$subName][] = $feature;
-                        }
-                    @endphp
+                    {{-- Chip: Status --}}
+                    <div x-show="visible.includes('status')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Status</span>
+                        <select wire:model.live="filtro_status" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
+                            <option value="">Todos</option>
+                            <option value="1">Apenas Ativos</option>
+                            <option value="0">Apenas Inativos</option>
+                        </select>
+                        <button @click="remove('status')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                    </div>
 
-                    @forelse($grouped as $module => $submodules)
-                        @foreach($submodules as $subName => $features)
-                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
-                                <td class="px-4 py-3 text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider align-middle">
-                                    {{ $module ?: 'GERAL' }}
-                                </td>
-                                
-                                <td class="px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300 capitalize align-middle">
-                                    {{ $subName }}
-                                </td>
-                                
-                                <td class="px-4 py-3 text-[10px] text-gray-500 dark:text-gray-400 max-w-[200px] truncate align-middle" title="{{ $features[0]->description }}">
-                                    {{ $features[0]->description }}
-                                </td>
-                                
-                                <td class="px-4 py-2 align-middle">
-                                    <div class="flex items-center justify-end gap-6 h-full">
-                                        @foreach($features as $f)
-                                            <div class="flex flex-col items-center justify-center gap-1" title="{{ $f->description }}">
-                                                <span class="text-[9px] font-bold text-gray-500 capitalize tracking-wider">{{ $f->action_label }}</span>
-                                                
-                                                <div class="flex items-center gap-2 mt-0.5">
-                                                    <!-- TOGGLE ATIVAR/DESATIVAR -->
-                                                    <label class="relative inline-flex items-center cursor-pointer">
-                                                        <input type="checkbox" class="sr-only peer" @if($f->is_active) checked @endif wire:click="toggleStatus({{ $f->id }})">
-                                                        <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
-                                                    </label>
+                    {{-- Add Filtro --}}
+                    <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
+                        <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
+                            + Adicionar Filtro
+                        </button>
+                        <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-2">
+                            <button x-show="!visible.includes('modulo')" @click="add('modulo'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-squares-four text-gray-400 text-lg"></i> Módulo</button>
+                            <button x-show="!visible.includes('status')" @click="add('status'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-toggle-left text-gray-400 text-lg"></i> Status</button>
+                        </div>
+                    </div>
 
-                                                    <!-- AÇÕES DA FEATURE -->
-                                                    <div class="flex items-center gap-1">
-                                                        <button wire:click="abrirModal({{ $f->id }})" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="ph-bold ph-pencil-simple text-[11px]"></i></button>
-                                                        <button wire:click="excluir({{ $f->id }})" onclick="confirm('Excluir feature permanentemente?') || event.stopImmediatePropagation()" class="text-red-500 hover:text-red-700 transition" title="Excluir"><i class="ph-bold ph-trash text-[11px]"></i></button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    @empty
-                        <tr>
-                            <td colspan="4" class="py-12 text-center text-gray-500 bg-gray-50/30 dark:bg-gray-900/30">
-                                <i class="ph-fill ph-toggle-left text-3xl text-gray-300 mb-2"></i>
-                                <p class="text-sm font-bold text-gray-700 dark:text-gray-400">Nenhuma Feature encontrada.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Paginação -->
-        <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-            {{ $registros->links() }}
-        </div>
-    </div>
+                    <button x-show="$wire.filtro_module || $wire.filtro_status !== '' || $wire.filtro_keyword" x-cloak wire:click="limparFiltros" @click="visible = []" class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
+                        Limpar Todos
+                    </button>
+                </div>
+            </div>
+        </x-slot>
 
-    <!-- MODAIS E COMPONENTES OCULTOS -->
+        {{-- CORPO DA TABELA PADRONIZADO --}}
+        @forelse($registros as $feature)
+            <tr wire:key="row-{{ $feature->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
+                <td class="px-4 py-2.5 t-label-12 text-gray-500 whitespace-nowrap">#{{ $feature->id }}</td>
+                
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-100 border border-purpura-200 rounded uppercase">
+                        {{ $feature->module }}
+                    </span>
+                </td>
+                
+                <td class="px-4 py-2.5">
+                    <div class="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[250px]">{{ $feature->name }}</div>
+                </td>
+
+                <td class="px-4 py-2.5">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[300px]">{{ $feature->description ?: '-' }}</div>
+                </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                        <!-- TOGGLE FUNCIONAL AUTOMÁTICO -->
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" @if($feature->is_active) checked @endif wire:click="toggleStatus({{ $feature->id }})">
+                            <div class="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                        </label>
+                        <span class="text-[10px] font-bold {{ $feature->is_active ? 'text-emerald-600' : 'text-gray-400' }}">
+                            {{ $feature->is_active ? 'ATIVO' : 'INATIVO' }}
+                        </span>
+                    </div>
+                </td>
+                
+                <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                    <div class="inline-flex items-center justify-end gap-1">
+                        <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
+                            <i class="text-lg ph-bold ph-pencil-simple"></i>
+                        </button>
+                        <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir esta feature permanentemente?') || event.stopImmediatePropagation()">
+                            <i class="text-lg ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr><td colspan="6" class="px-4 py-12 text-center text-gray-400">Nenhuma feature encontrada.</td></tr>
+        @endforelse
+
+        {{-- VISÃO MOBILE (GRID SLOT) --}}
+        <x-slot name="gridSlot">
+            @foreach($registros as $feature)
+                <div wire:key="card-{{ $feature->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                    <div class="flex items-center justify-between mb-3 w-full">
+                        <span class="inline-flex px-2 py-0.5 text-[10px] font-bold text-purpura-700 bg-purpura-100 border border-purpura-200 rounded uppercase">
+                            {{ $feature->module }}
+                        </span>
+                        <span class="text-[10px] font-bold text-gray-400">#{{ $feature->id }}</span>
+                    </div>
+
+                    <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-1">{{ $feature->name }}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">{{ $feature->description ?: '-' }}</p>
+
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700 w-full">
+                        <div class="flex items-center gap-2">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" @if($feature->is_active) checked @endif wire:click="toggleStatus({{ $feature->id }})">
+                                <div class="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center gap-1">
+                            <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph-bold ph-pencil-simple"></i></button>
+                            <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition" onclick="confirm('Excluir feature?') || event.stopImmediatePropagation()"><i class="text-lg ph-bold ph-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </x-slot>
+    </x-table>
+
+    <!-- MODAIS E COMPONENTES OCULTOS (MANTIDOS INTACTOS) -->
     @if($modalAberto)
-        <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="fixed inset-0 z-[120] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="fecharModal"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
@@ -225,11 +259,11 @@
 
     <!-- MODAL DE ALERTA DE CADASTRO AUSENTE -->
     @if($modalConfirmacaoAberto)
-        <div class="fixed inset-0 z-[60] overflow-y-auto">
+        <div class="fixed inset-0 z-[120] overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 transition-opacity bg-gray-900/80 backdrop-blur-sm" wire:click="ignorarCriacaoAusentes"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-                <div class="relative z-[60] inline-block px-4 pt-5 pb-4 overflow-visible text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div class="relative z-[120] inline-block px-4 pt-5 pb-4 overflow-visible text-left align-bottom transition-all transform bg-white rounded-xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <div class="flex items-start gap-4">
                         <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full dark:bg-yellow-900/30">
                             <i class="text-2xl text-yellow-600 ph-fill ph-warning-circle dark:text-yellow-500"></i>
@@ -237,14 +271,14 @@
                         <div class="mt-1">
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white">Correspondência não encontrada</h3>
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                O sistema não encontrou as seguintes permissões para atualizar:
+                                O sistema não encontrou os seguintes Feature Toggles para atualizar:
                             </p>
                             <ul class="mt-3 space-y-1 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded-md border border-gray-100 dark:border-gray-700">
                                 @foreach($pendenciasReplicacao as $pendencia)
                                     <li class="flex items-center gap-2"><i class="text-red-500 ph-bold ph-x"></i> {{ $pendencia }}</li>
                                 @endforeach
                             </ul>
-                            <p class="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Deseja criar os cadastros ausentes automaticamente no ACL agora?</p>
+                            <p class="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Deseja criar as Features ausentes automaticamente agora?</p>
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 mt-6 sm:mt-8 pt-4 border-t border-gray-100 dark:border-gray-700">
