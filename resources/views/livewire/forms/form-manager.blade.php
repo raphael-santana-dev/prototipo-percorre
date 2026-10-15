@@ -76,6 +76,26 @@
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-50 text-gray-700 border border-gray-200 uppercase">Geral</span>
                     @endif
                 </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {{ $form->total_respostas }}
+                </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {{ $form->data_inicio ? $form->data_inicio->format('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {{ $form->data_fim ? $form->data_fim->format('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {{ $form->created_at ? $form->created_at->format('d/m/Y H:i') : '-' }}
+                </td>
+
+                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {{ $form->updated_at ? $form->updated_at->format('d/m/Y H:i') : '-' }}
+                </td>
                 
                 <td class="px-4 py-2.5 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-1">
