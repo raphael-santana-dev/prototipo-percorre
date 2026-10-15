@@ -53,9 +53,13 @@
                    :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
                 
                 <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
-                    <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-                    </div>
+                    <a href="{{ route('dashboard') }}">
+                        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
+                        
+                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                         
+                        </div>
+                    </a>   
                     <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher / Expandir">
                         <i class="text-xl ph ph-list"></i>
                     </button>
@@ -303,10 +307,12 @@
                                     <i class="text-2xl ph ph-list"></i>
                                 </button>
                                 
-                                <div class="js-topcontrols flex-shrink-0 items-center gap-4 hidden md:flex" 
-                                     :class="loaded ? 'transition-all duration-300' : ''">
-                                    <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-                                </div>
+                                <a href="{{ route('dashboard') }}">
+                                    <div class="js-topcontrols flex-shrink-0 items-center gap-4 hidden md:flex" 
+                                        :class="loaded ? 'transition-all duration-300' : ''">
+                                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                                    </div>
+                                </a>
                             </div>
 
                             <div class="flex items-center gap-3 sm:gap-4 text-white dark:text-gray-200 ml-auto">
