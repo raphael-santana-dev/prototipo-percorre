@@ -11,19 +11,20 @@
         </button>
     </div>
 
+    <!-- Filtros -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
         <div class="md:col-span-2">
             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                 <i class="ph ph-magnifying-glass text-purpura-500"></i> Palavra-chave
             </label>
-            <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Buscar por nome ou descrição..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+            <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Buscar por nome ou descrição..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
         </div>
 
         <div>
             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                 <i class="ph ph-squares-four text-purpura-500"></i> Módulo
             </label>
-            <select wire:model.live="filtro_module" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+            <select wire:model.live="filtro_module" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 <option value="">Todos os Módulos</option>
                 @foreach($modulosDisponiveis as $modulo) 
                     <option value="{{ $modulo }}">{{ ucfirst($modulo) }}</option> 
@@ -35,7 +36,7 @@
             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
                 <i class="ph ph-toggle-left text-purpura-500"></i> Status
             </label>
-            <select wire:model.live="filtro_status" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+            <select wire:model.live="filtro_status" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm focus:ring-purpura-500 focus:border-purpura-500">
                 <option value="">Todos</option>
                 <option value="1">Apenas Ativos</option>
                 <option value="0">Apenas Inativos</option>
@@ -43,88 +44,95 @@
         </div>
     </div>
 
-    <x-table
-        :headers="$this->headers"
-        :registros="$registros"
-        :ordenacaoCampo="$ordenacaoCampo"
-        :ordenacaoDirecao="$ordenacaoDirecao"
-        :permiteGrid="$permiteGrid"
-        :modoExibicao="$modoExibicao">
+    <!-- Tabela Matriz Compacta -->
+    <div class="bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700">
+                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-32">Módulo</th>
+                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-40">Submódulo</th>
+                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider min-w-[150px]">Descrição (Agrupada)</th>
+                        <th class="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Features (Ações e Toggles)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    @php
+                        $grouped = [];
+                        foreach($registros as $feature) {
+                            $parts = explode('.', $feature->name);
+                            $action = array_pop($parts); 
+                            
+                            $prefix = strtolower($feature->module) . '.';
+                            $subStr = str_starts_with($feature->name, $prefix) ? substr($feature->name, strlen($prefix)) : $feature->name;
+                            $subParts = explode('.', $subStr);
+                            array_pop($subParts);
+                            
+                            $subName = count($subParts) > 0 ? implode(' ', $subParts) : 'Geral';
+                            $feature->action_label = $action;
+                            $grouped[$feature->module][$subName][] = $feature;
+                        }
+                    @endphp
 
-        @forelse ($registros as $feature)
-            <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    #{{ $feature->id }}
-                </td>
-                
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <span class="px-2 py-0.5 text-[9px] font-bold rounded bg-gray-100 text-gray-600 uppercase tracking-wider border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600">
-                        {{ $feature->module }}
-                    </span>
-                </td>
-                
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="font-bold text-sm text-gray-800 dark:text-white">{{ $feature->name }}</div>
-                </td>
-                
-                <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                    {{ $feature->description }}
-                </td>
-                
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                        <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
-                        <span class="text-[10px] font-bold {{ $feature->is_active ? 'text-green-600' : 'text-gray-400' }}">
-                            {{ $feature->is_active ? 'ATIVO' : 'INATIVO' }}
-                        </span>
-                    </div>
-                </td>
-                
-                <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                    <div class="flex items-center justify-end gap-1">
-                        <button wire:click="abrirModal({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar">
-                            <i class="text-lg ph ph-pencil-simple"></i>
-                        </button>
-                        <button wire:click="excluir({{ $feature->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir?') || event.stopImmediatePropagation()">
-                            <i class="text-lg ph ph-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        @empty
-            <tr>
-                <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">Nenhuma feature encontrada.</td>
-            </tr>
-        @endforelse
+                    @forelse($grouped as $module => $submodules)
+                        @foreach($submodules as $subName => $features)
+                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                                <td class="px-4 py-3 text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider align-middle">
+                                    {{ $module ?: 'GERAL' }}
+                                </td>
+                                
+                                <td class="px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300 capitalize align-middle">
+                                    {{ $subName }}
+                                </td>
+                                
+                                <td class="px-4 py-3 text-[10px] text-gray-500 dark:text-gray-400 max-w-[200px] truncate align-middle" title="{{ $features[0]->description }}">
+                                    {{ $features[0]->description }}
+                                </td>
+                                
+                                <td class="px-4 py-2 align-middle">
+                                    <div class="flex items-center justify-end gap-6 h-full">
+                                        @foreach($features as $f)
+                                            <div class="flex flex-col items-center justify-center gap-1" title="{{ $f->description }}">
+                                                <span class="text-[9px] font-bold text-gray-500 capitalize tracking-wider">{{ $f->action_label }}</span>
+                                                
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <!-- TOGGLE ATIVAR/DESATIVAR -->
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" class="sr-only peer" @if($f->is_active) checked @endif wire:click="toggleStatus({{ $f->id }})">
+                                                        <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                                    </label>
 
-        <x-slot name="gridSlot">
-            @foreach ( $registros as $feature )
-                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $feature->name }}</div>
-                        <span class="px-2 py-1 text-[10px] font-bold text-gray-700 bg-gray-100 rounded-full dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-600">{{ $feature->module }}</span>
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                        {{ $feature->description }}
-                    </div>
-                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
-                        
-                        <div class="flex items-center gap-2">
-                            <button wire:click="abrirModal({{ $feature->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Feature">
-                                <i class="text-lg ph ph-pencil-simple"></i>
-                            </button>
-                            <button wire:click="excluir({{ $feature->id }})" class="p-2 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir Feature" onclick="confirm('Excluir esta feature permanentemente?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph ph-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-        </x-slot>
-    </x-table>
+                                                    <!-- AÇÕES DA FEATURE -->
+                                                    <div class="flex items-center gap-1">
+                                                        <button wire:click="abrirModal({{ $f->id }})" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="ph-bold ph-pencil-simple text-[11px]"></i></button>
+                                                        <button wire:click="excluir({{ $f->id }})" onclick="confirm('Excluir feature permanentemente?') || event.stopImmediatePropagation()" class="text-red-500 hover:text-red-700 transition" title="Excluir"><i class="ph-bold ph-trash text-[11px]"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="4" class="py-12 text-center text-gray-500 bg-gray-50/30 dark:bg-gray-900/30">
+                                <i class="ph-fill ph-toggle-left text-3xl text-gray-300 mb-2"></i>
+                                <p class="text-sm font-bold text-gray-700 dark:text-gray-400">Nenhuma Feature encontrada.</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
+            {{ $registros->links() }}
+        </div>
+    </div>
 
+    <!-- MODAIS E COMPONENTES OCULTOS -->
     @if($modalAberto)
         <div class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -251,5 +259,4 @@
             </div>
         </div>
     @endif
-</div>
 </div>
