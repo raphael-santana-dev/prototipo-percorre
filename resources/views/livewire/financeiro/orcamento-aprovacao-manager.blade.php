@@ -34,6 +34,8 @@
                         <td class="px-4 py-1.5 t-label-12-semibold">{{ $orcamento->filial ?: '-' }}</td>
                         <td class="px-4 py-1.5">
                             <span class="text-sm t-label-12 text-gray-900 dark:text-white block">{{ $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Sem Vínculo' }}</span>
+                        </td>
+                        <td class="px-4 py-1.5">
                             <span class="text-xs t-label-12 font-medium text-purpura-600">C.C. {{ $orcamento->ccusto ?: '-' }}</span>
                         </td>
                         <td class="px-4 py-1.5 text-center">
