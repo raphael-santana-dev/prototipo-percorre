@@ -18,16 +18,12 @@ class OrcamentoFinalizadoMail extends Mailable
     public float $valorTotal;
     public int $qtdItens;
 
-    /**
-     * Recebe a instância do orçamento finalizado e os dados do coordenador.
-     */
     public function __construct(Orcamento $orcamento, string $coordenadorNome)
     {
         $this->orcamento = $orcamento->loadMissing(['centroCusto', 'itens']);
         $this->coordenadorNome = $coordenadorNome;
         $this->qtdItens = $this->orcamento->itens->count();
         
-        // Calcula o valor total somando os 12 meses de todos os itens
         $this->valorTotal = $this->orcamento->itens->reduce(function ($carry, $item) {
             return $carry + (
                 (float) $item->valor_jan + (float) $item->valor_fev + (float) $item->valor_mar +
@@ -38,9 +34,6 @@ class OrcamentoFinalizadoMail extends Mailable
         }, 0.0);
     }
 
-    /**
-     * Define o assunto do e-mail.
-     */
     public function envelope(): Envelope
     {
         $ccNome = $this->orcamento->centroCusto 
@@ -52,9 +45,6 @@ class OrcamentoFinalizadoMail extends Mailable
         );
     }
 
-    /**
-     * Define a view do e-mail.
-     */
     public function content(): Content
     {
         return new Content(
