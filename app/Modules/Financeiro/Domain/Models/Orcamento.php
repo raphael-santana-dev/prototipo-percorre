@@ -10,7 +10,45 @@ class Orcamento extends Model
     use RegistraAuditoria;
     protected $table = 'orcamentos';
     
-    protected $guarded = ['id'];
+    // Adicione 'dados_consolidados' dentro do seu array $fillable existente:
+    protected $fillable = [
+        'chave_composta',
+        'filial',
+        'ano',
+        'ccusto',
+        'moeda',
+        'cmoeda',
+        'xcat',
+        'descricao_despesa',
+        'status',
+        'dados_consolidados',
+        'reabertura_solicitada',
+        'reabertura_motivo',
+        'prazo_edicao',
+    ];
+
+    // Adicione o cast para array:
+    protected $casts = [
+        'dados_consolidados' => 'array',
+        'reabertura_solicitada' => 'boolean',
+        'prazo_edicao' => 'datetime',
+    ];
+
+    // Gatilho automático ao aprovar o orçamento:
+    protected static function booted(): void
+    {
+        static::saved(function (Orcamento $orcamento) {
+            if ($orcamento->wasChanged('status')) {
+                if (in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas'])) {
+                    app(\App\Modules\Financeiro\Services\ProtheusOrcamentoService::class)
+                        ->enviarParaProtheusSimulado($orcamento);
+                } elseif (in_array($orcamento->status, ['Criado', 'Em elaboração', 'Reprovado'])) {
+                    // Se o orçamento for reaberto ou reprovado, limpa a consolidação anterior
+                    $orcamento->updateQuietly(['dados_consolidados' => null]);
+                }
+            }
+        });
+    }
 
     /**
      * Retorna o valor total do orçamento somando todos os itens (naturezas) vinculados a ele

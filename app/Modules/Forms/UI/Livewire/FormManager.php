@@ -180,7 +180,12 @@ class FormManager extends Component
             ['key' => 'titulo', 'label' => 'Formulário', 'sortable' => true],
             ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
-            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => true], 
+            ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => true],
+            ['key' => 'total_respostas', 'label' => 'Respostas', 'sortable' => true],
+            ['key' => 'data_inicio', 'label' => 'Início', 'sortable' => true],
+            ['key' => 'data_fim', 'label' => 'Fim', 'sortable' => true],
+            ['key' => 'created_at', 'label' => 'Criado em', 'sortable' => true],
+            ['key' => 'updated_at', 'label' => 'Atualizado em', 'sortable' => true],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }

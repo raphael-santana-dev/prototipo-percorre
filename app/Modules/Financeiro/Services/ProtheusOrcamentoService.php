@@ -4,9 +4,11 @@ namespace App\Modules\Financeiro\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
+use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 
 class ProtheusOrcamentoService
 {
@@ -96,5 +98,103 @@ class ProtheusOrcamentoService
         } catch (\Exception $e) {
             return ['sucesso' => false, 'mensagem' => "Erro de ligação à API do Protheus."];
         }
+    }
+
+    /**
+     * Consolida os itens do orçamento no formato exato da Tabela Intermediária do Protheus.
+     */
+    public function consolidarParaTabelaIntermediaria(Orcamento $orcamento): array
+    {
+        $orcamento->loadMissing(['centroCusto', 'itens.natureza']);
+
+        $ccCodigo = trim((string) $orcamento->ccusto);
+        $ccDescricaoVirtual = $orcamento->centroCusto 
+            ? $orcamento->centroCusto->nome 
+            : 'Centro de Custo (' . $ccCodigo . ')';
+
+        // Consolida apenas itens que não foram reprovados, agrupando por natureza
+        $itensValidos = $orcamento->itens->where('status', '!=', 'Reprovado');
+        $itensAgrupados = $itensValidos->groupBy('natureza_codigo');
+        $linhasIntermediarias = [];
+
+        foreach ($itensAgrupados as $codigoNatureza => $grupoItens) {
+            $primeiroItem = $grupoItens->first();
+            $natObj = $primeiroItem->natureza;
+
+            $naturezaDescricaoVirtual = $natObj 
+                ? $natObj->descricao 
+                : 'Natureza Importada (' . $codigoNatureza . ')';
+
+            $categoria = $orcamento->xcat ?: ($natObj->categoria ?? 'Despesa Orçamentária');
+
+            $descricoes = $grupoItens->pluck('descricao')
+                ->map(fn($d) => trim((string) $d))
+                ->filter()
+                ->unique()
+                ->implode(' | ');
+
+            $linhasIntermediarias[] = [
+                'ano'                        => (int) $orcamento->ano,
+                'codigo_centro_custo'        => $ccCodigo,
+                'descricao_centro_custo'     => $ccDescricaoVirtual,
+                'codigo_natureza'            => trim((string) $codigoNatureza),
+                'descricao_natureza'         => $naturezaDescricaoVirtual,
+                'categoria'                  => $categoria,
+                'descricao_despesa'          => $descricoes ?: $naturezaDescricaoVirtual,
+                'status'                     => 'Finalizado', // Na Tabela Intermediária do Protheus o status final esperado é Finalizado
+                'valor_previsto_janeiro'     => round((float) $grupoItens->sum('valor_jan'), 2),
+                'valor_previsto_fevereiro'   => round((float) $grupoItens->sum('valor_fev'), 2),
+                'valor_previsto_marco'       => round((float) $grupoItens->sum('valor_mar'), 2),
+                'valor_previsto_abril'       => round((float) $grupoItens->sum('valor_abr'), 2),
+                'valor_previsto_maio'        => round((float) $grupoItens->sum('valor_mai'), 2),
+                'valor_previsto_junho'       => round((float) $grupoItens->sum('valor_jun'), 2),
+                'valor_previsto_julho'       => round((float) $grupoItens->sum('valor_jul'), 2),
+                'valor_previsto_agosto'      => round((float) $grupoItens->sum('valor_ago'), 2),
+                'valor_previsto_setembro'    => round((float) $grupoItens->sum('valor_set'), 2),
+                'valor_previsto_outubro'     => round((float) $grupoItens->sum('valor_out'), 2),
+                'valor_previsto_novembro'    => round((float) $grupoItens->sum('valor_nov'), 2),
+                'valor_previsto_dezembro'    => round((float) $grupoItens->sum('valor_dez'), 2),
+            ];
+        }
+
+        return [
+            'meta' => [
+                'orcamento_web_id'     => $orcamento->id,
+                'filial'               => $orcamento->filial,
+                'ano'                  => (int) $orcamento->ano,
+                'centro_custo'         => $ccCodigo,
+                'status_orcamento_web' => $orcamento->status,
+                'total_naturezas'      => count($linhasIntermediarias),
+                'data_consolidacao'    => now()->toIso8601String(),
+                'aprovado_por'         => auth()->user()->name ?? 'Sistema',
+            ],
+            'tabela_intermediaria' => $linhasIntermediarias,
+        ];
+    }
+
+    /**
+     * Gera o payload consolidado e armazena na coluna dados_consolidados do Orçamento aprovado.
+     */
+    public function enviarParaProtheusSimulado(Orcamento $orcamento): array
+    {
+        $payload = $this->consolidarParaTabelaIntermediaria($orcamento);
+
+        // Salva diretamente na coluna dados_consolidados do banco (sem disparar loop de eventos)
+        $orcamento->updateQuietly([
+            'dados_consolidados' => $payload,
+        ]);
+
+        Log::info("[SIMULAÇÃO PROTHEUS] Tabela Intermediária consolidada após aprovação do Orçamento #{$orcamento->id}", $payload);
+
+        OrcamentoAvaliacao::create([
+            'orcamento_id'    => $orcamento->id,
+            'user_id'         => auth()->id() ?? 1,
+            'user_nome'       => auth()->user()->name ?? 'Sistema',
+            'status_aplicado' => 'Consolidado p/ Protheus',
+            'comentario'      => "Orçamento aprovado e consolidado (" . count($payload['tabela_intermediaria']) . " naturezas) para a Tabela Intermediária do Protheus.",
+            'tipo_evento'     => 'integracao_protheus',
+        ]);
+
+        return $payload;
     }
 }

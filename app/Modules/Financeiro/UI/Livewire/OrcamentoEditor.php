@@ -5,6 +5,10 @@ namespace App\Modules\Financeiro\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
+use App\Mail\OrcamentoFinalizadoMail;
 use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
@@ -32,7 +36,6 @@ class OrcamentoEditor extends Component
     public ?int $linhaParaDesbloquear = null;
     public string $justificativaDesbloqueio = '';
 
-    // --- VARIÁVEIS DE SOLICITAÇÃO DE REABERTURA ---
     public bool $modalReaberturaAberto = false;
     public string $motivoReabertura = '';
 
@@ -54,13 +57,11 @@ class OrcamentoEditor extends Component
 
         $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
         
-        // Verifica bloqueio base
         $this->isLockedGlobal = in_array($this->orcamento->status, ['Aprovado', 'Aprovado com ressalvas', 'Finalizado']);
         if (!auth()->user()->hasRole('dev|admin') && $this->orcamento->status === 'Finalizado') {
             $this->isLockedGlobal = true;
         }
 
-        // Verifica o Prazo de Edição (Se existir um prazo e ele já passou, bloqueia)
         if ($this->orcamento->prazo_edicao && now()->greaterThan($this->orcamento->prazo_edicao)) {
             $this->isLockedGlobal = true;
         }
@@ -74,11 +75,9 @@ class OrcamentoEditor extends Component
         $this->itensOrcamento = [];
         
         foreach ($this->orcamento->itens as $item) {
-            
             $natObj = $item->natureza;
             $natNome = $natObj ? $natObj->descricao : 'Natureza Importada (API)';
 
-            // Observações da linha iniciam vazias se não houver anotação customizada
             $obs = trim($item->descricao);
             if ($obs === $natNome || $obs === 'Natureza Importada' || $obs === 'Natureza Importada (API)' || $obs === '') {
                 $obs = '';
@@ -112,7 +111,6 @@ class OrcamentoEditor extends Component
         }
     }
 
-    // --- SOLICITAR REABERTURA GERAL ---
     public function solicitarReabertura()
     {
         $this->validate(['motivoReabertura' => 'required|string|min:5'], ['motivoReabertura.required' => 'O motivo é obrigatório.']);
@@ -136,7 +134,6 @@ class OrcamentoEditor extends Component
         $this->orcamento->refresh();
     }
 
-    // --- SOLICITAR DESBLOQUEIO DE LINHA ---
     public function solicitarDesbloqueio($index)
     {
         if (($this->itensOrcamento[$index]['status'] ?? 'Criado') !== 'Aprovado' || $this->isLockedGlobal) return;
@@ -272,8 +269,15 @@ class OrcamentoEditor extends Component
         $this->dispatch('sucesso', msg: "Natureza {$codigoAleatorio} cadastrada com sucesso!");
     }
 
-    public function salvarOrcamento() { $this->processarGravacao('Em elaboração', 'Planilha guardada como rascunho com sucesso!'); }
-    public function finalizarOrcamento() { $this->processarGravacao('Finalizado', 'Orçamento submetido para aprovação da Diretoria!'); }
+    public function salvarOrcamento()
+    {
+        $this->processarGravacao('Em elaboração', 'Planilha guardada como rascunho com sucesso!');
+    }
+
+    public function finalizarOrcamento()
+    {
+        $this->processarGravacao('Finalizado', 'Orçamento finalizado e enviado para avaliação da Diretoria!');
+    }
 
     private function processarGravacao($statusDesejado, $mensagemSucesso)
     {
@@ -289,7 +293,9 @@ class OrcamentoEditor extends Component
             }
         }
 
-        $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamento->status, ['Criado', 'Reprovado'])) ? $this->orcamento->status : $statusDesejado;
+        $novoStatus = ($statusDesejado === 'Em elaboração' && !in_array($this->orcamento->status, ['Criado', 'Reprovado']))
+            ? $this->orcamento->status
+            : $statusDesejado;
         
         $dadosUpdate = ['descricao_despesa' => $this->justificativaGeral, 'status' => $novoStatus];
         if ($statusDesejado === 'Finalizado') {
@@ -314,7 +320,9 @@ class OrcamentoEditor extends Component
                 $descricaoParaSalvar = $naturezaDB ? $naturezaDB->descricao : 'Natureza Importada';
             }
 
-            $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas'])) ? 'Corrigido' : ($dataItem['status'] ?? 'Criado');
+            $statusItem = (isset($dataItem['status']) && in_array($dataItem['status'], ['Reprovado', 'Aprovado com ressalvas']))
+                ? 'Corrigido'
+                : ($dataItem['status'] ?? 'Criado');
 
             $idReal = (!empty($dataItem['id']) && is_numeric($dataItem['id'])) ? (int) $dataItem['id'] : null;
 
@@ -340,10 +348,42 @@ class OrcamentoEditor extends Component
             );
         }
 
-        $this->dispatch('sucesso', msg: $mensagemSucesso);
-        if ($statusDesejado === 'Finalizado') { return redirect()->route('financeiro.orcamentos'); }
         $this->orcamento->refresh();
+
+        // Ao finalizar, dispara o e-mail apenas para usuários com permissão 'financeiro.orcamentos.avaliacao'
+        if ($statusDesejado === 'Finalizado') {
+            $this->notificarAvaliadoresPorEmail();
+            $this->dispatch('sucesso', msg: $mensagemSucesso);
+            return redirect()->route('financeiro.orcamentos');
+        }
+
+        $this->dispatch('sucesso', msg: $mensagemSucesso);
         $this->carregarItens();
+    }
+
+    /**
+     * Envia e-mail exclusivamente para usuários com a permissão 'financeiro.orcamentos.avaliacao'.
+     */
+    private function notificarAvaliadoresPorEmail(): void
+    {
+        try {
+            $emails = User::permission('financeiro.orcamentos.avaliacao')
+                ->pluck('email')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (!empty($emails)) {
+                Mail::to($emails)->send(
+                    new OrcamentoFinalizadoMail($this->orcamento, auth()->user()->name ?? 'Coordenador')
+                );
+            } else {
+                Log::warning("Orçamento #{$this->orcamento->id} finalizado, mas nenhum usuário possui a permissão 'financeiro.orcamentos.avaliacao'.");
+            }
+        } catch (\Throwable $e) {
+            Log::error("Erro ao enviar e-mail de finalização do orçamento #{$this->orcamento->id}: " . $e->getMessage());
+        }
     }
 
     public function voltar() { return redirect()->route('financeiro.orcamentos'); }
