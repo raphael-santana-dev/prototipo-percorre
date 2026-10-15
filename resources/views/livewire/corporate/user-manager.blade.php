@@ -182,7 +182,7 @@
 
                             {{-- Passo 3 --}}
                             <button type="button" wire:click="irParaEtapa(3)" class="flex items-center gap-3 p-3 rounded-xl border text-left transition-all {{ $etapaAtual === 3 ? 'bg-white dark:bg-gray-800 border-purpura-500 shadow-sm ring-1 ring-purpura-500' : 'bg-gray-100/70 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-60' }}">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 {{ $etapaAtual === 3 ? 'bg-purpura-600 text-white' : 'bg-gray-300 text-gray-700') }}">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 {{ $etapaAtual === 3 ? 'bg-purpura-600 text-white' : 'bg-gray-300 text-gray-700' }}">
                                     3
                                 </div>
                                 <div class="min-w-0">
