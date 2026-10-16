@@ -859,8 +859,9 @@
                     @endif
 
                     <!-- CONFIGURAÇÕES DE TEXTO / NÚMEROS / MÁSCARAS -->
-                    @if($tipo === 'text' && in_array($subtipo, ['text', 'number', 'cpf', 'cnpj', 'tel']))
+                    @if($tipo === 'text' && in_array($subtipo, ['text', 'number', 'cpf', 'cnpj', 'tel', 'email']))
                         <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                            
                             @if($subtipo === 'number')
                                 <div class="grid grid-cols-2 gap-2.5">
                                     <div>
@@ -876,6 +877,28 @@
                                 <div>
                                     <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara do Input (x-mask)</label>
                                     <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                </div>
+                            @endif
+
+                            @if(in_array($subtipo, ['cpf', 'email']))
+                                <div class="border-t border-gray-200 pt-3 space-y-2.5">
+                                    @if($subtipo === 'cpf')
+                                        <label class="flex items-start gap-2 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="configuracoes.validar_cpf" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-gray-800">Validar CPF (Cálculo Real)</span>
+                                                <span class="text-[10px] text-gray-500 leading-tight">Impede CPFs falsos (ex: 111.111.111-11).</span>
+                                            </div>
+                                        </label>
+                                    @endif
+
+                                    <label class="flex items-start gap-2 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="configuracoes.unico" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-gray-800">Travar Resposta Única</span>
+                                            <span class="text-[10px] text-gray-500 leading-tight">O utilizador só poderá preencher o formulário uma vez com este {{ strtoupper($subtipo) }}.</span>
+                                        </div>
+                                    </label>
                                 </div>
                             @endif
                         </div>

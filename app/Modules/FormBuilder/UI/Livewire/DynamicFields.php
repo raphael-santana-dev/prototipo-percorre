@@ -171,6 +171,8 @@ class DynamicFields extends Component
         if ($tipo === 'text') {
             if ($subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
+                $this->configuracoes['validar_cpf'] = $this->configuracoes['validar_cpf'] ?? true; // NOVO
+                $this->configuracoes['unico'] = $this->configuracoes['unico'] ?? false; // NOVO
                 if (!$this->campoId) {
                     $this->label = 'CPF';
                     $this->name = 'cpf_' . rand(10, 99);
@@ -200,6 +202,7 @@ class DynamicFields extends Component
                     $this->largura = 4;
                 }
             } elseif ($subtipo === 'email') {
+                $this->configuracoes['unico'] = $this->configuracoes['unico'] ?? false; 
                 if (!$this->campoId && empty($this->label)) {
                     $this->label = 'E-mail';
                     $this->name = 'email_' . rand(10, 99);
@@ -482,6 +485,10 @@ class DynamicFields extends Component
         if ($this->tipo === 'text') {
             if ($this->subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
+                $configToSave['validar_cpf'] = filter_var($this->configuracoes['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN); // NOVO
+                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN); // NOVO
+            } elseif ($this->subtipo === 'email') {
+                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN); // NOVO
             } elseif ($this->subtipo === 'cnpj') {
                 $this->regex_mascara = '99.999.999/9999-99';
             } elseif ($this->subtipo === 'cep') {
