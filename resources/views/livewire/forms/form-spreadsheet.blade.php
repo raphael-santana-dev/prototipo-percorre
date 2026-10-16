@@ -113,11 +113,26 @@
                         @foreach($campos as $campo)
                             @php
                                 $val = $respostasSalvas[$campo->name] ?? null;
-                                $valStr = is_array($val) ? implode(' | ', $val) : (string) $val;
+                                $valStr = is_array($val) ? implode(' | ', array_filter($val)) : (string) $val;
                                 $valStr = empty(trim($valStr)) ? '-' : $valStr;
                             @endphp
-                            <td class="px-3 py-1.5 text-gray-700 dark:text-gray-400 max-w-[250px] truncate border-r border-gray-100 dark:border-gray-800 group-hover:border-blue-100" title="{{ $valStr }}">
-                                {{ $valStr }}
+                            <td class="px-3 py-1.5 text-gray-700 dark:text-gray-400 max-w-[250px] truncate border-r border-gray-100 dark:border-gray-800 group-hover:border-blue-100" title="{{ !str_starts_with($valStr, 'data:image/') ? $valStr : 'Assinatura Registada' }}">
+                                @if(str_starts_with($valStr, 'data:image/'))
+                                    <a href="{{ $valStr }}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200 rounded text-[10px] font-bold transition-colors whitespace-nowrap dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400">
+                                        <i class="ph-bold ph-signature text-sm"></i> Ver Assinatura
+                                    </a>
+                                @elseif(preg_match('/\/(uploads|documentos|links)\//', $valStr))
+                                    <div class="flex flex-col gap-1">
+                                        @foreach(explode(' | ', $valStr) as $caminhoArquivo)
+                                            @continue(empty(trim($caminhoArquivo)))
+                                            <a href="{{ asset('storage/' . trim($caminhoArquivo)) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 rounded text-[10px] font-bold transition-colors whitespace-nowrap dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
+                                                <i class="ph-bold ph-link text-sm"></i> Abrir Ficheiro
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ $valStr }}
+                                @endif
                             </td>
                         @endforeach
                     </tr>

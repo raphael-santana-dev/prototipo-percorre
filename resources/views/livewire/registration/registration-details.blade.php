@@ -217,6 +217,8 @@
                                     @php
                                         $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
                                         $isAssinatura = is_string($valor) && str_starts_with($valor, 'data:image/');
+                                        $valorFormatado = !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-';
+                                        $isArquivo = is_string($valorFormatado) && preg_match('/\/(uploads|documentos|links)\//', $valorFormatado);
                                     @endphp
 
                                     @if($isAssociative)
@@ -238,6 +240,7 @@
                                                 </div>
                                             </div>
                                         @endforeach
+
                                     @elseif($isAssinatura)
                                         <div class="md:col-span-2">
                                             <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -255,11 +258,29 @@
                                                 </div>
                                             </dd>
                                         </div>
+
+                                    @elseif($isArquivo)
+                                        <div class="md:col-span-2">
+                                            <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                                {{ str_replace('_', ' ', $chave) }}
+                                            </dt>
+                                            <dd class="flex flex-wrap gap-2">
+                                                @foreach(explode(', ', $valorFormatado) as $caminhoArquivo)
+                                                    @continue(empty(trim($caminhoArquivo)))
+                                                    <a href="{{ asset('storage/' . trim($caminhoArquivo)) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-purpura-600 dark:text-purpura-400 hover:border-purpura-400 shadow-sm transition">
+                                                        <i class="ph-bold ph-paperclip text-sm"></i>
+                                                        <span class="truncate max-w-[220px]">{{ basename(trim($caminhoArquivo)) }}</span>
+                                                        <i class="ph-bold ph-arrow-square-out"></i>
+                                                    </a>
+                                                @endforeach
+                                            </dd>
+                                        </div>
+
                                     @else
                                         <div>
                                             <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</dt>
                                             <dd class="block text-sm font-bold text-gray-900 break-words">
-                                                {{ !empty($valor) ? (is_array($valor) ? implode(', ', $valor) : $valor) : '-' }}
+                                                {{ $valorFormatado }}
                                             </dd>
                                         </div>
                                     @endif

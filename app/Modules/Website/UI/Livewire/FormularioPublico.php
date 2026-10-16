@@ -252,7 +252,37 @@ class FormularioPublico extends Component
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
 
-            if ($campo->subtipo === 'email') $ruleStr[] = 'email';
+            // NOVO: Lê as configurações do campo para saber se tem validações ativas
+            $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+
+            // E-MAIL E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'email') {
+                $ruleStr[] = 'email';
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
+            // CPF (MÁTEMATICA) E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'cpf') {
+                if (filter_var($cfgVal['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = function ($attribute, $value, $fail) {
+                        if (empty($value)) return; // Passa se for vazio (o required cuida disso)
+                        $c = preg_replace('/\D/', '', $value);
+                        if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                        for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                        for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                    };
+                }
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
             if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
             if ($campo->subtipo === 'date') $ruleStr[] = 'date';
             if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;

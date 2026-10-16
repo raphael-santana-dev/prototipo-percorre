@@ -1,8 +1,11 @@
 <div class="font-sans flex flex-col transition-all duration-300 bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden w-full"
-     x-data="{ modoExpandido: false, navbarOculta: false }"
+     x-data="{ modoExpandido: true, navbarOculta: true }"
      x-init="
         $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
         $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
+        
+        document.body.classList.toggle('modo-expandido', modoExpandido);
+        document.body.classList.toggle('navbar-oculta', navbarOculta);
      "
      :class="modoExpandido ? 'h-screen border-none rounded-none' : 'min-h-[680px] h-[calc(100vh-140px)]'">
 
