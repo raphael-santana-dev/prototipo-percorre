@@ -10,6 +10,7 @@ class Feature extends Model
     use RegistraAuditoria;
     protected $fillable = [
         'module',
+        'submodule',
         'name',
         'description',
         'is_active',

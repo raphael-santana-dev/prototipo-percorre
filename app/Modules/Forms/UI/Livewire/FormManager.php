@@ -192,7 +192,9 @@ class FormManager extends Component
 
     public function render()
     {
-        $query = Formulario::query();
+        // Adicionamos o withCount para contabilizar as respostas e criar o atributo total_respostas
+        $query = Formulario::query()
+            ->withCount('respostas as total_respostas');
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);

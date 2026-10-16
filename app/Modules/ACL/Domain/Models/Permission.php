@@ -12,6 +12,7 @@ class Permission extends SpatiePermission
         'name',
         'guard_name',
         'module',
+        'submodule',
         'description',
         'updated_at',
         'created_at'
