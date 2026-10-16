@@ -38,7 +38,6 @@ class DynamicFields extends Component
     public $matriz_linhas = '';
     public $matriz_colunas = '';
 
-    // Controle do Navigation Drawer de Configurações do Formulário
     public bool $drawerFormSettingsAberto = false;
 
     public $slug = '';
@@ -157,7 +156,6 @@ class DynamicFields extends Component
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
-        // Limpa máscara anterior se não estiver editando um campo existente
         if (!$this->campoId) {
             $this->regex_mascara = '';
         }
@@ -170,7 +168,6 @@ class DynamicFields extends Component
             $this->configuracoes['redes_permitidas'] = $this->configuracoes['redes_permitidas'] ?? [];
         }
 
-        // Configurações automáticas para subtipos de Texto e Máscaras
         if ($tipo === 'text') {
             if ($subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
@@ -217,7 +214,6 @@ class DynamicFields extends Component
             }
         }
 
-        // Configurações padrão caso selecione o tipo 'file'
         if ($tipo === 'file') {
             $this->configuracoes['tipo_arquivo'] = $this->configuracoes['tipo_arquivo'] ?? 'todos';
             $this->configuracoes['aceita_multiplos'] = $this->configuracoes['aceita_multiplos'] ?? false;
@@ -226,7 +222,6 @@ class DynamicFields extends Component
             $this->configuracoes['max_arquivos'] = $this->configuracoes['max_arquivos'] ?? 5;
         }
 
-        // Configurações padrão caso selecione o tipo 'signature'
         if ($tipo === 'signature') {
             $tipoAssinante = $this->configuracoes['tipo_assinante'] ?? ($subtipo !== 'text' ? $subtipo : 'usuario');
             $this->configuracoes['tipo_assinante'] = $tipoAssinante;
@@ -238,7 +233,6 @@ class DynamicFields extends Component
             }
         }
 
-        // Configurações padrão caso selecione o tipo 'link'
         if ($tipo === 'link') {
             $this->subtipo = 'link';
             $this->configuracoes['tipo_destino'] = $this->configuracoes['tipo_destino'] ?? 'externo';
@@ -355,7 +349,7 @@ class DynamicFields extends Component
 
         if ($campo->tipo === 'text' && $campo->subtipo === 'cep') {
             $this->configuracoes['viacep'] = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $this->configuracoes['criar_campos_endereco'] = false; // Na edição já foram criados
+            $this->configuracoes['criar_campos_endereco'] = false;
         }
 
         if ($campo->tipo === 'file') {
@@ -485,7 +479,6 @@ class DynamicFields extends Component
 
         $configToSave = $this->configuracoes ?? [];
 
-        // Máscaras padrão para CPF, CNPJ e CEP
         if ($this->tipo === 'text') {
             if ($this->subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
@@ -630,7 +623,6 @@ class DynamicFields extends Component
                 ->increment('ordem');
         }
 
-        // Mapas dos campos filhos de endereço caso o ViaCEP esteja ativo
         if ($this->tipo === 'text' && $this->subtipo === 'cep' && !empty($configToSave['viacep'])) {
             $configToSave['viacep_map'] = $configToSave['viacep_map'] ?? [
                 'logradouro'  => $nameSalvo . '_logradouro',
@@ -670,7 +662,6 @@ class DynamicFields extends Component
             CampoFormulario::create($dadosGerais);
         }
 
-        // Se for um campo CEP com ViaCEP ativo, cria automaticamente os campos de endereço logo abaixo
         if ($deveCriarEnderecoViaCep) {
             $this->gerarCamposEnderecoViaCep($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo);
         }
@@ -697,7 +688,6 @@ class DynamicFields extends Component
         foreach ($camposEndereco as $item) {
             $nomeCampo = $cepFieldName . '_' . $item['sufixo'];
 
-            // Verifica se o campo já existe no formulário para evitar duplicidades
             $jaExiste = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
                 ->where('name', $nomeCampo)
                 ->exists();
@@ -708,7 +698,6 @@ class DynamicFields extends Component
 
             $ordemAtual++;
 
-            // Empurra os campos seguintes para abrir espaço
             CampoFormulario::where($this->getContextColumn(), $this->contextoId)
                 ->where('etapa', $etapa)
                 ->where('tipo', '!=', 'config')

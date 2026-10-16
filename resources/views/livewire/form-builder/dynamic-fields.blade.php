@@ -7,7 +7,6 @@
      :class="modoExpandido ? 'h-screen border-none rounded-none' : 'min-h-[680px] h-[calc(100vh-140px)]'">
 
     <style>
-        /* Remove limites de largura do container pai para ocupar 100% da tela */
         main > div.py-6 > div { max-width: 100% !important; }
         body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
         body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
@@ -47,9 +46,9 @@
                 <i class="ph-bold ph-squares-four text-purpura-600"></i> {{ $camposCadastrados->count() }} Blocos
             </span>
 
-            <!-- CONTROLES DE TELA CHEIA E OCULTAR MENUS (PADRÃO ORÇAMENTO) -->
+            <!-- CONTROLES DE ECRÃ INTEIRO E OCULTAR MENUS -->
             <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 shadow-sm text-purpura-600' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" title="Expandir Tela">
+                <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 shadow-sm text-purpura-600' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" title="Expandir Ecrã">
                     <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
                 </button>
@@ -67,15 +66,11 @@
         </div>
     </div>
 
-    <!-- ÁREA DE TRABALHO EM 3 COLUNAS (ESQUERDA: INPUTS | CENTRO: PREVIEW | DIREITA: PROPRIEDADES) -->
+    <!-- ÁREA DE TRABALHO EM 3 COLUNAS -->
     <div class="flex flex-1 w-full overflow-hidden relative bg-gray-100 dark:bg-gray-950">
         
-        <div class="hidden col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 md:col-span-1 md:col-span-2 md:col-span-3 md:col-span-4 md:col-span-5 md:col-span-6 md:col-span-7 md:col-span-8 md:col-span-9 md:col-span-10 md:col-span-11 md:col-span-12"></div>
-
-        <!-- ===================================================================== -->
-        <!-- COLUNA 1 (ESQUERDA): PALETA DE TIPOS DE INPUTS                        -->
-        <!-- ===================================================================== -->
-        <aside class="w-72 xl:w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden">
+        <!-- COLUNA 1 (ESQUERDA): PALETA DE TIPOS DE INPUTS -->
+        <aside class="w-72 xl:w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
             <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
                 <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
                     <i class="ph-fill ph-squares-four text-purpura-600 text-base"></i> Tipos de Inputs
@@ -89,13 +84,13 @@
 
             <div class="p-4 overflow-y-auto flex-1 custom-scrollbar space-y-5">
                 
-                <!-- GRUPO 1: TEXTO E DOCUMENTOS (FORMATOS SEPARADOS) -->
+                <!-- GRUPO 1: TEXTO E DOCUMENTOS -->
                 <div>
-                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Texto e Documentos</p>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Texto e Entradas</p>
                     <div class="grid grid-cols-2 gap-1.5">
                         <button type="button" wire:click="setTipo('text', 'text')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'text' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                             <i class="ph-bold ph-text-t text-base {{ $tipo == 'text' && $subtipo == 'text' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
-                            <span class="text-[11px] font-bold truncate">Texto Simples</span>
+                            <span class="text-[11px] font-bold truncate">Texto Curto</span>
                         </button>
 
                         <button type="button" wire:click="setTipo('text', 'email')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'email' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
@@ -115,7 +110,7 @@
 
                         <button type="button" wire:click="setTipo('text', 'tel')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'tel' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                             <i class="ph-bold ph-device-mobile text-base {{ $tipo == 'text' && $subtipo == 'tel' ? 'text-purpura-600' : 'text-blue-500' }}"></i>
-                            <span class="text-[11px] font-bold truncate">Telefone / Cel</span>
+                            <span class="text-[11px] font-bold truncate">Telefone</span>
                         </button>
 
                         <button type="button" wire:click="setTipo('text', 'cpf')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cpf' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
@@ -135,7 +130,7 @@
                     </div>
                 </div>
 
-                <!-- GRUPO 2: DATAS E HORAS (SEPARADOS) -->
+                <!-- GRUPO 2: DATAS E HORAS -->
                 <div>
                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Datas e Horas</p>
                     <div class="grid grid-cols-2 gap-1.5">
@@ -156,7 +151,7 @@
                     </div>
                 </div>
 
-                <!-- GRUPO 3: UPLOAD E ASSINATURA À MÃO -->
+                <!-- GRUPO 3: UPLOAD E ASSINATURA -->
                 <div>
                     <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Anexos e Assinatura</p>
                     <div class="grid grid-cols-1 gap-1.5">
@@ -164,7 +159,7 @@
                             <i class="ph-bold ph-signature text-xl {{ $tipo == 'signature' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
                             <div class="flex flex-col min-w-0">
                                 <span class="text-xs font-bold">Assinatura à Mão</span>
-                                <span class="text-[10px] text-gray-500 truncate">Desenho com rato/toque (Utilizador ou Resp.)</span>
+                                <span class="text-[10px] text-gray-500 truncate">Desenho (Utilizador/Responsável)</span>
                             </div>
                         </button>
 
@@ -172,7 +167,7 @@
                             <i class="ph-bold ph-upload-simple text-xl {{ $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                             <div class="flex flex-col min-w-0">
                                 <span class="text-xs font-bold">Upload / Anexos</span>
-                                <span class="text-[10px] text-gray-500 truncate">Envio de imagens, vídeos e docs</span>
+                                <span class="text-[10px] text-gray-500 truncate">Imagens, vídeos e documentos</span>
                             </div>
                         </button>
                     </div>
@@ -267,10 +262,8 @@
             </div>
         </aside>
 
-        <!-- ===================================================================== -->
-        <!-- COLUNA 2 (CENTRO): CANVAS DE PRÉ-VISUALIZAÇÃO DO FORMULÁRIO           -->
-        <!-- ===================================================================== -->
-        <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <!-- COLUNA 2 (CENTRO): CANVAS DE PRÉ-VISUALIZAÇÃO DO FORMULÁRIO -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative z-10">
             
             @php
                 $previewBgUrl = null;
@@ -290,8 +283,14 @@
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
-            <!-- BARRA DE PÁGINAS / ETAPAS DO FORMULÁRIO -->
-            <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2.5 flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 z-20">
+            <!-- FUNDO CORRIGIDO: absolute para não vazar da coluna -->
+            @if($previewBgUrl)
+                <div class="absolute inset-0 z-0 bg-center bg-no-repeat pointer-events-none" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
+            @endif
+            <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
+
+            <!-- BARRA DE PÁGINAS / ETAPAS -->
+            <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2.5 flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 relative z-20">
                 <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purpura-50 border border-purpura-200 rounded-lg text-xs font-bold text-purpura-700 hover:bg-purpura-100 transition">
                     <i class="ph-bold ph-plus"></i> Nova Página
                 </button>
@@ -315,19 +314,14 @@
                 @endforeach
             </div>
 
-            <!-- CANVAS SCROLLÁVEL -->
-            <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center">
-                @if($previewBgUrl)
-                    <div class="fixed inset-0 z-0 bg-center bg-no-repeat pointer-events-none" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
-                @endif
-                <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
-
+            <!-- CANVAS DE PREVIEW (SCROLLÁVEL) -->
+            <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center z-10">
                 <div class="relative z-10 w-full {{ $formWidth }} {{ $cardClass }} p-6 md:p-10 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                     
                     <div class="mb-8 border-b border-gray-200 pb-4 flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-extrabold {{ $textoForm }}">{{ $contextoNome }}</h2>
-                            <p class="text-xs text-gray-500 mt-0.5">Clique em qualquer bloco abaixo para editar as suas propriedades no painel direito.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Clique num bloco abaixo para editar as definições à direita.</p>
                         </div>
                     </div>
 
@@ -442,7 +436,7 @@
                                                         <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
                                                     </div>
 
-                                                    {{-- PREVIEW: TEXTO E SUBTIPOS --}}
+                                                    {{-- PREVIEW DOS INPUTS E SUBTIPOS --}}
                                                     @if($c->tipo === 'text')
                                                         <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between gap-2 shadow-sm pointer-events-none">
                                                             <div class="flex items-center gap-2 truncate">
@@ -465,7 +459,6 @@
                                                             @endif
                                                         </div>
 
-                                                    {{-- PREVIEW: ASSINATURA À MÃO --}}
                                                     @elseif($c->tipo === 'signature')
                                                         <div class="w-full border-2 border-dashed border-indigo-200 rounded-lg p-4 bg-white text-center pointer-events-none">
                                                             <i class="ph-duotone ph-signature text-3xl text-indigo-500 mb-1"></i>
@@ -473,10 +466,9 @@
                                                             <p class="text-[11px] font-bold text-gray-600">
                                                                 {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
                                                             </p>
-                                                            <span class="text-[9px] text-gray-400">Área de desenho com o rato / ecrã tátil</span>
+                                                            <span class="text-[9px] text-gray-400">Área de desenho com rato / ecrã tátil</span>
                                                         </div>
 
-                                                    {{-- PREVIEW: LINK / ARQUIVO --}}
                                                     @elseif($c->tipo === 'link')
                                                         @php
                                                             $destinoPv = $cfg['tipo_destino'] ?? 'externo';
@@ -511,15 +503,15 @@
                                                             <div class="flex items-center gap-1 shrink-0">
                                                                 @if($destinoPv === 'arquivo')
                                                                     @if($abrirPreviewPv)
-                                                                        <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Pré-visualizar</span>
+                                                                        <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Ver</span>
                                                                     @endif
                                                                     @if($permDownloadPv)
-                                                                        <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">Download</span>
+                                                                        <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">Baixar</span>
                                                                     @else
-                                                                        <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[9px] font-bold rounded">Sem Download</span>
+                                                                        <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[9px] font-bold rounded">S/ Download</span>
                                                                     @endif
                                                                 @else
-                                                                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Abrir Link ↗</span>
+                                                                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Acessar</span>
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -669,10 +661,8 @@
             </div>
         </div>
 
-        <!-- ===================================================================== -->
-        <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO                       -->
-        <!-- ===================================================================== -->
-        <aside class="w-80 xl:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden">
+        <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO -->
+        <aside class="w-80 xl:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
             <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
                 <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
                     <i class="ph-fill ph-sliders text-purpura-600 text-base"></i> {{ $campoId ? 'Editar Input' : 'Configurar Input' }}
@@ -762,7 +752,7 @@
                                             <span class="text-[10px] text-gray-500">Aparece no formulário como: <strong>"Sua assinatura"</strong></span>
                                         </div>
                                     </label>
-                                    <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'usuario') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
+                                    <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'responsavel') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
                                         <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="responsavel" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
                                         <div class="flex flex-col">
                                             <span class="text-xs font-bold text-gray-900">Assinatura do Responsável</span>
@@ -852,7 +842,7 @@
                                 <input type="checkbox" wire:model.live="configuracoes.viacep" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
                                 <div class="flex flex-col">
                                     <span class="text-xs font-bold text-gray-900">Consultar ViaCEP automaticamente?</span>
-                                    <span class="text-[10px] text-gray-600 leading-tight mt-0.5">Ao digitar os 8 dígitos do CEP no formulário, consulta a API do ViaCEP e preenche os campos de endereço.</span>
+                                    <span class="text-[10px] text-gray-600 leading-tight mt-0.5">Ao digitar os 8 dígitos do CEP no formulário, consulta a API e preenche os campos de endereço.</span>
                                 </div>
                             </label>
 
@@ -861,7 +851,7 @@
                                     <input type="checkbox" wire:model="configuracoes.criar_campos_endereco" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
                                     <div class="flex flex-col">
                                         <span class="text-xs font-bold text-rose-900">Gerar campos de endereço automaticamente</span>
-                                        <span class="text-[10px] text-rose-700 leading-tight mt-0.5">Cria automaticamente: Logradouro, Número, Complemento, Bairro, Cidade e Estado (UF) vinculados a este CEP.</span>
+                                        <span class="text-[10px] text-rose-700 leading-tight mt-0.5">Cria automaticamente: Logradouro, Número, Complemento, Bairro, Cidade e Estado (UF).</span>
                                     </div>
                                 </label>
                             @endif
@@ -961,7 +951,7 @@
                         <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
                             <label class="flex items-center gap-2.5 cursor-pointer">
                                 <input type="checkbox" wire:model="configuracoes.aplicar_regras" class="h-4 w-4 text-purpura-600 rounded border-gray-300">
-                                <span class="text-xs text-gray-900 font-bold">Aplicar Regras de Cascata (Unidade → Curso → Turno)</span>
+                                <span class="text-xs text-gray-900 font-bold">Aplicar Regras de Cascata (Unidade → Curso)</span>
                             </label>
                         </div>
                     @elseif($tipo === 'html')

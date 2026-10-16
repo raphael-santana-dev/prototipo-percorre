@@ -246,9 +246,11 @@
                                             <dd class="inline-flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
                                                 <img src="{{ $valor }}" alt="Assinatura" class="max-h-28 w-auto object-contain">
                                                 <div class="w-full border-t border-gray-100 mt-2 pt-1.5 flex items-center justify-between gap-4 text-[10px] text-gray-500">
-                                                    <span class="font-bold uppercase">Assinatura Digital</span>
+                                                    <span class="font-bold uppercase">
+                                                        {{ str_contains(strtolower($chave), 'responsavel') ? 'Assinatura do Responsável' : 'Sua Assinatura' }}
+                                                    </span>
                                                     <a href="{{ $valor }}" download="assinatura-{{ $chave }}.png" class="text-purpura-600 hover:underline font-bold flex items-center gap-1">
-                                                        <i class="ph-bold ph-download-simple"></i> PNG
+                                                        <i class="ph-bold ph-download-simple"></i> Baixar PNG
                                                     </a>
                                                 </div>
                                             </dd>
