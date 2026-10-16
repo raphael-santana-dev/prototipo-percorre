@@ -40,6 +40,8 @@ class DynamicFields extends Component
 
     public $slug = '';
     public $bg_image_upload;
+    public $link_file_upload;
+
     public array $formSettings = [
         'bg_image' => null,
         'bg_color' => '#ffffff',
@@ -153,7 +155,7 @@ class DynamicFields extends Component
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
-        if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer']) && !$this->campoId && empty($this->name)) {
+        if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) && !$this->campoId && empty($this->name)) {
             $this->name = 'ui_' . time(); 
         }
 
@@ -169,33 +171,46 @@ class DynamicFields extends Component
             $this->configuracoes['max_size_mb'] = $this->configuracoes['max_size_mb'] ?? 10;
             $this->configuracoes['max_arquivos'] = $this->configuracoes['max_arquivos'] ?? 5;
         }
+
+        // NOVO: Configurações padrão para Assinatura à Mão ('signature')
+        if ($tipo === 'signature') {
+            $tipoAssinante = $this->configuracoes['tipo_assinante'] ?? ($subtipo !== 'text' ? $subtipo : 'usuario');
+            $this->configuracoes['tipo_assinante'] = $tipoAssinante;
+            $this->subtipo = $tipoAssinante;
+
+            if (!$this->campoId) {
+                $this->label = $tipoAssinante === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
+                $this->name = Str::slug($this->label, '_') . '_' . rand(10, 99);
+            }
+        }
+
+        // NOVO: Configurações padrão para Link / Documento ('link')
+        if ($tipo === 'link') {
+            $this->subtipo = 'link';
+            $this->configuracoes['tipo_destino'] = $this->configuracoes['tipo_destino'] ?? 'externo'; // externo | interno | arquivo
+            $this->configuracoes['url'] = $this->configuracoes['url'] ?? '';
+            $this->configuracoes['permitir_download'] = $this->configuracoes['permitir_download'] ?? true;
+            $this->configuracoes['abrir_preview'] = $this->configuracoes['abrir_preview'] ?? true;
+        }
     }
 
-    public function updatedConfiguracoesTipoArquivo($valor)
+    public function updatedConfiguracoesTipoAssinante($valor)
     {
-        if ($this->tipo !== 'file') return;
+        if ($this->tipo !== 'signature') return;
 
-        switch ($valor) {
-            case 'imagem':
-                $this->configuracoes['extensoes_permitidas'] = 'jpg, jpeg, png, webp, gif';
-                break;
-            case 'video':
-                $this->configuracoes['extensoes_permitidas'] = 'mp4, mov, avi, webm, mkv';
-                break;
-            case 'documento':
-                $this->configuracoes['extensoes_permitidas'] = 'pdf, doc, docx, xls, xlsx, txt';
-                break;
-            case 'todos':
-                $this->configuracoes['extensoes_permitidas'] = 'pdf, docx, jpg, png, mp4';
-                break;
+        $this->subtipo = $valor;
+        $this->label = $valor === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
+
+        if (!$this->campoId) {
+            $this->name = Str::slug($this->label, '_') . '_' . rand(10, 99);
         }
     }
 
     public function updatedLabel($valor)
     {
-        if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer'])) {
+        if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link'])) {
             $this->name = Str::slug($valor, '_');
-        } elseif (!$this->campoId) {
+        } elseif (!$this->campoId && empty($this->name)) {
             $this->name = 'campo_' . time(); 
         }
     }
@@ -276,8 +291,26 @@ class DynamicFields extends Component
             $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
+        
         if ($campo->tipo === 'social') {
             $this->configuracoes['redes_permitidas'] = $config['redes_permitidas'] ?? [];
+        }
+
+        // NOVO: Carrega configurações de Assinatura na edição
+        if ($campo->tipo === 'signature') {
+            $this->configuracoes['tipo_assinante'] = $config['tipo_assinante'] ?? ($campo->subtipo ?: 'usuario');
+        }
+
+        // NOVO: Carrega configurações de Link/Arquivo na edição
+        if ($campo->tipo === 'link') {
+            $this->configuracoes['tipo_destino'] = $config['tipo_destino'] ?? 'externo';
+            $this->configuracoes['url'] = $config['url'] ?? '';
+            $this->configuracoes['permitir_download'] = filter_var($config['permitir_download'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $this->configuracoes['abrir_preview'] = filter_var($config['abrir_preview'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $this->configuracoes['arquivo_path'] = $config['arquivo_path'] ?? null;
+            $this->configuracoes['arquivo_nome'] = $config['arquivo_nome'] ?? null;
+            $this->configuracoes['arquivo_extensao'] = $config['arquivo_extensao'] ?? null;
+            $this->link_file_upload = null;
         }
     }
 
@@ -286,7 +319,8 @@ class DynamicFields extends Component
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
-            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 'configuracoes', 'matriz_linhas', 'matriz_colunas'
+            'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 
+            'configuracoes', 'matriz_linhas', 'matriz_colunas', 'link_file_upload'
         ]);
         
         $this->configuracoes = [];
@@ -402,6 +436,63 @@ class DynamicFields extends Component
             $configToSave['redes_permitidas'] = array_values(array_filter($this->configuracoes['redes_permitidas'] ?? []));
         }
 
+        if ($this->tipo === 'signature') {
+            $tipoAssinante = $this->configuracoes['tipo_assinante'] ?? 'usuario';
+            $configToSave['tipo_assinante'] = $tipoAssinante;
+            $this->subtipo = $tipoAssinante;
+            $this->label = $tipoAssinante === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
+        }
+
+        if ($this->tipo === 'link') {
+            $tipoDestino = $this->configuracoes['tipo_destino'] ?? 'externo';
+            $configToSave['tipo_destino'] = $tipoDestino;
+
+            if ($tipoDestino === 'arquivo') {
+                // Exige arquivo caso seja um bloco novo ou ainda não tenha arquivo salvo
+                $rulesArquivo = empty($this->configuracoes['arquivo_path'])
+                    ? 'required|file|mimes:pdf,doc,docx,xls,xlsx|max:20480'
+                    : 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:20480';
+
+                $this->validate([
+                    'link_file_upload' => $rulesArquivo,
+                ], [
+                    'link_file_upload.required' => 'Selecione um arquivo (PDF, Word ou Excel) para este link.',
+                    'link_file_upload.mimes' => 'O arquivo deve ser do tipo PDF, Word (doc/docx) ou Excel (xls/xlsx).',
+                    'link_file_upload.max' => 'O arquivo não pode ultrapassar 20MB.',
+                ]);
+
+                if ($this->link_file_upload) {
+                    $nomeOriginal = $this->link_file_upload->getClientOriginalName();
+                    $extensao = strtolower($this->link_file_upload->getClientOriginalExtension());
+                    $path = $this->link_file_upload->store('formularios/links', 'public');
+
+                    $configToSave['arquivo_path'] = $path;
+                    $configToSave['arquivo_nome'] = $nomeOriginal;
+                    $configToSave['arquivo_extensao'] = $extensao;
+                    $configToSave['url'] = 'storage/' . $path;
+                    $this->link_file_upload = null;
+                } else {
+                    $configToSave['arquivo_path'] = $this->configuracoes['arquivo_path'] ?? null;
+                    $configToSave['arquivo_nome'] = $this->configuracoes['arquivo_nome'] ?? null;
+                    $configToSave['arquivo_extensao'] = $this->configuracoes['arquivo_extensao'] ?? null;
+                    $configToSave['url'] = $this->configuracoes['url'] ?? null;
+                }
+
+                $configToSave['permitir_download'] = filter_var($this->configuracoes['permitir_download'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                $configToSave['abrir_preview'] = filter_var($this->configuracoes['abrir_preview'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $this->validate([
+                    'configuracoes.url' => 'required|string',
+                ], [
+                    'configuracoes.url.required' => 'Informe a URL ou caminho de destino do link.',
+                ]);
+
+                $configToSave['url'] = trim($this->configuracoes['url'] ?? '');
+                $configToSave['permitir_download'] = false;
+                $configToSave['abrir_preview'] = false;
+            }
+        }
+
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
@@ -461,8 +552,7 @@ class DynamicFields extends Component
             'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
             'opcoes' => $arrayOpcoes,
             'configuracoes' => empty($configToSave) ? null : $configToSave,
-            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer']) ? false : $this->obrigatorio,            'regras_validacao' => $this->regras_validacao,
-            'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
+            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) ? false : $this->obrigatorio,            'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
             'depende_operador' => $this->depende_operador,
             'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,
         ];
