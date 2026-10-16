@@ -92,35 +92,18 @@
         </div>
     </div>
 
-    {{-- BARRA DE FILTROS PADRÃO DAS LISTAGENS --}}
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 space-y-3">
+    {{-- BARRA DE FILTROS DINÂMICOS (ESTILO PERIOD-MANAGER) --}}
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 space-y-4">
+        
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-3 flex-1">
-                {{-- Busca --}}
+            <div class="flex items-center gap-3 flex-1">
+                {{-- Campo de Busca Geral --}}
                 <div class="w-full sm:w-72 relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="ph ph-magnifying-glass text-gray-400"></i>
                     </div>
-                    <input wire:model.live.debounce.400ms="search" type="text" placeholder="Buscar por ID ou resposta..." class="pl-9 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs focus:ring-purpura-500 focus:border-purpura-500 py-2 shadow-sm">
+                    <input wire:model.live.debounce.400ms="search" type="text" placeholder="Pesquisar protocolo ou respostas..." class="pl-9 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs focus:ring-purpura-500 focus:border-purpura-500 py-2 shadow-sm">
                 </div>
-
-                {{-- Data Inicial --}}
-                <div class="w-full sm:w-auto flex items-center gap-1.5">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase shrink-0">De</span>
-                    <input wire:model.live="data_inicio" type="date" class="w-full sm:w-[145px] rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs focus:ring-purpura-500 focus:border-purpura-500 py-2 px-2.5 shadow-sm">
-                </div>
-
-                {{-- Data Final --}}
-                <div class="w-full sm:w-auto flex items-center gap-1.5">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase shrink-0">Até</span>
-                    <input wire:model.live="data_fim" type="date" class="w-full sm:w-[145px] rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs focus:ring-purpura-500 focus:border-purpura-500 py-2 px-2.5 shadow-sm">
-                </div>
-
-                @if($search || $data_inicio || $data_fim)
-                    <button type="button" wire:click="limparFiltros" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
-                        <i class="ph-bold ph-x"></i> Limpar Filtros
-                    </button>
-                @endif
             </div>
 
             {{-- Controlo de Seleção em Lote --}}
@@ -137,10 +120,105 @@
                 @endif
             </div>
         </div>
+
+        {{-- CHIPS DE FILTROS DINÂMICOS DOS CAMPOS DO FORMULÁRIO --}}
+        <div wire:ignore.self x-data="{
+            visible: [],
+            allFields: @js($this->camposFiltraveis->pluck('name')->toArray()),
+            init() {
+                @foreach($this->camposFiltraveis as $f)
+                    @if(isset($filtrosDinamicos[$f->name]) && $filtrosDinamicos[$f->name] !== '' && $filtrosDinamicos[$f->name] !== null)
+                        if(!this.visible.includes('{{ $f->name }}')) this.visible.push('{{ $f->name }}');
+                    @endif
+                @endforeach
+            },
+            add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
+            remove(f) {
+                $wire.set('filtrosDinamicos.' + f, '');
+                this.visible = this.visible.filter(i => i !== f);
+            }
+        }" class="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+            
+            {{-- Chip Fixo: Período de Envio (Data) --}}
+            <div class="flex items-center h-9 px-2 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0 gap-2">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Data Envio</span>
+                <div class="flex items-center gap-1">
+                    <input wire:model.live="data_inicio" type="date" class="border-none bg-transparent text-xs p-0 focus:ring-0 text-gray-700 dark:text-gray-200" title="De">
+                    <span class="text-gray-400 text-xs">até</span>
+                    <input wire:model.live="data_fim" type="date" class="border-none bg-transparent text-xs p-0 focus:ring-0 text-gray-700 dark:text-gray-200" title="Até">
+                </div>
+                @if($data_inicio || $data_fim)
+                    <button type="button" @click="$wire.set('data_inicio', ''); $wire.set('data_fim', '');" class="text-indigo-400 hover:text-indigo-600 transition"><i class="ph-bold ph-x text-sm"></i></button>
+                @endif
+            </div>
+
+            {{-- Chips Dinâmicos Gerados a Partir dos Campos do Formulário --}}
+            @foreach($this->camposFiltraveis as $campo)
+                @php
+                    $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                    $opcoesCampo = [];
+                    if (!empty($campo->opcoes)) {
+                        $dec = is_string($campo->opcoes) ? json_decode($campo->opcoes, true) : $campo->opcoes;
+                        $opcoesCampo = is_array($dec) ? $dec : explode(',', $campo->opcoes);
+                    }
+                    $isDataHora = in_array($campo->subtipo, ['date', 'datetime-local']);
+                    $isSelecao = in_array($campo->tipo, ['select', 'radio', 'check']);
+                @endphp
+
+                <div x-show="visible.includes('{{ $campo->name }}')" x-cloak class="flex items-center h-9 px-2 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0 gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 truncate max-w-[130px]" title="{{ $campo->label }}">{{ $campo->label }}</span>
+                    
+                    @if($isDataHora)
+                        <div class="flex items-center gap-1">
+                            <input wire:model.live="filtrosDinamicos.{{ $campo->name }}.de" type="date" class="border-none bg-transparent text-xs p-0 focus:ring-0 text-gray-700 dark:text-gray-200">
+                            <span class="text-gray-400 text-xs">até</span>
+                            <input wire:model.live="filtrosDinamicos.{{ $campo->name }}.ate" type="date" class="border-none bg-transparent text-xs p-0 focus:ring-0 text-gray-700 dark:text-gray-200">
+                        </div>
+                    @elseif($isSelecao)
+                        <select wire:model.live="filtrosDinamicos.{{ $campo->name }}" class="border-none shadow-none bg-transparent text-xs focus:ring-0 py-0 pl-1 pr-6 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
+                            <option value="">Todas as opções</option>
+                            @foreach($opcoesCampo as $op)
+                                <option value="{{ trim($op) }}">{{ trim($op) }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input wire:model.live.debounce.400ms="filtrosDinamicos.{{ $campo->name }}" type="text" placeholder="Filtrar..." class="border-none bg-transparent text-xs p-0 focus:ring-0 text-gray-700 dark:text-gray-200 w-28">
+                    @endif
+
+                    <button type="button" @click="remove('{{ $campo->name }}')" class="text-indigo-400 hover:text-indigo-600 transition"><i class="ph-bold ph-x text-sm"></i></button>
+                </div>
+            @endforeach
+
+            {{-- Botão Adicionar Filtro Dinâmico --}}
+            <div x-data="{ openMenu: false }" class="relative ml-1 shrink-0">
+                <button type="button" @click="openMenu = !openMenu" class="text-xs font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
+                    <i class="ph-bold ph-plus"></i> Adicionar Filtro
+                </button>
+                
+                <div x-show="openMenu" @click.away="openMenu = false" x-cloak class="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    <div class="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100 dark:border-gray-700 mb-1">Campos do Formulário</div>
+                    @foreach($this->camposFiltraveis as $campo)
+                        <button type="button" 
+                                @click="add('{{ $campo->name }}'); openMenu = false;" 
+                                x-show="!visible.includes('{{ $campo->name }}')"
+                                class="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-purpura-50 dark:hover:bg-gray-700 flex items-center justify-between">
+                            <span class="truncate pr-2">{{ $campo->label }}</span>
+                            <span class="text-[9px] uppercase font-mono bg-gray-100 dark:bg-gray-700 text-gray-500 px-1 rounded">{{ $campo->tipo }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            @if($search || $data_inicio || $data_fim || !empty(array_filter($filtrosDinamicos)))
+                <button type="button" wire:click="limparFiltros" @click="visible = []" class="text-xs font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-2 transition">
+                    Limpar Todos
+                </button>
+            @endif
+        </div>
     </div>
 
-    {{-- TABELA ÚNICA COM COMPONENTE <x-table> E PAGINAÇÃO --}}
-    <div class="custom-scrollbar overflow-x-auto">
+    {{-- TABELA DE RESPOSTAS COM CHECKBOX NA 1ª COLUNA E AÇÕES NA 2ª COLUNA --}}
+    <div class="custom-scrollbar overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <x-table
             :headers="$this->headers"
             :registros="$respostas"
@@ -155,7 +233,7 @@
                 
                 <tr wire:key="resp-row-{{ $resp->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group {{ in_array((string) $resp->id, $selecionadas) ? 'bg-purpura-50/40 dark:bg-purpura-900/20' : '' }}">
                     
-                    {{-- 1ª COLUNA: CHECKBOX DE SELEÇÃO PARA EXPORTAÇÃO --}}
+                    {{-- 1ª COLUNA: CHECKBOX DE SELEÇÃO --}}
                     <td class="px-4 py-2.5 whitespace-nowrap text-center w-10">
                         <input type="checkbox"
                                wire:model.live="selecionadas"
@@ -163,7 +241,7 @@
                                class="rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 cursor-pointer">
                     </td>
 
-                    {{-- 2ª COLUNA: AÇÕES (APENAS ÍCONE) --}}
+                    {{-- 2ª COLUNA: AÇÕES (APENAS O ÍCONE DE OLHO) --}}
                     <td class="px-4 py-2.5 whitespace-nowrap text-center w-16">
                         @if(feature('formulario.respostas') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.respostas')))
                             <a href="{{ route('formularios.respostas.show', $resp->id) }}"
@@ -174,7 +252,7 @@
                         @endif
                     </td>
 
-                    {{-- 3ª COLUNA: ID NO COMEÇO --}}
+                    {{-- 3ª COLUNA: ID --}}
                     <td class="px-4 py-2.5 whitespace-nowrap">
                         <span class="px-2.5 py-1 text-xs font-mono font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded">
                             #{{ str_pad($resp->id, 5, '0', STR_PAD_LEFT) }}

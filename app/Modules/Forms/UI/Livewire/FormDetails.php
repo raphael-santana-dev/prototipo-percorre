@@ -23,6 +23,7 @@ class FormDetails extends Component
     public $search = '';
     public $data_inicio = '';
     public $data_fim = '';
+    public array $filtrosDinamicos = []; // NOVO: Armazena os valores dos filtros dinâmicos por campo
 
     public array $selecionadas = [];
     public bool $selecionarTudo = false;
@@ -39,7 +40,7 @@ class FormDetails extends Component
 
     public function updating($property)
     {
-        if (in_array($property, ['search', 'data_inicio', 'data_fim'])) {
+        if (in_array($property, ['search', 'data_inicio', 'data_fim']) || str_starts_with($property, 'filtrosDinamicos.')) {
             $this->resetPage();
             $this->selecionarTudo = false;
         }
@@ -47,7 +48,7 @@ class FormDetails extends Component
 
     public function limparFiltros()
     {
-        $this->reset(['search', 'data_inicio', 'data_fim']);
+        $this->reset(['search', 'data_inicio', 'data_fim', 'filtrosDinamicos']);
         $this->resetPage();
     }
 
@@ -102,6 +103,7 @@ class FormDetails extends Component
             'search' => $this->search,
             'data_inicio' => $this->data_inicio,
             'data_fim' => $this->data_fim,
+            'filtrosDinamicos' => $this->filtrosDinamicos,
             'ids' => $this->selecionadas,
             'sortField' => str_starts_with($this->ordenacaoCampo, 'respostas->') || in_array($this->ordenacaoCampo, ['id', 'created_at']) ? $this->ordenacaoCampo : 'created_at',
             'sortDirection' => $this->ordenacaoDirecao ?? 'desc',
@@ -132,6 +134,16 @@ class FormDetails extends Component
         return $headers;
     }
 
+    public function getCamposFiltraveisProperty()
+    {
+        // Retorna apenas campos que fazem sentido para filtragem (ignora visuais, divisórias, etc.)
+        return CampoFormulario::where('formulario_id', $this->formulario->id)
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social', 'spacer', 'link', 'signature', 'file'])
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+    }
+
     private function getCamposDinamicos()
     {
         return CampoFormulario::where('formulario_id', $this->formulario->id)
@@ -153,6 +165,36 @@ class FormDetails extends Component
             })
             ->when($this->data_inicio, fn($q) => $q->whereDate('created_at', '>=', $this->data_inicio))
             ->when($this->data_fim, fn($q) => $q->whereDate('created_at', '<=', $this->data_fim));
+
+        // Aplica os filtros dinâmicos iterando sobre cada campo preenchido
+        if (!empty($this->filtrosDinamicos)) {
+            foreach ($this->filtrosDinamicos as $nomeCampo => $valorFiltro) {
+                if ($valorFiltro === null || $valorFiltro === '') {
+                    continue;
+                }
+
+                $campoObj = CampoFormulario::where('formulario_id', $this->formulario->id)->where('name', $nomeCampo)->first();
+                if (!$campoObj) continue;
+
+                if (in_array($campoObj->subtipo, ['date', 'datetime-local'])) {
+                    // Filtro de data De/Até (espera array com 'de' e 'ate')
+                    if (is_array($valorFiltro)) {
+                        if (!empty($valorFiltro['de'])) {
+                            $query->whereRaw("respostas->>? >= ?", [$nomeCampo, $valorFiltro['de']]);
+                        }
+                        if (!empty($valorFiltro['ate'])) {
+                            $query->whereRaw("respostas->>? <= ?", [$nomeCampo, $valorFiltro['ate']]);
+                        }
+                    }
+                } elseif (in_array($campoObj->tipo, ['select', 'radio'])) {
+                    // Filtro de seleção exata
+                    $query->whereRaw("respostas->>? = ?", [$nomeCampo, $valorFiltro]);
+                } else {
+                    // Filtro de texto parcial (ilike)
+                    $query->whereRaw("respostas->>? ilike ?", [$nomeCampo, "%{$valorFiltro}%"]);
+                }
+            }
+        }
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
