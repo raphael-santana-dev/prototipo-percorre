@@ -38,10 +38,12 @@ class DynamicFields extends Component
     public $matriz_linhas = '';
     public $matriz_colunas = '';
 
+    // Controle do Navigation Drawer de Configurações do Formulário
+    public bool $drawerFormSettingsAberto = false;
+
     public $slug = '';
     public $bg_image_upload;
     public $link_file_upload;
-
     public array $formSettings = [
         'bg_image' => null,
         'bg_color' => '#ffffff',
@@ -155,12 +157,64 @@ class DynamicFields extends Component
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
-        if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) && !$this->campoId && empty($this->name)) {
-            $this->name = 'ui_' . time(); 
+        // Limpa máscara anterior se não estiver editando um campo existente
+        if (!$this->campoId) {
+            $this->regex_mascara = '';
+        }
+
+        if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) && !$this->campoId) {
+            $this->name = 'ui_' . time() . '_' . rand(10, 99); 
         }
 
         if ($tipo === 'social') {
-            $this->configuracoes['redes_permitidas'] = [];
+            $this->configuracoes['redes_permitidas'] = $this->configuracoes['redes_permitidas'] ?? [];
+        }
+
+        // Configurações automáticas para subtipos de Texto e Máscaras
+        if ($tipo === 'text') {
+            if ($subtipo === 'cpf') {
+                $this->regex_mascara = '999.999.999-99';
+                if (!$this->campoId) {
+                    $this->label = 'CPF';
+                    $this->name = 'cpf_' . rand(10, 99);
+                    $this->largura = 4;
+                }
+            } elseif ($subtipo === 'cnpj') {
+                $this->regex_mascara = '99.999.999/9999-99';
+                if (!$this->campoId) {
+                    $this->label = 'CNPJ';
+                    $this->name = 'cnpj_' . rand(10, 99);
+                    $this->largura = 4;
+                }
+            } elseif ($subtipo === 'cep') {
+                $this->regex_mascara = '99999-999';
+                $this->configuracoes['viacep'] = $this->configuracoes['viacep'] ?? true;
+                $this->configuracoes['criar_campos_endereco'] = $this->configuracoes['criar_campos_endereco'] ?? true;
+                if (!$this->campoId) {
+                    $this->label = 'CEP';
+                    $this->name = 'cep_' . rand(10, 99);
+                    $this->largura = 3;
+                }
+            } elseif ($subtipo === 'tel') {
+                $this->regex_mascara = '(99) 99999-9999';
+                if (!$this->campoId && empty($this->label)) {
+                    $this->label = 'Telefone / Celular';
+                    $this->name = 'telefone_' . rand(10, 99);
+                    $this->largura = 4;
+                }
+            } elseif ($subtipo === 'email') {
+                if (!$this->campoId && empty($this->label)) {
+                    $this->label = 'E-mail';
+                    $this->name = 'email_' . rand(10, 99);
+                    $this->largura = 6;
+                }
+            } elseif ($subtipo === 'money') {
+                if (!$this->campoId && empty($this->label)) {
+                    $this->label = 'Valor (R$)';
+                    $this->name = 'valor_' . rand(10, 99);
+                    $this->largura = 4;
+                }
+            }
         }
 
         // Configurações padrão caso selecione o tipo 'file'
@@ -172,7 +226,7 @@ class DynamicFields extends Component
             $this->configuracoes['max_arquivos'] = $this->configuracoes['max_arquivos'] ?? 5;
         }
 
-        // NOVO: Configurações padrão para Assinatura à Mão ('signature')
+        // Configurações padrão caso selecione o tipo 'signature'
         if ($tipo === 'signature') {
             $tipoAssinante = $this->configuracoes['tipo_assinante'] ?? ($subtipo !== 'text' ? $subtipo : 'usuario');
             $this->configuracoes['tipo_assinante'] = $tipoAssinante;
@@ -184,10 +238,10 @@ class DynamicFields extends Component
             }
         }
 
-        // NOVO: Configurações padrão para Link / Documento ('link')
+        // Configurações padrão caso selecione o tipo 'link'
         if ($tipo === 'link') {
             $this->subtipo = 'link';
-            $this->configuracoes['tipo_destino'] = $this->configuracoes['tipo_destino'] ?? 'externo'; // externo | interno | arquivo
+            $this->configuracoes['tipo_destino'] = $this->configuracoes['tipo_destino'] ?? 'externo';
             $this->configuracoes['url'] = $this->configuracoes['url'] ?? '';
             $this->configuracoes['permitir_download'] = $this->configuracoes['permitir_download'] ?? true;
             $this->configuracoes['abrir_preview'] = $this->configuracoes['abrir_preview'] ?? true;
@@ -203,6 +257,26 @@ class DynamicFields extends Component
 
         if (!$this->campoId) {
             $this->name = Str::slug($this->label, '_') . '_' . rand(10, 99);
+        }
+    }
+
+    public function updatedConfiguracoesTipoArquivo($valor)
+    {
+        if ($this->tipo !== 'file') return;
+
+        switch ($valor) {
+            case 'imagem':
+                $this->configuracoes['extensoes_permitidas'] = 'jpg, jpeg, png, webp, gif';
+                break;
+            case 'video':
+                $this->configuracoes['extensoes_permitidas'] = 'mp4, mov, avi, webm, mkv';
+                break;
+            case 'documento':
+                $this->configuracoes['extensoes_permitidas'] = 'pdf, doc, docx, xls, xlsx, txt';
+                break;
+            case 'todos':
+                $this->configuracoes['extensoes_permitidas'] = 'pdf, docx, jpg, png, mp4';
+                break;
         }
     }
 
@@ -279,6 +353,11 @@ class DynamicFields extends Component
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config;
 
+        if ($campo->tipo === 'text' && $campo->subtipo === 'cep') {
+            $this->configuracoes['viacep'] = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $this->configuracoes['criar_campos_endereco'] = false; // Na edição já foram criados
+        }
+
         if ($campo->tipo === 'file') {
             $this->configuracoes['tipo_arquivo'] = $config['tipo_arquivo'] ?? 'todos';
             $this->configuracoes['aceita_multiplos'] = filter_var($config['aceita_multiplos'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -291,17 +370,12 @@ class DynamicFields extends Component
             $this->matriz_linhas = implode("\n", $config['linhas'] ?? []);
             $this->matriz_colunas = implode(', ', $config['colunas'] ?? []);
         }
-        
         if ($campo->tipo === 'social') {
             $this->configuracoes['redes_permitidas'] = $config['redes_permitidas'] ?? [];
         }
-
-        // NOVO: Carrega configurações de Assinatura na edição
         if ($campo->tipo === 'signature') {
             $this->configuracoes['tipo_assinante'] = $config['tipo_assinante'] ?? ($campo->subtipo ?: 'usuario');
         }
-
-        // NOVO: Carrega configurações de Link/Arquivo na edição
         if ($campo->tipo === 'link') {
             $this->configuracoes['tipo_destino'] = $config['tipo_destino'] ?? 'externo';
             $this->configuracoes['url'] = $config['url'] ?? '';
@@ -374,6 +448,7 @@ class DynamicFields extends Component
             ]
         );
 
+        $this->drawerFormSettingsAberto = false;
         $this->dispatch('sucesso', msg: 'Tema e aparência aplicados com sucesso!');
     }
 
@@ -409,9 +484,20 @@ class DynamicFields extends Component
         }
 
         $configToSave = $this->configuracoes ?? [];
+
+        // Máscaras padrão para CPF, CNPJ e CEP
+        if ($this->tipo === 'text') {
+            if ($this->subtipo === 'cpf') {
+                $this->regex_mascara = '999.999.999-99';
+            } elseif ($this->subtipo === 'cnpj') {
+                $this->regex_mascara = '99.999.999/9999-99';
+            } elseif ($this->subtipo === 'cep') {
+                $this->regex_mascara = '99999-999';
+                $configToSave['viacep'] = filter_var($this->configuracoes['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            }
+        }
         
         if ($this->tipo === 'file') {
-            // Normaliza as extensões removendo pontos e espaços (ex: ".pdf, .jpg" -> "pdf,jpg")
             $extensoesCruas = $this->configuracoes['extensoes_permitidas'] ?? 'pdf,docx,jpg,png,mp4';
             $extensoesTratadas = implode(',', array_filter(array_map(function($ext) {
                 return ltrim(strtolower(trim($ext)), '.');
@@ -448,7 +534,6 @@ class DynamicFields extends Component
             $configToSave['tipo_destino'] = $tipoDestino;
 
             if ($tipoDestino === 'arquivo') {
-                // Exige arquivo caso seja um bloco novo ou ainda não tenha arquivo salvo
                 $rulesArquivo = empty($this->configuracoes['arquivo_path'])
                     ? 'required|file|mimes:pdf,doc,docx,xls,xlsx|max:20480'
                     : 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:20480';
@@ -492,6 +577,14 @@ class DynamicFields extends Component
                 $configToSave['abrir_preview'] = false;
             }
         }
+
+        $isEditing = (bool) $this->campoId;
+        $ordemSalva = (int) $this->ordem;
+        $etapaSalva = (int) $this->etapa;
+        $nameSalvo  = $this->name;
+        $obrigatorioSalvo = (bool) $this->obrigatorio;
+        $exibirNoTopoSalvo = filter_var($this->configuracoes['exibir_no_topo'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $deveCriarEnderecoViaCep = ($this->tipo === 'text' && $this->subtipo === 'cep' && !empty($configToSave['viacep']) && (!$isEditing || !empty($this->configuracoes['criar_campos_endereco'])));
 
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
@@ -537,12 +630,24 @@ class DynamicFields extends Component
                 ->increment('ordem');
         }
 
+        // Mapas dos campos filhos de endereço caso o ViaCEP esteja ativo
+        if ($this->tipo === 'text' && $this->subtipo === 'cep' && !empty($configToSave['viacep'])) {
+            $configToSave['viacep_map'] = $configToSave['viacep_map'] ?? [
+                'logradouro'  => $nameSalvo . '_logradouro',
+                'numero'      => $nameSalvo . '_numero',
+                'complemento' => $nameSalvo . '_complemento',
+                'bairro'      => $nameSalvo . '_bairro',
+                'cidade'      => $nameSalvo . '_cidade',
+                'uf'          => $nameSalvo . '_uf',
+            ];
+        }
+
         $dadosGerais = [
             'ciclo_id' => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
             'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
-            'label' => empty($this->label) ? ($this->tipo === 'spacer' ? 'Espaço em Branco' : 'Campo Visão') : $this->label, 
+            'label' => empty($this->label) ? ($this->tipo === 'spacer' ? 'Espaço em Branco' : ($this->tipo === 'link' ? ($configToSave['arquivo_nome'] ?? 'Link / Documento') : 'Campo Visão')) : $this->label, 
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
@@ -552,7 +657,9 @@ class DynamicFields extends Component
             'regex_mascara' => empty($this->regex_mascara) ? null : $this->regex_mascara,
             'opcoes' => $arrayOpcoes,
             'configuracoes' => empty($configToSave) ? null : $configToSave,
-            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) ? false : $this->obrigatorio,            'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
+            'obrigatorio' => in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) ? false : $this->obrigatorio,
+            'regras_validacao' => $this->regras_validacao,
+            'depende_de' => empty($this->depende_de) ? null : $this->depende_de,
             'depende_operador' => $this->depende_operador,
             'depende_valor' => empty($this->depende_valor) ? null : $this->depende_valor,
         ];
@@ -563,8 +670,69 @@ class DynamicFields extends Component
             CampoFormulario::create($dadosGerais);
         }
 
+        // Se for um campo CEP com ViaCEP ativo, cria automaticamente os campos de endereço logo abaixo
+        if ($deveCriarEnderecoViaCep) {
+            $this->gerarCamposEnderecoViaCep($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo);
+        }
+
         $this->cancelarEdicao(); 
-        $this->dispatch('sucesso', msg: 'Bloco configurado e estruturado com sucesso!');
+        $this->dispatch('sucesso', msg: $deveCriarEnderecoViaCep 
+            ? 'Campo CEP e todos os campos de endereço (ViaCEP) foram adicionados com sucesso!' 
+            : 'Bloco configurado e estruturado com sucesso!');
+    }
+
+    private function gerarCamposEnderecoViaCep(int $etapa, int $ordemCep, string $cepFieldName, bool $obrigatorio, bool $exibirNoTopo): void
+    {
+        $camposEndereco = [
+            ['sufixo' => 'logradouro',  'label' => 'Endereço / Logradouro', 'largura' => 6, 'obrigatorio' => $obrigatorio],
+            ['sufixo' => 'numero',      'label' => 'Número',                'largura' => 3, 'obrigatorio' => $obrigatorio],
+            ['sufixo' => 'complemento', 'label' => 'Complemento',           'largura' => 4, 'obrigatorio' => false],
+            ['sufixo' => 'bairro',      'label' => 'Bairro',                'largura' => 4, 'obrigatorio' => $obrigatorio],
+            ['sufixo' => 'cidade',      'label' => 'Cidade',                'largura' => 3, 'obrigatorio' => $obrigatorio],
+            ['sufixo' => 'uf',          'label' => 'Estado (UF)',           'largura' => 1, 'obrigatorio' => $obrigatorio],
+        ];
+
+        $ordemAtual = $ordemCep;
+
+        foreach ($camposEndereco as $item) {
+            $nomeCampo = $cepFieldName . '_' . $item['sufixo'];
+
+            // Verifica se o campo já existe no formulário para evitar duplicidades
+            $jaExiste = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('name', $nomeCampo)
+                ->exists();
+
+            if ($jaExiste) {
+                continue;
+            }
+
+            $ordemAtual++;
+
+            // Empurra os campos seguintes para abrir espaço
+            CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('etapa', $etapa)
+                ->where('tipo', '!=', 'config')
+                ->where('ordem', '>=', $ordemAtual)
+                ->increment('ordem');
+
+            CampoFormulario::create([
+                'ciclo_id' => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+                'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+                'etapa' => $etapa,
+                'ordem' => $ordemAtual,
+                'label' => $item['label'],
+                'name' => $nomeCampo,
+                'tipo' => 'text',
+                'subtipo' => 'text',
+                'largura' => $item['largura'],
+                'obrigatorio' => $item['obrigatorio'],
+                'configuracoes' => [
+                    'viacep_parent' => $cepFieldName,
+                    'viacep_target' => $item['sufixo'],
+                    'exibir_no_topo' => $exibirNoTopo,
+                ],
+            ]);
+        }
     }
 
     public function excluir($id)

@@ -51,10 +51,10 @@ class PreInscricao extends Component
 
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         
-        foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
+        foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
             if (!isset($this->respostas[$campo->name])) {
                 $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-                if (in_array($campo->tipo, ['check', 'matriz']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
+                if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
                     $this->respostas[$campo->name] = [];
                 } else {
                     $this->respostas[$campo->name] = '';
@@ -67,15 +67,13 @@ class PreInscricao extends Component
     {
         $regras = [];
 
-        // Validação dos campos opcionais de captação de interesse na Etapa 1
         if ($etapa === 1 && $this->deseja_informar) {
             $regras['unidade_interesse'] = 'required';
             $regras['curso_interesse'] = 'required';
             $regras['turno_interesse'] = 'required';
         }
 
-        foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
-            // Avaliação de campos condicionais
+        foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
                 $val = strtolower(trim((string)$valorGatilho));
@@ -98,7 +96,13 @@ class PreInscricao extends Component
                 if (!$condicaoAtendida) continue; 
             }
 
-            // Regras dedicadas para upload de ficheiros
+            if ($campo->tipo === 'signature') {
+                $regras['respostas.' . $campo->name] = $campo->obrigatorio
+                    ? 'required|string|starts_with:data:image/'
+                    : 'nullable|string';
+                continue;
+            }
+
             if ($campo->tipo === 'file') {
                 $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                 $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
@@ -130,7 +134,6 @@ class PreInscricao extends Component
                 continue;
             }
 
-            // Regras para campos comuns de texto, data, número, etc.
             $ruleStr = [];
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
@@ -220,7 +223,6 @@ class PreInscricao extends Component
             ]);
         }
 
-        // Processa o armazenamento dos uploads temporários da etapa em curso
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
                 $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);

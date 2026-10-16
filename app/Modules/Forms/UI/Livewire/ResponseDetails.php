@@ -18,8 +18,7 @@ class ResponseDetails extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('formulario.respostas'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
+        abort_if(!feature('formulario.respostas') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas')), 403);
 
         $this->resposta = RespostaFormulario::findOrFail($id);
         $this->formulario = Formulario::findOrFail($this->resposta->formulario_id);
@@ -27,13 +26,12 @@ class ResponseDetails extends Component
 
     public function render()
     {
-        $campos = CampoFormulario::where('formulario_id', $this->formulario->id)
-            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
-            ->orderBy('etapa')
-            ->orderBy('ordem')
-            ->get();
-
-        $camposPorEtapa = $campos->groupBy('etapa');
+        $camposPorEtapa = CampoFormulario::where('formulario_id', $this->formulario->id)
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link'])
+            ->orderBy('etapa', 'asc')
+            ->orderBy('ordem', 'asc')
+            ->get()
+            ->groupBy('etapa');
 
         return view('livewire.forms.response-details', [
             'camposPorEtapa' => $camposPorEtapa

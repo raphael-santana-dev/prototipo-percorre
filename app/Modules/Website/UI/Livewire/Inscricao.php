@@ -86,10 +86,10 @@ class Inscricao extends Component
                 }
             }
             
-            $maxEtapaDinamica = $this->camposDinamicos->max('etapa') ?? 1;
+            $maxEtapaDinamica = $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1;
             $this->totalEtapas = max(1, $maxEtapaDinamica);
 
-            foreach ($this->camposDinamicos as $campo) {
+            foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
                 if (!isset($this->respostas[$campo->name])) {
                     $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                     if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
@@ -273,7 +273,7 @@ class Inscricao extends Component
         }
 
         if ($this->camposDinamicos) {
-            foreach ($this->camposDinamicos->where('etapa', $etapa) as $campo) {
+            foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
                 if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                     $valorGatilho = $this->respostas[$campo->depende_de] ?? $this->{$campo->depende_de} ?? null;
                     $val = strtolower(trim((string)$valorGatilho));
@@ -294,6 +294,13 @@ class Inscricao extends Component
                             break;
                     }
                     if (!$condicaoAtendida) continue; 
+                }
+
+                if ($campo->tipo === 'signature') {
+                    $regras['respostas.' . $campo->name] = $campo->obrigatorio
+                        ? 'required|string|starts_with:data:image/'
+                        : 'nullable|string';
+                    continue;
                 }
 
                 if ($campo->tipo === 'file') {

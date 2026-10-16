@@ -211,10 +211,12 @@
                             <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                                 @foreach($dinamicos as $chave => $valor)
                                     @continue(str_contains(strtolower($chave), 'form_config'))
+                                    @continue(str_starts_with(strtolower($chave), 'ui_'))
                                     @continue(in_array(strtolower(trim($chave)), ['submission started', 'last updated']))
                                     
                                     @php
                                         $isAssociative = is_array($valor) && count(array_filter(array_keys($valor), 'is_string')) > 0;
+                                        $isAssinatura = is_string($valor) && str_starts_with($valor, 'data:image/');
                                     @endphp
 
                                     @if($isAssociative)
@@ -236,6 +238,21 @@
                                                 </div>
                                             </div>
                                         @endforeach
+                                    @elseif($isAssinatura)
+                                        <div class="md:col-span-2">
+                                            <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                                {{ str_contains(strtolower($chave), 'responsavel') ? 'Assinatura do responsável' : (str_contains(strtolower($chave), 'sua_assinatura') ? 'Sua assinatura' : str_replace('_', ' ', $chave)) }}
+                                            </dt>
+                                            <dd class="inline-flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                                <img src="{{ $valor }}" alt="Assinatura" class="max-h-28 w-auto object-contain">
+                                                <div class="w-full border-t border-gray-100 mt-2 pt-1.5 flex items-center justify-between gap-4 text-[10px] text-gray-500">
+                                                    <span class="font-bold uppercase">Assinatura Digital</span>
+                                                    <a href="{{ $valor }}" download="assinatura-{{ $chave }}.png" class="text-purpura-600 hover:underline font-bold flex items-center gap-1">
+                                                        <i class="ph-bold ph-download-simple"></i> PNG
+                                                    </a>
+                                                </div>
+                                            </dd>
+                                        </div>
                                     @else
                                         <div>
                                             <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">{{ str_replace('_', ' ', $chave) }}</dt>
