@@ -15,6 +15,7 @@ class FormularioPublico extends Component
     use WithFileUploads;
 
     public Formulario $formulario;
+    public $respostaId = null;
     public $camposDinamicos = [];
     public $respostas = [];
     public array $uploads = [];
@@ -144,6 +145,88 @@ class FormularioPublico extends Component
         }
     }
 
+    /**
+     * Restaura os dados salvos no localStorage ao reabrir o formulário
+     */
+    public function restaurarRascunhoLocal(array $dados)
+    {
+        if (request()->query('preview') || $this->bloqueado || $this->finalizado) {
+            return;
+        }
+
+        if (!empty($dados['respostaId'])) {
+            $respBanco = RespostaFormulario::where('id', $dados['respostaId'])
+                ->where('formulario_id', $this->formulario->id)
+                ->first();
+
+            if ($respBanco) {
+                $this->respostaId = $respBanco->id;
+            }
+        }
+
+        if (!empty($dados['respostas']) && is_array($dados['respostas'])) {
+            foreach ($dados['respostas'] as $k => $v) {
+                if ($v !== '' && $v !== null) {
+                    $this->respostas[$k] = $v;
+                }
+            }
+        }
+
+        if (!empty($dados['etapaAtual']) && is_numeric($dados['etapaAtual']) && $dados['etapaAtual'] <= $this->totalEtapas) {
+            $this->etapaAtual = (int) $dados['etapaAtual'];
+        }
+
+        // Recarrega cascatas de Unidade -> Curso -> Turno se houver campos 'system'
+        foreach ($this->camposDinamicos->where('tipo', 'system') as $campoSys) {
+            $cfg = is_string($campoSys->configuracoes) ? json_decode($campoSys->configuracoes, true) : ($campoSys->configuracoes ?? []);
+            if (filter_var($cfg['aplicar_regras'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $valId = $this->respostas[$campoSys->name] ?? null;
+                if ($campoSys->subtipo === 'unidade' && $valId) {
+                    $this->cursosDisponiveis = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+                        ->whereHas('unidades', fn($q) => $q->where('unidades.id', $valId))
+                        ->pluck('nome', 'id')->toArray();
+                } elseif ($campoSys->subtipo === 'curso' && $valId) {
+                    $curso = \App\Models\Curso::find($valId);
+                    if ($curso && method_exists($curso, 'turnosVinculados')) {
+                        $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
+                    }
+                }
+            }
+        }
+
+        $this->salvarRascunhoSilencioso();
+    }
+
+    /**
+     * Registra/atualiza a resposta no banco em tempo real enquanto o usuário preenche
+     */
+    public function salvarRascunhoSilencioso()
+    {
+        if (request()->query('preview') || $this->bloqueado || $this->finalizado) {
+            return;
+        }
+
+        $temPreenchimento = !empty(array_filter($this->respostas, function ($v) {
+            return is_array($v) ? !empty(array_filter($v)) : ($v !== '' && $v !== null);
+        }));
+
+        if (!$temPreenchimento) {
+            return;
+        }
+
+        $registro = RespostaFormulario::updateOrCreate(
+            ['id' => $this->respostaId],
+            [
+                'formulario_id' => $this->formulario->id,
+                'user_id' => auth('web')->id() ?? auth('student')->id() ?? null,
+                'respostas' => $this->respostas,
+                'etapa_parada' => $this->etapaAtual,
+            ]
+        );
+
+        $this->respostaId = $registro->id;
+    }
+
     private function bloquearAcesso(string $mensagem, string $icone, bool $exibeBotaoLogin = false)
     {
         $this->bloqueado = true;
@@ -252,23 +335,21 @@ class FormularioPublico extends Component
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
 
-            // NOVO: Lê as configurações do campo para saber se tem validações ativas
             $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
 
-            // E-MAIL E TRAVA DE ÚNICO
             if ($campo->subtipo === 'email') {
                 $ruleStr[] = 'email';
                 if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
-                        ->where('formulario_id', $this->formulario->id);
+                        ->where('formulario_id', $this->formulario->id)
+                        ->ignore($this->respostaId);
                 }
             }
 
-            // CPF (MÁTEMATICA) E TRAVA DE ÚNICO
             if ($campo->subtipo === 'cpf') {
                 if (filter_var($cfgVal['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN)) {
                     $ruleStr[] = function ($attribute, $value, $fail) {
-                        if (empty($value)) return; // Passa se for vazio (o required cuida disso)
+                        if (empty($value)) return;
                         $c = preg_replace('/\D/', '', $value);
                         if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
                         for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
@@ -279,7 +360,8 @@ class FormularioPublico extends Component
                 }
                 if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
-                        ->where('formulario_id', $this->formulario->id);
+                        ->where('formulario_id', $this->formulario->id)
+                        ->ignore($this->respostaId);
                 }
             }
 
@@ -315,6 +397,8 @@ class FormularioPublico extends Component
         }
 
         if (str_starts_with($propertyName, 'respostas.')) {
+            $this->salvarRascunhoSilencioso();
+
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras)) {
                 $this->validateOnly($propertyName, $regras, [
@@ -382,6 +466,8 @@ class FormularioPublico extends Component
                 unset($this->uploads[$campoName]);
             }
         }
+
+        $this->salvarRascunhoSilencioso();
     }
 
     public function avancarEtapa()
@@ -431,14 +517,20 @@ class FormularioPublico extends Component
 
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
+            $this->salvarRascunhoSilencioso();
         } else {
-            RespostaFormulario::create([
-                'formulario_id' => $this->formulario->id,
-                'user_id' => auth()->check() ? auth()->id() : null,
-                'respostas' => $this->respostas,
-                'etapa_parada' => $this->etapaAtual
-            ]);
+            $registro = RespostaFormulario::updateOrCreate(
+                ['id' => $this->respostaId],
+                [
+                    'formulario_id' => $this->formulario->id,
+                    'user_id' => auth('web')->id() ?? auth('student')->id() ?? null,
+                    'respostas' => $this->respostas,
+                    'etapa_parada' => $this->etapaAtual
+                ]
+            );
+            $this->respostaId = $registro->id;
             $this->finalizado = true;
+            $this->dispatch('limpar-storage-formulario');
         }
     }
 

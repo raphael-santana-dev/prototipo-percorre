@@ -421,6 +421,12 @@
                                 this.loadSavedSignature(savedVal);
                             }
 
+                            $watch('$wire.respostas.{{ $campo->name }}', (newVal) => {
+                                if (newVal && String(newVal).startsWith('data:image') && !this.drawing) {
+                                    this.loadSavedSignature(newVal);
+                                }
+                            });
+
                             window.addEventListener('resize', () => this.resizeCanvas(true));
                         },
                         resizeCanvas(preserve = false) {
@@ -577,7 +583,7 @@
                 @endif
 
             @elseif($campo->tipo === 'rating')
-                <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name) }">
+                <div class="flex gap-2 text-3xl" x-data="{ temp: 0, rating: @entangle('respostas.'.$campo->name).live }">
                     @for($i = 1; $i <= ($config['max_stars'] ?? 5); $i++)
                         <i class="cursor-pointer transition-colors" 
                            :class="(temp >= {{ $i }} || (!temp && rating >= {{ $i }})) ? 'ph-fill ph-star text-yellow-400 drop-shadow-sm' : 'ph ph-star text-gray-300 dark:text-gray-600 bg-white dark:bg-gray-800 rounded-full'"
@@ -814,6 +820,7 @@
                                         if (data.complemento) {
                                             $wire.set('respostas.{{$mapaViaCep['complemento'] }}', data.complemento);
                                         }
+                                        setTimeout(() => $el.dispatchEvent(new CustomEvent('input', { bubbles: true })), 300);
                                     }
                                 } catch (e) {
                                     this.erroCep = 'Erro ao consultar o ViaCEP.';
