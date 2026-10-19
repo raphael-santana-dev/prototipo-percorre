@@ -1,17 +1,23 @@
 @php
     if (!function_exists('formatWppText')) {
         function formatWppText($text) {
-            // Remove injeções maliciosas de código
+            if (empty($text)) return '';
+            if ($text !== strip_tags($text)) {
+                return strip_tags($text, '<strong><b><em><i><u><s><del><span><br><p><ul><ol><li><a>');
+            }
             $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
-            // Formata negrito, itálico e riscado
             $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
             $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
             $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
-            // Preserva as quebras de linha
             return nl2br($text);
         }
     }
 @endphp
+<style>
+    .ql-size-small { font-size: 0.75em; }
+    .ql-size-large { font-size: 1.25em; }
+    .ql-size-huge { font-size: 1.6em; }
+</style>
 
 <div class="hidden col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 md:col-span-1 md:col-span-2 md:col-span-3 md:col-span-4 md:col-span-5 md:col-span-6 md:col-span-7 md:col-span-8 md:col-span-9 md:col-span-10 md:col-span-11 md:col-span-12"></div>
 
@@ -54,6 +60,28 @@
         }
 
         $layoutOpcoes = $config['layout_opcoes'] ?? 'horizontal';
+
+        $dicaModo = $config['dica_modo'] ?? 'nenhum';
+        $tooltipTexto = null;
+        $tooltipTrigger = 'hover';
+        $legendaTexto = null;
+
+        if ($dicaModo === 'legenda') {
+            $legendaTexto = $config['dica_1_texto'] ?? null;
+        } elseif ($dicaModo === 'tooltip') {
+            $tooltipTexto = $config['dica_1_texto'] ?? null;
+            $tooltipTrigger = $config['dica_1_trigger'] ?? 'hover';
+        } elseif ($dicaModo === 'ambos') {
+            if (($config['dica_1_tipo'] ?? 'legenda') === 'tooltip') {
+                $tooltipTexto = $config['dica_1_texto'] ?? null;
+                $tooltipTrigger = $config['dica_1_trigger'] ?? 'hover';
+                $legendaTexto = $config['dica_2_texto'] ?? null;
+            } else {
+                $legendaTexto = $config['dica_1_texto'] ?? null;
+                $tooltipTexto = $config['dica_2_texto'] ?? null;
+                $tooltipTrigger = $config['dica_2_trigger'] ?? 'hover';
+            }
+        }
     @endphp
 
     <div class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
@@ -107,15 +135,66 @@
         @endif
 
         <div class="relative z-10">
-            @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media', 'spacer', 'link']))
-                <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
-                    @if($campo->tipo === 'signature')
-                        {{ ($config['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
-                    @else
-                        {!! formatWppText($campo->label) !!}
+            @if(!in_array($campo->tipo, ['html', 'divider', 'media', 'spacer', 'link']))
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
+                        @if($campo->tipo === 'signature')
+                            {!! formatWppText($campo->label ?: (($config['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura')) !!}
+                        @else
+                            {!! formatWppText($campo->label) !!}
+                        @endif
+                        @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
+                    </label>
+
+                    @if(!empty($tooltipTexto))
+                        <div x-data="{ 
+                                openTip: false,
+                                calculatePos() {
+                                    if(!this.openTip) return;
+                                    let btn = this.$refs.btnTip.getBoundingClientRect();
+                                    let tip = this.$refs.boxTip;
+                                    tip.style.top = (btn.top - tip.offsetHeight - 8 + window.scrollY) + 'px';
+                                    
+                                    // Centraliza e evita que fuja do ecrã na esquerda
+                                    let leftPos = (btn.left + (btn.width / 2) - (tip.offsetWidth / 2) + window.scrollX);
+                                    if(leftPos < 10) leftPos = 10;
+                                    
+                                    tip.style.left = leftPos + 'px';
+                                }
+                             }" 
+                             class="inline-flex items-center">
+                             
+                            <button type="button"
+                                    x-ref="btnTip"
+                                    @if($tooltipTrigger === 'hover')
+                                        @mouseenter="openTip = true; $nextTick(() => calculatePos());" 
+                                        @mouseleave="openTip = false"
+                                    @else
+                                        @click="openTip = !openTip; $nextTick(() => calculatePos());" 
+                                        @click.away="openTip = false"
+                                    @endif
+                                    class="w-5 h-5 rounded-full bg-purpura-50 dark:bg-purpura-900/40 text-purpura-600 dark:text-purpura-300 border border-purpura-200 dark:border-purpura-700 hover:bg-purpura-100 flex items-center justify-center transition focus:outline-none"
+                                    aria-label="Ver orientação">
+                                <i class="ph-bold ph-info text-xs"></i>
+                            </button>
+                            
+                            <!-- Teleport para evitar corte por parent overflows -->
+                            <template x-teleport="body">
+                                <div x-show="openTip"
+                                     x-ref="boxTip"
+                                     x-transition.opacity
+                                     x-cloak
+                                     class="absolute w-64 p-3 bg-gray-900 text-white text-xs rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] z-[99999] leading-relaxed border border-gray-700"
+                                     style="pointer-events: none;">
+                                    {!! formatWppText($tooltipTexto) !!}
+                                    
+                                    <!-- Seta decorativa do Tooltip -->
+                                    <div class="absolute w-3 h-3 bg-gray-900 border-r border-b border-gray-700 transform rotate-45" style="bottom: -7px; left: calc(50% - 6px);"></div>
+                                </div>
+                            </template>
+                        </div>
                     @endif
-                    @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
-                </label>
+                </div>
             @endif
             
             @if($campo->tipo === 'select')
@@ -866,6 +945,12 @@
 
                         class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
                 @endif
+            @endif
+
+            @if(!empty($legendaTexto))
+                <div class="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    {!! formatWppText($legendaTexto) !!}
+                </div>
             @endif
 
             @error('respostas.'.$campo->name) <span class="text-red-500 text-xs font-bold mt-1 block drop-shadow-md">{{ $message }}</span> @enderror

@@ -102,7 +102,48 @@ class DynamicFields extends Component
         }
         
         $this->loadFormSettings();
+        $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
+    }
+
+    private function inicializarDefaultsDicas(): void
+    {
+        $this->configuracoes['dica_modo'] = $this->configuracoes['dica_modo'] ?? 'nenhum'; // nenhum, legenda, tooltip, ambos
+        $this->configuracoes['dica_1_texto'] = $this->configuracoes['dica_1_texto'] ?? '';
+        $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda'; // legenda ou tooltip
+        $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover'; // hover ou click
+        $this->configuracoes['dica_2_texto'] = $this->configuracoes['dica_2_texto'] ?? '';
+        $this->configuracoes['dica_2_tipo'] = $this->configuracoes['dica_2_tipo'] ?? 'tooltip'; // legenda ou tooltip
+        $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover'; // hover ou click
+    }
+
+    public function updatedConfiguracoesDicaModo($valor)
+    {
+        if ($valor === 'legenda') {
+            $this->configuracoes['dica_1_tipo'] = 'legenda';
+        } elseif ($valor === 'tooltip') {
+            $this->configuracoes['dica_1_tipo'] = 'tooltip';
+            $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover';
+        } elseif ($valor === 'ambos') {
+            $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda';
+            $this->configuracoes['dica_2_tipo'] = ($this->configuracoes['dica_1_tipo'] === 'legenda') ? 'tooltip' : 'legenda';
+            $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover';
+            $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover';
+        }
+    }
+
+    public function updatedConfiguracoesDica1Tipo($valor)
+    {
+        if (($this->configuracoes['dica_modo'] ?? '') === 'ambos') {
+            $this->configuracoes['dica_2_tipo'] = ($valor === 'legenda') ? 'tooltip' : 'legenda';
+        }
+    }
+
+    public function updatedConfiguracoesDica2Tipo($valor)
+    {
+        if (($this->configuracoes['dica_modo'] ?? '') === 'ambos') {
+            $this->configuracoes['dica_1_tipo'] = ($valor === 'legenda') ? 'tooltip' : 'legenda';
+        }
     }
 
     private function getContextColumn()
@@ -160,6 +201,8 @@ class DynamicFields extends Component
             $this->regex_mascara = '';
         }
 
+        $this->inicializarDefaultsDicas();
+
         if (in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']) && !$this->campoId) {
             $this->name = 'ui_' . time() . '_' . rand(10, 99); 
         }
@@ -171,8 +214,8 @@ class DynamicFields extends Component
         if ($tipo === 'text') {
             if ($subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
-                $this->configuracoes['validar_cpf'] = $this->configuracoes['validar_cpf'] ?? true; // NOVO
-                $this->configuracoes['unico'] = $this->configuracoes['unico'] ?? false; // NOVO
+                $this->configuracoes['validar_cpf'] = $this->configuracoes['validar_cpf'] ?? true;
+                $this->configuracoes['unico'] = $this->configuracoes['unico'] ?? false;
                 if (!$this->campoId) {
                     $this->label = 'CPF';
                     $this->name = 'cpf_' . rand(10, 99);
@@ -232,7 +275,7 @@ class DynamicFields extends Component
 
             if (!$this->campoId) {
                 $this->label = $tipoAssinante === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
-                $this->name = Str::slug($this->label, '_') . '_' . rand(10, 99);
+                $this->name = Str::slug(strip_tags($this->label), '_') . '_' . rand(10, 99);
             }
         }
 
@@ -243,6 +286,8 @@ class DynamicFields extends Component
             $this->configuracoes['permitir_download'] = $this->configuracoes['permitir_download'] ?? true;
             $this->configuracoes['abrir_preview'] = $this->configuracoes['abrir_preview'] ?? true;
         }
+
+        $this->dispatch(' sincronizar-quill-builder');
     }
 
     public function updatedConfiguracoesTipoAssinante($valor)
@@ -253,7 +298,7 @@ class DynamicFields extends Component
         $this->label = $valor === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
 
         if (!$this->campoId) {
-            $this->name = Str::slug($this->label, '_') . '_' . rand(10, 99);
+            $this->name = Str::slug(strip_tags($this->label), '_') . '_' . rand(10, 99);
         }
     }
 
@@ -279,8 +324,11 @@ class DynamicFields extends Component
 
     public function updatedLabel($valor)
     {
+        $textoLimpo = trim(html_entity_decode(strip_tags((string) $valor), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
         if (!$this->campoId && !in_array($this->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link'])) {
-            $this->name = Str::slug($valor, '_');
+            $slug = Str::slug($textoLimpo, '_');
+            $this->name = !empty($slug) ? substr($slug, 0, 50) : 'campo_' . time();
         } elseif (!$this->campoId && empty($this->name)) {
             $this->name = 'campo_' . time(); 
         }
@@ -349,6 +397,7 @@ class DynamicFields extends Component
 
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config;
+        $this->inicializarDefaultsDicas();
 
         if ($campo->tipo === 'text' && $campo->subtipo === 'cep') {
             $this->configuracoes['viacep'] = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -383,6 +432,8 @@ class DynamicFields extends Component
             $this->configuracoes['arquivo_extensao'] = $config['arquivo_extensao'] ?? null;
             $this->link_file_upload = null;
         }
+
+        $this->dispatch('sincronizar-quill-builder');
     }
 
     public function cancelarEdicao()
@@ -395,7 +446,9 @@ class DynamicFields extends Component
         ]);
         
         $this->configuracoes = [];
-        $this->atualizarProximaOrdem(); 
+        $this->inicializarDefaultsDicas();
+        $this->atualizarProximaOrdem();
+        $this->dispatch('sincronizar-quill-builder');
     }
 
     public function salvarFormSettings()
@@ -449,8 +502,25 @@ class DynamicFields extends Component
         $this->dispatch('sucesso', msg: 'Tema e aparência aplicados com sucesso!');
     }
 
+    private function limparHtmlQuill(?string $html): string
+    {
+        if ($html === null) return '';
+        $limpo = trim($html);
+        // Remove <p><br></p> vazios gerados pelo Quill
+        if (in_array($limpo, ['<p><br></p>', '<p></p>', '<br>'])) {
+            return '';
+        }
+        // Se houver apenas um único parágrafo <p>...</p>, remove a tag externa <p> para manter alinhamento inline
+        if ( substr_count($limpo, '<p>') === 1 && str_starts_with($limpo, '<p>') && str_ends_with($limpo, '</p>') ) {
+            $limpo = substr($limpo, 3, -4);
+        }
+        return trim($limpo);
+    }
+
     public function salvar()
     {
+        $this->label = $this->limparHtmlQuill($this->label);
+
         $this->validate([
             'etapa' => 'required',
             'ordem' => 'required|integer|min:1|max:' . $this->limiteOrdem(),
@@ -482,13 +552,26 @@ class DynamicFields extends Component
 
         $configToSave = $this->configuracoes ?? [];
 
+        // Higieniza os textos ricos das dicas e avisos
+        $configToSave['dica_modo'] = $configToSave['dica_modo'] ?? 'nenhum';
+        $configToSave['dica_1_texto'] = $this->limparHtmlQuill($configToSave['dica_1_texto'] ?? '');
+        $configToSave['dica_1_tipo'] = $configToSave['dica_1_tipo'] ?? ($configToSave['dica_modo'] === 'tooltip' ? 'tooltip' : 'legenda');
+        $configToSave['dica_1_trigger'] = $configToSave['dica_1_trigger'] ?? 'hover';
+        $configToSave['dica_2_texto'] = $this->limparHtmlQuill($configToSave['dica_2_texto'] ?? '');
+        $configToSave['dica_2_tipo'] = $configToSave['dica_2_tipo'] ?? ($configToSave['dica_1_tipo'] === 'legenda' ? 'tooltip' : 'legenda');
+        $configToSave['dica_2_trigger'] = $configToSave['dica_2_trigger'] ?? 'hover';
+
+        if (!empty($configToSave['descricao'])) {
+            $configToSave['descricao'] = $this->limparHtmlQuill($configToSave['descricao']);
+        }
+
         if ($this->tipo === 'text') {
             if ($this->subtipo === 'cpf') {
                 $this->regex_mascara = '999.999.999-99';
-                $configToSave['validar_cpf'] = filter_var($this->configuracoes['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN); // NOVO
-                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN); // NOVO
+                $configToSave['validar_cpf'] = filter_var($this->configuracoes['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN);
             } elseif ($this->subtipo === 'email') {
-                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN); // NOVO
+                $configToSave['unico'] = filter_var($this->configuracoes['unico'] ?? false, FILTER_VALIDATE_BOOLEAN);
             } elseif ($this->subtipo === 'cnpj') {
                 $this->regex_mascara = '99.999.999/9999-99';
             } elseif ($this->subtipo === 'cep') {
@@ -526,7 +609,9 @@ class DynamicFields extends Component
             $tipoAssinante = $this->configuracoes['tipo_assinante'] ?? 'usuario';
             $configToSave['tipo_assinante'] = $tipoAssinante;
             $this->subtipo = $tipoAssinante;
-            $this->label = $tipoAssinante === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
+            if (empty(strip_tags($this->label))) {
+                $this->label = $tipoAssinante === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura';
+            }
         }
 
         if ($this->tipo === 'link') {
@@ -646,7 +731,7 @@ class DynamicFields extends Component
             'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
             'etapa' => $this->etapa,
             'ordem' => $this->ordem,
-            'label' => empty($this->label) ? ($this->tipo === 'spacer' ? 'Espaço em Branco' : ($this->tipo === 'link' ? ($configToSave['arquivo_nome'] ?? 'Link / Documento') : 'Campo Visão')) : $this->label, 
+            'label' => empty(strip_tags($this->label)) ? ($this->tipo === 'spacer' ? 'Espaço em Branco' : ($this->tipo === 'link' ? ($configToSave['arquivo_nome'] ?? 'Link / Documento') : 'Campo Visão')) : $this->label, 
             'name' => $this->name,
             'tipo' => $this->tipo,
             'largura' => $this->largura,
