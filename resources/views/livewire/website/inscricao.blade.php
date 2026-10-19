@@ -12,7 +12,78 @@
     $inputClassBase = "w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purpura-500/25 focus:border-purpura-500 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700";
 @endphp
 
-<div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent">
+<div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
+     x-data="{
+        storageKey: 'percorre_inscricao_ciclo_{{ $cicloAtivoId ?? 'default' }}',
+        readyToSave: false,
+        init() {
+            if (@js($isPreview) || !@js($inscricoesAbertas)) return;
+
+            const raw = localStorage.getItem(this.storageKey);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        $wire.restaurarRascunhoLocal(parsed).then(() => {
+                            this.readyToSave = true;
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    localStorage.removeItem(this.storageKey);
+                }
+            }
+            this.readyToSave = true;
+        },
+        salvarNoLocalStorage() {
+            if (!this.readyToSave || @js($isPreview)) return;
+            if ([99, 100].includes(Number($wire.etapaAtual))) {
+                localStorage.removeItem(this.storageKey);
+                return;
+            }
+
+            const payload = {
+                inscricaoId: $wire.inscricaoId,
+                etapaAtual: $wire.etapaAtual,
+                nome: $wire.nome,
+                possui_nome_social: $wire.possui_nome_social,
+                nome_social: $wire.nome_social,
+                cpf: $wire.cpf,
+                email: $wire.email,
+                celular: $wire.celular,
+                data_nascimento: $wire.data_nascimento,
+                possui_deficiencia: $wire.possui_deficiencia,
+                natureza_deficiencia: $wire.natureza_deficiencia,
+                cep: $wire.cep,
+                logradouro: $wire.logradouro,
+                numero: $wire.numero,
+                bairro: $wire.bairro,
+                cidade: $wire.cidade,
+                estado: $wire.estado,
+                complemento: $wire.complemento,
+                regiao: $wire.regiao,
+                unidade: $wire.unidade,
+                curso: $wire.curso,
+                turno: $wire.turno,
+                deseja_informar: $wire.deseja_informar,
+                unidade_interesse: $wire.unidade_interesse,
+                curso_interesse: $wire.curso_interesse,
+                turno_interesse: $wire.turno_interesse,
+                autorizacao_uso_infos: $wire.autorizacao_uso_infos,
+                respostas: $wire.respostas
+            };
+
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify(payload));
+            } catch (e) {}
+        }
+     }"
+     @input.debounce.400ms="salvarNoLocalStorage()"
+     @change="salvarNoLocalStorage()"
+     @mouseup.debounce.300ms="salvarNoLocalStorage()"
+     @touchend.debounce.300ms="salvarNoLocalStorage()"
+     @limpar-storage-inscricao.window="localStorage.removeItem(storageKey)">
+
     @if($formBgUrl)
         <div class="fixed inset-0 z-0 bg-center bg-no-repeat" style="background-image: url('{{ $formBgUrl }}'); background-size: {{ $bgSize }};"></div>
     @endif
@@ -126,7 +197,7 @@
 
                                 <div class="col-span-12 md:col-span-6">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Celular / Telefone <span class="text-red-500">*</span></label>
-                                    <input wire:model="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
+                                    <input wire:model.live.debounce.500ms="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
                                 </div>
 
                                 <div class="col-span-12 md:col-span-6">
@@ -181,7 +252,7 @@
 
                                 <div class="col-span-12 md:col-span-2">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Número</label>
-                                    <input wire:model="numero" type="number" min="0" class="{{ $inputClassBase }}">
+                                    <input wire:model.live.debounce.500ms="numero" type="number" min="0" class="{{ $inputClassBase }}">
                                 </div>
 
                                 <div class="col-span-12 md:col-span-5">
@@ -201,7 +272,7 @@
 
                                 <div class="col-span-6 md:col-span-6">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Complemento</label>
-                                    <input wire:model="complemento" type="text" class="{{ $inputClassBase }}">
+                                    <input wire:model.live.debounce.500ms="complemento" type="text" class="{{ $inputClassBase }}">
                                 </div>
 
                                 <div class="col-span-6 md:col-span-6">
@@ -275,7 +346,7 @@
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 animate-fade-in-down">
                                                 <div>
                                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Unidade de Interesse</label>
-                                                    <select wire:model="unidade_interesse" class="{{ $inputClassBase }} @error('unidade_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                    <select wire:model.live="unidade_interesse" class="{{ $inputClassBase }} @error('unidade_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
                                                         <option value="">Selecione a Unidade...</option>
                                                         @foreach($unidadesInteresseDb ?? [] as $u)
                                                             <option value="{{ $u->id }}">{{ $u->nome }}</option>
@@ -285,7 +356,7 @@
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Curso de Interesse <span class="text-red-500">*</span></label>
-                                                    <select wire:model="curso_interesse" class="{{ $inputClassBase }} @error('curso_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                    <select wire:model.live="curso_interesse" class="{{ $inputClassBase }} @error('curso_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
                                                         <option value="">Selecione o Curso...</option>
                                                         @foreach($cursosInteresseDb ?? [] as $c)
                                                             <option value="{{ $c->id }}">{{ $c->nome }}</option>
@@ -295,7 +366,7 @@
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Turno de Interesse <span class="text-red-500">*</span></label>
-                                                    <select wire:model="turno_interesse" class="{{ $inputClassBase }} @error('turno_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
+                                                    <select wire:model.live="turno_interesse" class="{{ $inputClassBase }} @error('turno_interesse') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @enderror">
                                                         <option value="">Selecione o Turno...</option>
                                                         @foreach($turnosInteresseDb ?? [] as $t)
                                                             <option value="{{ $t->id }}">{{ $t->nome }}</option>
@@ -328,7 +399,7 @@
                                     <div class="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
                                         <div class="flex items-start">
                                             <div class="flex items-center h-5">
-                                                <input wire:model="autorizacao_uso_infos" id="checkTermos" type="checkbox" class="focus:ring-purpura-500 h-4 w-4 text-purpura-600 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded">
+                                                <input wire:model.live="autorizacao_uso_infos" id="checkTermos" type="checkbox" class="focus:ring-purpura-500 h-4 w-4 text-purpura-600 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded">
                                             </div>
                                             <div class="ml-3 text-sm">
                                                 <label for="checkTermos" class="font-bold text-gray-800 dark:text-gray-200 text-xs uppercase cursor-pointer">

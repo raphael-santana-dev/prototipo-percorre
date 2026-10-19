@@ -11,7 +11,52 @@
     $textoForm = $isTranslucent ? 'text-gray-900 dark:text-white drop-shadow-sm' : 'text-gray-900 dark:text-white';
 @endphp
 
-<div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent">
+<div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
+     x-data="{
+        storageKey: 'percorre_form_publico_{{ $formulario->id }}',
+        readyToSave: false,
+        init() {
+            if (@js((bool) request()->query('preview')) || @js($bloqueado)) return;
+
+            const raw = localStorage.getItem(this.storageKey);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        $wire.restaurarRascunhoLocal(parsed).then(() => {
+                            this.readyToSave = true;
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    localStorage.removeItem(this.storageKey);
+                }
+            }
+            this.readyToSave = true;
+        },
+        salvarNoLocalStorage() {
+            if (!this.readyToSave || @js((bool) request()->query('preview')) || @js($bloqueado)) return;
+            if ($wire.finalizado) {
+                localStorage.removeItem(this.storageKey);
+                return;
+            }
+
+            const payload = {
+                respostaId: $wire.respostaId,
+                etapaAtual: $wire.etapaAtual,
+                respostas: $wire.respostas
+            };
+
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify(payload));
+            } catch (e) {}
+        }
+     }"
+     @input.debounce.400ms="salvarNoLocalStorage()"
+     @change="salvarNoLocalStorage()"
+     @mouseup.debounce.300ms="salvarNoLocalStorage()"
+     @touchend.debounce.300ms="salvarNoLocalStorage()"
+     @limpar-storage-formulario.window="localStorage.removeItem(storageKey)">
     
     @if($formBgUrl)
         <div class="fixed inset-0 z-0 bg-center bg-no-repeat" style="background-image: url('{{ $formBgUrl }}'); background-size: {{ $bgSize }};"></div>
