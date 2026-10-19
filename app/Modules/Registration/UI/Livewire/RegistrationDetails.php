@@ -35,6 +35,15 @@ class RegistrationDetails extends Component
         $this->abaAtiva = $aba;
     }
 
+    #[Computed]
+    public function contatosRegistrados()
+    {
+        return \App\Models\InscricaoContato::where('inscricao_id', $this->inscricao->id)
+            ->orderBy('data_contato', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
     public function verConteudoEmail($logId)
     {
         $this->emailVisualizacao = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::find($logId);

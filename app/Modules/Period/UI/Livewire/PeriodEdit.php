@@ -17,7 +17,8 @@ use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 class PeriodEdit extends Component
 {
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
-    
+    public $data_inicio_matricula = '';
+    public $data_fim_matricula = '';
     public array $unidadesSelecionadas = []; 
     public array $cursosSelecionados = []; 
     public array $turnosSelecionados = []; 
@@ -45,6 +46,8 @@ class PeriodEdit extends Component
         $this->data_inicio = $ciclo->data_inicio->format('Y-m-d\TH:i');
         $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
         $this->status = $ciclo->status;
+        $this->data_inicio_matricula = $ciclo->data_inicio_matricula ? \Carbon\Carbon::parse($ciclo->data_inicio_matricula)->format('Y-m-d\TH:i') : '';
+        $this->data_fim_matricula = $ciclo->data_fim_matricula ? \Carbon\Carbon::parse($ciclo->data_fim_matricula)->format('Y-m-d\TH:i') : '';
         
         $this->unidadesSelecionadas = $ciclo->unidades->pluck('id')->map(fn($v) => (string)$v)->toArray();
         $this->cursosSelecionados = $ciclo->cursos->pluck('id')->map(fn($v) => (string)$v)->toArray();
@@ -162,6 +165,8 @@ class PeriodEdit extends Component
             'nome' => empty(trim($this->nome)) ? "{$this->ano} - {$this->semestre}º Semestre" : $this->nome,
             'ano' => $this->ano, 'semestre' => $this->semestre, 'data_inicio' => $this->data_inicio,
             'data_fim' => $this->data_fim, 'status' => $this->status,
+            'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
+            'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
         ]);
 
         $cicloSalvo->unidades()->sync($this->unidadesSelecionadas);

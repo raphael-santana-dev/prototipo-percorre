@@ -460,6 +460,19 @@
                                     </div>
                                 </div>
 
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Início do Período de Matrícula</label>
+                                        <input type="datetime-local" wire:model="data_inicio_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
+                                        @error('data_inicio_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Fim do Período de Matrícula</label>
+                                        <input type="datetime-local" wire:model="data_fim_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
+                                        @error('data_fim_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+
                                 <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                                     <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">Ativar este ciclo imediatamente</label>

@@ -287,6 +287,59 @@
                     </div>
                 </td>
 
+                {{-- COLUNA DE FLAGS DE CONTATO: E-MAIL, WHATSAPP E TELEFONE --}}
+                <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                    @php
+                        $contatosInsc = $inscricao->contatos ?? collect();
+                        $cEmail = $contatosInsc->where('canal', 'email');
+                        $cWpp   = $contatosInsc->where('canal', 'whatsapp');
+                        $cTel   = $contatosInsc->where('canal', 'telefone');
+
+                        $temEmail = $cEmail->isNotEmpty();
+                        $respEmail = $cEmail->where('houve_resposta', true)->isNotEmpty();
+
+                        $temWpp = $cWpp->isNotEmpty();
+                        $respWpp = $cWpp->where('houve_resposta', true)->isNotEmpty();
+
+                        $temTel = $cTel->isNotEmpty();
+                        $respTel = $cTel->where('houve_resposta', true)->isNotEmpty();
+                    @endphp
+                    <div class="inline-flex items-center justify-center gap-1.5">
+                        {{-- Botão E-mail --}}
+                        <button type="button"
+                                wire:click="abrirModalContato({{ $inscricao->id }}, 'email')"
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temEmail ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-500 hover:border-blue-200 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temEmail ? 'Contato por E-mail registrado (' . $cEmail->count() . ') - Clique para ver/editar' : 'Registrar contato por E-mail' }}">
+                            <i class="{{ $temEmail ? 'ph-fill' : 'ph-bold' }} ph-envelope-simple text-sm"></i>
+                            @if($respEmail)
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                            @endif
+                        </button>
+
+                        {{-- Botão WhatsApp --}}
+                        <button type="button"
+                                wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')"
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temWpp ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-500 hover:border-emerald-200 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temWpp ? 'Contato por WhatsApp registrado (' . $cWpp->count() . ') - Clique para ver/editar' : 'Registrar contato por WhatsApp' }}">
+                            <i class="{{ $temWpp ? 'ph-fill' : 'ph-bold' }} ph-whatsapp-logo text-sm"></i>
+                            @if($respWpp)
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                            @endif
+                        </button>
+
+                        {{-- Botão Telefone --}}
+                        <button type="button"
+                                wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')"
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temTel ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-amber-500 hover:border-amber-200 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temTel ? 'Contato por Telefone registrado (' . $cTel->count() . ') - Clique para ver/editar' : 'Registrar contato por Telefone' }}">
+                            <i class="{{ $temTel ? 'ph-fill' : 'ph-bold' }} ph-phone-call text-sm"></i>
+                            @if($respTel)
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                            @endif
+                        </button>
+                    </div>
+                </td>
+
                 <td class="px-4 py-1.5 whitespace-nowrap">
                     @if($inscricao->origem === 'importacao')
                         <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Importação</span>
@@ -830,6 +883,112 @@
                     </button>
                     <button type="button" wire:click="enviarSolicitacaoAlteracao" class="btn btn--primary btn--medium !bg-amber-600 hover:!bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
                         <i class="ph-bold ph-paper-plane-tilt"></i> Submeter Solicitação
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE REGISTRO E EDIÇÃO DE CONTATO (E-MAIL, WHATSAPP, TELEFONE) --}}
+    @if($modalContatoAberto)
+        <div class="fixed inset-0 z-[140] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                @php
+                    $metaCanal = match($contatoCanal) {
+                        'email'    => ['titulo' => 'Contato por E-mail', 'icone' => 'ph-envelope-simple', 'cor' => 'text-blue-600 bg-blue-50 border-blue-200'],
+                        'whatsapp' => ['titulo' => 'Contato por WhatsApp', 'icone' => 'ph-whatsapp-logo', 'cor' => 'text-emerald-600 bg-emerald-50 border-emerald-200'],
+                        default    => ['titulo' => 'Contato por Telefone', 'icone' => 'ph-phone-call', 'cor' => 'text-amber-600 bg-amber-50 border-amber-200'],
+                    };
+                @endphp
+
+                <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-lg border flex items-center justify-center text-xl {{ $metaCanal['cor'] }}">
+                            <i class="ph-fill {{ $metaCanal['icone'] }}"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ $metaCanal['titulo'] }}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Candidato: <strong>{{ $contatoInscricaoNome }}</strong></p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="$set('modalContatoAberto', false)" class="text-gray-400 hover:text-gray-700 dark:hover:text-white p-1">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                    {{-- Seletor rápido de canal dentro do modal --}}
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" wire:click="abrirModalContato({{ $contatoInscricaoId }}, 'email')" class="py-2 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition {{ $contatoCanal === 'email' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-envelope-simple"></i> E-mail
+                        </button>
+                        <button type="button" wire:click="abrirModalContato({{ $contatoInscricaoId }}, 'whatsapp')" class="py-2 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition {{ $contatoCanal === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                        </button>
+                        <button type="button" wire:click="abrirModalContato({{ $contatoInscricaoId }}, 'telefone')" class="py-2 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition {{ $contatoCanal === 'telefone' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-phone-call"></i> Telefone
+                        </button>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Data e Hora do Contato (Opcional)</label>
+                            @if($contatoRegistroId)
+                                <button type="button" wire:click="novoRegistroContatoNoModal" class="text-[11px] font-bold text-purpura-600 hover:underline flex items-center gap-1">
+                                    <i class="ph-bold ph-plus"></i> Novo Registro neste Canal
+                                </button>
+                            @endif
+                        </div>
+                        <input type="datetime-local" wire:model="contatoData" class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Conteúdo / Resumo da Conversa (Opcional)</label>
+                        <textarea wire:model="contatoConteudo" rows="3" placeholder="Descreva o que foi tratado no contato..." class="w-full text-sm rounded-lg border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-purpura-500 focus:border-purpura-500"></textarea>
+                    </div>
+
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 cursor-pointer">
+                        <input type="checkbox" wire:model="contatoHouveResposta" class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Já houve resposta do candidato?</span>
+                            <span class="text-[11px] text-gray-500">Exibe um indicador verde no ícone de contato.</span>
+                        </div>
+                    </label>
+
+                    @if(count($historicoContatosCanal) > 0)
+                        <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-2">Registros Salvos neste Canal ({{ count($historicoContatosCanal) }})</span>
+                            <div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                @foreach($historicoContatosCanal as $hist)
+                                    <div class="p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 {{ $contatoRegistroId == $hist['id'] ? 'border-purpura-400 bg-purpura-50/40 dark:bg-purpura-900/20' : 'border-gray-200 bg-white dark:bg-gray-800' }}">
+                                        <div class="min-w-0 flex-1 cursor-pointer" wire:click="editarRegistroContato({{ $hist['id'] }})">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-gray-800 dark:text-gray-200">
+                                                    {{ !empty($hist['data_contato']) ? \Carbon\Carbon::parse($hist['data_contato'])->format('d/m/Y H:i') : 'Sem data' }}
+                                                </span>
+                                                @if(!empty($hist['houve_resposta']))
+                                                    <span class="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded">Respondeu</span>
+                                                @else
+                                                    <span class="px-1.5 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-600 rounded">Sem resposta</span>
+                                                @endif
+                                            </div>
+                                            <p class="text-gray-600 dark:text-gray-400 truncate mt-0.5">{{ $hist['conteudo'] ?: 'Sem observações registradas.' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button type="button" wire:click="editarRegistroContato({{ $hist['id'] }})" class="p-1 text-gray-400 hover:text-purpura-600" title="Editar"><i class="ph-bold ph-pencil-simple"></i></button>
+                                            <button type="button" wire:click="excluirRegistroContato({{ $hist['id'] }})" class="p-1 text-gray-400 hover:text-red-600" title="Excluir"><i class="ph-bold ph-trash"></i></button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-2">
+                    <button type="button" wire:click="$set('modalContatoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
+                    <button type="button" wire:click="salvarContato" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
+                        <i class="ph-bold ph-floppy-disk"></i> {{ $contatoRegistroId ? 'Atualizar Contato' : 'Registrar Contato' }}
                     </button>
                 </div>
             </div>
