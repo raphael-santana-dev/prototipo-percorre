@@ -43,7 +43,7 @@ class AutomacaoDetails extends Component
 
     public function showQuickView($id)
     {
-        $log = Comunicado::with('template')->findOrFail($id);
+        $log = Comunicado::with(['template', 'eventos'])->findOrFail($id);
 
         $destinatariosHtml = '';
         if (is_array($log->destinatarios)) {
@@ -56,14 +56,35 @@ class AutomacaoDetails extends Component
             $destinatariosHtml = '<span class="text-sm text-gray-700 dark:text-gray-300">'.($log->destinatarios ?? 'Nenhum').'</span>';
         }
 
+        $eventosHtml = '<div class="space-y-2 mt-1">';
+        if ($log->eventos && $log->eventos->count() > 0) {
+            foreach ($log->eventos as $ev) {
+                $badge = $ev->tipo === 'clique'
+                    ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-purpura-100 text-purpura-700 rounded">CLIQUE</span>'
+                    : '<span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded">ABERTURA</span>';
+                $detalhe = $ev->tipo === 'clique'
+                    ? "<div class='text-xs mt-1'><b>Botão:</b> {$ev->texto_link}<br><b>URL:</b> <a href='{$ev->url_destino}' target='_blank' class='text-purpura-600 underline'>{$ev->url_destino}</a></div>"
+                    : '';
+                $eventosHtml .= "<div class='p-2.5 bg-gray-50 rounded border border-gray-200 text-xs'>
+                    <div class='flex justify-between items-center'>{$badge} <span class='font-mono text-[10px] text-gray-500'>{$ev->created_at->format('d/m/Y H:i:s')}</span></div>
+                    {$detalhe}
+                    <div class='text-[10px] text-gray-400 mt-1'>{$ev->dispositivo} • {$ev->navegador} • IP: {$ev->ip}</div>
+                </div>";
+            }
+        } else {
+            $eventosHtml .= '<span class="text-xs text-gray-400 italic">Nenhuma abertura ou clique registrado ainda.</span>';
+        }
+        $eventosHtml .= '</div>';
+
         $this->dispatch('load-quick-view', [
-            'title' => 'Detalhes do Disparo',
+            'title' => 'Detalhes e Métricas do Disparo',
             'subtitle' => 'Enviado em ' . $log->created_at->format('d/m/Y \à\s H:i:s'),
             'icon' => 'ph-paper-plane-tilt',
             'data' => [
-                'Status do Envio' => '<span class="px-2.5 py-1 text-xs font-bold rounded-full border border-green-200 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400"><i class="ph-bold ph-check mr-1"></i> Entregue</span>',
-                'Template Utilizado' => '<div class="text-sm font-medium text-gray-900 dark:text-gray-100"><i class="ph ph-layout text-purpura-500 mr-1"></i> '.($log->template->nome ?? 'Excluído').'</div>',
-                'Destinatários' => '<div class="max-h-48 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-gray-800 p-3 rounded border border-gray-100 dark:border-gray-700 mt-1">'.$destinatariosHtml.'</div>',
+                'Status do Envio' => '<span class="px-2.5 py-1 text-xs font-bold rounded-full border border-green-200 bg-green-50 text-green-700"><i class="ph-bold ph-check mr-1"></i> Entregue</span>',
+                'Resumo de Leituras e Cliques' => '<div class="text-xs space-y-1"><b>Aberturas:</b> '.$log->aberturas_count.'x (1ª em: '.($log->aberto_em ? $log->aberto_em->format('d/m/Y H:i') : '-').')<br><b>Cliques em Links:</b> '.$log->cliques_count.'x</div>',
+                'Destinatários' => '<div class="max-h-32 overflow-y-auto custom-scrollbar bg-gray-50 p-3 rounded border border-gray-100 mt-1">'.$destinatariosHtml.'</div>',
+                'Histórico de Aberturas e URLs Clicadas' => $eventosHtml,
             ]
         ]);
     }
@@ -79,32 +100,39 @@ class AutomacaoDetails extends Component
         ->when($this->filtro_data_inicio, fn($q) => $q->whereDate('created_at', '>=', $this->filtro_data_inicio))
         ->when($this->filtro_data_fim, fn($q) => $q->whereDate('created_at', '<=', $this->filtro_data_fim));
 
+        $totalDisparos = (clone $query)->count();
+        $totalAbertos  = (clone $query)->where('aberturas_count', '>', 0)->count();
+        $totalClicados = (clone $query)->where('cliques_count', '>', 0)->count();
+
+        $taxaAbertura = $totalDisparos > 0 ? round(($totalAbertos / $totalDisparos) * 100, 1) : 0;
+        $taxaCliques  = $totalDisparos > 0 ? round(($totalClicados / $totalDisparos) * 100, 1) : 0;
+
         $historico = $query->orderBy('created_at', 'desc')->paginate(15);
 
         $metricas = [
             [
-                'label' => 'Apelido da Regra',
-                'value' => $this->automacao->nome,
-                'value_size' => 'text-base md:text-lg',
-                'color_text' => 'text-gray-500 dark:text-gray-400',
-                'color_bg' => 'bg-gray-100 dark:bg-gray-800',
-                'icon' => '<i class="ph-fill ph-tag text-2xl text-gray-500 dark:text-gray-400"></i>'
+                'label' => 'Disparos Realizados',
+                'value' => $totalDisparos,
+                'value_size' => 'text-xl',
+                'color_text' => 'text-blue-600',
+                'color_bg' => 'bg-blue-100',
+                'icon' => '<i class="ph-fill ph-paper-plane-tilt text-2xl text-blue-600"></i>'
             ],
             [
-                'label' => 'Evento Gatilho',
-                'value' => $this->automacao->evento_gatilho,
-                'value_size' => 'text-base md:text-lg',
-                'color_text' => 'text-blue-500 dark:text-blue-400',
-                'color_bg' => 'bg-blue-100 dark:bg-blue-900/30',
-                'icon' => '<i class="ph-fill ph-lightning text-2xl text-blue-500 dark:text-blue-400"></i>'
+                'label' => 'Taxa de Abertura',
+                'value' => "{$taxaAbertura}% ({$totalAbertos})",
+                'value_size' => 'text-xl',
+                'color_text' => 'text-emerald-600',
+                'color_bg' => 'bg-emerald-100',
+                'icon' => '<i class="ph-fill ph-envelope-open text-2xl text-emerald-600"></i>'
             ],
             [
-                'label' => 'Template Disparado',
-                'value' => $this->automacao->template->nome ?? 'Excluído',
-                'value_size' => 'text-base md:text-lg',
-                'color_text' => 'text-purpura-500 dark:text-purpura-400',
-                'color_bg' => 'bg-purpura-100 dark:bg-purpura-900/30',
-                'icon' => '<i class="ph-fill ph-layout text-2xl text-purpura-500 dark:text-purpura-400"></i>'
+                'label' => 'Taxa de Cliques (CTR)',
+                'value' => "{$taxaCliques}% ({$totalClicados})",
+                'value_size' => 'text-xl',
+                'color_text' => 'text-purpura-600',
+                'color_bg' => 'bg-purpura-100',
+                'icon' => '<i class="ph-fill ph-cursor-click text-2xl text-purpura-600"></i>'
             ]
         ];
 
