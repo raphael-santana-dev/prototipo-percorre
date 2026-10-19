@@ -46,21 +46,56 @@
                     
                     <div class="space-y-6">
                         @foreach($campos as $campo)
+                            @continue(in_array($campo->tipo, ['config', 'html', 'divider', 'media', 'spacer', 'link']))
+
                             @php 
                                 $valor = $respostasSalvas[$campo->name] ?? null; 
                                 $temResposta = !empty($valor) || $valor === '0' || $valor === 0;
+                                $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                             @endphp
 
                             <div class="bg-gray-50/50 dark:bg-gray-900/30 p-4 rounded-lg border border-gray-100 dark:border-gray-700 print:p-0 print:border-none print:bg-white print:mb-4">
                                 <label class="block text-sm font-bold text-gray-800 dark:text-gray-300 mb-2 print:text-base print:mb-1">
-                                    {{ $campo->label }}
+                                    @if($campo->tipo === 'signature')
+                                        {{ ($cfg['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
+                                    @else
+                                        {{ $campo->label }}
+                                    @endif
                                 </label>
                                 
                                 @if(!$temResposta)
                                     <p class="text-gray-400 dark:text-gray-500 text-sm italic border-l-2 border-gray-300 dark:border-gray-600 pl-3">Nenhuma resposta fornecida ou campo ocultado por regra condicional.</p>
                                 @else
                                     
-                                    @if($campo->tipo === 'check' && is_array($valor))
+                                    {{-- EXIBIÇÃO DA ASSINATURA À MÃO --}}
+                                    @if($campo->tipo === 'signature' || (is_string($valor) && str_starts_with($valor, 'data:image/')))
+                                        <div class="mt-2 inline-flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                            <img src="{{ $valor }}" alt="{{ $campo->label }}" class="max-h-32 w-auto object-contain">
+                                            <div class="w-full border-t border-gray-100 mt-2 pt-1.5 flex items-center justify-between gap-4 text-[10px] text-gray-500 print:hidden">
+                                                <span class="font-bold uppercase">
+                                                    {{ ($cfg['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do Responsável' : 'Sua Assinatura' }}
+                                                </span>
+                                                <a href="{{ $valor }}" download="assinatura-{{ $campo->name }}.png" class="text-purpura-600 hover:underline font-bold flex items-center gap-1">
+                                                    <i class="ph-bold ph-download-simple"></i> Baixar PNG
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                    {{-- EXIBIÇÃO DE ARQUIVOS ANEXADOS --}}
+                                    @elseif($campo->tipo === 'file')
+                                        @php $arquivos = is_array($valor) ? $valor : [$valor]; @endphp
+                                        <div class="flex flex-wrap gap-2 mt-2">
+                                            @foreach(array_filter($arquivos) as $arqPath)
+                                                <a href="{{ asset('storage/' . $arqPath) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-purpura-600 dark:text-purpura-400 hover:border-purpura-400 shadow-sm transition">
+                                                    <i class="ph-bold ph-paperclip text-sm"></i>
+                                                    <span class="truncate max-w-[220px]">{{ basename($arqPath) }}</span>
+                                                    <i class="ph-bold ph-arrow-square-out"></i>
+                                                </a>
+                                            @endforeach
+                                        </div>
+
+                                    {{-- EXIBIÇÃO DE CHECKBOXES --}}
+                                    @elseif($campo->tipo === 'check' && is_array($valor))
                                         <div class="flex flex-wrap gap-2 mt-2">
                                             @foreach($valor as $v)
                                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 text-sm font-medium border border-indigo-100 dark:border-indigo-800 print:border-none print:p-0 print:bg-white print:text-black print:before:content-['✓']">
@@ -69,9 +104,9 @@
                                             @endforeach
                                         </div>
 
+                                    {{-- EXIBIÇÃO DE MATRIZ --}}
                                     @elseif($campo->tipo === 'matriz' && is_array($valor))
                                         @php
-                                            $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                                             $linhas = $cfg['linhas'] ?? [];
                                         @endphp
                                         <div class="mt-3 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden bg-white dark:bg-gray-800">
@@ -89,6 +124,22 @@
                                             </table>
                                         </div>
 
+                                    {{-- EXIBIÇÃO DE REDES SOCIAIS --}}
+                                    @elseif($campo->tipo === 'social' && is_array($valor))
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                                            @foreach($valor as $rede => $userRede)
+                                                @continue(empty($userRede))
+                                                <div class="flex items-center gap-2.5 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                                    <i class="ph-fill ph-{{ strtolower($rede) }}-logo text-lg text-purpura-600"></i>
+                                                    <div class="min-w-0">
+                                                        <span class="block text-[10px] font-bold uppercase text-gray-400">{{ $rede }}</span>
+                                                        <span class="block text-xs font-bold text-gray-900 dark:text-white truncate">{{ $userRede }}</span>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                    {{-- EXIBIÇÃO DE RATING (ESTRELAS) --}}
                                     @elseif($campo->tipo === 'rating')
                                         @php $maxStars = $cfg['max_stars'] ?? 5; @endphp
                                         <div class="flex gap-1 text-2xl text-yellow-400 mt-1">
@@ -98,9 +149,10 @@
                                             <span class="ml-2 text-sm text-gray-500 font-bold self-center">({{ $valor }}/{{ $maxStars }})</span>
                                         </div>
 
+                                    {{-- TEXTO COMUM / CPF / CNPJ / CEP / TELEFONE / MOEDA / ESCALA --}}
                                     @else
                                         <p class="text-gray-900 dark:text-white text-base border-l-2 border-indigo-400 dark:border-indigo-600 pl-3 bg-white dark:bg-transparent py-1 print:border-none print:pl-0 print:font-bold">
-                                            {{ $valor }}
+                                            {{ is_array($valor) ? implode(', ', $valor) : $valor }}
                                         </p>
                                     @endif
 

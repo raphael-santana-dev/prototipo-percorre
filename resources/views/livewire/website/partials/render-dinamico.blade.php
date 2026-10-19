@@ -107,9 +107,13 @@
         @endif
 
         <div class="relative z-10">
-            @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media', 'spacer']))
+            @if(!in_array($campo->tipo, ['html', 'divider', 'social', 'media', 'spacer', 'link']))
                 <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 {{ isset($config['bg_image']) ? 'text-white drop-shadow-md' : '' }}">
-                    {!! formatWppText($campo->label) !!} 
+                    @if($campo->tipo === 'signature')
+                        {{ ($config['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
+                    @else
+                        {!! formatWppText($campo->label) !!}
+                    @endif
                     @if($campo->obrigatorio) <span class="text-red-500">*</span> @endif
                 </label>
             @endif
@@ -186,6 +190,343 @@
                             <p class="text-sm">{!! formatWppText($config['descricao'] ?? '') !!}</p>
                         </div>
                     @endif
+                </div>
+
+            {{-- ================================================================= --}}
+            {{-- NOVO BLOCO: LINK EXTERNO / PÁGINA INTERNA / ARQUIVO COM PREVIEW   --}}
+            {{-- ================================================================= --}}
+            @elseif($campo->tipo === 'link')
+                @php
+                    $tipoDestino = $config['tipo_destino'] ?? 'externo';
+                    $urlDestino = $config['url'] ?? '#';
+                    $arquivoPath = $config['arquivo_path'] ?? null;
+                    $arquivoNome = $config['arquivo_nome'] ?? ($campo->label ?: 'Documento');
+                    $arquivoExt = strtolower($config['arquivo_extensao'] ?? pathinfo($arquivoPath ?? '', PATHINFO_EXTENSION));
+                    $permitirDownload = filter_var($config['permitir_download'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                    $abrirPreview = filter_var($config['abrir_preview'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+                    $fileFullUrl = $arquivoPath ? asset('storage/' . $arquivoPath) : asset($urlDestino);
+                @endphp
+
+                @if($tipoDestino === 'arquivo' && $arquivoPath)
+                    <div x-data="{
+                            previewOpen: false,
+                            loadingDoc: false,
+                            htmlPreview: '',
+                            erroPreview: '',
+                            ext: '{{ $arquivoExt }}',
+                            fileUrl: '{{ $fileFullUrl }}',
+                            canDownload: {{ $permitirDownload ? 'true' : 'false' }},
+                            async abrirVisualizador() {
+                                this.previewOpen = true;
+                                if (this.ext === 'pdf' || this.htmlPreview !== '') return;
+
+                                this.loadingDoc = true;
+                                this.erroPreview = '';
+
+                                try {
+                                    const response = await fetch(this.fileUrl);
+                                    const arrayBuffer = await response.arrayBuffer();
+
+                                    if (['xls', 'xlsx'].includes(this.ext)) {
+                                        if (!window.XLSX) {
+                                            await new Promise((resolve, reject) => {
+                                                const s = document.createElement('script');
+                                                s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                                                s.onload = resolve;
+                                                s.onerror = reject;
+                                                document.head.appendChild(s);
+                                            });
+                                        }
+                                        const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+                                        let html = '';
+                                        workbook.SheetNames.forEach(sheetName => {
+                                            const ws = workbook.Sheets[sheetName];
+                                            html += `<div class='mb-6'><h4 class='text-xs font-bold uppercase tracking-wider text-purpura-700 bg-purpura-50 px-3 py-2 border border-b-0 border-gray-200 rounded-t-lg'>Planilha: ${sheetName}</h4>`;
+                                            html += `<div class='overflow-x-auto border border-gray-200 rounded-b-lg shadow-sm excel-preview-table'>` + window.XLSX.utils.sheet_to_html(ws) + `</div></div>`;
+                                        });
+                                        this.htmlPreview = html;
+                                    } else if (this.ext === 'docx') {
+                                        if (!window.mammoth) {
+                                            await new Promise((resolve, reject) => {
+                                                const s = document.createElement('script');
+                                                s.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js';
+                                                s.onload = resolve;
+                                                s.onerror = reject;
+                                                document.head.appendChild(s);
+                                            });
+                                        }
+                                        const result = await window.mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                                        this.htmlPreview = `<div class='prose max-w-none p-6 bg-white shadow border border-gray-200 rounded-lg'>${result.value}</div>`;
+                                    } else {
+                                        const encoded = encodeURIComponent(this.fileUrl);
+                                        this.htmlPreview = `<iframe src='https://view.officeapps.live.com/op/embed.aspx?src=${encoded}' class='w-full h-[75vh] border-0 rounded-lg'></iframe>`;
+                                    }
+                                } catch (e) {
+                                    this.erroPreview = 'Não foi possível gerar a pré-visualização deste formato no navegador.';
+                                } finally {
+                                    this.loadingDoc = false;
+                                }
+                            }
+                         }"
+                         class="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+
+                        <style>
+                            .excel-preview-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                            .excel-preview-table td, .excel-preview-table th { border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; }
+                            .excel-preview-table tr:nth-child(even) { background-color: #f9fafb; }
+                        </style>
+
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="w-11 h-11 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
+                                @if($arquivoExt === 'pdf')
+                                    <i class="ph-fill ph-file-pdf text-2xl text-red-500"></i>
+                                @elseif(in_array($arquivoExt, ['xls', 'xlsx']))
+                                    <i class="ph-fill ph-file-xls text-2xl text-emerald-600"></i>
+                                @else
+                                    <i class="ph-fill ph-file-doc text-2xl text-blue-600"></i>
+                                @endif
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate">{!! formatWppText($campo->label ?: $arquivoNome) !!}</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                    {{ $arquivoNome }} <span class="uppercase font-mono text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded ml-1">{{ $arquivoExt }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                            @if($abrirPreview)
+                                <button type="button"
+                                        @click="abrirVisualizador()"
+                                        class="px-3.5 py-2 bg-purpura-50 hover:bg-purpura-100 dark:bg-purpura-900/30 text-purpura-700 dark:text-purpura-300 border border-purpura-200 dark:border-purpura-800 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                                    <i class="ph-bold ph-eye text-sm"></i> Visualizar
+                                </button>
+                            @endif
+
+                            @if($permitirDownload)
+                                <a href="{{ $fileFullUrl }}"
+                                   download="{{ $arquivoNome }}"
+                                   target="_blank"
+                                   class="px-3.5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                                    <i class="ph-bold ph-download-simple text-sm"></i> Baixar
+                                </a>
+                            @endif
+                        </div>
+
+                        <!-- MODAL DE PRÉ-VISUALIZAÇÃO DIRETA NO NAVEGADOR -->
+                        <div x-show="previewOpen"
+                             x-cloak
+                             @keydown.escape.window="previewOpen = false"
+                             class="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-6">
+                            
+                            <div @click.away="previewOpen = false"
+                                 @if(!$permitirDownload) @contextmenu.prevent @endif
+                                 class="bg-white dark:bg-gray-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                                
+                                <!-- Cabeçalho do Visualizador -->
+                                <div class="px-5 py-3.5 bg-gray-900 text-white flex items-center justify-between shrink-0">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <i class="ph-bold ph-file-text text-lg text-purpura-400"></i>
+                                        <span class="text-sm font-bold truncate">{{ $arquivoNome }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        @if($permitirDownload)
+                                            <a href="{{ $fileFullUrl }}" download="{{ $arquivoNome }}" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                                                <i class="ph-bold ph-download-simple"></i> Download
+                                            </a>
+                                        @else
+                                            <span class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded text-[11px] font-bold flex items-center gap-1">
+                                                <i class="ph-fill ph-lock-key"></i> Somente Leitura
+                                            </span>
+                                        @endif
+                                        <button type="button" @click="previewOpen = false" class="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition">
+                                            <i class="ph-bold ph-x text-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Corpo do Visualizador -->
+                                <div class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-950 min-h-[65vh] flex flex-col">
+                                    @if($arquivoExt === 'pdf')
+                                        <iframe :src="previewOpen ? '{{ $fileFullUrl }}{{ !$permitirDownload ? '#toolbar=0&navpanes=0&scrollbar=1' : '' }}' : ''"
+                                                class="w-full flex-1 min-h-[70vh] rounded-lg border border-gray-300 bg-white"></iframe>
+                                    @else
+                                        <template x-if="loadingDoc">
+                                            <div class="flex-1 flex flex-col items-center justify-center py-16 text-gray-600">
+                                                <i class="ph-bold ph-spinner animate-spin text-4xl text-purpura-600 mb-2"></i>
+                                                <p class="text-sm font-bold">A carregar pré-visualização do documento...</p>
+                                            </div>
+                                        </template>
+                                        <template x-if="!loadingDoc && erroPreview">
+                                            <div class="flex-1 flex flex-col items-center justify-center py-16 text-center">
+                                                <i class="ph-duotone ph-warning-circle text-4xl text-amber-500 mb-2"></i>
+                                                <p class="text-sm font-bold text-gray-800" x-text="erroPreview"></p>
+                                            </div>
+                                        </template>
+                                        <div x-show="!loadingDoc && !erroPreview" x-html="htmlPreview" class="w-full flex-1 select-none"></div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    @php
+                        $hrefFinal = $tipoDestino === 'interno'
+                            ? url($urlDestino)
+                            : (preg_match('/^https?:\/\//i', $urlDestino) ? $urlDestino : 'https://' . ltrim($urlDestino, '/'));
+                    @endphp
+                    <a href="{{ $hrefFinal }}"
+                       target="{{ $tipoDestino === 'interno' ? '_self' : '_blank' }}"
+                       rel="noopener noreferrer"
+                       class="w-full p-4 bg-white dark:bg-gray-800 hover:bg-purpura-50/40 dark:hover:bg-gray-700/60 border border-gray-200 dark:border-gray-700 hover:border-purpura-400 rounded-xl shadow-sm transition flex items-center justify-between gap-3 group">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-lg bg-purpura-50 dark:bg-purpura-900/40 text-purpura-600 dark:text-purpura-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <i class="ph-bold {{ $tipoDestino === 'interno' ? 'ph-compass' : 'ph-arrow-square-out' }} text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <span class="text-sm font-bold text-gray-900 dark:text-white group-hover:text-purpura-600 transition-colors block truncate">
+                                    {!! formatWppText($campo->label ?: $urlDestino) !!}
+                                </span>
+                                <span class="text-xs text-gray-400 truncate block">{{ $urlDestino }}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-purpura-600 dark:text-purpura-400 shrink-0 flex items-center gap-1">
+                            Acessar <i class="ph-bold ph-caret-right"></i>
+                        </span>
+                    </a>
+                @endif
+
+            {{-- ================================================================= --}}
+            {{-- NOVO BLOCO: ASSINATURA À MÃO COM O MOUSE / TOQUE ('signature')    --}}
+            {{-- ================================================================= --}}
+            @elseif($campo->tipo === 'signature')
+                @php
+                    $isBloqueadoAssinatura = isset($podeResponder) && !$podeResponder;
+                @endphp
+                <div wire:ignore
+                     x-data="{
+                        drawing: false,
+                        hasSignature: false,
+                        isDisabled: {{ $isBloqueadoAssinatura ? 'true' : 'false' }},
+                        canvas: null,
+                        ctx: null,
+                        init() {
+                            this.canvas = this.$refs.sigCanvas;
+                            this.ctx = this.canvas.getContext('2d');
+                            this.resizeCanvas();
+
+                            let savedVal = $wire.get('respostas.{{ $campo->name }}');
+                            if (savedVal && String(savedVal).startsWith('data:image')) {
+                                this.loadSavedSignature(savedVal);
+                            }
+
+                            window.addEventListener('resize', () => this.resizeCanvas(true));
+                        },
+                        resizeCanvas(preserve = false) {
+                            let tempImg = null;
+                            if (preserve && this.hasSignature) {
+                                tempImg = this.canvas.toDataURL('image/png');
+                            }
+                            const rect = this.canvas.getBoundingClientRect();
+                            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                            this.canvas.width = rect.width * ratio;
+                            this.canvas.height = rect.height * ratio;
+                            this.ctx.scale(ratio, ratio);
+                            this.ctx.strokeStyle = '#111827';
+                            this.ctx.lineWidth = 2.2;
+                            this.ctx.lineCap = 'round';
+                            this.ctx.lineJoin = 'round';
+
+                            if (tempImg) {
+                                this.loadSavedSignature(tempImg);
+                            }
+                        },
+                        loadSavedSignature(dataUrl) {
+                            const img = new Image();
+                            img.onload = () => {
+                                const rect = this.canvas.getBoundingClientRect();
+                                this.ctx.drawImage(img, 0, 0, rect.width, rect.height);
+                                this.hasSignature = true;
+                            };
+                            img.src = dataUrl;
+                        },
+                        getCoords(e) {
+                            const rect = this.canvas.getBoundingClientRect();
+                            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                            return {
+                                x: clientX - rect.left,
+                                y: clientY - rect.top
+                            };
+                        },
+                        startDrawing(e) {
+                            if (this.isDisabled) return;
+                            this.drawing = true;
+                            this.hasSignature = true;
+                            const pos = this.getCoords(e);
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(pos.x, pos.y);
+                        },
+                        draw(e) {
+                            if (!this.drawing || this.isDisabled) return;
+                            const pos = this.getCoords(e);
+                            this.ctx.lineTo(pos.x, pos.y);
+                            this.ctx.stroke();
+                        },
+                        stopDrawing() {
+                            if (!this.drawing) return;
+                            this.drawing = false;
+                            this.ctx.closePath();
+                            const dataUrl = this.canvas.toDataURL('image/png');
+                            $wire.set('respostas.{{ $campo->name }}', dataUrl);
+                        },
+                        clearPad() {
+                            if (this.isDisabled) return;
+                            const rect = this.canvas.getBoundingClientRect();
+                            this.ctx.clearRect(0, 0, rect.width, rect.height);
+                            this.hasSignature = false;
+                            $wire.set('respostas.{{ $campo->name }}', null);
+                        }
+                     }"
+                     class="w-full">
+                    
+                    <div class="relative w-full bg-white border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden shadow-inner transition-colors"
+                         :class="drawing ? 'border-purpura-500 ring-2 ring-purpura-500/20' : ''">
+                        
+                        <!-- Linha Guia de Assinatura -->
+                        <div class="absolute inset-x-8 bottom-8 border-b border-gray-300 pointer-events-none flex justify-center">
+                            <span x-show="!hasSignature" class="text-[11px] text-gray-400 bg-white px-2 -mb-2 select-none">
+                                Assine aqui utilizando o mouse ou o toque na tela
+                            </span>
+                        </div>
+
+                        <canvas x-ref="sigCanvas"
+                                @mousedown="startDrawing($event)"
+                                @mousemove="draw($event)"
+                                @mouseup="stopDrawing()"
+                                @mouseleave="stopDrawing()"
+                                @touchstart.prevent="startDrawing($event)"
+                                @touchmove.prevent="draw($event)"
+                                @touchend.prevent="stopDrawing()"
+                                class="w-full h-44 cursor-crosshair touch-none block relative z-10"></canvas>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-2 px-1">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <i class="ph-bold ph-signature text-purpura-600"></i>
+                            {{ ($config['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
+                        </span>
+
+                        @if(!$isBloqueadoAssinatura)
+                            <button type="button"
+                                    @click="clearPad()"
+                                    x-show="hasSignature"
+                                    class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition">
+                                <i class="ph-bold ph-eraser"></i> Limpar assinatura
+                            </button>
+                        @endif
+                    </div>
                 </div>
 
             @elseif($campo->tipo === 'media')
@@ -322,7 +663,7 @@
                             @endif
 
                             <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                Clique para selecionar ou arraste o ficheiro
+                                Clique para selecionar ou arraste o arquivo
                             </p>
                             <p class="text-xs text-gray-400 mt-0.5">
                                 @if(!empty($extensoes))
@@ -333,18 +674,16 @@
                         </div>
                     </div>
 
-                    {{-- Indicador de Upload em Andamento --}}
                     <div wire:loading wire:target="uploads.{{ $campo->name }}" class="text-xs text-purpura-600 dark:text-purpura-400 font-semibold flex items-center gap-1.5 pt-1">
-                        <i class="ph-bold ph-spinner animate-spin"></i> A carregar ficheiro(s), aguarde...
+                        <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo(s), aguarde...
                     </div>
 
-                    {{-- Lista de Ficheiros Recém-Selecionados (Staged/Pendente de envio) --}}
                     @if(!empty($listaPendentes))
                         <div class="space-y-1.5 pt-1">
                             <span class="text-[11px] font-bold text-purpura-600 dark:text-purpura-400 uppercase tracking-wider block">
-                                Ficheiro(s) Selecionado(s) (Pronto para envio):
+                                Arquivo(s) Selecionado(s) (Pronto para envio):
                             </span>
-                            @foreach($listaPendentes as $pIdx => $pendente)
+                            @foreach($listaPendentes as $pIdx =>$pendente)
                                 @if($pendente && method_exists($pendente, 'getClientOriginalName'))
                                     <div class="flex items-center justify-between p-2 rounded-md bg-purpura-50/60 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 text-xs">
                                         <div class="flex items-center gap-2 truncate">
@@ -364,16 +703,13 @@
                         </div>
                     @endif
 
-                    {{-- Lista de Ficheiros Já Salvos / Registados --}}
                     @if(!empty($listaSalvos))
                         <div class="space-y-1.5 pt-2">
-                            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Ficheiro(s) Anexado(s):</span>
-                            @foreach($listaSalvos as $sIdx => $path)
+                            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Arquivo(s) Anexado(s):</span>
+                            @foreach($listaSalvos as $sIdx =>$path)
                                 @php
-                                    $nomeOriginal = basename($path);
-                                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $path);
-                                    $isVideo = preg_match('/\.(mp4|mov|webm|mkv|avi)$/i', $path);
-                                    $isPdf = preg_match('/\.pdf$/i', $path);
+                                    $nomeOriginal = basename($path);$isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $path);
+                                    $isVideo = preg_match('/\.(mp4|mov|webm|mkv|avi)$/i', $path);$isPdf = preg_match('/\.pdf$/i', $path);
                                 @endphp
                                 <div class="flex items-center justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 text-xs">
                                     <div class="flex items-center gap-2 truncate">
@@ -392,11 +728,11 @@
                                         <a href="{{ asset('storage/' . $path) }}" target="_blank" class="text-purpura-600 dark:text-purpura-400 hover:text-purpura-700 font-bold">
                                             Ver ↗
                                         </a>
-                                        @if(!isset($podeResponder) || $podeResponder)
+                                        @if(!isset($podeResponder) ||$podeResponder)
                                             <button type="button" 
                                                     wire:click="removerArquivo('{{ $campo->name }}'{{ $aceitaMultiplos ? ', ' . $sIdx : '' }})" 
                                                     class="text-red-500 hover:text-red-700 dark:text-red-400 p-1 transition-colors" 
-                                                    title="Excluir ficheiro">
+                                                    title="Excluir arquivo">
                                                 <i class="ph ph-trash text-sm"></i>
                                             </button>
                                         @endif
@@ -406,7 +742,6 @@
                         </div>
                     @endif
 
-                    {{-- Erros Específicos de Upload --}}
                     @error('uploads.'.$campo->name)
                         <span class="text-red-500 text-xs font-bold block drop-shadow-md">{{ $message }}</span>
                     @enderror
@@ -418,19 +753,20 @@
             @elseif($campo->tipo === 'system')
                 @php
                     $opcoesSistema = [];
-                    if ($campo->subtipo === 'unidade' && isset($unidadesDisponiveis)) $opcoesSistema = $unidadesDisponiveis;
-                    elseif ($campo->subtipo === 'curso' && isset($cursosDisponiveis)) $opcoesSistema = $cursosDisponiveis;
-                    elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema = $turnosDisponiveis;
+                    if ($campo->subtipo === 'unidade' && isset($unidadesDisponiveis)) $opcoesSistema =$unidadesDisponiveis;
+                    elseif ($campo->subtipo === 'curso' && isset($cursosDisponiveis)) $opcoesSistema =$cursosDisponiveis;
+                    elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema =$turnosDisponiveis;
                 @endphp
                 
                 <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
                     <option value="">Selecione...</option>
-                    @foreach($opcoesSistema as $id => $nome)
+                    @foreach($opcoesSistema as $id =>$nome)
                         <option value="{{ $id }}">{{ $nome }}</option>
                     @endforeach
                 </select>
                 
             @else
+                {{-- SUBTIPOS DE TEXTO: MOEDA, CEP (COM VIACEP), CPF, CNPJ, TELEFONE, DATAS E TEXTO SIMPLES --}}
                 @if($campo->subtipo === 'money')
                     <div class="relative w-full">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -442,13 +778,78 @@
                             class="w-full rounded-md border pl-10 pr-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror"
                             placeholder="0,00">
                     </div>
+
+                @elseif($campo->subtipo === 'cep')
+                    @php
+                        $usaViaCep = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                        $mapaViaCep =$config['viacep_map'] ?? [
+                            'logradouro'  => $campo->name . '_logradouro',
+                            'numero'      => $campo->name . '_numero',
+                            'complemento' => $campo->name . '_complemento',
+                            'bairro'      => $campo->name . '_bairro',
+                            'cidade'      => $campo->name . '_cidade',
+                            'uf'          => $campo->name . '_uf',
+                        ];
+                    @endphp
+                    <div x-data="{
+                            buscandoCep: false,
+                            erroCep: '',
+                            async consultarViaCep(valor) {
+                                @if(!$usaViaCep) return; @endif
+                                let cepLimpo = String(valor || '').replace(/\D/g, '');
+                                this.erroCep = '';
+                                if (cepLimpo.length !== 8) return;
+
+                                this.buscandoCep = true;
+                                try {
+                                    const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+                                    const data = await res.json();
+                                    if (data.erro) {
+                                        this.erroCep = 'CEP não encontrado.';
+                                    } else {
+                                        $wire.set('respostas.{{$mapaViaCep['logradouro'] }}', data.logradouro || '');
+                                        $wire.set('respostas.{{$mapaViaCep['bairro'] }}', data.bairro || '');
+                                        $wire.set('respostas.{{$mapaViaCep['cidade'] }}', data.localidade || '');
+                                        $wire.set('respostas.{{$mapaViaCep['uf'] }}', data.uf || '');
+                                        if (data.complemento) {
+                                            $wire.set('respostas.{{$mapaViaCep['complemento'] }}', data.complemento);
+                                        }
+                                    }
+                                } catch (e) {
+                                    this.erroCep = 'Erro ao consultar o ViaCEP.';
+                                } finally {
+                                    this.buscandoCep = false;
+                                }
+                            }
+                         }"
+                         class="w-full">
+                        <div class="relative">
+                            <input type="text"
+                                   wire:model.live.debounce.500ms="respostas.{{ $campo->name }}"
+                                   x-mask="99999-999"
+                                   @input.debounce.400ms="consultarViaCep($event.target.value)"
+                                   placeholder="00000-000"
+                                   class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
+                            <div x-show="buscandoCep" x-cloak class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <i class="ph-bold ph-spinner animate-spin text-purpura-600"></i>
+                            </div>
+                        </div>
+                        <span x-show="erroCep" x-cloak x-text="erroCep" class="text-xs text-red-500 font-bold mt-1 block"></span>
+                    </div>
+
                 @else
-                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ? $campo->subtipo : 'text' }}" 
+                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ?$campo->subtipo : 'text' }}" 
                         wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
                         
                         @if($campo->subtipo === 'tel')
                             x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'"
                             placeholder="(00) 00000-0000"
+                        @elseif($campo->subtipo === 'cpf')
+                            x-mask="999.999.999-99"
+                            placeholder="000.000.000-00"
+                        @elseif($campo->subtipo === 'cnpj')
+                            x-mask="99.999.999/9999-99"
+                            placeholder="00.000.000/0000-00"
                         @elseif($campo->regex_mascara) 
                             x-mask="{{ $campo->regex_mascara }}" 
                         @endif

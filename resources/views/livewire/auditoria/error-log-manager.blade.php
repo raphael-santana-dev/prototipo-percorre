@@ -14,7 +14,7 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Pesquisar</label>
-                    <input wire:model.live.debounce.300ms="filtroBusca" type="text" placeholder="Mensagem ou ficheiro..." class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <input wire:model.live.debounce.300ms="filtroBusca" type="text" placeholder="Mensagem ou arquivo..." class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:ring-purpura-500 focus:border-purpura-500">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Erro</label>
@@ -52,7 +52,7 @@
                     <tr>
                         <th class="p-4 w-16">Código</th>
                         <th class="p-4">Mensagem / Exceção</th>
-                        <th class="p-4">Ficheiro / Linha</th>
+                        <th class="p-4">Arquivo / Linha</th>
                         <th class="p-4">Utilizador</th>
                         <th class="p-4">Data / Hora</th>
                         <th class="p-4 text-center">Estado</th>
@@ -141,7 +141,7 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                            <span class="font-bold text-gray-500 block">Ficheiro Afetado:</span>
+                            <span class="font-bold text-gray-500 block">Arquivo Afetado:</span>
                             <span class="font-mono text-gray-800 break-all">{{ $errorDetalhes->arquivo }} (Linha {{ $errorDetalhes->linha }})</span>
                         </div>
                         <div class="bg-gray-50 p-3 rounded border border-gray-200">

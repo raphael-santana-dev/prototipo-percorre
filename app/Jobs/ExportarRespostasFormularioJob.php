@@ -40,12 +40,16 @@ class ExportarRespostasFormularioJob implements ShouldQueue
         $formulario = Formulario::find($this->formularioId);
         
         $campos = CampoFormulario::where('formulario_id', $this->formularioId)
-            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social', 'spacer', 'link'])
             ->orderBy('etapa')
             ->orderBy('ordem')
             ->get();
 
         $query = RespostaFormulario::where('formulario_id', $this->formularioId);
+
+        if (!empty($this->filtros['ids']) && is_array($this->filtros['ids'])) {
+            $query->whereIn('id', $this->filtros['ids']);
+        }
 
         if (!empty($this->filtros['search'])) {
             $search = $this->filtros['search'];
@@ -98,8 +102,8 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             $respostasSalvas = is_string($resp->respostas) ? json_decode($resp->respostas, true) : ($resp->respostas ?? []);
 
             foreach ($campos as $campo) {
-                $val = $respostasSalvas[$campo->name] ?? '-';
-                $linha[$campo->label] = is_array($val) ? implode(' | ', $val) : (string) $val;
+                $val = $respostasSalvas[$campo->name] ?? null;
+                $linha[$campo->label] = $this->formatarValorParaExportacao($val);
             }
 
             $writer->addRow($linha);
@@ -112,5 +116,40 @@ class ExportarRespostasFormularioJob implements ShouldQueue
             'linhas_processadas' => $linhasProcessadas,
             'arquivo_gerado_caminho' => $caminhoRelativo
         ]);
+    }
+
+    private function formatarValorParaExportacao($val): string
+    {
+        if (is_array($val)) {
+            $itens = array_map(fn($item) => $this->formatarValorParaExportacao($item), array_filter($val, fn($v) => $v !== null && $v !== ''));
+            return empty($itens) ? '-' : implode(' | ', $itens);
+        }
+
+        $valStr = trim((string) $val);
+        if ($valStr === '' || $valStr === '-') {
+            return '-';
+        }
+
+        if (str_starts_with($valStr, 'data:image/')) {
+            $hash = md5($valStr);
+            $caminhoAssinatura = "assinaturas/sig_{$hash}.png";
+
+            if (!Storage::disk('public')->exists($caminhoAssinatura)) {
+                $partes = explode(',', $valStr, 2);
+                if (isset($partes[1])) {
+                    Storage::disk('public')->put($caminhoAssinatura, base64_decode($partes[1]));
+                }
+            }
+
+            return asset('storage/' . $caminhoAssinatura);
+        }
+
+        if (preg_match('/\/(uploads|documentos|links)\//', $valStr)) {
+            $caminhos = explode('|', $valStr);
+            $urls = array_map(fn($p) => asset('storage/' . ltrim(trim($p), '/')), array_filter($caminhos));
+            return implode(' | ', $urls);
+        }
+
+        return $valStr;
     }
 }

@@ -32,7 +32,7 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
         try {
             $this->exportacao->update([
                 'status' => 'processando',
-                'started_at' => now() // <-- GRAVA O INÍCIO
+                'started_at' => now()
             ]);
             
             $nomeArquivo = "Exportacao_" . ucfirst($this->exportacao->tipo) . "_" . now()->format('Ymd_His') . "." . $this->exportacao->formato;
@@ -82,14 +82,14 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
                 'status' => 'concluido',
                 'linhas_processadas' => $linhaAtual,
                 'arquivo_gerado_caminho' => $caminhoRelativo,
-                'finished_at' => now() // <-- GRAVA O FIM COM SUCESSO
+                'finished_at' => now()
             ]);
 
         } catch (\Throwable $e) {
             $this->exportacao->update([
                 'status' => 'erro', 
                 'erro_mensagem' => json_encode([['linha' => 'Geração', 'mensagem' => $e->getMessage()]], JSON_UNESCAPED_UNICODE),
-                'finished_at' => now() // <-- GRAVA O FIM COM ERRO
+                'finished_at' => now()
             ]);
         }
     }
@@ -112,11 +112,49 @@ class ProcessarExportacaoUniversalJob implements ShouldQueue
 
         if (is_array($dadosDinamicos)) {
             foreach ($dadosDinamicos as $pergunta => $resposta) {
-                $base["Resposta: " . ucfirst(str_replace('_', ' ', $pergunta))] = is_array($resposta) ? implode(', ', $resposta) : $resposta;
+                if (str_contains(strtolower($pergunta), 'form_config') || str_starts_with(strtolower($pergunta), 'ui_')) {
+                    continue;
+                }
+                $base["Resposta: " . ucfirst(str_replace('_', ' ', $pergunta))] = $this->formatarValorParaExportacao($resposta);
             }
         }
 
         return $base;
+    }
+
+    private function formatarValorParaExportacao($val): string
+    {
+        if (is_array($val)) {
+            $itens = array_map(fn($item) => $this->formatarValorParaExportacao($item), array_filter($val, fn($v) => $v !== null && $v !== ''));
+            return empty($itens) ? '' : implode(', ', $itens);
+        }
+
+        $valStr = trim((string) $val);
+        if ($valStr === '') {
+            return '';
+        }
+
+        if (str_starts_with($valStr, 'data:image/')) {
+            $hash = md5($valStr);
+            $caminhoAssinatura = "assinaturas/sig_{$hash}.png";
+
+            if (!Storage::disk('public')->exists($caminhoAssinatura)) {
+                $partes = explode(',', $valStr, 2);
+                if (isset($partes[1])) {
+                    Storage::disk('public')->put($caminhoAssinatura, base64_decode($partes[1]));
+                }
+            }
+
+            return asset('storage/' . $caminhoAssinatura);
+        }
+
+        if (preg_match('/\/(uploads|documentos|links)\//', $valStr)) {
+            $caminhos = explode(',', $valStr);
+            $urls = array_map(fn($p) => asset('storage/' . ltrim(trim($p), '/')), array_filter($caminhos));
+            return implode(', ', $urls);
+        }
+
+        return $valStr;
     }
 
     private function mapearUsuario($registro)

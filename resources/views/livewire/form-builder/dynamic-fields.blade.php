@@ -1,41 +1,273 @@
-<div class="p-6 max-w-[1400px] mx-auto h-full flex flex-col font-sans">
-    
-    <!-- CABEÇALHO COM BADGE DE CONTEXTO -->
-    <div class="mb-6 flex justify-between items-center border-b border-gray-200 pb-4">
-        <div>
-            <a href="{{ route('formbuilder.hub') }}" class="text-indigo-600 hover:text-indigo-800 transition text-sm mb-1 inline-flex items-center gap-1 font-medium">
-                <i class="ph ph-arrow-left"></i> Voltar para a Central
-            </a>
-            <div class="flex items-center gap-3 mt-1">
-                <h2 class="text-2xl font-bold text-gray-900">Construtor do Formulário</h2>
-                
-                @if($badgeContexto === 'Avaliação de Aprendizagem')
-                    <span class="px-2.5 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-md border border-orange-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-tree-structure"></i> {{ $badgeContexto }}</span>
-                @elseif($badgeContexto === 'Pré-Inscrição (Lead)')
-                    <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-md border border-emerald-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-funnel"></i> {{ $badgeContexto }}</span>
-                @elseif($badgeContexto === 'Inscrição Oficial')
-                    <span class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-md border border-indigo-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-calendar-check"></i> {{ $badgeContexto }}</span>
-                @else
-                    <span class="px-2.5 py-1 bg-purpura-100 text-purpura-700 text-xs font-bold rounded-md border border-purpura-200 uppercase tracking-wider shadow-sm flex items-center gap-1"><i class="ph-fill ph-list-dashes"></i> {{ $badgeContexto }}</span>
-                @endif
-            </div>
-            
-            <p class="text-gray-500 text-sm mt-1">Estruturando blocos para: <span class="font-bold text-gray-800">{{ $contextoNome }}</span></p>
-        </div>
+<div class="font-sans flex flex-col transition-all duration-300 bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden w-full"
+     x-data="{ modoExpandido: true, navbarOculta: true }"
+     x-init="
+        $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
+        $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
         
+        document.body.classList.toggle('modo-expandido', modoExpandido);
+        document.body.classList.toggle('navbar-oculta', navbarOculta);
+     "
+     :class="modoExpandido ? 'h-screen border-none rounded-none' : 'min-h-[680px] h-[calc(100vh-140px)]'">
+
+    <style>
+        main > div.py-6 > div { max-width: 100% !important; }
+        body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
+        body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
+        body.modo-expandido main { overflow: hidden !important; display: flex; flex-direction: column; }
+        body.navbar-oculta .js-topnav { display: none !important; }
+        body.navbar-oculta header { display: none !important; }
+        body.navbar-oculta .js-sidebar { display: none !important; }
+    </style>
+
+    <!-- BARRA SUPERIOR FIXA DO CONSTRUTOR -->
+    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-5 py-3 flex items-center justify-between z-[60] shrink-0">
+        <div class="flex items-center gap-4">
+            <a href="{{ route('formbuilder.hub') }}" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Voltar para a Central">
+                <i class="ph-bold ph-arrow-left"></i>
+            </a>
+            <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
+                <div class="flex items-center gap-2.5">
+                    <h1 class="text-base font-black text-gray-900 dark:text-white tracking-tight">Construtor de Formulário</h1>
+                    @if($badgeContexto === 'Avaliação de Aprendizagem')
+                        <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded border border-orange-200 uppercase tracking-wider flex items-center gap-1"><i class="ph-fill ph-tree-structure"></i> {{ $badgeContexto }}</span>
+                    @elseif($badgeContexto === 'Pré-Inscrição (Lead)')
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded border border-emerald-200 uppercase tracking-wider flex items-center gap-1"><i class="ph-fill ph-funnel"></i> {{ $badgeContexto }}</span>
+                    @elseif($badgeContexto === 'Inscrição Oficial')
+                        <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded border border-indigo-200 uppercase tracking-wider flex items-center gap-1"><i class="ph-fill ph-calendar-check"></i> {{ $badgeContexto }}</span>
+                    @else
+                        <span class="px-2 py-0.5 bg-purpura-100 text-purpura-700 text-[10px] font-bold rounded border border-purpura-200 uppercase tracking-wider flex items-center gap-1"><i class="ph-fill ph-list-dashes"></i> {{ $badgeContexto }}</span>
+                    @endif
+                </div>
+                <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                    Contexto: <span class="font-bold text-gray-800 dark:text-gray-200">{{ $contextoNome }}</span>
+                </p>
+            </div>
+        </div>
+
         <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-md font-medium">
-                <i class="ph ph-squares-four"></i> {{ $camposCadastrados->count() }} Blocos
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold border border-gray-200 dark:border-gray-700">
+                <i class="ph-bold ph-squares-four text-purpura-600"></i> {{ $camposCadastrados->count() }} Blocos
             </span>
+
+            <!-- CONTROLES DE ECRÃ INTEIRO E OCULTAR MENUS -->
+            <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 shadow-sm text-purpura-600' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" title="Expandir Ecrã">
+                    <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
+                    <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
+                </button>
+                <button type="button" x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''" title="Ocultar Menus do Sistema">
+                    <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
+                    <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
+                </button>
+            </div>
+
+            <!-- BOTÃO ACIONADOR DO NAVIGATION DRAWER DE CONFIGURAÇÃO DO FORMULÁRIO -->
+            <button type="button" @click="$wire.set('drawerFormSettingsAberto', true)" class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2">
+                <i class="ph-bold ph-sliders-horizontal text-sm text-purpura-400"></i>
+                <span>Configurações do Formulário</span>
+            </button>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <!-- ÁREA DE TRABALHO EM 3 COLUNAS -->
+    <div class="flex flex-1 w-full overflow-hidden relative bg-gray-100 dark:bg-gray-950">
         
-        <div class="lg:col-span-8 space-y-6">
-            
-            <div class="hidden col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 md:col-span-1 md:col-span-2 md:col-span-3 md:col-span-4 md:col-span-5 md:col-span-6 md:col-span-7 md:col-span-8 md:col-span-9 md:col-span-10 md:col-span-11 md:col-span-12"></div>
+        <!-- COLUNA 1 (ESQUERDA): PALETA DE TIPOS DE INPUTS -->
+        <aside class="w-72 xl:w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                    <i class="ph-fill ph-squares-four text-purpura-600 text-base"></i> Tipos de Inputs
+                </span>
+                @if($campoId)
+                    <button type="button" wire:click="cancelarEdicao" class="text-[10px] font-bold text-purpura-600 hover:underline flex items-center gap-1">
+                        <i class="ph-bold ph-plus"></i> Novo
+                    </button>
+                @endif
+            </div>
 
+            <div class="p-4 overflow-y-auto flex-1 custom-scrollbar space-y-5">
+                
+                <!-- GRUPO 1: TEXTO E DOCUMENTOS -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Texto e Entradas</p>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button type="button" wire:click="setTipo('text', 'text')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'text' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-text-t text-base {{ $tipo == 'text' && $subtipo == 'text' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Texto Curto</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'email')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'email' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-envelope-simple text-base {{ $tipo == 'text' && $subtipo == 'email' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">E-mail</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'number')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'number' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-hash text-base {{ $tipo == 'text' && $subtipo == 'number' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Número</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'money')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'money' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-currency-circle-dollar text-base {{ $tipo == 'text' && $subtipo == 'money' ? 'text-purpura-600' : 'text-emerald-600' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Moeda (R$)</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'tel')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'tel' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-device-mobile text-base {{ $tipo == 'text' && $subtipo == 'tel' ? 'text-purpura-600' : 'text-blue-500' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Telefone</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'cpf')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cpf' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-identification-card text-base {{ $tipo == 'text' && $subtipo == 'cpf' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
+                            <span class="text-[11px] font-bold truncate">CPF</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'cnpj')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cnpj' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-buildings text-base {{ $tipo == 'text' && $subtipo == 'cnpj' ? 'text-purpura-600' : 'text-amber-600' }}"></i>
+                            <span class="text-[11px] font-bold truncate">CNPJ</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'cep')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cep' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-map-pin-line text-base {{ $tipo == 'text' && $subtipo == 'cep' ? 'text-purpura-600' : 'text-rose-500' }}"></i>
+                            <span class="text-[11px] font-bold truncate">CEP (ViaCEP)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GRUPO 2: DATAS E HORAS -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Datas e Horas</p>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button type="button" wire:click="setTipo('text', 'date')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'date' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-calendar-blank text-base {{ $tipo == 'text' && $subtipo == 'date' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Data</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'time')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'time' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-clock text-base {{ $tipo == 'text' && $subtipo == 'time' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Hora</span>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('text', 'datetime-local')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'datetime-local' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-calendar-check text-base {{ $tipo == 'text' && $subtipo == 'datetime-local' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Data e Hora Completa</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GRUPO 3: UPLOAD E ASSINATURA -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Anexos e Assinatura</p>
+                    <div class="grid grid-cols-1 gap-1.5">
+                        <button type="button" wire:click="setTipo('signature', 'usuario')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'signature' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-signature text-xl {{ $tipo == 'signature' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-bold">Assinatura à Mão</span>
+                                <span class="text-[10px] text-gray-500 truncate">Desenho (Utilizador/Responsável)</span>
+                            </div>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('file', 'file')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'file' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-upload-simple text-xl {{ $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-bold">Upload / Anexos</span>
+                                <span class="text-[10px] text-gray-500 truncate">Imagens, vídeos e documentos</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GRUPO 4: SELEÇÃO E ESCOLHAS -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Seleção e Escolhas</p>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button type="button" wire:click="setTipo('select')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'select' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-caret-circle-down text-base {{ $tipo == 'select' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Dropdown</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('radio')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'radio' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-radio-button text-base {{ $tipo == 'radio' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Múltipla Esc.</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('check')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'check' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-check-square-offset text-base {{ $tipo == 'check' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Checkboxes</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('scale')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'scale' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-linear-scale text-base {{ $tipo == 'scale' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Escala Num.</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('matriz')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-table text-base {{ $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Matriz</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('rating')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-star text-base {{ $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Estrelas</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GRUPO 5: LINKS, DOCUMENTOS E LAYOUT -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Links, Documentos e Layout</p>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button type="button" wire:click="setTipo('link', 'link')" class="col-span-2 flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'link' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-link-simple text-xl {{ $tipo == 'link' ? 'text-purpura-600' : 'text-blue-600' }}"></i>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-bold">Link externo</span>
+                                <span class="text-[10px] text-gray-500 truncate">URL externa, página ou PDF/Word/Excel</span>
+                            </div>
+                        </button>
+
+                        <button type="button" wire:click="setTipo('html', 'p')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'html' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-article text-base {{ $tipo == 'html' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Texto / Aviso</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('media', 'image')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'media' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-image text-base {{ $tipo == 'media' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Mídia Visual</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('social')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'social' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-share-network text-base {{ $tipo == 'social' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Redes Sociais</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('divider')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'divider' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-minus text-base {{ $tipo == 'divider' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Divisória</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('spacer', 'spacer')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'spacer' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-arrows-out-line-horizontal text-base {{ $tipo == 'spacer' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold truncate">Espaço em Branco (Colunas)</span>
+                        </button>
+                    </div>
+                </div>
+
+                @if($contextoTipo === 'formulario')
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
+                        <div class="grid grid-cols-1 gap-1.5">
+                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-buildings text-base {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                <span class="text-[11px] font-bold">Unidades Ativas</span>
+                            </button>
+                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-graduation-cap text-base {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                <span class="text-[11px] font-bold">Cursos Ativos</span>
+                            </button>
+                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-clock text-base {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                                <span class="text-[11px] font-bold">Turnos Ativos</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+            </div>
+        </aside>
+
+        <!-- COLUNA 2 (CENTRO): CANVAS DE PRÉ-VISUALIZAÇÃO DO FORMULÁRIO -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative z-10">
+            
             @php
                 $previewBgUrl = null;
                 if ($bg_image_upload) {
@@ -54,23 +286,30 @@
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
             @endphp
 
-            <div class="flex items-center gap-2 mb-2 overflow-x-auto custom-scrollbar pb-2">
-                <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-purpura-600 hover:border-purpura-300">
-                    <i class="ph-bold ph-plus"></i> Adicionar Página
+            <!-- FUNDO CORRIGIDO: absolute para não vazar da coluna -->
+            @if($previewBgUrl)
+                <div class="absolute inset-0 z-0 bg-center bg-no-repeat pointer-events-none" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
+            @endif
+            <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
+
+            <!-- BARRA DE PÁGINAS / ETAPAS -->
+            <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2.5 flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 relative z-20">
+                <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purpura-50 border border-purpura-200 rounded-lg text-xs font-bold text-purpura-700 hover:bg-purpura-100 transition">
+                    <i class="ph-bold ph-plus"></i> Nova Página
                 </button>
-                <div class="w-px h-6 bg-gray-300 mx-1 shrink-0"></div>
+                <div class="w-px h-5 bg-gray-200 mx-1 shrink-0"></div>
                 
                 @foreach($etapasDisponiveis as $et)
-                    <div class="shrink-0 flex items-center bg-white border border-gray-200 rounded-lg text-sm shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-purpura-500 focus-within:border-purpura-500 transition-all">
-                        <div class="px-3 py-2 border-r border-gray-100 text-gray-400 bg-gray-50">
-                            <i class="ph-fill ph-dots-six-vertical"></i>
-                        </div>
+                    <div class="shrink-0 flex items-center bg-white border {{ $etapa == $et->numero ? 'border-purpura-500 ring-1 ring-purpura-500' : 'border-gray-200' }} rounded-lg text-xs shadow-sm overflow-hidden group transition-all">
+                        <button type="button" wire:click="$set('etapa', {{ $et->numero }})" class="px-2.5 py-1.5 border-r border-gray-100 font-bold {{ $etapa == $et->numero ? 'bg-purpura-600 text-white' : 'bg-gray-50 text-gray-500' }}">
+                            #{{ $et->numero }}
+                        </button>
                         <input type="text" 
                                wire:change="atualizarNomeEtapa({{ $et->id }}, $event.target.value)" 
                                value="{{ $et->nome }}" 
-                               class="w-32 border-none focus:ring-0 text-sm font-bold text-gray-700 px-3 py-2 bg-transparent">
+                               class="w-28 border-none focus:ring-0 text-xs font-bold text-gray-700 px-2.5 py-1.5 bg-transparent">
                         @if($etapasDisponiveis->count() > 1)
-                            <button wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
+                            <button wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-2 py-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
                                 <i class="ph-bold ph-trash"></i>
                             </button>
                         @endif
@@ -78,894 +317,908 @@
                 @endforeach
             </div>
 
-            <div class="relative w-full min-h-[600px] rounded-xl overflow-hidden bg-gray-100 shadow-inner">
-                
-                @if($previewBgUrl)
-                    <div class="absolute inset-0 z-0 bg-center bg-no-repeat" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
-                @endif
-                
-                <div class="absolute inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
-
-                <div class="relative z-10 w-full p-4 md:p-8 h-full overflow-y-auto flex flex-col items-center">
+            <!-- CANVAS DE PREVIEW (SCROLLÁVEL) -->
+            <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center z-10">
+                <div class="relative z-10 w-full {{ $formWidth }} {{ $cardClass }} p-6 md:p-10 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                     
-                    <div class="w-full {{ $formWidth }} {{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
-                        
-                        <div class="mb-10 border-b border-gray-200 pb-6">
-                            <h1 class="text-3xl font-extrabold mb-2 {{ $textoForm }}">Construtor de Formulários</h1>
-                            <p class="text-gray-600">Abaixo está a estrutura de como o utilizador visualizará este formulário.</p>
+                    <div class="mb-8 border-b border-gray-200 pb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-extrabold {{ $textoForm }}">{{ $contextoNome }}</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Clique num bloco abaixo para editar as definições à direita.</p>
                         </div>
+                    </div>
 
-                        @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
-                            <div class="mb-12" wire:key="grupo-etapa-{{ $numEtapa }}">
-                                
-                                <div class="flex items-center gap-3 mb-6">
-                                    <span class="flex items-center justify-center w-7 h-7 text-sm font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                    @php 
-                                        $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
-                                        $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                    @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
+                        <div class="mb-10" wire:key="grupo-etapa-{{ $numEtapa }}">
+                            <div class="flex items-center gap-3 mb-5">
+                                <span class="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
+                                @php 
+                                    $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
+                                    $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                                    
+                                    if (!function_exists('formatWppText')) {
+                                        function formatWppText($text) {
+                                            $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
+                                            $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
+                                            $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
+                                            $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
+                                            return nl2br($text);
+                                        }
+                                    }
+
+                                    $gruposRender = [];
+                                    if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
+                                        $camposTopo = $camposDaEtapa->filter(function($c) {
+                                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                            return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
+                                        });
+                                        $camposRodape = $camposDaEtapa->filter(function($c) {
+                                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                            return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
+                                        });
                                         
-                                        if (!function_exists('formatWppText')) {
-                                            function formatWppText($text) {
-                                                $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
-                                                $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
-                                                $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
-                                                $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
-                                                return nl2br($text);
-                                            }
+                                        if ($camposTopo->count() > 0) {
+                                            $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
                                         }
+                                        $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                                        if ($camposRodape->count() > 0) {
+                                            $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                                        }
+                                    } else {
+                                        $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
+                                    }
+                                @endphp
+                                <h3 class="text-lg font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
+                                <div class="flex-1 h-px ml-2 bg-gray-200"></div>
+                            </div>
 
-                                        $gruposRender = [];
-                                        if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
-                                            $camposTopo = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
-                                            });
-                                            $camposRodape = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
-                                            });
-                                            
-                                            if ($camposTopo->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
-                                            }
-                                            $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                                            if ($camposRodape->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
-                                            }
-                                        } else {
-                                            $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
-                                        }
-                                    @endphp
-                                    <h3 class="text-xl font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
-                                    <div class="flex-1 h-px ml-4 bg-gray-200"></div>
-                                </div>
-                                
-                                @foreach($gruposRender as $grupo)
-                                    @if($grupo['titulo'] === 'placeholder_dados_pessoais')
-                                        <div class="w-full my-8 pointer-events-none">
-                                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gray-50/50 opacity-70">
-                                                <h4 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                                    <i class="ph-fill ph-lock-key"></i> Dados Pessoais (Campos Padrões do Sistema)
-                                                </h4>
-                                                <div class="grid grid-cols-2 gap-4">
-                                                    <div class="h-10 bg-gray-200 rounded-md"></div>
-                                                    <div class="h-10 bg-gray-200 rounded-md"></div>
-                                                    <div class="h-10 bg-gray-200 rounded-md col-span-2"></div>
-                                                </div>
-                                                <p class="text-xs text-gray-400 mt-4 text-center">
-                                                    Os campos fixos de perfil (Nome, E-mail, Nascimento, Localidade, etc.) e escolhas académicas serão renderizados automaticamente pelo sistema aqui na visão pública.
-                                                </p>
+                            @foreach($gruposRender as $grupo)
+                                @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                                    <div class="w-full my-6 pointer-events-none">
+                                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50 opacity-70">
+                                            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                <i class="ph-fill ph-lock-key"></i> Dados Pessoais (Campos Padrões do Sistema)
+                                            </h4>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="h-9 bg-gray-200 rounded-md"></div>
+                                                <div class="h-9 bg-gray-200 rounded-md"></div>
                                             </div>
                                         </div>
-                                    @else
-                                        @if($grupo['titulo'])
-                                            <div class="mb-4 mt-2 border-b border-gray-200 pb-2 w-full">
-                                                <h4 class="text-lg font-bold {{ $textoForm }}">{{ $grupo['titulo'] }}</h4>
-                                            </div>
-                                        @endif
-
-                                        <div class="grid grid-cols-12 gap-x-6 gap-y-4 w-full">
-                                            @php $colunasUsadasLinha = 0; @endphp
-                                            @foreach($grupo['campos'] as $c)
-                                                @php 
-                                                    $isActive = $campoId == $c->id; 
-                                                    $larguraSolicitada = (int) $c->largura;
-
-                                                    // Se for 0 (Ocupar Restante), preenche exatamente o saldo restante da linha de 12 colunas
-                                                    if ($larguraSolicitada === 0) {
-                                                        $larguraEfetiva = ($colunasUsadasLinha === 0) ? 12 : (12 - $colunasUsadasLinha);
-                                                        $colunasUsadasLinha = 0; // fecha a linha
-                                                    } else {
-                                                        if ($colunasUsadasLinha + $larguraSolicitada > 12) {
-                                                            $colunasUsadasLinha = 0; // o grid quebrou para a linha seguinte
-                                                        }
-                                                        $larguraEfetiva = $larguraSolicitada;
-                                                        $colunasUsadasLinha = ($colunasUsadasLinha + $larguraSolicitada) % 12;
-                                                    }
-
-                                                    $colSpan = "col-span-12 md:col-span-{$larguraEfetiva}";
-                                                    $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                    $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
-                                                @endphp
-
-                                                <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-4 bg-white/95' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/50' }}" wire:click="editar({{ $c->id }})">
-                                                    
-                                                    <div class="absolute right-2 -top-4 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
-                                                        <button wire:click.stop="editar({{ $c->id }})" class="p-2 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-base"></i></button>
-                                                        <button wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza de que deseja excluir este campo?" class="p-2 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-base"></i></button>
-                                                    </div>
-
-                                                    <div class="relative z-10">
-                                                        <div class="flex justify-between items-start mb-2">
-                                                            @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer']))
-                                                                <label class="block text-sm font-bold text-gray-800">
-                                                                    {!! formatWppText($c->label) !!} @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
-                                                                </label>
-                                                            @else
-                                                                <span></span>
-                                                            @endif
-                                                            <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
-                                                        </div>
-                                                        
-                                                        @if($c->tipo === 'text')
-                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center gap-2 shadow-sm pointer-events-none">
-                                                                @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-lg"></i>
-                                                                @elseif(in_array($c->subtipo, ['date', 'datetime-local', 'date_range'])) <i class="ph ph-calendar-blank text-lg"></i>
-                                                                @elseif($c->subtipo == 'time') <i class="ph ph-clock text-lg"></i>
-                                                                @elseif($c->subtipo == 'number') <i class="ph ph-hash text-lg"></i>
-                                                                @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-lg text-green-600"></i>
-                                                                @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-lg text-blue-500"></i>
-                                                                @else <i class="ph ph-text-t text-lg"></i> @endif
-                                                                <span class="truncate">Preenchimento ({{ $c->subtipo === 'money' ? 'Moeda' : ($c->subtipo === 'tel' ? 'Telefone' : $c->subtipo) }})...</span>
-                                                            </div>
-                                                        
-                                                        @elseif($c->tipo === 'file')
-                                                            @php
-                                                                $tipoArquivoPv = $cfg['tipo_arquivo'] ?? 'todos';
-                                                                $multiPv = !empty($cfg['aceita_multiplos']);
-                                                                $extsPv = $cfg['extensoes_permitidas'] ?? '';
-                                                                $maxMbPv = $cfg['max_size_mb'] ?? 10;
-                                                            @endphp
-                                                            <div class="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50/60 text-center pointer-events-none transition hover:border-purpura-400">
-                                                                <div class="flex flex-col items-center justify-center py-1">
-                                                                    @if($tipoArquivoPv === 'imagem')
-                                                                        <i class="ph ph-image text-2xl text-purpura-500 mb-1"></i>
-                                                                    @elseif($tipoArquivoPv === 'video')
-                                                                        <i class="ph ph-video-camera text-2xl text-purpura-500 mb-1"></i>
-                                                                    @elseif($tipoArquivoPv === 'documento')
-                                                                        <i class="ph ph-file-text text-2xl text-purpura-500 mb-1"></i>
-                                                                    @else
-                                                                        <i class="ph ph-cloud-arrow-up text-2xl text-purpura-500 mb-1"></i>
-                                                                    @endif
-                                                                    <p class="text-xs font-bold text-gray-700">Carregar Anexo ({{ ucfirst($tipoArquivoPv) }})</p>
-                                                                    <span class="text-[10px] text-gray-400 mt-0.5">
-                                                                        {{ $multiPv ? 'Múltiplos ficheiros permitidos' : 'Ficheiro único' }} &middot; Máx: {{ $maxMbPv }}MB
-                                                                        @if(!empty($extsPv)) &middot; ({{ strtoupper($extsPv) }}) @endif
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                        @elseif($c->tipo === 'select')
-                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
-                                                                <span>Lista Suspensa...</span><i class="ph ph-caret-down text-gray-500"></i>
-                                                            </div>
-                                                        @elseif($c->tipo === 'scale')
-                                                            @php 
-                                                                $maxScale = $cfg['escala_maxima'] ?? 10;
-                                                            @endphp
-                                                            <div class="mt-2 pointer-events-none">
-                                                                <div class="flex w-full border border-gray-300 rounded-md overflow-hidden bg-white">
-                                                                    @for($i = 0; $i <= $maxScale; $i++)
-                                                                        <div class="flex-1 py-2 text-center border-r last:border-r-0 border-gray-200 text-gray-600 text-xs font-bold">
-                                                                            {{ $i }}
-                                                                        </div>
-                                                                    @endfor
-                                                                </div>
-                                                                <div class="flex justify-between mt-1.5 text-[10px] text-gray-500 font-bold px-1">
-                                                                    <span>{{ $cfg['label_min'] ?? 'Mínimo' }}</span>
-                                                                    <span>{{ $cfg['label_max'] ?? 'Máximo' }}</span>
-                                                                </div>
-                                                            </div>
-                                                        
-                                                        @elseif($c->tipo === 'radio' || $c->tipo === 'check')
-                                                            <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-2' : 'flex-wrap gap-4' }} mt-1 pointer-events-none">
-                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
-                                                                </div>
-                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
-                                                                </div>
-                                                                @if($layoutOpcoes === 'vertical')
-                                                                <div class="flex items-center gap-2 text-gray-600 text-sm">
-                                                                    <div class="w-4 h-4 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 3
-                                                                </div>
-                                                                @endif
-                                                            </div>
-                                                            
-                                                        @elseif($c->tipo === 'system')
-                                                            <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-sm flex items-center justify-between shadow-sm pointer-events-none">
-                                                                <span class="flex items-center gap-2"><i class="ph ph-database text-purpura-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
-                                                            </div>
-                                                            
-                                                        @elseif($c->tipo === 'matriz')
-                                                            @php
-                                                                $linhasPv = [];
-                                                                $colunasPv = [];
-                                                                if ($isActive) {
-                                                                    $linhasPv = array_filter(array_map('trim', explode("\n", $matriz_linhas ?? '')));
-                                                                    $colunasPv = array_filter(array_map('trim', explode(',', $matriz_colunas ?? '')));
-                                                                }
-                                                                if (empty($linhasPv)) $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
-                                                                if (empty($colunasPv)) $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
-                                                            @endphp
-                                                            <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-2 shadow-sm">
-                                                                <table class="min-w-full text-xs text-left">
-                                                                    <thead class="bg-gray-50 border-b border-gray-200">
-                                                                        <tr>
-                                                                            <th class="p-2 w-1/3"></th>
-                                                                            @foreach($colunasPv as $col)
-                                                                                <th class="p-2 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
-                                                                            @endforeach
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody class="divide-y divide-gray-100">
-                                                                        @foreach($linhasPv as $linha)
-                                                                            <tr>
-                                                                                <td class="p-2 font-medium text-gray-800">{{ $linha }}</td>
-                                                                                @foreach($colunasPv as $col)
-                                                                                    <td class="p-2 text-center border-l border-gray-100">
-                                                                                        <div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div>
-                                                                                    </td>
-                                                                                @endforeach
-                                                                            </tr>
-                                                                        @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-
-                                                        @elseif($c->tipo === 'html')
-                                                            <div class="text-gray-800">
-                                                                @if($c->subtipo === 'h1') <h1 class="text-3xl font-extrabold">{!! formatWppText($c->label) !!}</h1>
-                                                                @elseif($c->subtipo === 'h2') <h2 class="text-2xl font-bold">{!! formatWppText($c->label) !!}</h2>
-                                                                @elseif($c->subtipo === 'h3') <h3 class="text-xl font-bold">{!! formatWppText($c->label) !!}</h3>
-                                                                @elseif($c->subtipo === 'p') <div class="text-sm leading-relaxed">{!! formatWppText($c->label) !!}</div>
-                                                                @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline">{!! formatWppText($c->label) !!}</span>
-                                                                @elseif($c->subtipo === 'info_card') 
-                                                                    <div class="p-3 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
-                                                                        <p class="font-bold text-sm">{!! formatWppText($c->label) !!}</p>
-                                                                    </div>
-                                                                @endif
-                                                            </div>
-
-                                                        @elseif($c->tipo === 'divider')
-                                                            <hr class="border-t-2 border-dashed border-gray-300 my-2">
-
-                                                        @elseif($c->tipo === 'spacer')
-                                                            <div class="w-full h-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center bg-gray-50/60 dark:bg-gray-800/40 text-gray-400 text-xs font-semibold select-none">
-                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5 text-base"></i> Espaço em Branco ({{ $c->largura == 0 ? "Restante: {$larguraEfetiva}/12" : "{$c->largura}/12" }})
-                                                            </div>
-
-                                                        @elseif($c->tipo === 'media')
-                                                            <div class="w-full bg-gray-50 rounded-md p-4 text-center border border-gray-200 pointer-events-none text-gray-500 shadow-sm">
-                                                                <i class="ph ph-{{ $c->subtipo == 'video' ? 'video-camera' : 'image' }} text-2xl mb-1"></i>
-                                                                <p class="text-xs font-bold">Mídia Visual ({{ ucfirst($c->subtipo) }})</p>
-                                                            </div>
-
-                                                        @elseif($c->tipo === 'social')
-                                                            @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
-                                                            <div class="flex flex-col gap-2 mt-2 pointer-events-none">
-                                                                @foreach($redesPreview as $rede)
-                                                                    <div class="flex items-center gap-2">
-                                                                        <div class="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-lg ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
-                                                                        <div class="flex-1 h-8 bg-gray-50 border border-gray-200 rounded-md"></div>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                            
-                                                        @elseif($c->tipo === 'rating')
-                                                            <div class="flex gap-1 text-2xl text-yellow-400 pointer-events-none drop-shadow-sm">
-                                                                <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph ph-star text-gray-300"></i><i class="ph ph-star text-gray-300"></i>
-                                                            </div>
-                                                        @endif
-                                                        
-                                                        <div class="mt-2.5 flex flex-wrap gap-2 items-center">
-                                                            @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media']))
-                                                                <span class="text-[10px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
-                                                            @endif
-                                                            @if($c->depende_de)
-                                                                <span class="inline-flex items-center gap-1 bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded font-bold">
-                                                                    <i class="ph-fill ph-warning-circle"></i> Condicional
-                                                                </span>
-                                                            @endif
-                                                        </div>
-
-                                                    </div>
-                                                </div>
-                                            @endforeach
+                                    </div>
+                                @else
+                                    @if($grupo['titulo'])
+                                        <div class="mb-3 mt-2 border-b border-gray-200 pb-1.5 w-full">
+                                            <h4 class="text-sm font-bold {{ $textoForm }}">{{ $grupo['titulo'] }}</h4>
                                         </div>
                                     @endif
-                                @endforeach
-                            </div>
-                        @empty
-                            <div class="flex flex-col items-center justify-center py-20 text-center relative z-10">
-                                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-200">
-                                    <i class="ph ph-list-plus text-4xl text-gray-400"></i>
-                                </div>
-                                <h3 class="text-lg font-bold text-gray-900 mb-1">Formulário Vazio</h3>
-                                <p class="text-gray-500 text-sm max-w-sm">Utilize a barra lateral ao lado para adicionar elementos e estruturar o seu formulário.</p>
-                            </div>
-                        @endforelse
 
-                        <div class="relative z-10 mt-6">
-                            <button type="button" wire:click="cancelarEdicao" class="w-full py-4 border-2 border-dashed border-purpura-200 text-purpura-600 hover:bg-purpura-50 hover:border-purpura-400 rounded-xl font-bold transition flex justify-center items-center gap-2">
-                                <i class="ph ph-plus-circle text-xl"></i> Adicionar Novo Bloco
-                            </button>
+                                    <div class="grid grid-cols-12 gap-x-5 gap-y-4 w-full">
+                                        @php $colunasUsadasLinha = 0; @endphp
+                                        @foreach($grupo['campos'] as $c)
+                                            @php 
+                                                $isActive = $campoId == $c->id; 
+                                                $larguraSolicitada = (int) $c->largura;
+
+                                                if ($larguraSolicitada === 0) {
+                                                    $larguraEfetiva = ($colunasUsadasLinha === 0) ? 12 : (12 - $colunasUsadasLinha);
+                                                    $colunasUsadasLinha = 0;
+                                                } else {
+                                                    if ($colunasUsadasLinha + $larguraSolicitada > 12) {
+                                                        $colunasUsadasLinha = 0;
+                                                    }
+                                                    $larguraEfetiva = $larguraSolicitada;
+                                                    $colunasUsadasLinha = ($colunasUsadasLinha + $larguraSolicitada) % 12;
+                                                }
+
+                                                $colSpan = "col-span-12 md:col-span-{$larguraEfetiva}";
+                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                                $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
+                                            @endphp
+
+                                            <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60' }}" wire:click="editar({{ $c->id }})">
+                                                
+                                                <div class="absolute right-2 -top-3 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
+                                                    <button type="button" wire:click.stop="editar({{ $c->id }})" class="p-1.5 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-sm"></i></button>
+                                                    <button type="button" wire:click.stop="excluir({{ $c->id }})" wire:confirm="Tem certeza de que deseja excluir este campo?" class="p-1.5 hover:bg-red-50 hover:text-red-600 transition border-l border-gray-100" title="Excluir Campo"><i class="ph ph-trash text-sm"></i></button>
+                                                </div>
+
+                                                <div class="relative z-10">
+                                                    <div class="flex justify-between items-start mb-1.5">
+                                                        @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
+                                                            <label class="block text-xs font-bold text-gray-800">
+                                                                @if($c->tipo === 'signature')
+                                                                    {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
+                                                                @else
+                                                                    {!! formatWppText($c->label) !!}
+                                                                @endif
+                                                                @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
+                                                            </label>
+                                                        @else
+                                                            <span></span>
+                                                        @endif
+                                                        <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
+                                                    </div>
+
+                                                    {{-- PREVIEW DOS INPUTS E SUBTIPOS --}}
+                                                    @if($c->tipo === 'text')
+                                                        <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between gap-2 shadow-sm pointer-events-none">
+                                                            <div class="flex items-center gap-2 truncate">
+                                                                @if($c->subtipo == 'email') <i class="ph ph-envelope-simple text-base"></i> <span>exemplo@email.com</span>
+                                                                @elseif($c->subtipo == 'date') <i class="ph ph-calendar-blank text-base"></i> <span>dd/mm/aaaa</span>
+                                                                @elseif($c->subtipo == 'time') <i class="ph ph-clock text-base"></i> <span>00:00</span>
+                                                                @elseif($c->subtipo == 'datetime-local') <i class="ph ph-calendar-check text-base"></i> <span>dd/mm/aaaa 00:00</span>
+                                                                @elseif($c->subtipo == 'number') <i class="ph ph-hash text-base"></i> <span>Número...</span>
+                                                                @elseif($c->subtipo == 'money') <i class="ph ph-currency-circle-dollar text-base text-emerald-600"></i> <span>R$ 0,00</span>
+                                                                @elseif($c->subtipo == 'tel') <i class="ph ph-device-mobile text-base text-blue-500"></i> <span>(00) 00000-0000</span>
+                                                                @elseif($c->subtipo == 'cpf') <i class="ph ph-identification-card text-base text-indigo-500"></i> <span>000.000.000-00</span>
+                                                                @elseif($c->subtipo == 'cnpj') <i class="ph ph-buildings text-base text-amber-600"></i> <span>00.000.000/0000-00</span>
+                                                                @elseif($c->subtipo == 'cep') <i class="ph ph-map-pin-line text-base text-rose-500"></i> <span>00000-000</span>
+                                                                @else <i class="ph ph-text-t text-base"></i> <span>Texto curto...</span> @endif
+                                                            </div>
+                                                            @if($c->subtipo === 'cep' && !empty($cfg['viacep']))
+                                                                <span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[9px] font-bold shrink-0">ViaCEP Ativo</span>
+                                                            @elseif(!empty($cfg['viacep_parent']))
+                                                                <span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[9px] font-bold shrink-0">Auto (ViaCEP)</span>
+                                                            @endif
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'signature')
+                                                        <div class="w-full border-2 border-dashed border-indigo-200 rounded-lg p-4 bg-white text-center pointer-events-none">
+                                                            <i class="ph-duotone ph-signature text-3xl text-indigo-500 mb-1"></i>
+                                                            <div class="w-48 max-w-full mx-auto border-b border-gray-400 my-2"></div>
+                                                            <p class="text-[11px] font-bold text-gray-600">
+                                                                {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
+                                                            </p>
+                                                            <span class="text-[9px] text-gray-400">Área de desenho com rato / ecrã tátil</span>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'link')
+                                                        @php
+                                                            $destinoPv = $cfg['tipo_destino'] ?? 'externo';
+                                                            $extPv = strtolower($cfg['arquivo_extensao'] ?? '');
+                                                            $permDownloadPv = !empty($cfg['permitir_download']);
+                                                            $abrirPreviewPv = !empty($cfg['abrir_preview']);
+                                                        @endphp
+                                                        <div class="w-full p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg flex items-center justify-between gap-3 pointer-events-none">
+                                                            <div class="flex items-center gap-3 min-w-0">
+                                                                <div class="w-9 h-9 rounded-lg bg-white border border-blue-200 flex items-center justify-center shrink-0 text-blue-600">
+                                                                    @if($destinoPv === 'arquivo')
+                                                                        @if($extPv === 'pdf') <i class="ph-fill ph-file-pdf text-xl text-red-500"></i>
+                                                                        @elseif(in_array($extPv, ['xls', 'xlsx'])) <i class="ph-fill ph-file-xls text-xl text-emerald-600"></i>
+                                                                        @else <i class="ph-fill ph-file-doc text-xl text-blue-600"></i> @endif
+                                                                    @elseif($destinoPv === 'interno')
+                                                                        <i class="ph-bold ph-compass text-xl text-indigo-600"></i>
+                                                                    @else
+                                                                        <i class="ph-bold ph-arrow-square-out text-xl text-blue-600"></i>
+                                                                    @endif
+                                                                </div>
+                                                                <div class="min-w-0">
+                                                                    <p class="text-xs font-bold text-gray-900 truncate">{{ $c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento') }}</p>
+                                                                    <p class="text-[10px] text-gray-500 truncate">
+                                                                        @if($destinoPv === 'arquivo')
+                                                                            Arquivo: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
+                                                                        @else
+                                                                            {{ $cfg['url'] ?? 'URL não definida' }}
+                                                                        @endif
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center gap-1 shrink-0">
+                                                                @if($destinoPv === 'arquivo')
+                                                                    @if($abrirPreviewPv)
+                                                                        <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Ver</span>
+                                                                    @endif
+                                                                    @if($permDownloadPv)
+                                                                        <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">Baixar</span>
+                                                                    @else
+                                                                        <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[9px] font-bold rounded">S/ Download</span>
+                                                                    @endif
+                                                                @else
+                                                                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Acessar</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'file')
+                                                        @php
+                                                            $tipoArquivoPv = $cfg['tipo_arquivo'] ?? 'todos';
+                                                            $multiPv = !empty($cfg['aceita_multiplos']);
+                                                            $maxMbPv = $cfg['max_size_mb'] ?? 10;
+                                                        @endphp
+                                                        <div class="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50/60 text-center pointer-events-none">
+                                                            <i class="ph ph-cloud-arrow-up text-xl text-purpura-500"></i>
+                                                            <p class="text-xs font-bold text-gray-700">Carregar Anexo ({{ ucfirst($tipoArquivoPv) }})</p>
+                                                            <span class="text-[10px] text-gray-400">{{ $multiPv ? 'Múltiplos' : 'Único' }} &middot; Máx: {{ $maxMbPv }}MB</span>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'select')
+                                                        <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between shadow-sm pointer-events-none">
+                                                            <span>Selecione...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'scale')
+                                                        @php $maxScale = $cfg['escala_maxima'] ?? 10; @endphp
+                                                        <div class="mt-1 pointer-events-none">
+                                                            <div class="flex w-full border border-gray-300 rounded-md overflow-hidden bg-white">
+                                                                @for($i = 0; $i <= $maxScale; $i++)
+                                                                    <div class="flex-1 py-1.5 text-center border-r last:border-r-0 border-gray-200 text-gray-600 text-[11px] font-bold">{{ $i }}</div>
+                                                                @endfor
+                                                            </div>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'radio' || $c->tipo === 'check')
+                                                        <div class="flex {{ $layoutOpcoes === 'vertical' ? 'flex-col gap-1.5' : 'flex-wrap gap-3' }} mt-1 pointer-events-none">
+                                                            <div class="flex items-center gap-1.5 text-gray-600 text-xs">
+                                                                <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
+                                                            </div>
+                                                            <div class="flex items-center gap-1.5 text-gray-600 text-xs">
+                                                                <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
+                                                            </div>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'system')
+                                                        <div class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-400 text-xs flex items-center justify-between shadow-sm pointer-events-none">
+                                                            <span class="flex items-center gap-1.5"><i class="ph ph-database text-purpura-400"></i> Selecione {{ ucfirst($c->subtipo) }}...</span><i class="ph ph-caret-down text-gray-500"></i>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'matriz')
+                                                        @php
+                                                            $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
+                                                            $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
+                                                        @endphp
+                                                        <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-1">
+                                                            <table class="min-w-full text-[11px] text-left">
+                                                                <thead class="bg-gray-50 border-b border-gray-200">
+                                                                    <tr>
+                                                                        <th class="p-1.5"></th>
+                                                                        @foreach($colunasPv as $col)
+                                                                            <th class="p-1.5 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
+                                                                        @endforeach
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody class="divide-y divide-gray-100">
+                                                                    @foreach($linhasPv as $linha)
+                                                                        <tr>
+                                                                            <td class="p-1.5 font-medium text-gray-800">{{ $linha }}</td>
+                                                                            @foreach($colunasPv as $col)
+                                                                                <td class="p-1.5 text-center border-l border-gray-100"><div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div></td>
+                                                                            @endforeach
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'html')
+                                                        <div class="text-gray-800">
+                                                            @if($c->subtipo === 'h1') <h1 class="text-2xl font-extrabold">{!! formatWppText($c->label) !!}</h1>
+                                                            @elseif($c->subtipo === 'h2') <h2 class="text-xl font-bold">{!! formatWppText($c->label) !!}</h2>
+                                                            @elseif($c->subtipo === 'h3') <h3 class="text-lg font-bold">{!! formatWppText($c->label) !!}</h3>
+                                                            @elseif($c->subtipo === 'p') <div class="text-xs leading-relaxed">{!! formatWppText($c->label) !!}</div>
+                                                            @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline text-xs">{!! formatWppText($c->label) !!}</span>
+                                                            @elseif($c->subtipo === 'info_card') 
+                                                                <div class="p-2.5 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
+                                                                    <p class="font-bold text-xs">{!! formatWppText($c->label) !!}</p>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'divider')
+                                                        <hr class="border-t-2 border-dashed border-gray-300 my-2">
+
+                                                    @elseif($c->tipo === 'spacer')
+                                                        <div class="w-full h-10 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50/60 text-gray-400 text-[11px] font-semibold select-none">
+                                                            <i class="ph ph-arrows-out-line-horizontal mr-1.5"></i> Espaço ({{ $c->largura == 0 ? "Restante: {$larguraEfetiva}/12" : "{$c->largura}/12" }})
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'media')
+                                                        <div class="w-full bg-gray-50 rounded-md p-3 text-center border border-gray-200 pointer-events-none text-gray-500">
+                                                            <i class="ph ph-{{ $c->subtipo == 'video' ? 'video-camera' : 'image' }} text-xl"></i>
+                                                            <p class="text-[11px] font-bold">Mídia ({{ ucfirst($c->subtipo) }})</p>
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'social')
+                                                        @php $redesPreview = $cfg['redes_permitidas'] ?? ['instagram']; @endphp
+                                                        <div class="flex flex-col gap-1.5 mt-1 pointer-events-none">
+                                                            @foreach($redesPreview as $rede)
+                                                                <div class="flex items-center gap-2">
+                                                                    <div class="w-7 h-7 rounded bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200"><i class="text-sm ph-fill ph-{{ strtolower($rede) }}-logo"></i></div>
+                                                                    <div class="flex-1 h-7 bg-gray-50 border border-gray-200 rounded"></div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+
+                                                    @elseif($c->tipo === 'rating')
+                                                        <div class="flex gap-1 text-xl text-yellow-400 pointer-events-none">
+                                                            <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph ph-star text-gray-300"></i><i class="ph ph-star text-gray-300"></i>
+                                                        </div>
+                                                    @endif
+
+                                                    <div class="mt-2 flex flex-wrap gap-1.5 items-center">
+                                                        @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media', 'spacer', 'link']))
+                                                            <span class="text-[9px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
+                                                        @endif
+                                                        @if($c->depende_de)
+                                                            <span class="inline-flex items-center gap-1 bg-yellow-100 border border-yellow-200 text-yellow-800 text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                                                <i class="ph-fill ph-warning-circle"></i> Condicional
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            @endforeach
                         </div>
-                        
-                    </div>
+                    @empty
+                        <div class="flex flex-col items-center justify-center py-16 text-center">
+                            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-200">
+                                <i class="ph ph-list-plus text-3xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-gray-900 mb-1">Formulário Vazio</h3>
+                            <p class="text-gray-500 text-xs max-w-xs">Selecione um tipo de input na coluna da esquerda e configure-o na coluna da direita.</p>
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
 
-        <div x-data="{ activeTab: 'field' }" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden flex flex-col max-h-[85vh]">
-            
-            <div class="flex border-b border-gray-200 shrink-0 bg-gray-50">
-                <button type="button" @click="activeTab = 'field'" :class="activeTab === 'field' ? 'border-purpura-600 text-purpura-700 bg-white shadow-[0_2px_0_0_#9333ea]' : 'border-transparent text-gray-500 hover:text-gray-700'" class="flex-1 py-3.5 text-xs font-bold border-b-2 text-center transition tracking-wide uppercase flex flex-col items-center gap-1">
-                    <i class="ph-fill ph-textbox text-lg"></i> Bloco Ativo
-                </button>
-                <button type="button" @click="activeTab = 'form'" :class="activeTab === 'form' ? 'border-purpura-600 text-purpura-700 bg-white shadow-[0_2px_0_0_#9333ea]' : 'border-transparent text-gray-500 hover:text-gray-700'" class="flex-1 py-3.5 text-xs font-bold border-b-2 text-center transition tracking-wide uppercase flex flex-col items-center gap-1">
-                    <i class="ph-fill ph-browser text-lg"></i> Formulário
-                </button>
+        <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO -->
+        <aside class="w-80 xl:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
+            <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                    <i class="ph-fill ph-sliders text-purpura-600 text-base"></i> {{ $campoId ? 'Editar Input' : 'Configurar Input' }}
+                </span>
+                @if($campoId)
+                    <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-indigo-200">Em Edição</span>
+                @endif
             </div>
 
-            <div x-show="activeTab === 'field'" class="flex-1 flex flex-col overflow-hidden">
-                
-                <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
-                    <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-5">
-                        
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-gray-800">{{ $campoId ? 'Editar Propriedades' : 'Inserir Novo Elemento' }}</h3>
-                            @if($campoId) <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider border border-indigo-200">A Editar</span> @endif
+            <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-4">
+                    
+                    <!-- PÁGINA E ORDEM -->
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Página (Fase) e Posição</label>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <select wire:model.live="etapa" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700">
+                                @foreach($etapasDisponiveis as $et)
+                                    <option value="{{ $et->numero }}">{{ $et->nome }}</option>
+                                @endforeach
+                            </select>
+                            <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700 text-center">
                         </div>
+                        @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
 
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Página (Fase) e Posição</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <select wire:model.live="etapa" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700">
-                                        @foreach($etapasDisponiveis as $et)
-                                            <option value="{{ $et->numero }}">{{ $et->nome }}</option>
-                                        @endforeach
-                                    </select>
+                        @if($etapa == 1 && $contextoTipo === 'ciclo')
+                            <label class="flex items-center gap-2.5 p-2.5 mt-2.5 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer">
+                                <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
+                                    <span class="text-[10px] text-indigo-700">Antes dos dados pessoais fixos.</span>
                                 </div>
-                                <div>
-                                    <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 font-semibold text-gray-700 text-center">
-                                </div>
-                            </div>
-                            @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-
-                            @if($etapa == 1 && $contextoTipo === 'ciclo')
-                                <label class="flex items-center gap-3 p-3 mt-3 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer transition hover:bg-indigo-100">
-                                    <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500">
-                                    <div class="flex flex-col">
-                                        <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
-                                        <span class="text-[10px] text-indigo-700 mt-0.5">Renderizar este campo ANTES dos dados pessoais (Nome, CPF, etc.).</span>
-                                    </div>
-                                </label>
-                            @endif
-                        </div>
-
-                        <hr class="border-gray-100">
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-800 mb-3">Escolha o Tipo de Bloco <span class="text-red-500">*</span></label>
-                            
-                            <div class="space-y-4 pr-2">
-                                
-                                <div>
-                                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Entrada de Dados</p>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" wire:click="setTipo('text', 'text')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-text-t text-xl {{ $tipo == 'text' && in_array($subtipo, ['text', 'email', 'number', 'password', 'money', 'tel']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Texto Curto</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('text', 'date')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-calendar-blank text-xl {{ $tipo == 'text' && in_array($subtipo, ['date', 'datetime-local', 'time', 'date_range']) ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Datas e Horas</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('file', 'file')" class="col-span-2 flex items-center gap-3 p-3 border rounded-lg text-left transition {{ $tipo == 'file' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-upload-simple text-xl {{ $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
-                                            <div class="flex flex-col">
-                                                <span class="text-xs font-bold">Upload / Anexos</span>
-                                                <span class="text-[10px] text-gray-500">Imagens, vídeos e documentos</span>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Seleção e Escolhas</p>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" wire:click="setTipo('scale')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'scale' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-linear-scale text-xl {{ $tipo == 'scale' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Escala Numérica</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('select')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'select' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-caret-circle-down text-xl {{ $tipo == 'select' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Dropdown</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('radio')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'radio' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-radio-button text-xl {{ $tipo == 'radio' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Múltipla Escolha</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('check')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'check' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-check-square-offset text-xl {{ $tipo == 'check' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Checkboxes</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('matriz')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-table text-xl {{ $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Matriz</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('rating')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-star text-xl {{ $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Avaliação (Estrelas)</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Layout e Visual</p>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" wire:click="setTipo('html', 'p')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'html' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-article text-xl {{ $tipo == 'html' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Texto Descritivo</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('media', 'image')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'media' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-image text-xl {{ $tipo == 'media' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Mídia (Img/Vid)</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('social')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'social' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-share-network text-xl {{ $tipo == 'social' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Redes Sociais</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('divider')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'divider' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-minus text-xl {{ $tipo == 'divider' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Linha Divisória</span>
-                                        </button>
-                                        <button type="button" wire:click="setTipo('spacer', 'spacer')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'spacer' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                            <i class="ph ph-arrows-out-line-horizontal text-xl {{ $tipo == 'spacer' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                            <span class="text-xs font-bold">Espaço em Branco</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                @if($contextoTipo === 'formulario')
-                                    <div>
-                                        <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                                <i class="ph ph-buildings text-xl {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                                <span class="text-xs font-bold">Unidades Ativas</span>
-                                            </button>
-                                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                                <i class="ph ph-graduation-cap text-xl {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                                <span class="text-xs font-bold">Cursos Ativos</span>
-                                            </button>
-                                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex flex-col items-start gap-1 p-3 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                                <i class="ph ph-clock text-xl {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                                <span class="text-xs font-bold">Turnos Ativos</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <hr class="border-gray-100">
-
-                        @if(!in_array($tipo, ['divider', 'spacer']))
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
-                                    <span>{{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : 'Título da Pergunta' }} <span class="text-red-500">*</span></span>
-                                </label>
-                                <textarea wire:model.live="label" rows="2" placeholder="Digite aqui..." class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
-                            </div>
+                            </label>
                         @endif
+                    </div>
 
-                        <div class="grid grid-cols-2 gap-3">
+                    <hr class="border-gray-100">
+
+                    <!-- TÍTULO / LABEL -->
+                    @if(!in_array($tipo, ['divider', 'spacer', 'signature']))
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                {{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : ($tipo === 'link' ? 'Texto de Exibição do Link / Botão' : 'Título da Pergunta') }} <span class="text-red-500">*</span>
+                            </label>
+                            <textarea wire:model.live="label" rows="2" placeholder="Digite aqui..." class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                        </div>
+                    @endif
+
+                    <!-- ID NO BANCO E LARGURA -->
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ID no Banco <span class="text-red-500">*</span></label>
+                            <input type="text" wire:model="name" class="w-full text-[11px] rounded-lg border-gray-300 shadow-sm bg-gray-100 text-gray-600 font-mono">
+                            @error('name') <span class="text-[10px] text-red-500 mt-0.5 block">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Largura na Grelha</label>
+                            <select wire:model="largura" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                <option value="12">100% (12/12)</option>
+                                <option value="9">75% (9/12)</option>
+                                <option value="8">66% (8/12)</option>
+                                <option value="6">50% (6/12)</option>
+                                <option value="4">33% (4/12)</option>
+                                <option value="3">25% (3/12)</option>
+                                <option value="2">16% (2/12)</option>
+                                <option value="1">8% (1/12)</option>
+                                <option value="0">Ocupar Restante</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================= -->
+                    <!-- CONFIGURAÇÕES ESPECÍFICAS: ASSINATURA À MÃO ('signature') -->
+                    <!-- ========================================================= -->
+                    @if($tipo === 'signature')
+                        <div class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3">
+                            <h5 class="font-bold text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-signature text-indigo-600 text-base"></i> Configuração da Assinatura
+                            </h5>
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
-                                    <span>ID no Banco <span class="text-red-500">*</span></span>
-                                </label>
-                                <input type="text" wire:model="name" class="w-full text-[11px] rounded-lg border-gray-300 shadow-sm bg-gray-100 text-gray-600 font-mono cursor-not-allowed">
+                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Quem irá assinar este campo?</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'usuario') === 'usuario' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
+                                        <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="usuario" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-gray-900">Assinatura do Utilizador</span>
+                                            <span class="text-[10px] text-gray-500">Aparece no formulário como: <strong>"Sua assinatura"</strong></span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'responsavel') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
+                                        <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="responsavel" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-gray-900">Assinatura do Responsável</span>
+                                            <span class="text-[10px] text-gray-500">Aparece no formulário como: <strong>"Assinatura do responsável"</strong></span>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
+                        </div>
+                    @endif
+
+                    <!-- ========================================================= -->
+                    <!-- CONFIGURAÇÕES ESPECÍFICAS: LINK / ARQUIVO ('link')        -->
+                    <!-- ========================================================= -->
+                    @if($tipo === 'link')
+                        <div class="p-4 bg-blue-50/60 border border-blue-200 rounded-lg space-y-3.5">
+                            <h5 class="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-link-simple text-blue-600 text-base"></i> Configuração do Link / Arquivo
+                            </h5>
+
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Largura na Tela <span class="text-red-500">*</span></label>
-                                <select wire:model="largura" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                    <option value="12">100% (Linha Inteira)</option>
-                                    <option value="6">50% (Metade)</option>
-                                    <option value="4">33% (Um Terço)</option>
-                                    <option value="3">25% (Um Quarto)</option>
-                                    <option value="0">Ocupar Espaço Restante (Auto)</option>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Tipo de Destino</label>
+                                <select wire:model.live="configuracoes.tipo_destino" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="externo">Link Externo (URL Completa)</option>
+                                    <option value="interno">Página ou Rota Interna do Sistema</option>
+                                    <option value="arquivo">Arquivo Interno (Upload PDF, Word ou Excel)</option>
                                 </select>
                             </div>
-                        </div>
 
-                        <!-- CONFIGURAÇÕES DE UPLOAD DE ARQUIVOS -->
-                        @if($tipo === 'file')
-                            <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4">
-                                <h5 class="font-bold text-xs text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
-                                </h5>
-
-                                <div class="space-y-3">
+                            @if(($configuracoes['tipo_destino'] ?? 'externo') === 'arquivo')
+                                <div class="space-y-3 pt-1">
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Categoria de Ficheiros</label>
-                                        <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
-                                            <option value="todos">Todos os Tipos (Documentos, Imagens, Vídeos)</option>
-                                            <option value="imagem">Apenas Imagens (JPG, PNG, WEBP, GIF)</option>
-                                            <option value="video">Apenas Vídeos (MP4, MOV, WEBM, MKV)</option>
-                                            <option value="documento">Apenas Documentos (PDF, DOCX, XLS, TXT)</option>
-                                            <option value="custom">Personalizado (Extensões Manuais)</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Extensões Permitidas (separadas por vírgula)</label>
-                                        <input type="text" wire:model="configuracoes.extensoes_permitidas" placeholder="ex: pdf, docx, png, jpg, mp4" class="w-full text-xs font-mono rounded-md border-gray-300 dark:bg-gray-900">
-                                    </div>
-
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Máx. por Ficheiro (MB)</label>
-                                            <input type="number" min="1" max="100" wire:model="configuracoes.max_size_mb" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Upload do Documento (PDF, Word, Excel)</label>
+                                        <input type="file" wire:model="link_file_upload" accept=".pdf,.doc,.docx,.xls,.xlsx" class="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 bg-white border border-gray-300 rounded-lg p-1">
+                                        <div wire:loading wire:target="link_file_upload" class="text-[11px] text-blue-600 font-bold mt-1 flex items-center gap-1">
+                                            <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo...
                                         </div>
-                                        @if(!empty($configuracoes['aceita_multiplos']))
-                                            <div>
-                                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Qtd. Máx. Ficheiros</label>
-                                                <input type="number" min="2" max="20" wire:model="configuracoes.max_arquivos" class="w-full text-xs rounded-md border-gray-300 dark:bg-gray-900">
+                                        @error('link_file_upload') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+
+                                        @if(!empty($configuracoes['arquivo_nome']) && !$link_file_upload)
+                                            <div class="mt-2 p-2 bg-white border border-blue-200 rounded flex items-center justify-between text-[11px]">
+                                                <span class="font-bold text-gray-700 truncate"><i class="ph-fill ph-check-circle text-emerald-500 mr-1"></i> {{ $configuracoes['arquivo_nome'] }}</span>
+                                                <span class="uppercase font-mono text-[10px] px-1.5 py-0.5 bg-gray-100 rounded">{{ $configuracoes['arquivo_extensao'] ?? '' }}</span>
                                             </div>
                                         @endif
                                     </div>
 
-                                    <div class="pt-2">
-                                        <label class="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
-                                            <span class="text-xs text-gray-700 dark:text-gray-300 font-bold">Permitir múltiplos ficheiros?</span>
+                                    <div class="space-y-2 border-t border-blue-200/70 pt-2.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer">
+                                            <input type="checkbox" wire:model="configuracoes.abrir_preview" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-gray-800">Abrir pré-visualização no navegador</span>
+                                                <span class="text-[10px] text-gray-500">Exibe o leitor integrado na própria página.</span>
+                                            </div>
+                                        </label>
+
+                                        <label class="flex items-center gap-2.5 cursor-pointer">
+                                            <input type="checkbox" wire:model="configuracoes.permitir_download" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-gray-800">Permitir o download do arquivo</span>
+                                                <span class="text-[10px] text-gray-500">Se desmarcado, oculta o botão de transferir.</span>
+                                            </div>
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-                        @endif
-
-                        @if($tipo === 'text')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+                            @else
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-900 mb-1.5">Formato Exato</label>
-                                    <select wire:model.live="subtipo" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                        <option value="text">Texto Simples</option>
-                                        <option value="email">E-mail</option>
-                                        <option value="number">Números</option>
-                                        <option value="date">Data (Calendário)</option>
-                                        <option value="time">Hora (Relógio)</option>
-                                        <option value="datetime-local">Data e Hora</option>
-                                        <option value="money">Valor Monetário (R$)</option>
-                                        <option value="tel">Telefone / Celular</option>
-                                    </select>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                                        {{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? 'Caminho Interno (ex: /portal ou /inscricao)' : 'URL Externa (https://...)' }}
+                                    </label>
+                                    <input type="text" wire:model="configuracoes.url" placeholder="{{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? '/portal' : 'https://exemplo.com.br' }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500">
+                                    @error('configuracoes.url') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                 </div>
-                                
-                                @if($subtipo === 'number')
-                                <div class="grid grid-cols-2 gap-3 border-t border-gray-200 pt-3">
+                            @endif
+                        </div>
+                    @endif
+
+                    <!-- ========================================================= -->
+                    <!-- CONFIGURAÇÕES ESPECÍFICAS: CEP COM VIACEP AUTOMÁTICO      -->
+                    <!-- ========================================================= -->
+                    @if($tipo === 'text' && $subtipo === 'cep')
+                        <div class="p-4 bg-rose-50/60 border border-rose-200 rounded-lg space-y-3">
+                            <h5 class="font-bold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-map-pin-line text-rose-600 text-base"></i> Automação ViaCEP
+                            </h5>
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="checkbox" wire:model.live="configuracoes.viacep" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-gray-900">Consultar ViaCEP automaticamente?</span>
+                                    <span class="text-[10px] text-gray-600 leading-tight mt-0.5">Ao digitar os 8 dígitos do CEP no formulário, consulta a API e preenche os campos de endereço.</span>
+                                </div>
+                            </label>
+
+                            @if(!empty($configuracoes['viacep']) && !$campoId)
+                                <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-rose-200/70">
+                                    <input type="checkbox" wire:model="configuracoes.criar_campos_endereco" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold text-rose-900">Gerar campos de endereço automaticamente</span>
+                                        <span class="text-[10px] text-rose-700 leading-tight mt-0.5">Cria automaticamente: Logradouro, Número, Complemento, Bairro, Cidade e Estado (UF).</span>
+                                    </div>
+                                </label>
+                            @endif
+                        </div>
+                    @endif
+
+                    <!-- CONFIGURAÇÕES DE TEXTO / NÚMEROS / MÁSCARAS -->
+                    @if($tipo === 'text' && in_array($subtipo, ['text', 'number', 'cpf', 'cnpj', 'tel', 'email']))
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                            
+                            @if($subtipo === 'number')
+                                <div class="grid grid-cols-2 gap-2.5">
                                     <div>
                                         <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Mínimo</label>
-                                        <input type="number" wire:model="tamanho_min" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
+                                        <input type="number" wire:model="tamanho_min" class="w-full text-xs rounded-lg border-gray-300">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Máximo</label>
-                                        <input type="number" wire:model="tamanho_max" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
+                                        <input type="number" wire:model="tamanho_max" class="w-full text-xs rounded-lg border-gray-300">
                                     </div>
                                 </div>
-                                @endif
-
-                                @if($subtipo === 'text')
-                                <div class="border-t border-gray-200 pt-3">
-                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara Exata (x-mask)</label>
-                                    <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-sm font-mono rounded-lg border-gray-300 shadow-sm">
-                                </div>
-                                @endif
-                            </div>
-
-                        @elseif(in_array($tipo, ['select', 'radio', 'check']))
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+                            @else
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-700">Opções de Resposta</label>
-                                    <p class="text-[10px] text-gray-500 mb-1.5">Coloque **uma opção por linha** (Aperte Enter).</p>
-                                    <textarea wire:model="opcoes" rows="5" placeholder="Sim&#10;Não&#10;Talvez" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
-                                </div>
-
-                                @if(in_array($tipo, ['radio', 'check']))
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Alinhamento das Opções</label>
-                                    <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                        <option value="horizontal">Lado a Lado (Horizontal)</option>
-                                        <option value="vertical">Uma abaixo da outra (Vertical)</option>
-                                    </select>
-                                </div>
-                                @endif
-                            </div>
-                        
-                        @elseif($tipo === 'matriz')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Itens (Linhas)</label>
-                                    <p class="text-[10px] text-gray-500 mb-1.5">Um item por linha (Enter)</p>
-                                    <textarea wire:model.live="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="Ex:&#10;Camiseta&#10;Horários"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Opções (Colunas)</label>
-                                    <p class="text-[10px] text-gray-500 mb-1.5">Separadas por vírgula</p>
-                                    <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="Ex: Concordo, Não Concordo">
-                                </div>
-                            </div>
-                        @elseif($tipo === 'system')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" wire:model="configuracoes.aplicar_regras" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                    <div class="flex flex-col">
-                                        <span class="text-sm text-gray-900 font-bold">Aplicar Regras de Cascata (Dependência)</span>
-                                        <span class="text-[10px] text-gray-500 leading-tight mt-1">O Curso listará apenas opções da Unidade selecionada, e o Turno do Curso. Se desmarcado, listará todos os ativos do banco de dados.</span>
-                                    </div>
-                                </label>
-                            </div>
-                        @elseif($tipo === 'html')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Estilo do Texto</label>
-                                <select wire:model.live="subtipo" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                                    <option value="h1">Título Gigante (H1)</option>
-                                    <option value="h2">Título Médio (H2)</option>
-                                    <option value="h3">Título Pequeno (H3)</option>
-                                    <option value="p">Parágrafo Normal</option>
-                                    <option value="info_card">Caixa de Aviso (Azul)</option>
-                                    <option value="link">Hyperlink Clicável</option>
-                                </select>
-                                @if($subtipo === 'info_card')
-                                    <textarea wire:model="configuracoes.descricao" rows="2" placeholder="Texto adicional de aviso" class="w-full text-sm rounded-lg border-gray-300"></textarea>
-                                @elseif($subtipo === 'link')
-                                    <input type="url" wire:model="configuracoes.url" placeholder="URL Destino (https://...)" class="w-full text-sm rounded-lg border-gray-300">
-                                @endif
-                            </div>
-                        @elseif($tipo === 'media')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Tipo de Mídia</label>
-                                <select wire:model.live="subtipo" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                                    <option value="image">Imagem Estática</option>
-                                    <option value="video">Vídeo Externo</option>
-                                </select>
-                                <input type="url" wire:model="configuracoes.url" placeholder="URL da Imagem ou YouTube" class="w-full text-sm rounded-lg border-gray-300">
-                            </div>
-                        @elseif($tipo === 'social')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                                <label class="block text-xs font-bold text-gray-900 mb-3">Redes Sociais Solicitadas</label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    @php
-                                        $redesOpcoes = [
-                                            'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
-                                            'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
-                                            'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
-                                            'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
-                                            'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
-                                            'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
-                                        ];
-                                    @endphp
-                                    @foreach($redesOpcoes as $key => $rede)
-                                        <label class="flex items-center gap-2 cursor-pointer bg-white p-2 rounded border border-gray-200 shadow-sm hover:border-purpura-300">
-                                            <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                            <i class="ph-fill {{ $rede['icon'] }} text-lg"></i>
-                                            <span class="text-xs font-bold text-gray-700">{{ $rede['nome'] }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @elseif($tipo === 'rating')
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">Total de Estrelas</label>
-                                <input type="number" wire:model="configuracoes.max_stars" min="3" max="10" placeholder="5" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                            </div>
-                        @elseif($tipo === 'scale')
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Escala de 0 a:</label>
-                                    <select wire:model="configuracoes.escala_maxima" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
-                                    </select>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-700 mb-1">Rótulo Mínimo (0)</label>
-                                        <input type="text" wire:model="configuracoes.label_min" placeholder="Ex: Precisa Melhorar" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-700 mb-1">Rótulo Máximo</label>
-                                        <input type="text" wire:model="configuracoes.label_max" placeholder="Ex: Excelente" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500">
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if(!in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer']))
-                            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition mt-4">
-                                <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                <div class="flex flex-col">
-                                    <span class="text-sm text-gray-900 font-bold">Campo Obrigatório</span>
-                                    <span class="text-[10px] text-gray-500">O candidato ou utilizador não poderá avançar sem preencher.</span>
-                                </div>
-                            </label>
-                        @endif
-
-                        <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="mt-4 border border-yellow-200 rounded-lg overflow-hidden">
-                            <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-3 bg-yellow-50 hover:bg-yellow-100 transition text-sm font-bold text-yellow-800">
-                                <span class="flex items-center gap-2"><i class="ph-fill ph-git-branch text-yellow-600 text-lg"></i> Regras de Exibição</span>
-                                <i class="ph ph-caret-down transition-transform" :class="openCond ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="openCond" x-collapse x-cloak class="p-4 bg-white border-t border-yellow-200 space-y-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-yellow-700 mb-1">Mostrar este bloco SOMENTE SE:</label>
-                                    <select wire:model.live="depende_de" class="w-full text-sm rounded-lg border-yellow-300 shadow-sm focus:border-yellow-500">
-                                        <option value="">-- Sempre Visível --</option>
-                                        @foreach($camposCadastrados as $c)
-                                            @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social']))
-                                                <option value="{{ $c->name }}">{{ Str::limit($c->label, 30) }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                </div>
-                                @if(!empty($depende_de))
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <div class="col-span-1">
-                                            <select wire:model="depende_operador" class="w-full text-xs rounded-lg border-gray-300 shadow-sm">
-                                                <option value="=">Igual a</option>
-                                                <option value="!=">Dif.</option>
-                                                <option value=">">Maior</option>
-                                                <option value="<">Menor</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-span-2">
-                                            <input type="text" wire:model="depende_valor" placeholder="Valor esperado" class="w-full text-sm rounded-lg border-gray-300 shadow-sm">
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-3">
-                        @if($campoId)
-                            <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 hover:text-gray-900 transition">Cancelar</button>
-                        @endif
-                        <button type="submit" class="flex-1 bg-purpura-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-purpura-700 transition flex justify-center items-center gap-2">
-                            <i class="ph-bold ph-floppy-disk text-lg"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div x-show="activeTab === 'form'" x-cloak class="flex-1 flex flex-col overflow-hidden bg-white">
-                
-                <form wire:submit.prevent="salvarFormSettings" class="flex-1 flex flex-col overflow-hidden">
-                    <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                        
-                        <div class="text-center mb-6">
-                            <i class="ph-fill ph-magic-wand text-4xl text-purpura-500 mb-2"></i>
-                            <h3 class="text-lg font-bold text-gray-900">Aparência Global</h3>
-                            <p class="text-xs text-gray-500 mt-1">Defina o comportamento e o estilo da página do formulário.</p>
-                        </div>
-
-                        <div class="space-y-6">
-                            
-                            @if($contextoTipo === 'formulario')
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                    <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link para partilhar)</label>
-                                    <div class="flex items-center mt-2">
-                                        <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">seusite.com/f/</span>
-                                        <input type="text" wire:model="slug" class="w-full text-sm rounded-r-md border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500" placeholder="meu-formulario">
-                                    </div>
-                                    @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                    <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara do Input (x-mask)</label>
+                                    <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-xs font-mono rounded-lg border-gray-300">
                                 </div>
                             @endif
 
-                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                <label class="block text-sm font-bold text-gray-800 mb-2">Upload de Imagem de Fundo</label>
-                                
-                                <div class="flex items-center justify-center w-full">
-                                    <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition">
-                                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <i class="ph ph-upload-simple text-3xl text-gray-400 mb-1"></i>
+                            @if(in_array($subtipo, ['cpf', 'email']))
+                                <div class="border-t border-gray-200 pt-3 space-y-2.5">
+                                    @if($subtipo === 'cpf')
+                                        <label class="flex items-start gap-2 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="configuracoes.validar_cpf" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-gray-800">Validar CPF (Cálculo Real)</span>
+                                                <span class="text-[10px] text-gray-500 leading-tight">Impede CPFs falsos (ex: 111.111.111-11).</span>
+                                            </div>
+                                        </label>
+                                    @endif
+
+                                    <label class="flex items-start gap-2 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="configuracoes.unico" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-gray-800">Travar Resposta Única</span>
+                                            <span class="text-[10px] text-gray-500 leading-tight">O utilizador só poderá preencher o formulário uma vez com este {{ strtoupper($subtipo) }}.</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    <!-- CONFIGURAÇÕES DE UPLOAD DE ARQUIVOS -->
+                    @if($tipo === 'file')
+                        <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                            <h5 class="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
+                            </h5>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria de Arquivos</label>
+                                <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300">
+                                    <option value="todos">Todos os Tipos</option>
+                                    <option value="imagem">Apenas Imagens</option>
+                                    <option value="video">Apenas Vídeos</option>
+                                    <option value="documento">Apenas Documentos</option>
+                                    <option value="custom">Personalizado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Extensões Permitidas</label>
+                                <input type="text" wire:model="configuracoes.extensoes_permitidas" class="w-full text-xs font-mono rounded-md border-gray-300">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1">Máx. (MB)</label>
+                                    <input type="number" min="1" max="100" wire:model="configuracoes.max_size_mb" class="w-full text-xs rounded-md border-gray-300">
+                                </div>
+                                @if(!empty($configuracoes['aceita_multiplos']))
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Qtd. Máx.</label>
+                                        <input type="number" min="2" max="20" wire:model="configuracoes.max_arquivos" class="w-full text-xs rounded-md border-gray-300">
+                                    </div>
+                                @endif
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer pt-1">
+                                <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300">
+                                <span class="text-xs text-gray-700 font-bold">Permitir múltiplos arquivos?</span>
+                            </label>
+                        </div>
+                    @endif
+
+                    @if(in_array($tipo, ['select', 'radio', 'check']))
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700">Opções de Resposta (1 por linha)</label>
+                                <textarea wire:model="opcoes" rows="4" placeholder="Sim&#10;Não" class="w-full text-xs rounded-lg border-gray-300 mt-1"></textarea>
+                            </div>
+                            @if(in_array($tipo, ['radio', 'check']))
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">Alinhamento</label>
+                                    <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-xs rounded-lg border-gray-300">
+                                        <option value="horizontal">Horizontal (Lado a Lado)</option>
+                                        <option value="vertical">Vertical (Lista)</option>
+                                    </select>
+                                </div>
+                            @endif
+                        </div>
+                    @elseif($tipo === 'matriz')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Linhas (1 por linha)</label>
+                                <textarea wire:model.live="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Colunas (separadas por vírgula)</label>
+                                <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300">
+                            </div>
+                        </div>
+                    @elseif($tipo === 'system')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+                            <label class="flex items-center gap-2.5 cursor-pointer">
+                                <input type="checkbox" wire:model="configuracoes.aplicar_regras" class="h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                <span class="text-xs text-gray-900 font-bold">Aplicar Regras de Cascata (Unidade → Curso)</span>
+                            </label>
+                        </div>
+                    @elseif($tipo === 'html')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                            <label class="block text-xs font-bold text-gray-700">Estilo do Texto</label>
+                            <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
+                                <option value="h1">Título Grande (H1)</option>
+                                <option value="h2">Título Médio (H2)</option>
+                                <option value="h3">Título Pequeno (H3)</option>
+                                <option value="p">Parágrafo Normal</option>
+                                <option value="info_card">Caixa de Aviso (Azul)</option>
+                            </select>
+                            @if($subtipo === 'info_card')
+                                <textarea wire:model="configuracoes.descricao" rows="2" placeholder="Texto adicional de aviso" class="w-full text-xs rounded-lg border-gray-300"></textarea>
+                            @endif
+                        </div>
+                    @elseif($tipo === 'media')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                            <label class="block text-xs font-bold text-gray-700">Tipo de Mídia</label>
+                            <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
+                                <option value="image">Imagem Estática</option>
+                                <option value="video">Vídeo Externo</option>
+                            </select>
+                            <input type="url" wire:model="configuracoes.url" placeholder="URL da Imagem ou YouTube" class="w-full text-xs rounded-lg border-gray-300">
+                        </div>
+                    @elseif($tipo === 'social')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+                            <label class="block text-xs font-bold text-gray-900 mb-2">Redes Solicitadas</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                @php
+                                    $redesOpcoes = [
+                                        'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
+                                        'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
+                                        'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
+                                        'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
+                                        'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
+                                        'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
+                                    ];
+                                @endphp
+                                @foreach($redesOpcoes as $key => $rede)
+                                    <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 rounded border border-gray-200">
+                                        <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-3.5 h-3.5 text-purpura-600 rounded">
+                                        <i class="ph-fill {{ $rede['icon'] }}"></i>
+                                        <span class="text-[11px] font-bold text-gray-700">{{ $rede['nome'] }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @elseif($tipo === 'rating')
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Total de Estrelas</label>
+                            <input type="number" wire:model="configuracoes.max_stars" min="3" max="10" placeholder="5" class="w-full text-xs rounded-lg border-gray-300">
+                        </div>
+                    @elseif($tipo === 'scale')
+                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Escala de 0 a:</label>
+                                <select wire:model="configuracoes.escala_maxima" class="w-full text-xs rounded-lg border-gray-300">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" wire:model="configuracoes.label_min" placeholder="Rótulo Mín (0)" class="w-full text-xs rounded-lg border-gray-300">
+                                <input type="text" wire:model="configuracoes.label_max" placeholder="Rótulo Máx" class="w-full text-xs rounded-lg border-gray-300">
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- OBRIGATORIEDADE -->
+                    @if(!in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
+                        <label class="flex items-center gap-2.5 p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                            <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-900 font-bold">Campo Obrigatório</span>
+                                <span class="text-[10px] text-gray-500">Impede o avanço sem preenchimento.</span>
+                            </div>
+                        </label>
+                    @endif
+
+                    <!-- CONDICIONAL -->
+                    <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="border border-yellow-200 rounded-lg overflow-hidden">
+                        <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-2.5 bg-yellow-50 hover:bg-yellow-100 transition text-xs font-bold text-yellow-800">
+                            <span class="flex items-center gap-1.5"><i class="ph-fill ph-git-branch text-yellow-600 text-base"></i> Exibição Condicional</span>
+                            <i class="ph ph-caret-down transition-transform" :class="openCond ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="openCond" x-collapse x-cloak class="p-3 bg-white border-t border-yellow-200 space-y-2.5">
+                            <div>
+                                <label class="block text-[10px] font-bold text-yellow-700 mb-1">Mostrar SOMENTE SE:</label>
+                                <select wire:model.live="depende_de" class="w-full text-xs rounded-lg border-yellow-300">
+                                    <option value="">-- Sempre Visível --</option>
+                                    @foreach($camposCadastrados as $c)
+                                        @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
+                                            <option value="{{ $c->name }}">{{ Str::limit($c->label, 28) }} ({{ $c->name }})</option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                            @if(!empty($depende_de))
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <select wire:model="depende_operador" class="col-span-1 text-xs rounded-lg border-gray-300">
+                                        <option value="=">Igual</option>
+                                        <option value="!=">Dif.</option>
+                                        <option value=">">Maior</option>
+                                        <option value="<">Menor</option>
+                                    </select>
+                                    <input type="text" wire:model="depende_valor" placeholder="Valor esperado" class="col-span-2 text-xs rounded-lg border-gray-300">
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RODAPÉ DE SALVAMENTO DO INPUT -->
+                <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-2">
+                    @if($campoId)
+                        <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition">Cancelar</button>
+                    @endif
+                    <button type="submit" class="flex-1 bg-purpura-600 text-white py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-purpura-700 transition flex justify-center items-center gap-1.5">
+                        <i class="ph-bold ph-floppy-disk text-base"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
+                    </button>
+                </div>
+            </form>
+        </aside>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- NAVIGATION DRAWER: CONFIGURAÇÕES GLOBAIS DO FORMULÁRIO                    -->
+    <!-- ========================================================================= -->
+    <div class="relative z-[150]" role="dialog" aria-modal="true" x-show="$wire.drawerFormSettingsAberto" x-cloak>
+        <div x-show="$wire.drawerFormSettingsAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+        <div class="fixed inset-0 overflow-hidden">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    <div x-show="$wire.drawerFormSettingsAberto"
+                         x-transition:enter="transform transition ease-in-out duration-300"
+                         x-transition:enter-start="translate-x-full"
+                         x-transition:enter-end="translate-x-0"
+                         x-transition:leave="transform transition ease-in-out duration-300"
+                         x-transition:leave-start="translate-x-0"
+                         x-transition:leave-end="translate-x-full"
+                         class="pointer-events-auto w-screen max-w-md h-[100dvh] flex flex-col"
+                         @click.away="$wire.set('drawerFormSettingsAberto', false)">
+                         
+                        <form wire:submit.prevent="salvarFormSettings" class="flex flex-col h-full bg-white shadow-2xl overflow-hidden">
+                            <div class="bg-gray-900 text-white px-6 py-4 shrink-0 flex items-center justify-between">
+                                <h2 class="text-sm font-bold flex items-center gap-2">
+                                    <i class="ph-fill ph-magic-wand text-lg text-purpura-400"></i> Configurações e Aparência do Formulário
+                                </h2>
+                                <button type="button" @click="$wire.set('drawerFormSettingsAberto', false)" class="rounded-md text-gray-400 hover:text-white p-1.5 transition">
+                                    <i class="ph-bold ph-x text-lg"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                                @if($contextoTipo === 'formulario')
+                                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <label class="block text-xs font-bold text-gray-800 mb-1">URL Amigável (Link Público)</label>
+                                        <div class="flex items-center mt-2">
+                                            <span class="bg-gray-200 border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-xs text-gray-600 font-mono">/f/</span>
+                                            <input type="text" wire:model="slug" class="w-full text-xs rounded-r-md border-gray-300 focus:border-purpura-500" placeholder="meu-formulario">
+                                        </div>
+                                        @error('slug') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                    </div>
+                                @endif
+
+                                <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                    <label class="block text-xs font-bold text-gray-800 mb-2">Imagem de Fundo da Página</label>
+                                    <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition">
+                                        <div class="flex flex-col items-center justify-center pt-4 pb-4">
+                                            <i class="ph ph-upload-simple text-2xl text-gray-400 mb-1"></i>
                                             <p class="text-[11px] text-gray-500"><span class="font-bold">Clique para carregar</span> (PNG/JPG)</p>
                                         </div>
                                         <input type="file" wire:model="bg_image_upload" class="hidden" accept="image/*">
                                     </label>
-                                </div>
-                                
-                                <div wire:loading wire:target="bg_image_upload" class="mt-2 text-xs font-bold text-purpura-600 flex items-center gap-2">
-                                    <i class="ph ph-spinner animate-spin text-lg"></i> A carregar imagem...
-                                </div>
-                                @error('bg_image_upload') <span class="text-xs text-red-500 mt-2 block font-bold">{{ $message }}</span> @enderror
 
-                                @if($bg_image_upload || !empty($formSettings['bg_image']))
-                                    <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
-                                        <div class="col-span-2">
-                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Comportamento da Imagem</label>
-                                            <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                                <option value="cover">Preencher todo o ecrã (Cortar sobras)</option>
-                                                <option value="contain">Encaixar no ecrã (Sem cortar)</option>
-                                                <option value="auto">Tamanho Original (Centralizado)</option>
-                                                <option value="repeat">Repetir como Textura (Mosaico)</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor da Sobreposição</label>
-                                            <div class="flex items-center gap-2">
-                                                <input type="color" wire:model.live="formSettings.bg_color" class="w-12 h-8 rounded border border-gray-300 cursor-pointer p-0.5">
+                                    @if($bg_image_upload || !empty($formSettings['bg_image']))
+                                        <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-200">
+                                            <div class="col-span-2">
+                                                <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Ajuste da Imagem</label>
+                                                <select wire:model.live="formSettings.bg_size" class="w-full text-xs rounded-lg border-gray-300 bg-white">
+                                                    <option value="cover">Preencher ecrã (Cover)</option>
+                                                    <option value="contain">Encaixar (Contain)</option>
+                                                    <option value="auto">Original</option>
+                                                    <option value="repeat">Repetir Mosaico</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Cor Sobreposição</label>
+                                                <input type="color" wire:model.live="formSettings.bg_color" class="w-full h-8 rounded border border-gray-300 cursor-pointer">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0 a 1)</label>
+                                                <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 bg-white">
                                             </div>
                                         </div>
-                                        <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Opacidade (0.0 a 1.0)</label>
-                                            <input type="number" step="0.1" min="0" max="1" wire:model.live="formSettings.bg_opacity" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
+                                    @endif
+                                </div>
+
+                                <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-4">
+                                    <h4 class="text-xs font-bold text-gray-800 border-b border-gray-200 pb-2 uppercase">Layout do Cartão</h4>
+                                    <div>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Largura Central</label>
+                                        <select wire:model.live="formSettings.form_width" class="w-full text-xs rounded-lg border-gray-300 bg-white">
+                                            <option value="max-w-4xl">Largo (Padrão Grid)</option>
+                                            <option value="max-w-2xl">Médio</option>
+                                            <option value="max-w-lg">Estreito</option>
+                                        </select>
+                                    </div>
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="formSettings.translucent_card" class="mt-0.5 w-4 h-4 border-gray-300 rounded text-purpura-600">
+                                        <div class="text-xs">
+                                            <span class="font-bold text-gray-900 block">Cartão Translúcido (Efeito Vidro)</span>
+                                            <span class="text-[10px] text-gray-500">Fundo branco semi-transparente com blur.</span>
                                         </div>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">Layout do Cartão</h4>
-                                
-                                <div class="mb-4">
-                                    <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Largura Central</label>
-                                    <select wire:model.live="formSettings.form_width" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                        <option value="max-w-4xl">Largo (Preenchimento Duplo/Grid)</option>
-                                        <option value="max-w-2xl">Médio (Padrão para inquéritos)</option>
-                                        <option value="max-w-lg">Estreito (Foco no centro)</option>
-                                    </select>
+                                    </label>
                                 </div>
 
-                                <div class="flex items-start">
-                                    <div class="flex items-center h-5">
-                                        <input type="checkbox" wire:model.live="formSettings.translucent_card" id="translucent_card" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="translucent_card" class="font-bold text-gray-900 cursor-pointer">Cartão Translúcido (Efeito Vidro)</label>
-                                        <p class="text-[10px] text-gray-500 font-medium leading-tight mt-0.5">O cartão branco principal ficará levemente transparente e com desfoque, revelando a imagem de fundo através dele.</p>
-                                    </div>
+                                <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                    <h4 class="text-xs font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2 uppercase">Regras de Negócio</h4>
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="formSettings.use_vacancy_limit" class="mt-0.5 w-4 h-4 border-gray-300 rounded text-purpura-600">
+                                        <div class="text-xs">
+                                            <span class="font-bold text-gray-900 block">Ativar Trava de Vagas</span>
+                                            <span class="text-[10px] text-gray-500">Oculta Unidades/Cursos/Turnos com vagas esgotadas.</span>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 
-                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">Regras de Negócio</h4>
-                                
-                                <div class="flex items-start">
-                                    <div class="flex items-center h-5">
-                                        <input type="checkbox" wire:model.live="formSettings.use_vacancy_limit" id="use_vacancy_limit" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="use_vacancy_limit" class="font-bold text-gray-900 cursor-pointer">Ativar Trava de Vagas (Limitar Vagas)</label>
-                                        <p class="text-[10px] text-gray-500 font-medium leading-tight mt-0.5">Se ativo, os menus de Unidade, Curso e Turno ocultarão opções que já atingiram o limite de vagas (inscrições aprovadas) na matriz do Ciclo.</p>
-                                    </div>
-                                </div>
+                            <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
+                                <button type="submit" class="w-full bg-purpura-600 hover:bg-purpura-700 text-white py-2.5 rounded-lg text-xs font-bold shadow-sm transition flex justify-center items-center gap-2">
+                                    <i class="ph-bold ph-check"></i> Guardar Aparência do Formulário
+                                </button>
                             </div>
-                            
-                        </div>
+                        </form>
                     </div>
-                    
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
-                        <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-lg text-sm font-bold shadow-sm hover:bg-black transition flex justify-center items-center gap-2">
-                            <i class="ph-bold ph-check"></i> Aplicar Tema ao Formulário
-                        </button>
-                    </div>
-                </form>
-
+                </div>
             </div>
-
         </div>
     </div>
 </div>

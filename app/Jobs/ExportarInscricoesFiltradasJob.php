@@ -34,7 +34,7 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
         try {
             $tracking->update([
                 'status' => 'processando',
-                'started_at' => now() // <-- GRAVA O INÍCIO
+                'started_at' => now()
             ]);
 
             $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
@@ -58,13 +58,13 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             $ciclosIds = (clone $query)->pluck('ciclo_id')->unique()->filter()->toArray();
             
             $camposOficiais = CampoFormulario::whereIn('ciclo_id', $ciclosIds)
-                ->whereNotIn('tipo', ['config', 'html', 'divider', 'media'])
+                ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link'])
                 ->get();
 
             $chavesDinamicas = [];
 
             foreach ($camposOficiais as $campo) {
-                if (str_contains(strtolower($campo->name), 'form_config')) continue;
+                if (str_contains(strtolower($campo->name), 'form_config') || str_starts_with(strtolower($campo->name), 'ui_')) continue;
                 
                 if ($campo->tipo === 'social') {
                     $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
@@ -81,7 +81,7 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             foreach ($dadosDinamicosAll as $json) {
                 $dinamicos = is_string($json) ? json_decode($json, true) : ($json ?? []);
                 foreach ($dinamicos as $key => $val) {
-                    if (str_contains(strtolower($key), 'form_config')) continue;
+                    if (str_contains(strtolower($key), 'form_config') || str_starts_with(strtolower($key), 'ui_')) continue;
                     
                     if (is_array($val) && count(array_filter(array_keys($val), 'is_string')) > 0) {
                         foreach ($val as $rede => $user) {
@@ -163,7 +163,7 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
                         $valor = $dinamicos[$chaveInterna] ?? '';
                     }
                     
-                    $linha[$label] = is_array($valor) ? implode(', ', $valor) : $valor;
+                    $linha[$label] = $this->formatarValorParaExportacao($valor);
                 }
 
                 if ($isCsv && !$cabecalhosEscritos) {
@@ -199,15 +199,50 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
                 'status' => 'concluido',
                 'linhas_processadas' => $linhasProcessadas,
                 'arquivo_gerado_caminho' => $caminhoRelativo,
-                'finished_at' => now() // <-- GRAVA O FIM COM SUCESSO
+                'finished_at' => now()
             ]);
 
         } catch (\Throwable $e) {
             $tracking->update([
                 'status' => 'erro',
                 'erro_mensagem' => json_encode([['linha' => 0, 'tipo' => 'Erro Interno', 'mensagem' => $e->getMessage()]]),
-                'finished_at' => now() // <-- GRAVA O FIM COM ERRO
+                'finished_at' => now()
             ]);
         }
+    }
+
+    private function formatarValorParaExportacao($val): string
+    {
+        if (is_array($val)) {
+            $itens = array_map(fn($item) => $this->formatarValorParaExportacao($item), array_filter($val, fn($v) => $v !== null && $v !== ''));
+            return empty($itens) ? '' : implode(', ', $itens);
+        }
+
+        $valStr = trim((string) $val);
+        if ($valStr === '') {
+            return '';
+        }
+
+        if (str_starts_with($valStr, 'data:image/')) {
+            $hash = md5($valStr);
+            $caminhoAssinatura = "assinaturas/sig_{$hash}.png";
+
+            if (!Storage::disk('public')->exists($caminhoAssinatura)) {
+                $partes = explode(',', $valStr, 2);
+                if (isset($partes[1])) {
+                    Storage::disk('public')->put($caminhoAssinatura, base64_decode($partes[1]));
+                }
+            }
+
+            return asset('storage/' . $caminhoAssinatura);
+        }
+
+        if (preg_match('/\/(uploads|documentos|links)\//', $valStr)) {
+            $caminhos = explode(',', $valStr);
+            $urls = array_map(fn($p) => asset('storage/' . ltrim(trim($p), '/')), array_filter($caminhos));
+            return implode(', ', $urls);
+        }
+
+        return $valStr;
     }
 }

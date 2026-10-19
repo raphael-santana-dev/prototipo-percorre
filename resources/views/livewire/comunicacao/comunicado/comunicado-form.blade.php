@@ -174,7 +174,7 @@
                     <label class="flex flex-col items-center justify-center w-full h-20 border border-dashed border-gray-300 bg-gray-50/50 hover:bg-gray-50 rounded-lg cursor-pointer transition">
                         <div class="flex flex-col items-center justify-center pt-4 pb-4">
                             <i class="ph ph-upload-simple text-xl text-gray-400 mb-1"></i>
-                            <p class="text-[11px] text-gray-500 font-medium">Anexar ficheiros (Opcional)</p>
+                            <p class="text-[11px] text-gray-500 font-medium">Anexar arquivos (Opcional)</p>
                         </div>
                         <input type="file" wire:model="anexos_upload" multiple class="hidden">
                     </label>

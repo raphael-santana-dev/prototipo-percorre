@@ -51,10 +51,10 @@ class PreInscricao extends Component
 
         $this->totalEtapas = max(1, $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1);
         
-        foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
+        foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
             if (!isset($this->respostas[$campo->name])) {
                 $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-                if (in_array($campo->tipo, ['check', 'matriz']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
+                if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
                     $this->respostas[$campo->name] = [];
                 } else {
                     $this->respostas[$campo->name] = '';
@@ -67,15 +67,13 @@ class PreInscricao extends Component
     {
         $regras = [];
 
-        // Validação dos campos opcionais de captação de interesse na Etapa 1
         if ($etapa === 1 && $this->deseja_informar) {
             $regras['unidade_interesse'] = 'required';
             $regras['curso_interesse'] = 'required';
             $regras['turno_interesse'] = 'required';
         }
 
-        foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
-            // Avaliação de campos condicionais
+        foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
                 $val = strtolower(trim((string)$valorGatilho));
@@ -98,7 +96,13 @@ class PreInscricao extends Component
                 if (!$condicaoAtendida) continue; 
             }
 
-            // Regras dedicadas para upload de ficheiros
+            if ($campo->tipo === 'signature') {
+                $regras['respostas.' . $campo->name] = $campo->obrigatorio
+                    ? 'required|string|starts_with:data:image/'
+                    : 'nullable|string';
+                continue;
+            }
+
             if ($campo->tipo === 'file') {
                 $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                 $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
@@ -130,12 +134,41 @@ class PreInscricao extends Component
                 continue;
             }
 
-            // Regras para campos comuns de texto, data, número, etc.
             $ruleStr = [];
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
 
-            if ($campo->subtipo === 'email') $ruleStr[] = 'email';
+            // NOVO: Lê as configurações do campo para saber se tem validações ativas
+            $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+
+            // E-MAIL E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'email') {
+                $ruleStr[] = 'email';
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
+            // CPF (MÁTEMATICA) E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'cpf') {
+                if (filter_var($cfgVal['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = function ($attribute, $value, $fail) {
+                        if (empty($value)) return; // Passa se for vazio (o required cuida disso)
+                        $c = preg_replace('/\D/', '', $value);
+                        if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                        for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                        for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                    };
+                }
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
             if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
             if ($campo->subtipo === 'date') $ruleStr[] = 'date';
             if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
@@ -158,11 +191,11 @@ class PreInscricao extends Component
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
                 $this->validateOnly($propertyName, $regras, [
-                    'uploads.*.required' => 'O envio do ficheiro é obrigatório.',
-                    'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
-                    'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
-                    'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
-                    'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                    'uploads.*.required' => 'O envio do arquivo é obrigatório.',
+                    'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
+                    'uploads.*.mimes' => 'Formato de arquivo não suportado.',
+                    'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
+                    'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
                 ]);
             }
             return;
@@ -212,15 +245,14 @@ class PreInscricao extends Component
                 'respostas.*.required' => 'Este campo é obrigatório.',
                 'respostas.*.email' => 'Indique um e-mail válido.',
                 'respostas.*.numeric' => 'Este campo aceita apenas números.',
-                'uploads.*.required' => 'O envio do ficheiro é obrigatório.',
-                'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
-                'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
-                'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
-                'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                'uploads.*.required' => 'O envio do arquivo é obrigatório.',
+                'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
+                'uploads.*.mimes' => 'Formato de arquivo não suportado.',
+                'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
+                'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
             ]);
         }
 
-        // Processa o armazenamento dos uploads temporários da etapa em curso
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
                 $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);

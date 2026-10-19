@@ -3,6 +3,7 @@
 namespace App\Modules\GestaoEducacional\UI\Livewire;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Formulario;
@@ -12,12 +13,15 @@ use App\Models\AlunoCicloAprendizagem;
 #[Title('Avaliação de Aprendizagem')]
 class FormularioAprendizagem extends Component
 {
+    use WithFileUploads;
+
     public Formulario $formulario;
     public Student $aluno;
     public $cicloAluno;
     
     public $camposDinamicos = [];
     public $respostas = [];
+    public array $uploads = [];
     public $etapaAtual = 1;
     public $totalEtapas = 1;
     
@@ -91,21 +95,118 @@ class FormularioAprendizagem extends Component
         if ($respostaSalva && is_array($respostaSalva->respostas)) {
             $this->respostas = $respostaSalva->respostas;
         } else {
-            foreach ($this->camposDinamicos->where('tipo', '!=', 'config') as $campo) {
-                $this->respostas[$campo->name] = in_array($campo->tipo, ['check', 'matriz']) ? [] : '';
+            foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+                $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $this->respostas[$campo->name] = (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) ? [] : '';
             }
         }
     }
+
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
-        foreach ($this->camposDinamicos->where('etapa', $etapa)->where('tipo', '!=', 'config') as $campo) {
+        foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+            if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
+                $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
+                $val = strtolower(trim((string)$valorGatilho));
+                $tgt = strtolower(trim((string)$campo->depende_valor));
+                $op = $campo->depende_operador ?? '=';
+                $condicaoAtendida = false;
+
+                switch($op) {
+                    case '=': $condicaoAtendida = ($val === $tgt); break;
+                    case '!=': $condicaoAtendida = ($val !== $tgt); break;
+                    case '>': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val > $tgt); break;
+                    case '<': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val < $tgt); break;
+                    case '>=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val >= $tgt); break;
+                    case '<=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val <= $tgt); break;
+                    case 'in': 
+                        $arrayAlvos = array_map('trim', explode(',', $tgt));
+                        $condicaoAtendida = in_array($val, $arrayAlvos);
+                        break;
+                }
+                if (!$condicaoAtendida) continue;
+            }
+
+            if ($campo->tipo === 'signature') {
+                $regras['respostas.' . $campo->name] = $campo->obrigatorio
+                    ? 'required|string|starts_with:data:image/'
+                    : 'nullable|string';
+                continue;
+            }
+
+            if ($campo->tipo === 'file') {
+                $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+                $maxKb = ((int)($cfg['max_size_mb'] ?? 10)) * 1024;
+                $exts = !empty($cfg['extensoes_permitidas']) ? str_replace(' ', '', $cfg['extensoes_permitidas']) : null;
+
+                $baseRule = ['file', "max:{$maxKb}"];
+                if ($exts) {
+                    $baseRule[] = "mimes:{$exts}";
+                }
+
+                $jaPossuiArquivo = !empty($this->respostas[$campo->name]);
+
+                if ($aceitaMultiplos) {
+                    if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                        $regras['uploads.' . $campo->name] = 'required|array|min:1';
+                    } else {
+                        $regras['uploads.' . $campo->name] = 'nullable|array';
+                    }
+                    $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                } else {
+                    if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
+                        $baseRule[] = 'required';
+                    } else {
+                        $baseRule[] = 'nullable';
+                    }
+                    $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                }
+                continue;
+            }
+
             $ruleStr = [];
             if ($campo->obrigatorio) $ruleStr[] = 'required';
             else $ruleStr[] = 'nullable';
             
-            if ($campo->subtipo === 'email') $ruleStr[] = 'email';
+            $ruleStr = [];
+            if ($campo->obrigatorio) $ruleStr[] = 'required';
+            else $ruleStr[] = 'nullable';
+
+            // NOVO: Lê as configurações do campo para saber se tem validações ativas
+            $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+
+            // E-MAIL E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'email') {
+                $ruleStr[] = 'email';
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
+            // CPF (MÁTEMATICA) E TRAVA DE ÚNICO
+            if ($campo->subtipo === 'cpf') {
+                if (filter_var($cfgVal['validar_cpf'] ?? true, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = function ($attribute, $value, $fail) {
+                        if (empty($value)) return; // Passa se for vazio (o required cuida disso)
+                        $c = preg_replace('/\D/', '', $value);
+                        if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                        for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                        for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                        if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                    };
+                }
+                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                        ->where('formulario_id', $this->formulario->id);
+                }
+            }
+
             if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
+            if ($campo->subtipo === 'date') $ruleStr[] = 'date';
             if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
             if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
 
@@ -114,13 +215,58 @@ class FormularioAprendizagem extends Component
         return $regras;
     }
 
+    public function removerArquivo(string $campoName, $index = null)
+    {
+        if (isset($this->respostas[$campoName])) {
+            if ($index !== null && is_array($this->respostas[$campoName])) {
+                unset($this->respostas[$campoName][$index]);
+                $this->respostas[$campoName] = array_values($this->respostas[$campoName]);
+            } else {
+                $this->respostas[$campoName] = '';
+            }
+        }
+
+        if (isset($this->uploads[$campoName])) {
+            if ($index !== null && is_array($this->uploads[$campoName])) {
+                unset($this->uploads[$campoName][$index]);
+                $this->uploads[$campoName] = array_values($this->uploads[$campoName]);
+            } else {
+                unset($this->uploads[$campoName]);
+            }
+        }
+    }
+
     public function salvarEAvancar()
     {
         if (!$this->podeResponder) return;
 
         $regras = $this->regrasPorEtapa($this->etapaAtual);
         if (!empty($regras)) {
-            $this->validate($regras, ['respostas.*.required' => 'Campo obrigatório.']);
+            $this->validate($regras, [
+                'respostas.*.required' => 'Campo obrigatório.',
+                'uploads.*.required' => 'O envio do arquivo é obrigatório.',
+            ]);
+        }
+
+        foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+            if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+
+                if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                    $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                    foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                        if ($arquivo) {
+                            $caminhos[] = $arquivo->store('aprendizagem/uploads', 'public');
+                        }
+                    }
+                    $this->respostas[$campoFile->name] = $caminhos;
+                } else {
+                    $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('aprendizagem/uploads', 'public');
+                }
+
+                unset($this->uploads[$campoFile->name]);
+            }
         }
 
         if ($this->etapaAtual < $this->totalEtapas) {
