@@ -22,12 +22,14 @@ use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
 
+
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
 class RegistrationManager extends Component
 {
     use WithPagination;
     use ComPadraoListagem;
+    use \App\Traits\ComFiltroAvancado;
 
     public $filtroNome = '';
     public $filtroStatus = '';
@@ -96,6 +98,100 @@ class RegistrationManager extends Component
             $this->filtroCiclo = $cicloPadrao->id;
             $this->ciclo_id = $cicloPadrao->id; 
         }
+    }
+
+    public function getEsquemaFiltrosProperty(): array
+    {
+        $cicloIdRef = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        $dropdowns = Cache::remember('filtros_registration_arr', 3600, function() {
+            return [
+                'status'   => StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'ciclos'   => Ciclo::orderBy('id', 'desc')->pluck('nome', 'id')->toArray(),
+                'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->pluck('nome', 'id')->toArray(),
+                'turnos'   => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'cursos'   => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->pluck('nome', 'id')->toArray(),
+            ];
+        });
+
+        $etapasOpcoes = [];
+        if ($cicloIdRef) {
+            foreach (Etapa::where('ciclo_id', $cicloIdRef)->orderBy('numero')->get() as $et) {
+                $etapasOpcoes[(string) $et->numero] = "Passo {$et->numero} - {$et->nome}";
+            }
+        }
+        $etapasOpcoes['Finalizado'] = 'Finalizado (Concluído)';
+
+        $fixos = [
+            [
+                'key'          => 'status_inscricao_id',
+                'column'       => 'status_inscricao_id',
+                'label'        => 'Status da Inscrição',
+                'icon'         => 'ph-tag',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['status'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'          => 'unidade_id',
+                'column'       => 'unidade_id',
+                'label'        => 'Unidades (1 ou mais)',
+                'icon'         => 'ph-buildings',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['unidades'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'          => 'curso_id',
+                'column'       => 'curso_id',
+                'label'        => 'Cursos (1 ou mais)',
+                'icon'         => 'ph-graduation-cap',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['cursos'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'turno_id',
+                'column'  => 'turno_id',
+                'label'   => 'Turnos',
+                'icon'    => 'ph-clock',
+                'type'    => 'multiselect',
+                'options' => $dropdowns['turnos'],
+                'section' => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'etapa_atual',
+                'column'  => 'etapa_atual',
+                'label'   => 'Etapa do Funil',
+                'icon'    => 'ph-steps',
+                'type'    => 'multiselect',
+                'options' => $etapasOpcoes,
+                'section' => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'created_at',
+                'column'  => 'created_at',
+                'label'   => 'Período de Inscrição',
+                'icon'    => 'ph-calendar',
+                'type'    => 'date_range',
+                'section' => 'Filtros Principais',
+            ],
+        ];
+
+        // Carrega automaticamente todos os campos dinâmicos do Ciclo selecionado
+        $dinamicos = [];
+        if ($cicloIdRef) {
+            $camposCiclo = \App\Models\CampoFormulario::where('ciclo_id', $cicloIdRef)
+                ->orderBy('etapa')
+                ->orderBy('ordem')
+                ->get();
+            $dinamicos = $this->mapearCamposDinamicosParaFiltro($camposCiclo);
+        }
+
+        return array_merge($fixos, $dinamicos);
     }
 
     protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
@@ -287,7 +383,8 @@ class RegistrationManager extends Component
             }
         }
 
-        return $query; 
+        $this->aplicarFiltrosAvancadosNaQuery($query, $this->esquemaFiltros, 'inscricoes', 'dados_dinamicos');
+        return $query;
     }
 
     public function abrirRegras(int $id)

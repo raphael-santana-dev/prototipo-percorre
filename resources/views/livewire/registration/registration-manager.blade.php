@@ -83,7 +83,10 @@
             @endif
         </x-slot>
     </x-page-header>
-
+    <x-dynamic-filter 
+            mode="sidebar" 
+            :schema="$this->esquemaFiltros" 
+            :filtrosAtivos="$filtrosAvancados" />
     <x-table
         :headers="$this->headers"
         :registros="$registros"
@@ -101,6 +104,11 @@
         </x-slot>
 
         <x-slot name="filters">
+
+        <x-dynamic-filter-chips 
+                        :chips="$this->obterChipsAtivos($this->esquemaFiltros)" 
+                        :showToggleSidebar="true" 
+                        :painelAberto="$painelFiltrosAberto" />
             <div class="w-full flex flex-col gap-4">
                 
                 {{-- LINHA 1: Botões de Filtros / Chips --}}
