@@ -83,412 +83,343 @@
             @endif
         </x-slot>
     </x-page-header>
-    <x-dynamic-filter 
+
+    {{-- LAYOUT LADO A LADO: SIDEBAR DE FILTROS À ESQUERDA + TABELA À DIREITA --}}
+    <div class="flex flex-col lg:flex-row gap-5 items-start w-full mt-2">
+        
+        {{-- SIDEBAR ESQUERDA DE FILTROS DINÂMICOS --}}
+        <x-dynamic-filter 
             mode="sidebar" 
             :schema="$this->esquemaFiltros" 
             :filtrosAtivos="$filtrosAvancados" />
-    <x-table
-        :headers="$this->headers"
-        :registros="$registros"
-        :ordenacaoCampo="$ordenacaoCampo"
-        :ordenacaoDirecao="$ordenacaoDirecao"
-        :permiteGrid="$permiteGrid"
-        :modoExibicao="$modoExibicao">
 
-        {{-- CAMPO DE BUSCA INLINE NA TABELA --}}
-        <x-slot name="search">
-            <div class="relative w-full">
-                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome, E-mail ou CPF" class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
-            </div>
-        </x-slot>
+        {{-- COLUNA PRINCIPAL DA LISTAGEM --}}
+        <div class="flex-1 min-w-0 w-full">
+            <x-table
+                :headers="$this->headers"
+                :registros="$registros"
+                :ordenacaoCampo="$ordenacaoCampo"
+                :ordenacaoDirecao="$ordenacaoDirecao"
+                :permiteGrid="$permiteGrid"
+                :modoExibicao="$modoExibicao">
 
-        <x-slot name="filters">
-
-        <x-dynamic-filter-chips 
-                        :chips="$this->obterChipsAtivos($this->esquemaFiltros)" 
-                        :showToggleSidebar="true" 
-                        :painelAberto="$painelFiltrosAberto" />
-            <div class="w-full flex flex-col gap-4">
-                
-                {{-- LINHA 1: Botões de Filtros / Chips --}}
-                <div wire:ignore.self x-data="{
-                    visible: [],
-                    allFilters: ['status', 'etapa', 'unidade', 'curso'],
-                    init() {
-                        if ($wire.filtroStatus && !this.visible.includes('status')) this.visible.push('status');
-                        if ($wire.filtroEtapa && !this.visible.includes('etapa')) this.visible.push('etapa');
-                        if ($wire.filtroUnidade && !this.visible.includes('unidade')) this.visible.push('unidade');
-                        if ($wire.filtroCurso && !this.visible.includes('curso')) this.visible.push('curso');
-                    },
-                    add(f) { if(!this.visible.includes(f)) this.visible.push(f); },
-                    remove(f) {
-                        $wire.set('filtro' + f.charAt(0).toUpperCase() + f.slice(1), '');
-                        this.visible = this.visible.filter(i => i !== f);
-                    },
-                    get canAddMore() { return this.visible.length < this.allFilters.length; }
-                }" class="flex flex-wrap items-center gap-2">
-                    
-                    {{-- Chip Fixo: Ciclo com Indicador de Status --}}
-                    @php
-                        $cicloSelecionadoObj = !empty($filtroCiclo) ? \App\Models\Ciclo::find($filtroCiclo) : null;
-                    @endphp
-
-                    <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
-                        <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[160px] truncate">
-                            <option value="">Qualquer Ciclo</option>
-                            @foreach($ciclosDb as $id => $nome) 
-                                <option value="{{ $id }}">{{ $nome }}</option> 
-                            @endforeach
-                        </select>
-
-                        @if($cicloSelecionadoObj)
-                            @if($cicloSelecionadoObj->status && $cicloSelecionadoObj->data_inicio <= now() && $cicloSelecionadoObj->data_fim >= now())
-                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" title="Ciclo com inscrições abertas e vigentes">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
-                                </span>
-                            @else
-                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" title="Exibindo último ciclo registado">
-                                    Histórico
-                                </span>
-                            @endif
-                        @endif
+                {{-- CAMPO DE BUSCA INLINE NA TABELA --}}
+                <x-slot name="search">
+                    <div class="relative w-full">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="text" wire:model.live.debounce.500ms="filtroNome" placeholder="Nome, E-mail ou CPF" class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
                     </div>
+                </x-slot>
 
-                    {{-- Chip: Status --}}
-                    <div x-show="visible.includes('status')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Status</span>
-                        <select wire:model.live="filtroStatus" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @foreach($statusInscricoesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                        </select>
-                        <button @click="remove('status')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                    </div>
-
-                    {{-- Chip: Etapa --}}
-                    <div x-show="visible.includes('etapa')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Etapa</span>
-                        <select wire:model.live="filtroEtapa" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @if(!empty($etapasDb))
-                                @foreach($etapasDb as $numero => $nome) <option value="{{ $numero }}">Passo {{ $numero }}</option> @endforeach
-                            @endif
-                            <option value="Finalizado">Finalizado</option>
-                        </select>
-                        <button @click="remove('etapa')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                    </div>
-
-                    {{-- Chip: Unidade --}}
-                    <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Unidade</span>
-                        <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @foreach($unidadesDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                        </select>
-                        <button @click="remove('unidade')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                    </div>
-
-                    {{-- Chip: Curso --}}
-                    <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Curso</span>
-                        <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @foreach($cursosDb as $id => $nome) <option value="{{ $id }}">{{ $nome }}</option> @endforeach
-                        </select>
-                        <button @click="remove('curso')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                    </div>
-
-                    <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
-                        <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
-                            + Adicionar Filtro
-                        </button>
-                        <div x-show="open" @click.away="open = false" class="absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-2">
-                            <button x-show="!visible.includes('status')" @click="add('status'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-tag text-gray-400 text-lg"></i> Status</button>
-                            <button x-show="!visible.includes('etapa')" @click="add('etapa'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-steps text-gray-400 text-lg"></i> Etapa do Funil</button>
-                            <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-buildings text-gray-400 text-lg"></i> Unidade Presencial</button>
-                            <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"><i class="ph-bold ph-graduation-cap text-gray-400 text-lg"></i> Curso de Interesse</button>
-                        </div>
-                    </div>
-
-                    <button x-show="$wire.filtroStatus || $wire.filtroUnidade || $wire.filtroCurso || $wire.filtroEtapa || $wire.filtroNome" x-cloak wire:click="limparFiltros" @click="visible = []" class="text-sm font-medium text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition">
-                        Limpar Todos
-                    </button>
-                </div>
-
-                {{-- LINHA 2: Área de Ações em Lote e Quick Select --}}
-                @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                    
-                    {{-- Botões Top 10, Top 50... --}}
-                    <div class="flex items-center gap-3 text-sm mt-1">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Seleção Rápida:</span>
-                        <button wire:click="selecionarTop(10)" class="text-purpura-600 font-bold hover:underline">Top 10</button> &middot;
-                        <button wire:click="selecionarTop(50)" class="text-purpura-600 font-bold hover:underline">Top 50</button> &middot;
-                        <button wire:click="selecionarTop(100)" class="text-purpura-600 font-bold hover:underline">Top 100</button>
-                        @if(count($selecionadas) > 0)
-                            <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos</button>
-                        @endif
-                    </div>
-                    
-                    {{-- Barra Escura do Lote --}}
-                    @if(count($selecionadas) > 0)
-                    <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all mt-2">
-                        <div class="flex items-center shrink-0">
-                            <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
-                        </div>
+                <x-slot name="filters">
+                    <div class="w-full flex flex-col gap-3">
                         
-                        @if($cicloBloqueado)
-                            {{-- MODO CICLO BLOQUEADO: APENAS SOLICITAR ALTERAÇÃO --}}
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
-                                    <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
-                                </span>
-                                <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
-                                    <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
-                                </button>
-                            </div>
-                        @else
-                            {{-- MODO NORMAL: ALTERAÇÕES DIRETAS --}}
-                            <div class="flex items-center gap-2 w-full sm:w-auto">
-                                <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
-                                    <option value="">Alterar status para...</option>
-                                    @foreach($statusInscricoesDb as $id => $nome)
-                                        <option value="{{ $id }}">{{ $nome }}</option>
+                        {{-- LINHA 1: Seletor de Ciclo Fixo + Botão Mostrar/Ocultar Sidebar + Chips Ativos --}}
+                        <div class="flex flex-wrap items-center gap-2">
+                            @php
+                                $cicloSelecionadoObj = !empty($filtroCiclo) ? \App\Models\Ciclo::find($filtroCiclo) : null;
+                            @endphp
+
+                            <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
+                                <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
+                                <select wire:model.live="filtroCiclo" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[160px] truncate">
+                                    <option value="">Qualquer Ciclo</option>
+                                    @foreach($ciclosDb as $id => $nome) 
+                                        <option value="{{ $id }}">{{ $nome }}</option> 
                                     @endforeach
                                 </select>
-                                <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">Aplicar</button>
+
+                                @if($cicloSelecionadoObj)
+                                    @if($cicloSelecionadoObj->status && $cicloSelecionadoObj->data_inicio <= now() && $cicloSelecionadoObj->data_fim >= now())
+                                        <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" title="Ciclo com inscrições abertas e vigentes">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo
+                                        </span>
+                                    @else
+                                        <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" title="Exibindo último ciclo registado">
+                                            Histórico
+                                        </span>
+                                    @endif
+                                @endif
+                            </div>
+
+                            <div class="flex-1 min-w-[200px]">
+                                <x-dynamic-filter-chips 
+                                    :chips="$this->obterChipsAtivos($this->esquemaFiltros)" 
+                                    :showToggleSidebar="true" 
+                                    :painelAberto="$painelFiltrosAberto" />
+                            </div>
+                        </div>
+
+                        {{-- LINHA 2: Área de Ações em Lote e Quick Select --}}
+                        @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                            <div class="flex items-center gap-3 text-sm mt-1">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Seleção Rápida:</span>
+                                <button wire:click="selecionarTop(10)" class="text-purpura-600 font-bold hover:underline">Top 10</button> &middot;
+                                <button wire:click="selecionarTop(50)" class="text-purpura-600 font-bold hover:underline">Top 50</button> &middot;
+                                <button wire:click="selecionarTop(100)" class="text-purpura-600 font-bold hover:underline">Top 100</button>
+                                @if(count($selecionadas) > 0)
+                                    <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos</button>
+                                @endif
                             </div>
                             
-                            <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
-                                Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
-                            </button>
+                            @if(count($selecionadas) > 0)
+                            <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all mt-1">
+                                <div class="flex items-center shrink-0">
+                                    <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
+                                </div>
+                                
+                                @if($cicloBloqueado)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-amber-300 font-bold flex items-center gap-1 mr-2">
+                                            <i class="ph-bold ph-lock-key"></i> Ciclo Bloqueado
+                                        </span>
+                                        <button wire:click="abrirModalSolicitacao" class="btn btn--primary btn--small bg-amber-600 hover:bg-amber-700 border-none shadow-sm flex items-center gap-1.5">
+                                            <i class="ph-bold ph-paper-plane-tilt"></i> Solicitar Alteração
+                                        </button>
+                                    </div>
+                                @else
+                                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                                        <select wire:model="novoStatusId" class="w-full sm:w-auto h-9 !py-0 text-sm border-transparent bg-gray-800 text-white focus:ring-1 focus:ring-white rounded-lg">
+                                            <option value="">Alterar status para...</option>
+                                            @foreach($statusInscricoesDb as $id => $nome)
+                                                <option value="{{ $id }}">{{ $nome }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button wire:click="salvarStatusEmLote" class="btn btn--primary btn--small bg-blue-600 hover:bg-blue-700 border-none">Aplicar</button>
+                                    </div>
+                                    
+                                    <button wire:click="avancarSelecionadas" class="btn btn--ondark btn--small">
+                                        Avançar Etapa <i class="ph-bold ph-arrow-right"></i>
+                                    </button>
 
-                            <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
-                                Alterar ciclo <i class="ph-bold ph-calendar text-lg"></i>
-                            </button>
-                            
-                            <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
-                                <i class="ph-bold ph-list-dashes text-lg"></i>
-                            </button>
+                                    <button wire:click="abrirModalMoverCiclo" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Mover para outro Ciclo">
+                                        Alterar ciclo <i class="ph-bold ph-calendar text-lg"></i>
+                                    </button>
+                                    
+                                    <button wire:click="abrirModalLote" class="btn btn--ondark btn--small border-transparent hover:bg-gray-800 px-3" title="Visualizar Lote">
+                                        <i class="ph-bold ph-list-dashes text-lg"></i>
+                                    </button>
+                                @endif
+                            </div>
+                            @endif
                         @endif
+
                     </div>
-                    @endif
-                @endif
+                </x-slot>
 
-            </div>
-        </x-slot>
-
-        @forelse($registros as $inscricao)
-            <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
-                
-                <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
-                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
-                </td>
-                
-                <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
-                    <div class="flex items-center gap-3">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($inscricao->nome) }}&background=f3f4f6&color=111827&bold=true" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 hidden sm:block shrink-0">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white truncate max-w-[200px]" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</span>
-                            <span class="text-xs text-gray-500 leading-tight truncate max-w-[200px]">{{ $inscricao->email ?? $inscricao->cpf }}</span>
-                        </div>
-                    </div>
-                </td>
-
-                {{-- COLUNA DE FLAGS DE CONTATO: E-MAIL, WHATSAPP E TELEFONE --}}
-                <td class="px-4 py-1.5 text-center whitespace-nowrap">
-                    @php
-                        $contatosInsc = $inscricao->contatos ?? collect();
-                        $cEmail = $contatosInsc->where('canal', 'email');
-                        $cWpp   = $contatosInsc->where('canal', 'whatsapp');
-                        $cTel   = $contatosInsc->where('canal', 'telefone');
-
-                        $temEmail  = $cEmail->isNotEmpty();
-                        $respEmail = $cEmail->where('houve_resposta', true)->isNotEmpty();
-
-                        $temWpp  = $cWpp->isNotEmpty();
-                        $respWpp = $cWpp->where('houve_resposta', true)->isNotEmpty();
-
-                        $temTel  = $cTel->isNotEmpty();
-                        $respTel = $cTel->where('houve_resposta', true)->isNotEmpty();
-                    @endphp
-                    <div class="inline-flex items-center justify-center gap-1.5">
-                        {{-- Flag 1: E-mail --}}
-                        <button type="button"
-                                wire:click="abrirModalContato({{ $inscricao->id }}, 'email')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temEmail ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-600 hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temEmail ? 'E-mail: ' . $cEmail->count() . ' tentativa(s) registrada(s)' . ($respEmail ? ' (Respondido)' : '') : 'Registrar tentativa de contato por E-mail' }}">
-                            <i class="{{ $temEmail ? 'ph-fill' : 'ph-bold' }} ph-envelope-simple text-sm"></i>
-                            @if($respEmail)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
-                            @endif
-                        </button>
-
-                        {{-- Flag 2: WhatsApp --}}
-                        <button type="button"
-                                wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temWpp ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-600 hover:border-emerald-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temWpp ? 'WhatsApp: ' . $cWpp->count() . ' tentativa(s) registrada(s)' . ($respWpp ? ' (Respondido)' : '') : 'Registrar tentativa de contato por WhatsApp' }}">
-                            <i class="{{ $temWpp ? 'ph-fill' : 'ph-bold' }} ph-whatsapp-logo text-sm"></i>
-                            @if($respWpp)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
-                            @endif
-                        </button>
-
-                        {{-- Flag 3: Telefone --}}
-                        <button type="button"
-                                wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temTel ? 'bg-purpura-600 text-white border-purpura-700 hover:bg-purpura-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-purpura-600 hover:border-purpura-300 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temTel ? 'Telefone: ' . $cTel->count() . ' tentativa(s) registrada(s)' . ($respTel ? ' (Atendido/Respondido)' : '') : 'Registrar tentativa de contato por Telefone' }}">
-                            <i class="{{ $temTel ? 'ph-fill' : 'ph-bold' }} ph-phone-call text-sm"></i>
-                            @if($respTel)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato atendeu/respondeu"></span>
-                            @endif
-                        </button>
-                    </div>
-                </td>
-
-                <td class="px-4 py-1.5 whitespace-nowrap">
-                    @if($inscricao->origem === 'importacao')
-                        <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Importação</span>
-                    @elseif($inscricao->origem === 'manual')
-                        <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-hand-pointing"></i> Manual</span>
-                    @else
-                        <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Formulário</span>
-                    @endif
-                </td>
-                
-                <td class="px-4 py-1.5 whitespace-nowrap">
-                    <div class="font-medium text-gray-700 text-[13px] dark:text-gray-300 truncate max-w-[150px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
-                    <div class="text-[11px] text-gray-400 truncate max-w-[150px]">{{ $inscricao->unidade->nome ?? '-' }}</div>
-                </td>
-                
-                <td class="px-4 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    @if($inscricao->etapa_atual == 99)
-                        <span class="font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-check-circle"></i> Finalizado</span>
-                    @elseif($inscricao->etapa_atual == 100)
-                        <span class="font-medium text-orange-500 flex items-center gap-1.5"><i class="ph-bold ph-clock"></i> Em Espera</span>
-                    @else
-                        Passo {{ $inscricao->etapa_atual }}
-                    @endif
-                </td>
-
-                <td class="px-4 py-1.5 text-center whitespace-nowrap">
-                    <span class="font-bold text-gray-800 dark:text-gray-200">
-                        {{ $inscricao->pontuacao_total ?? 0 }}
-                    </span>
-                </td>
-                
-                <td class="px-4 py-1.5 text-center whitespace-nowrap">
-                    @if($inscricao->posicao_ranking_geral)
-                        <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400">
-                            {{ $inscricao->posicao_ranking_geral }}º
-                        </span>
-                    @else
-                        <span class="text-gray-300 dark:text-gray-600">-</span>
-                    @endif
-                </td>
-                
-                <td class="px-4 py-1.5 whitespace-nowrap">
-                    @php $corHex = $inscricao->statusInscricao->cor ?? '#9CA3AF'; @endphp
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
-                        <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
-                        {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                    </span>
-                </td>
-                
-                <td class="px-4 py-1.5 text-right whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-1">
-                        <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
+                @forelse($registros as $inscricao)
+                    <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                         
-                        <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
-
-                        @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
-                            <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400" title="Ver Perfil Completo">
-                                <i class="text-lg ph-bold ph-eye"></i>
-                            </a>
-                        @endif
-
-                        @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
-                            <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
-                                <i class="text-lg ph-bold ph-trash"></i>
-                            </button>
-                        @endif
-                    </div>
-                </td>
-            </tr>
-        @empty
-            <tr>
-                <td colspan="13" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-                    <div class="flex flex-col items-center justify-center">
-                        <i class="ph ph-magnifying-glass text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
-                        <p class="font-medium text-gray-600 dark:text-gray-300">Nenhuma inscrição encontrada.</p>
-                        <p class="text-xs mt-1">Tente ajustar ou limpar os filtros de busca.</p>
-                    </div>
-                </td>
-            </tr>   
-        @endforelse
-
-        <x-slot name="gridSlot">
-            @foreach($registros as $inscricao)
-                <div wire:key="card-inscricao-{{ $inscricao->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
-                    
-                    <div class="flex items-center justify-between mb-4 w-full">
-                        @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
-                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
-                            <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
-                            {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
-                        </span>
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
+                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
+                        </td>
                         
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
-                        </div>
-                    </div>
+                        <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
+                            <div class="flex items-center gap-3">
+                                <img src="https://ui-avatars.com/api/?name={{ urlencode($inscricao->nome) }}&background=f3f4f6&color=111827&bold=true" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 hidden sm:block shrink-0">
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white truncate max-w-[200px]" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</span>
+                                    <span class="text-xs text-gray-500 leading-tight truncate max-w-[200px]">{{ $inscricao->email ?? $inscricao->cpf }}</span>
+                                </div>
+                            </div>
+                        </td>
 
-                    <div class="flex items-center gap-3 mb-4 w-full">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($inscricao->nome) }}&background=f3f4f6&color=111827&bold=true" class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 shrink-0">
-                        <div class="overflow-hidden">
-                            <h4 class="text-sm font-medium text-gray-900 truncate dark:text-white">{{ $inscricao->nome }}</h4>
-                            <p class="text-xs text-gray-500 truncate dark:text-gray-400">ID: {{ $inscricao->id }} • {{ $inscricao->cpf }}</p>
-                        </div>
-                    </div>
+                        {{-- COLUNA DE FLAGS DE CONTATO: E-MAIL, WHATSAPP E TELEFONE --}}
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @php
+                                $contatosInsc = $inscricao->contatos ?? collect();
+                                $cEmail = $contatosInsc->where('canal', 'email');
+                                $cWpp   = $contatosInsc->where('canal', 'whatsapp');
+                                $cTel   = $contatosInsc->where('canal', 'telefone');
 
-                    <div class="divider divider--horizontal border-dashed my-2"></div>
+                                $temEmail  = $cEmail->isNotEmpty();
+                                $respEmail = $cEmail->where('houve_resposta', true)->isNotEmpty();
 
-                    <div class="flex items-center justify-between mt-2 w-full">
-                        <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400">
-                            <i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> 
+                                $temWpp  = $cWpp->isNotEmpty();
+                                $respWpp = $cWpp->where('houve_resposta', true)->isNotEmpty();
+
+                                $temTel  = $cTel->isNotEmpty();
+                                $respTel = $cTel->where('houve_resposta', true)->isNotEmpty();
+                            @endphp
+                            <div class="inline-flex items-center justify-center gap-1.5">
+                                {{-- Flag 1: E-mail --}}
+                                <button type="button"
+                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'email')"
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temEmail ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-600 hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                        title="{{ $temEmail ? 'E-mail: ' . $cEmail->count() . ' tentativa(s) registrada(s)' . ($respEmail ? ' (Respondido)' : '') : 'Registrar tentativa de contato por E-mail' }}">
+                                    <i class="{{ $temEmail ? 'ph-fill' : 'ph-bold' }} ph-envelope-simple text-sm"></i>
+                                    @if($respEmail)
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
+                                    @endif
+                                </button>
+
+                                {{-- Flag 2: WhatsApp --}}
+                                <button type="button"
+                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')"
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temWpp ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-600 hover:border-emerald-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                        title="{{ $temWpp ? 'WhatsApp: ' . $cWpp->count() . ' tentativa(s) registrada(s)' . ($respWpp ? ' (Respondido)' : '') : 'Registrar tentativa de contato por WhatsApp' }}">
+                                    <i class="{{ $temWpp ? 'ph-fill' : 'ph-bold' }} ph-whatsapp-logo text-sm"></i>
+                                    @if($respWpp)
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
+                                    @endif
+                                </button>
+
+                                {{-- Flag 3: Telefone --}}
+                                <button type="button"
+                                        wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')"
+                                        class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temTel ? 'bg-purpura-600 text-white border-purpura-700 hover:bg-purpura-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-purpura-600 hover:border-purpura-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                        title="{{ $temTel ? 'Telefone: ' . $cTel->count() . ' tentativa(s) registrada(s)' . ($respTel ? ' (Atendido/Respondido)' : '') : 'Registrar tentativa de contato por Telefone' }}">
+                                    <i class="{{ $temTel ? 'ph-fill' : 'ph-bold' }} ph-phone-call text-sm"></i>
+                                    @if($respTel)
+                                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato atendeu/respondeu"></span>
+                                    @endif
+                                </button>
+                            </div>
+                        </td>
+
+                        <td class="px-4 py-1.5 whitespace-nowrap">
+                            @if($inscricao->origem === 'importacao')
+                                <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Importação</span>
+                            @elseif($inscricao->origem === 'manual')
+                                <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-hand-pointing"></i> Manual</span>
+                            @else
+                                <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Formulário</span>
+                            @endif
+                        </td>
+                        
+                        <td class="px-4 py-1.5 whitespace-nowrap">
+                            <div class="font-medium text-gray-700 text-[13px] dark:text-gray-300 truncate max-w-[150px]">{{ $inscricao->curso->nome ?? 'Não selecionado' }}</div>
+                            <div class="text-[11px] text-gray-400 truncate max-w-[150px]">{{ $inscricao->unidade->nome ?? '-' }}</div>
+                        </td>
+                        
+                        <td class="px-4 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
                             @if($inscricao->etapa_atual == 99)
-                                <span class="text-emerald-600 dark:text-emerald-400">Finalizado</span>
+                                <span class="font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-check-circle"></i> Finalizado</span>
                             @elseif($inscricao->etapa_atual == 100)
-                                <span class="text-orange-500">Em Espera</span>
+                                <span class="font-medium text-orange-500 flex items-center gap-1.5"><i class="ph-bold ph-clock"></i> Em Espera</span>
                             @else
                                 Passo {{ $inscricao->etapa_atual }}
                             @endif
-                        </div>
-                        <div class="flex flex-col items-end gap-1">
-                            <div class="text-xs font-bold text-gray-900 dark:text-white">
-                                {{ $inscricao->pontuacao_total ?? 0 }} pts
-                            </div>
-                            <div class="flex flex-wrap justify-end gap-1 mt-1">
-                                @if($inscricao->posicao_ranking_geral)
-                                    <span class="tag tag--small tag--outline tag--neutral" title="Ranking Geral">G: {{ $inscricao->posicao_ranking_geral }}º</span>
+                        </td>
+
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            <span class="font-bold text-gray-800 dark:text-gray-200">
+                                {{ $inscricao->pontuacao_total ?? 0 }}
+                            </span>
+                        </td>
+                        
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @if($inscricao->posicao_ranking_geral)
+                                <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                                    {{ $inscricao->posicao_ranking_geral }}º
+                                </span>
+                            @else
+                                <span class="text-gray-300 dark:text-gray-600">-</span>
+                            @endif
+                        </td>
+                        
+                        <td class="px-4 py-1.5 whitespace-nowrap">
+                            @php $corHex = $inscricao->statusInscricao->cor ?? '#9CA3AF'; @endphp
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
+                                <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
+                                {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                            </span>
+                        </td>
+                        
+                        <td class="px-4 py-1.5 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1">
+                                <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
+                                
+                                <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
+
+                                @if(feature('inscricao.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.visualizar')))
+                                    <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 font-bold hover:text-blue-400" title="Ver Perfil Completo">
+                                        <i class="text-lg ph-bold ph-eye"></i>
+                                    </a>
+                                @endif
+
+                                @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
+                                    <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
+                                        <i class="text-lg ph-bold ph-trash"></i>
+                                    </button>
                                 @endif
                             </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="13" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="ph ph-magnifying-glass text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="font-medium text-gray-600 dark:text-gray-300">Nenhuma inscrição encontrada.</p>
+                                <p class="text-xs mt-1">Tente ajustar ou limpar os filtros de busca.</p>
+                            </div>
+                        </td>
+                    </tr>   
+                @endforelse
+
+                <x-slot name="gridSlot">
+                    @foreach($registros as $inscricao)
+                        <div wire:key="card-inscricao-{{ $inscricao->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                            
+                            <div class="flex items-center justify-between mb-4 w-full">
+                                @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp
+                                <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
+                                    {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                                </span>
+                                
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 mb-4 w-full">
+                                <img src="https://ui-avatars.com/api/?name={{ urlencode($inscricao->nome) }}&background=f3f4f6&color=111827&bold=true" class="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 shrink-0">
+                                <div class="overflow-hidden">
+                                    <h4 class="text-sm font-medium text-gray-900 truncate dark:text-white">{{ $inscricao->nome }}</h4>
+                                    <p class="text-xs text-gray-500 truncate dark:text-gray-400">ID: {{ $inscricao->id }} • {{ $inscricao->cpf }}</p>
+                                </div>
+                            </div>
+
+                            <div class="divider divider--horizontal border-dashed my-2"></div>
+
+                            <div class="flex items-center justify-between mt-2 w-full">
+                                <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                                    <i class="text-xs ph-fill ph-{{ $inscricao->origem === 'importacao' ? 'upload-simple' : ($inscricao->origem === 'manual' ? 'hand-pointing' : 'globe') }}"></i> 
+                                    @if($inscricao->etapa_atual == 99)
+                                        <span class="text-emerald-600 dark:text-emerald-400">Finalizado</span>
+                                    @elseif($inscricao->etapa_atual == 100)
+                                        <span class="text-orange-500">Em Espera</span>
+                                    @else
+                                        Passo {{ $inscricao->etapa_atual }}
+                                    @endif
+                                </div>
+                                <div class="flex flex-col items-end gap-1">
+                                    <div class="text-xs font-bold text-gray-900 dark:text-white">
+                                        {{ $inscricao->pontuacao_total ?? 0 }} pts
+                                    </div>
+                                    <div class="flex flex-wrap justify-end gap-1 mt-1">
+                                        @if($inscricao->posicao_ranking_geral)
+                                            <span class="tag tag--small tag--outline tag--neutral" title="Ranking Geral">G: {{ $inscricao->posicao_ranking_geral }}º</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-1 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 w-full">
+                                <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-info"></i></button>
+                                <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-arrow-right"></i></a>
+                                <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition" onclick="confirm('Excluir permanentemente essa inscrição?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
+                            </div>
+
                         </div>
-                    </div>
+                    @endforeach
+                </x-slot>
 
-                    <div class="flex items-center justify-end gap-1 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 w-full">
-                        <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-info"></i></button>
-                        <a href="{{ route('inscricoes.show', $inscricao->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700 rounded-md transition"><i class="text-lg ph ph-arrow-right"></i></a>
-                        <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition" onclick="confirm('Excluir permanentemente essa inscrição?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
-                    </div>
-
-                </div>
-            @endforeach
-        </x-slot>
-
-    </x-table>
+            </x-table>
+        </div>
+    </div>
 
     {{-- MODAL DE LOTE E OUTROS --}}
     @if($modalLoteAberto)
@@ -797,7 +728,6 @@
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="card !w-full !max-w-2xl !p-0 shadow-2xl overflow-hidden bg-white dark:bg-gray-800 flex flex-col max-h-[90vh]">
                 
-                {{-- CABEÇALHO DO MODAL (w-full garantido) --}}
                 <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-amber-50 dark:bg-amber-950/30 w-full shrink-0">
                     <div class="flex items-center gap-3">
                         <span class="p-2 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 rounded-lg text-xl shrink-0">
@@ -817,7 +747,6 @@
                     </button>
                 </div>
 
-                {{-- CORPO DO FORMULÁRIO (w-full com scroll) --}}
                 <div class="p-6 space-y-5 overflow-y-auto custom-scrollbar w-full flex-1">
                     <div>
                         <label class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">
@@ -884,7 +813,6 @@
                     </div>
                 </div>
 
-                {{-- RODAPÉ DO MODAL (w-full e justify-end garantidos) --}}
                 <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end items-center gap-3 w-full shrink-0">
                     <button type="button" wire:click="$set('modalSolicitarAlteracaoAberto', false)" class="btn btn--secondary btn--medium">
                         Cancelar

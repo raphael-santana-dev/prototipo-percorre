@@ -15,12 +15,15 @@ use App\Models\OfertaVaga;
 use App\Models\ConfiguracaoGeral;
 use App\Models\SystemTask;
 use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Fluxo de Inscrição')]
 class KanbanBoard extends Component
 {
+    use \App\Traits\ComFiltroAvancado;
+
     public $cicloId = '';
     public array $selecionados = []; 
     public $statusDestinoLote = '';
@@ -54,6 +57,70 @@ class KanbanBoard extends Component
         } else {
             $this->cicloId = '';
         }
+    }
+
+    public function getEsquemaFiltrosProperty(): array
+    {
+        $user = auth()->user();
+        $unidadesQuery = Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome');
+        if (!$user->hasRole('dev') && method_exists($user, 'unidades') && $user->unidades()->count() > 0) {
+            $unidadesQuery->whereIn('id', $user->unidades->pluck('id'));
+        }
+
+        $unidadesOpcoes = $unidadesQuery->pluck('nome', 'id')->toArray();
+        $cursosOpcoes   = Curso::whereIn('status', ['Ativo', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
+        $turnosOpcoes   = Turno::orderBy('nome')->pluck('nome', 'id')->toArray();
+
+        $fixos = [
+            [
+                'key'          => 'unidade_id',
+                'column'       => 'unidade_id',
+                'label'        => 'Unidades (1 ou mais)',
+                'icon'         => 'ph-buildings',
+                'type'         => 'multiselect',
+                'options'      => $unidadesOpcoes,
+                'default_open' => true,
+                'section'      => 'Filtros do Fluxo',
+            ],
+            [
+                'key'          => 'curso_id',
+                'column'       => 'curso_id',
+                'label'        => 'Cursos (1 ou mais)',
+                'icon'         => 'ph-graduation-cap',
+                'type'         => 'multiselect',
+                'options'      => $cursosOpcoes,
+                'default_open' => true,
+                'section'      => 'Filtros do Fluxo',
+            ],
+            [
+                'key'     => 'turno_id',
+                'column'  => 'turno_id',
+                'label'   => 'Turnos',
+                'icon'    => 'ph-clock',
+                'type'    => 'multiselect',
+                'options' => $turnosOpcoes,
+                'section' => 'Filtros do Fluxo',
+            ],
+            [
+                'key'     => 'created_at',
+                'column'  => 'created_at',
+                'label'   => 'Período de Inscrição',
+                'icon'    => 'ph-calendar',
+                'type'    => 'date_range',
+                'section' => 'Filtros do Fluxo',
+            ],
+        ];
+
+        $dinamicos = [];
+        if (!empty($this->cicloId)) {
+            $camposCiclo = \App\Models\CampoFormulario::where('ciclo_id', $this->cicloId)
+                ->orderBy('etapa')
+                ->orderBy('ordem')
+                ->get();
+            $dinamicos = $this->mapearCamposDinamicosParaFiltro($camposCiclo);
+        }
+
+        return array_merge($fixos, $dinamicos);
     }
 
     protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
@@ -141,7 +208,7 @@ class KanbanBoard extends Component
 
     public function limparFiltros()
     {
-        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna', 'filtroDataInicio', 'selecionados']);
+        $this->reset(['filtroBusca', 'filtroCurso', 'filtroUnidade', 'filtroDataFim', 'ordenacao', 'limitesPorColuna', 'filtroDataInicio', 'selecionados', 'filtrosAvancados']);
         
         $cicloPadrao = $this->obterCicloPadrao();
         $this->cicloId = $cicloPadrao ? (string) $cicloPadrao->id : '';
@@ -187,6 +254,8 @@ class KanbanBoard extends Component
             elseif (strlen($dataFim) === 16) $dataFim .= ':59';
             $queryBase->where('created_at', '<=', $dataFim);
         }
+
+        $this->aplicarFiltrosAvancadosNaQuery($queryBase, $this->esquemaFiltros, 'inscricoes', 'dados_dinamicos');
 
         return $queryBase;
     }
