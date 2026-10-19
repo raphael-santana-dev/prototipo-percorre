@@ -56,6 +56,8 @@
             }
         })();
     </script>
+
+    @includeIf('components.partials.analytics-heatmap')
     
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     @livewireStyles
@@ -67,7 +69,10 @@
 </head>
 
 <body class="flex flex-col min-h-screen text-gray-900 transition-colors duration-300 {{ request()->query('embed') ? 'bg-transparent' : 'bg-slate-50 dark:bg-gray-950' }} dark:text-gray-100 antialiased relative overflow-x-hidden">
-    
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCLCLKXJ"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     @if(!request()->query('embed'))
     <div x-data="{ drawerOpen: false }">
         

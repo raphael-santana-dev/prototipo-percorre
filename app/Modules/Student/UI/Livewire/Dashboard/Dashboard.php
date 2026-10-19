@@ -120,7 +120,7 @@ class Dashboard extends Component
 
         $documentosPendentes = false;
 
-        if ($inscricaoAtual && $inscricaoAtual->etapa_atual < 2) {
+        if ($inscricaoAtual) {
             $temDocumentos = \App\Modules\Matricula\Domain\Models\DocumentoExigido::where('ciclo_id', $inscricaoAtual->ciclo_id)->exists();
             if ($temDocumentos) {
                 $documentosPendentes = true;

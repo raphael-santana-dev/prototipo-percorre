@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'clarity' => ['id' => env('CLARITY_PROJECT_ID')],
+    'meta'    => ['pixel_id' => env('META_PIXEL_ID')],
+    'google'  => ['gtag_id' => env('GOOGLE_GTAG_ID')],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

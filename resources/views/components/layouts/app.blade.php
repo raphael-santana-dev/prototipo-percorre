@@ -20,13 +20,9 @@
                 d.dataset.layout  = localStorage.getItem('layoutMode') || 'left';
                 d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
             })();
-
-            (function(c,l,a,r,i,t,y){
-                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-            })(window, document, "clarity", "script", "z08d7ymbv7");
         </script>
+
+        @includeIf('components.partials.analytics-heatmap')
         
 
         @livewireStyles
@@ -34,7 +30,10 @@
     </head>
 
     <body class="h-full antialiased text-gray-900 bg-gray-50 dark:bg-gray-900 dark:text-gray-100 overflow-hidden">
-        
+        <!-- Google Tag Manager (noscript) -->
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCLCLKXJ"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <!-- End Google Tag Manager (noscript) -->
         <div x-data="{ 
             drawerOpen: false, 
             layoutMode: localStorage.getItem('layoutMode') || 'left',

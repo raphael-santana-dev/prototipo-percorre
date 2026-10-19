@@ -7,6 +7,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\FiltraPorVinculo;
 
+use App\Notifications\CustomResetPasswordNotification;
+
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Auth\Passwords\CanResetPassword;
 
@@ -65,5 +67,9 @@ class Student extends Authenticatable implements CanResetPasswordContract
     public function inscricoes()
     {
         return $this->hasMany(\App\Models\Inscricao::class, 'student_id');
+    }
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }
