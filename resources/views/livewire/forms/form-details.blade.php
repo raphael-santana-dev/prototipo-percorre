@@ -283,7 +283,7 @@
                                     @foreach(explode(' | ', $valStr) as $caminhoArquivo)
                                         @continue(empty(trim($caminhoArquivo)))
                                         <a href="{{ asset('storage/' . trim($caminhoArquivo)) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 rounded text-[10px] font-bold transition-colors whitespace-nowrap dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
-                                            <i class="ph-bold ph-link text-sm"></i> Abrir Ficheiro
+                                            <i class="ph-bold ph-link text-sm"></i> Abrir Arquivo
                                         </a>
                                     @endforeach
                                 </div>

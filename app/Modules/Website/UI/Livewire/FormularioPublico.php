@@ -304,11 +304,11 @@ class FormularioPublico extends Component
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
                 $this->validateOnly($propertyName, $regras, [
-                    'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
-                    'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
-                    'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
-                    'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
-                    'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                    'uploads.*.required' => 'O envio de arquivo é obrigatório.',
+                    'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
+                    'uploads.*.mimes' => 'Formato de arquivo não suportado.',
+                    'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
+                    'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
                 ]);
             }
             return;
@@ -400,11 +400,11 @@ class FormularioPublico extends Component
                 'respostas.*.required' => 'Este campo é obrigatório.',
                 'respostas.*.email' => 'Informe um e-mail válido.',
                 'respostas.*.numeric' => 'Este campo aceita apenas números.',
-                'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
-                'uploads.*.max' => 'O ficheiro excede o tamanho máximo permitido.',
-                'uploads.*.mimes' => 'Formato de ficheiro não suportado.',
-                'uploads.*.*.max' => 'Um dos ficheiros excede o tamanho máximo permitido.',
-                'uploads.*.*.mimes' => 'Um dos ficheiros possui formato não suportado.',
+                'uploads.*.required' => 'O envio de arquivo é obrigatório.',
+                'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
+                'uploads.*.mimes' => 'Formato de arquivo não suportado.',
+                'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
+                'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
             ]);
         }
 

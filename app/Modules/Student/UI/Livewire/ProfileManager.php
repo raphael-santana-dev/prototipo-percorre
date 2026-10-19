@@ -100,7 +100,7 @@ class ProfileManager extends Component
         $this->validate([
             "uploads.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp|max:10240'
         ], [
-            "uploads.{$documentoExigidoId}.mimes" => 'Apenas ficheiros JPEG, PNG e WebP são aceitos.',
+            "uploads.{$documentoExigidoId}.mimes" => 'Apenas arquivos JPEG, PNG e WebP são aceitos.',
             "uploads.{$documentoExigidoId}.max" => 'O tamanho máximo do documento é de 10MB.'
         ]);
 

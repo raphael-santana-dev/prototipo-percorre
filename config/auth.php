@@ -117,7 +117,7 @@ return [
             'throttle' => 60,
         ],
         'company_users' => [
-            'provider' => 'company_users',
+            'provider' => 'companies',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,

@@ -161,12 +161,12 @@
                             @endif
 
                             @if($task->operacao === 'exportacao' && $task->status === 'concluido' && $task->arquivo_gerado_caminho)
-                                <button wire:click="baixarExportacao({{ $task->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Ficheiro Gerado">
+                                <button wire:click="baixarExportacao({{ $task->id }})" class="p-1.5 text-green-600 transition-colors rounded hover:bg-green-50" title="Baixar Arquivo Gerado">
                                     <i class="text-lg ph-bold ph-download-simple"></i>
                                 </button>
                             @endif
 
-                            <button wire:click="excluirImportacao({{ $task->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir Registo" onclick="confirm('Excluir este log e apagar os ficheiros do servidor?') || event.stopImmediatePropagation()">
+                            <button wire:click="excluirImportacao({{ $task->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-red-500 hover:bg-red-50" title="Excluir Registo" onclick="confirm('Excluir este log e apagar os arquivos do servidor?') || event.stopImmediatePropagation()">
                                 <i class="text-lg ph ph-trash"></i>
                             </button>
                         </div>
@@ -209,7 +209,7 @@
                         </div>
 
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                            <label class="block text-xs font-bold text-gray-800 mb-2 uppercase tracking-wider">Ficheiro de Origem</label>
+                            <label class="block text-xs font-bold text-gray-800 mb-2 uppercase tracking-wider">Arquivo de Origem</label>
                             
                             <div class="flex items-center justify-center w-full">
                                 <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-purpura-300 bg-purpura-50 rounded-lg cursor-pointer hover:bg-purpura-100 transition">
@@ -223,7 +223,7 @@
                             </div>
                             
                             <div wire:loading wire:target="arquivo" class="mt-2 text-xs font-bold text-purpura-600 flex items-center justify-center gap-2">
-                                <i class="ph ph-spinner animate-spin text-lg"></i> A ler ficheiro...
+                                <i class="ph ph-spinner animate-spin text-lg"></i> A ler arquivo...
                             </div>
                             
                             @if($arquivo)
@@ -360,7 +360,7 @@
                             <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                                 <i class="ph-fill ph-terminal-window text-purpura-500"></i> Relatório da Tarefa #{{ $taskDetalhes->id }}
                             </h3>
-                            <p class="text-xs text-gray-500 font-medium mt-1">Origem de Dados: <b class="text-gray-700">{{ $taskDetalhes->arquivo_nome ?? 'Sem origem de ficheiro' }}</b></p>
+                            <p class="text-xs text-gray-500 font-medium mt-1">Origem de Dados: <b class="text-gray-700">{{ $taskDetalhes->arquivo_nome ?? 'Sem origem de arquivo' }}</b></p>
                         </div>
                         <div class="flex gap-2 items-center">
                             @if(count($erros) > 0 && $taskDetalhes->operacao === 'importacao')
@@ -370,7 +370,7 @@
                             @endif
                             @if($taskDetalhes->operacao === 'importacao')
                                 <button wire:click="baixarArquivoOriginal({{ $taskDetalhes->id }})" class="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-2 transition shadow-sm">
-                                    <i class="ph-bold ph-download-simple"></i> Ficheiro Original
+                                    <i class="ph-bold ph-download-simple"></i> Arquivo Original
                                 </button>
                             @endif
                             <button @click="fullscreen = !fullscreen" class="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-lg transition ml-1">

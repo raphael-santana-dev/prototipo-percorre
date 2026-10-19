@@ -663,7 +663,7 @@
                             @endif
 
                             <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                                Clique para selecionar ou arraste o ficheiro
+                                Clique para selecionar ou arraste o arquivo
                             </p>
                             <p class="text-xs text-gray-400 mt-0.5">
                                 @if(!empty($extensoes))
@@ -675,13 +675,13 @@
                     </div>
 
                     <div wire:loading wire:target="uploads.{{ $campo->name }}" class="text-xs text-purpura-600 dark:text-purpura-400 font-semibold flex items-center gap-1.5 pt-1">
-                        <i class="ph-bold ph-spinner animate-spin"></i> A carregar ficheiro(s), aguarde...
+                        <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo(s), aguarde...
                     </div>
 
                     @if(!empty($listaPendentes))
                         <div class="space-y-1.5 pt-1">
                             <span class="text-[11px] font-bold text-purpura-600 dark:text-purpura-400 uppercase tracking-wider block">
-                                Ficheiro(s) Selecionado(s) (Pronto para envio):
+                                Arquivo(s) Selecionado(s) (Pronto para envio):
                             </span>
                             @foreach($listaPendentes as $pIdx =>$pendente)
                                 @if($pendente && method_exists($pendente, 'getClientOriginalName'))
@@ -705,7 +705,7 @@
 
                     @if(!empty($listaSalvos))
                         <div class="space-y-1.5 pt-2">
-                            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Ficheiro(s) Anexado(s):</span>
+                            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Arquivo(s) Anexado(s):</span>
                             @foreach($listaSalvos as $sIdx =>$path)
                                 @php
                                     $nomeOriginal = basename($path);$isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $path);
@@ -732,7 +732,7 @@
                                             <button type="button" 
                                                     wire:click="removerArquivo('{{ $campo->name }}'{{ $aceitaMultiplos ? ', ' . $sIdx : '' }})" 
                                                     class="text-red-500 hover:text-red-700 dark:text-red-400 p-1 transition-colors" 
-                                                    title="Excluir ficheiro">
+                                                    title="Excluir arquivo">
                                                 <i class="ph ph-trash text-sm"></i>
                                             </button>
                                         @endif

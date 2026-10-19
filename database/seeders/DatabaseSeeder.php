@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
             CompanyUsersSeeder::class,
             MaisStatusInscricaoSeeder::class,
             InscricaoRecebidaTemplateSeeder::class,
-            InscricoesSeeder::class,
+            // InscricoesSeeder::class,
             ConteudoSeeder::class,
             CentroCustoSeeder::class,
             NaturezaSeeder::class,

@@ -244,7 +244,7 @@ class FormularioAprendizagem extends Component
         if (!empty($regras)) {
             $this->validate($regras, [
                 'respostas.*.required' => 'Campo obrigatório.',
-                'uploads.*.required' => 'O envio de ficheiro é obrigatório.',
+                'uploads.*.required' => 'O envio do arquivo é obrigatório.',
             ]);
         }
 

@@ -214,7 +214,7 @@
                         <button type="button" wire:click="setTipo('link', 'link')" class="col-span-2 flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'link' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
                             <i class="ph-bold ph-link-simple text-xl {{ $tipo == 'link' ? 'text-purpura-600' : 'text-blue-600' }}"></i>
                             <div class="flex flex-col min-w-0">
-                                <span class="text-xs font-bold">Link / Ficheiro para Consulta</span>
+                                <span class="text-xs font-bold">Link externo</span>
                                 <span class="text-[10px] text-gray-500 truncate">URL externa, página ou PDF/Word/Excel</span>
                             </div>
                         </button>
@@ -496,7 +496,7 @@
                                                                     <p class="text-xs font-bold text-gray-900 truncate">{{ $c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento') }}</p>
                                                                     <p class="text-[10px] text-gray-500 truncate">
                                                                         @if($destinoPv === 'arquivo')
-                                                                            Ficheiro: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
+                                                                            Arquivo: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
                                                                         @else
                                                                             {{ $cfg['url'] ?? 'URL não definida' }}
                                                                         @endif
@@ -773,7 +773,7 @@
                     @if($tipo === 'link')
                         <div class="p-4 bg-blue-50/60 border border-blue-200 rounded-lg space-y-3.5">
                             <h5 class="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="ph-bold ph-link-simple text-blue-600 text-base"></i> Configuração do Link / Ficheiro
+                                <i class="ph-bold ph-link-simple text-blue-600 text-base"></i> Configuração do Link / Arquivo
                             </h5>
 
                             <div>
@@ -781,7 +781,7 @@
                                 <select wire:model.live="configuracoes.tipo_destino" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                     <option value="externo">Link Externo (URL Completa)</option>
                                     <option value="interno">Página ou Rota Interna do Sistema</option>
-                                    <option value="arquivo">Ficheiro Interno (Upload PDF, Word ou Excel)</option>
+                                    <option value="arquivo">Arquivo Interno (Upload PDF, Word ou Excel)</option>
                                 </select>
                             </div>
 
@@ -791,7 +791,7 @@
                                         <label class="block text-xs font-bold text-gray-700 mb-1">Upload do Documento (PDF, Word, Excel)</label>
                                         <input type="file" wire:model="link_file_upload" accept=".pdf,.doc,.docx,.xls,.xlsx" class="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 bg-white border border-gray-300 rounded-lg p-1">
                                         <div wire:loading wire:target="link_file_upload" class="text-[11px] text-blue-600 font-bold mt-1 flex items-center gap-1">
-                                            <i class="ph-bold ph-spinner animate-spin"></i> A carregar ficheiro...
+                                            <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo...
                                         </div>
                                         @error('link_file_upload') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
 
@@ -815,7 +815,7 @@
                                         <label class="flex items-center gap-2.5 cursor-pointer">
                                             <input type="checkbox" wire:model="configuracoes.permitir_download" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
                                             <div class="flex flex-col">
-                                                <span class="text-xs font-bold text-gray-800">Permitir o download do ficheiro</span>
+                                                <span class="text-xs font-bold text-gray-800">Permitir o download do arquivo</span>
                                                 <span class="text-[10px] text-gray-500">Se desmarcado, oculta o botão de transferir.</span>
                                             </div>
                                         </label>
@@ -914,7 +914,7 @@
                                 <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
                             </h5>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria de Ficheiros</label>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria de Arquivos</label>
                                 <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300">
                                     <option value="todos">Todos os Tipos</option>
                                     <option value="imagem">Apenas Imagens</option>
@@ -941,7 +941,7 @@
                             </div>
                             <label class="flex items-center gap-2 cursor-pointer pt-1">
                                 <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300">
-                                <span class="text-xs text-gray-700 font-bold">Permitir múltiplos ficheiros?</span>
+                                <span class="text-xs text-gray-700 font-bold">Permitir múltiplos arquivos?</span>
                             </label>
                         </div>
                     @endif
