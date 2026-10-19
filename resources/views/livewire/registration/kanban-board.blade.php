@@ -1,5 +1,22 @@
-<div class="px-2 md:px-6 py-4 h-[calc(100vh-60px)] flex flex-col font-sans relative w-full overflow-hidden">
+<div class="font-sans flex flex-col transition-all duration-300 w-full overflow-hidden relative"
+     x-data="{ modoExpandido: false, navbarOculta: false }"
+     x-init="
+        $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
+        $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
+     "
+     :class="modoExpandido ? 'h-screen px-4 py-3 bg-gray-50 dark:bg-gray-900' : 'px-2 md:px-6 py-4 h-[calc(100vh-80px)]'">
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <style>
+        main > div.py-6 > div { max-width: 100% !important; }
+        body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
+        body.modo-expandido main > div.py-6 { padding-top: 0 !important; padding-bottom: 0 !important; height: 100%; display: flex; flex-direction: column; }
+        body.modo-expandido main { overflow: hidden !important; display: flex; flex-direction: column; }
+        body.navbar-oculta .js-topnav { display: none !important; }
+        body.navbar-oculta header { display: none !important; }
+        body.navbar-oculta .js-sidebar { display: none !important; }
+    </style>
 
     {{-- WRAPPER DO TOPO: overflow-visible e z-30 para não cortar dropdowns --}}
     <div class="mb-4 flex flex-col gap-3 shrink-0 w-full relative z-30">
@@ -7,7 +24,7 @@
         {{-- CARD PRINCIPAL: Título, Busca e Filtros --}}
         <div class="card !p-4 shrink-0 shadow-sm flex flex-col w-full gap-4 relative z-30 overflow-visible">
             
-            {{-- LINHA SUPERIOR: Título, Busca e Ordenação --}}
+            {{-- LINHA SUPERIOR: Título, Busca, Ordenação e Botões de Tela Cheia --}}
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full gap-4">
                 
                 {{-- Esquerda: Título com Distintivo de Ciclo Ativo / Último Registrado / Geral --}}
@@ -32,8 +49,8 @@
                     @endif
                 </div>
 
-                {{-- Direita: Busca e Ordenação --}}
-                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto lg:ml-auto">
+                {{-- Direita: Busca, Ordenação e Controles de Expansão / Menus --}}
+                <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full lg:w-auto lg:ml-auto justify-end">
                     <div class="relative w-full sm:w-64 shrink-0">
                         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
                         <input type="text" wire:model.live.debounce.500ms="filtroBusca" placeholder="Nome, E-mail ou CPF" class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700">
@@ -54,6 +71,28 @@
                             <option value="nome_asc">Nome (A-Z)</option>
                             <option value="nome_desc">Nome (Z-A)</option>
                         </select>
+                    </div>
+
+                    {{-- CONTROLES DE TELA CHEIA E OCULTAR MENUS --}}
+                    <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0 self-end sm:self-auto">
+                        <button type="button" 
+                                @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" 
+                                class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center" 
+                                :class="modoExpandido ? 'bg-white dark:bg-gray-900 shadow-sm text-purpura-600' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" 
+                                title="Expandir Tela">
+                            <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
+                            <span x-text="modoExpandido ? 'Compactar' : 'Expandir'" class="hidden xl:inline ml-1"></span>
+                        </button>
+                        <button type="button" 
+                                x-show="modoExpandido" 
+                                x-cloak 
+                                @click="navbarOculta = !navbarOculta" 
+                                class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 flex items-center" 
+                                :class="navbarOculta ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''" 
+                                title="Ocultar Menus do Sistema">
+                            <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
+                            <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
+                        </button>
                     </div>
                 </div>
             </div>
