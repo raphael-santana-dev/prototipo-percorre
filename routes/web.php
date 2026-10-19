@@ -42,7 +42,11 @@ Route::middleware('guest:student,company,web')->group(function () {
 });
 
 Route::get('/matricula/{token}', \App\Modules\Matricula\UI\Livewire\PortalMatricula::class)->name('matricula.portal');
-
+Route::get('/email/t/o/{token}.gif', [\App\Modules\Comunicacao\Http\Controllers\EmailTrackingController::class, 'open'])
+    ->name('email.tracking.open');
+Route::get('/email/t/c/{token}', [\App\Modules\Comunicacao\Http\Controllers\EmailTrackingController::class, 'click'])
+    ->name('email.tracking.click');
+    
 Route::middleware('auth:web,student,company')->group(function () {
     Route::get('/seguranca/atualizar-senha', \App\Modules\Portal\UI\Livewire\Auth\ForcePasswordChange::class)
         ->name('password.force-change');

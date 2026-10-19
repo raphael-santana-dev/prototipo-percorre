@@ -16,10 +16,12 @@ class EmailLogManager extends Component
     
     public $modalPreviewAberto = false;
     public $modalErroAberto = false;
+    public $modalMetricasAberto = false;
     public $logSelecionado = null;
 
     public $filtro_status = '';
     public $filtro_origem = '';
+    public $filtro_engajamento = '';
 
     public function mount()
     {
@@ -32,14 +34,14 @@ class EmailLogManager extends Component
 
     public function updating($nomePropriedade)
     {
-        if (in_array($nomePropriedade, ['filtro_status', 'filtro_origem'])) {
+        if (in_array($nomePropriedade, ['filtro_status', 'filtro_origem', 'filtro_engajamento'])) {
             $this->resetPage();
         }
     }
 
     public function limparFiltros()
     {
-        $this->reset(['filtro_status', 'filtro_origem']);
+        $this->reset(['filtro_status', 'filtro_origem', 'filtro_engajamento']);
         $this->resetPage();
     }
 
@@ -50,8 +52,9 @@ class EmailLogManager extends Component
             ['key' => 'destinatario', 'label' => 'Destinatário', 'sortable' => true],
             ['key' => 'assunto', 'label' => 'Assunto / Origem', 'sortable' => false],
             ['key' => 'data_agendamento', 'label' => 'Agendado / Enviado', 'sortable' => true],
+            ['key' => 'aberturas_count', 'label' => 'Engajamento (Abertura / Cliques)', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
-            ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'text-right w-24'],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right w-28'],
         ];
     }
 
@@ -59,6 +62,12 @@ class EmailLogManager extends Component
     {
         $this->logSelecionado = ComunicacaoLog::findOrFail($id);
         $this->modalPreviewAberto = true;
+    }
+
+    public function verMetricas($id)
+    {
+        $this->logSelecionado = ComunicacaoLog::with('eventos')->findOrFail($id);
+        $this->modalMetricasAberto = true;
     }
 
     public function verErro($id)
@@ -71,8 +80,19 @@ class EmailLogManager extends Component
     {
         $query = ComunicacaoLog::query();
 
-        if (!empty($this->filtro_status)) $query->where('status', $this->filtro_status);
-        if (!empty($this->filtro_origem)) $query->where('origem', $this->filtro_origem);
+        if (!empty($this->filtro_status)) {
+            $query->where('status', $this->filtro_status);
+        }
+        if (!empty($this->filtro_origem)) {
+            $query->whereIn('origem', $this->filtro_origem === 'automacao' ? ['automacao', 'automação'] : [$this->filtro_origem]);
+        }
+        if ($this->filtro_engajamento === 'abertos') {
+            $query->where('aberturas_count', '>', 0);
+        } elseif ($this->filtro_engajamento === 'nao_abertos') {
+            $query->where('aberturas_count', 0);
+        } elseif ($this->filtro_engajamento === 'clicados') {
+            $query->where('cliques_count', '>', 0);
+        }
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
@@ -80,8 +100,20 @@ class EmailLogManager extends Component
             $query->orderBy('id', 'desc');
         }
 
+        $totalEnviados = ComunicacaoLog::where('status', 'enviado')->count();
+        $totalAbertos  = ComunicacaoLog::where('status', 'enviado')->where('aberturas_count', '>', 0)->count();
+        $totalClicados = ComunicacaoLog::where('status', 'enviado')->where('cliques_count', '>', 0)->count();
+
+        $taxaAbertura = $totalEnviados > 0 ? round(($totalAbertos / $totalEnviados) * 100, 1) : 0;
+        $taxaCliques  = $totalEnviados > 0 ? round(($totalClicados / $totalEnviados) * 100, 1) : 0;
+
         return view('livewire.comunicacao.email-log.email-log-manager', [
-            'registros' => $query->paginate($this->porPagina)
+            'registros'     => $query->paginate($this->porPagina),
+            'totalEnviados' => $totalEnviados,
+            'totalAbertos'  => $totalAbertos,
+            'totalClicados' => $totalClicados,
+            'taxaAbertura'  => $taxaAbertura,
+            'taxaCliques'   => $taxaCliques,
         ])->layout('components.layouts.app', ['title' => 'Monitor de E-mails']);
     }
 }

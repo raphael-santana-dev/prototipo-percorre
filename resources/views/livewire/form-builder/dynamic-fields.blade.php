@@ -9,6 +9,9 @@
      "
      :class="modoExpandido ? 'h-screen border-none rounded-none' : 'min-h-[680px] h-[calc(100vh-140px)]'">
 
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
     <style>
         main > div.py-6 > div { max-width: 100% !important; }
         body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; height: 100%; display: flex; flex-direction: column; }
@@ -17,6 +20,35 @@
         body.navbar-oculta .js-topnav { display: none !important; }
         body.navbar-oculta header { display: none !important; }
         body.navbar-oculta .js-sidebar { display: none !important; }
+
+        /* Estilos compactos para o Mini-Quill do Construtor */
+        .builder-quill .ql-toolbar.ql-snow {
+            padding: 4px 6px;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border-color: #d1d5db;
+            background-color: #f9fafb;
+        }
+        .builder-quill .ql-container.ql-snow {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            border-color: #d1d5db;
+            background-color: #ffffff;
+            font-family: inherit;
+            font-size: 0.78rem;
+        }
+        .builder-quill .ql-editor {
+            min-height: 58px;
+            max-height: 150px;
+            padding: 8px 10px;
+            overflow-y: auto;
+        }
+        .builder-quill .ql-snow .ql-picker.ql-size { width: 74px; }
+
+        /* Classes de tamanho do Quill renderizadas no preview e formulário */
+        .ql-size-small { font-size: 0.75em; }
+        .ql-size-large { font-size: 1.25em; }
+        .ql-size-huge { font-size: 1.6em; }
     </style>
 
     <!-- BARRA SUPERIOR FIXA DO CONSTRUTOR -->
@@ -61,7 +93,6 @@
                 </button>
             </div>
 
-            <!-- BOTÃO ACIONADOR DO NAVIGATION DRAWER DE CONFIGURAÇÃO DO FORMULÁRIO -->
             <button type="button" @click="$wire.set('drawerFormSettingsAberto', true)" class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2">
                 <i class="ph-bold ph-sliders-horizontal text-sm text-purpura-400"></i>
                 <span>Configurações do Formulário</span>
@@ -284,9 +315,23 @@
                 
                 $cardClass = $isTranslucent ? 'bg-white/80 backdrop-blur-md shadow-2xl' : 'bg-white shadow-xl';
                 $textoForm = $isTranslucent ? 'text-gray-900 drop-shadow-sm' : 'text-gray-900';
+
+                if (!function_exists('formatRichFormText')) {
+                    function formatRichFormText($text) {
+                        if (empty($text)) return '';
+                        // Se já possui tags HTML do Quill, sanitiza mantendo apenas tags visuais seguras
+                        if ($text !== strip_tags($text)) {
+                            return strip_tags($text, '<strong><b><em><i><u><s><del><span><br><p><ul><ol><li><a>');
+                        }
+                        $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+                        $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
+                        $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
+                        $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
+                        return nl2br($text);
+                    }
+                }
             @endphp
 
-            <!-- FUNDO CORRIGIDO: absolute para não vazar da coluna -->
             @if($previewBgUrl)
                 <div class="absolute inset-0 z-0 bg-center bg-no-repeat pointer-events-none" style="background-image: url('{{ $previewBgUrl }}'); background-size: {{ $bgSize }};"></div>
             @endif
@@ -335,16 +380,6 @@
                                 @php 
                                     $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
                                     $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
-                                    
-                                    if (!function_exists('formatWppText')) {
-                                        function formatWppText($text) {
-                                            $text = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
-                                            $text = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $text);
-                                            $text = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $text);
-                                            $text = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $text);
-                                            return nl2br($text);
-                                        }
-                                    }
 
                                     $gruposRender = [];
                                     if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
@@ -413,6 +448,29 @@
                                                 $colSpan = "col-span-12 md:col-span-{$larguraEfetiva}";
                                                 $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
                                                 $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
+
+                                                // Resolve dicas (Tooltip e Legenda) do campo para o preview
+                                                $dicaModoPv = $cfg['dica_modo'] ?? 'nenhum';
+                                                $tooltipTextoPv = null;
+                                                $tooltipTriggerPv = 'hover';
+                                                $legendaTextoPv = null;
+
+                                                if ($dicaModoPv === 'legenda') {
+                                                    $legendaTextoPv = $cfg['dica_1_texto'] ?? null;
+                                                } elseif ($dicaModoPv === 'tooltip') {
+                                                    $tooltipTextoPv = $cfg['dica_1_texto'] ?? null;
+                                                    $tooltipTriggerPv = $cfg['dica_1_trigger'] ?? 'hover';
+                                                } elseif ($dicaModoPv === 'ambos') {
+                                                    if (($cfg['dica_1_tipo'] ?? 'legenda') === 'tooltip') {
+                                                        $tooltipTextoPv = $cfg['dica_1_texto'] ?? null;
+                                                        $tooltipTriggerPv = $cfg['dica_1_trigger'] ?? 'hover';
+                                                        $legendaTextoPv = $cfg['dica_2_texto'] ?? null;
+                                                    } else {
+                                                        $legendaTextoPv = $cfg['dica_1_texto'] ?? null;
+                                                        $tooltipTextoPv = $cfg['dica_2_texto'] ?? null;
+                                                        $tooltipTriggerPv = $cfg['dica_2_trigger'] ?? 'hover';
+                                                    }
+                                                }
                                             @endphp
 
                                             <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60' }}" wire:click="editar({{ $c->id }})">
@@ -423,20 +481,41 @@
                                                 </div>
 
                                                 <div class="relative z-10">
-                                                    <div class="flex justify-between items-start mb-1.5">
-                                                        @if(!in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
-                                                            <label class="block text-xs font-bold text-gray-800">
-                                                                @if($c->tipo === 'signature')
-                                                                    {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
-                                                                @else
-                                                                    {!! formatWppText($c->label) !!}
+                                                    <div class="flex justify-between items-start mb-1.5 gap-2">
+                                                        @if(!in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link']))
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <label class="block text-xs font-bold text-gray-800">
+                                                                    @if($c->tipo === 'signature')
+                                                                        {!! formatRichFormText($c->label ?: (($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura')) !!}
+                                                                    @else
+                                                                        {!! formatRichFormText($c->label) !!}
+                                                                    @endif
+                                                                    @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
+                                                                </label>
+
+                                                                {{-- Ícone de Tooltip no Preview --}}
+                                                                @if(!empty($tooltipTextoPv))
+                                                                    <div x-data="{ showTip: false }" class="relative inline-flex items-center" @click.stop>
+                                                                        <button type="button"
+                                                                                @if($tooltipTriggerPv === 'hover')
+                                                                                    @mouseenter="showTip = true" @mouseleave="showTip = false"
+                                                                                @else
+                                                                                    @click="showTip = !showTip" @click.away="showTip = false"
+                                                                                @endif
+                                                                                class="text-purpura-600 hover:text-purpura-800 focus:outline-none inline-flex items-center justify-center w-4 h-4 rounded-full bg-purpura-50 border border-purpura-200"
+                                                                                title="Dica ({{ $tooltipTriggerPv === 'hover' ? 'Ao passar o rato' : 'Ao clicar' }})">
+                                                                            <i class="ph-bold ph-question text-[10px]"></i>
+                                                                        </button>
+                                                                        <div x-show="showTip" x-cloak class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[11px] rounded-lg shadow-xl z-50 leading-relaxed">
+                                                                            {!! formatRichFormText($tooltipTextoPv) !!}
+                                                                        </div>
+                                                                    </div>
                                                                 @endif
-                                                                @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
-                                                            </label>
+                                                            </div>
                                                         @else
                                                             <span></span>
                                                         @endif
-                                                        <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">#{{ $c->ordem }}</span>
+                                                        <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 shrink-0">#{{ $c->ordem }}</span>
                                                     </div>
 
                                                     {{-- PREVIEW DOS INPUTS E SUBTIPOS --}}
@@ -493,7 +572,7 @@
                                                                     @endif
                                                                 </div>
                                                                 <div class="min-w-0">
-                                                                    <p class="text-xs font-bold text-gray-900 truncate">{{ $c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento') }}</p>
+                                                                    <p class="text-xs font-bold text-gray-900 truncate">{!! formatRichFormText($c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento')) !!}</p>
                                                                     <p class="text-[10px] text-gray-500 truncate">
                                                                         @if($destinoPv === 'arquivo')
                                                                             Arquivo: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
@@ -591,14 +670,17 @@
 
                                                     @elseif($c->tipo === 'html')
                                                         <div class="text-gray-800">
-                                                            @if($c->subtipo === 'h1') <h1 class="text-2xl font-extrabold">{!! formatWppText($c->label) !!}</h1>
-                                                            @elseif($c->subtipo === 'h2') <h2 class="text-xl font-bold">{!! formatWppText($c->label) !!}</h2>
-                                                            @elseif($c->subtipo === 'h3') <h3 class="text-lg font-bold">{!! formatWppText($c->label) !!}</h3>
-                                                            @elseif($c->subtipo === 'p') <div class="text-xs leading-relaxed">{!! formatWppText($c->label) !!}</div>
-                                                            @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline text-xs">{!! formatWppText($c->label) !!}</span>
+                                                            @if($c->subtipo === 'h1') <h1 class="text-2xl font-extrabold">{!! formatRichFormText($c->label) !!}</h1>
+                                                            @elseif($c->subtipo === 'h2') <h2 class="text-xl font-bold">{!! formatRichFormText($c->label) !!}</h2>
+                                                            @elseif($c->subtipo === 'h3') <h3 class="text-lg font-bold">{!! formatRichFormText($c->label) !!}</h3>
+                                                            @elseif($c->subtipo === 'p') <div class="text-xs leading-relaxed">{!! formatRichFormText($c->label) !!}</div>
+                                                            @elseif($c->subtipo === 'link') <span class="text-purpura-600 font-bold underline text-xs">{!! formatRichFormText($c->label) !!}</span>
                                                             @elseif($c->subtipo === 'info_card') 
                                                                 <div class="p-2.5 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
-                                                                    <p class="font-bold text-xs">{!! formatWppText($c->label) !!}</p>
+                                                                    <p class="font-bold text-xs">{!! formatRichFormText($c->label) !!}</p>
+                                                                    @if(!empty($cfg['descricao']))
+                                                                        <div class="text-[11px] mt-1">{!! formatRichFormText($cfg['descricao']) !!}</div>
+                                                                    @endif
                                                                 </div>
                                                             @endif
                                                         </div>
@@ -634,6 +716,13 @@
                                                         </div>
                                                     @endif
 
+                                                    {{-- Legenda / Dica abaixo do input no Preview --}}
+                                                    @if(!empty($legendaTextoPv))
+                                                        <div class="mt-1.5 text-[11px] text-gray-500 leading-snug">
+                                                            {!! formatRichFormText($legendaTextoPv) !!}
+                                                        </div>
+                                                    @endif
+
                                                     <div class="mt-2 flex flex-wrap gap-1.5 items-center">
                                                         @if(!in_array($c->tipo, ['html', 'divider', 'social', 'media', 'spacer', 'link']))
                                                             <span class="text-[9px] bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold"><i class="ph ph-database"></i> {{ $c->name }}</span>
@@ -641,6 +730,11 @@
                                                         @if($c->depende_de)
                                                             <span class="inline-flex items-center gap-1 bg-yellow-100 border border-yellow-200 text-yellow-800 text-[9px] px-1.5 py-0.5 rounded font-bold">
                                                                 <i class="ph-fill ph-warning-circle"></i> Condicional
+                                                            </span>
+                                                        @endif
+                                                        @if($dicaModoPv !== 'nenhum')
+                                                            <span class="inline-flex items-center gap-1 bg-purpura-50 border border-purpura-200 text-purpura-700 text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                                                <i class="ph-fill ph-info"></i> Dica: {{ ucfirst($dicaModoPv) }}
                                                             </span>
                                                         @endif
                                                     </div>
@@ -704,13 +798,47 @@
 
                     <hr class="border-gray-100">
 
-                    <!-- TÍTULO / LABEL -->
-                    @if(!in_array($tipo, ['divider', 'spacer', 'signature']))
+                    <!-- TÍTULO / LABEL COM EDITOR QUILL BÁSICO -->
+                    @if(!in_array($tipo, ['divider', 'spacer']))
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
                                 {{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : ($tipo === 'link' ? 'Texto de Exibição do Link / Botão' : 'Título da Pergunta') }} <span class="text-red-500">*</span>
                             </label>
-                            <textarea wire:model.live="label" rows="2" placeholder="Digite aqui..." class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500"></textarea>
+                            
+                            <div class="builder-quill"
+                                 wire:ignore
+                                 x-data="{
+                                    val: @entangle('label').live,
+                                    quill: null,
+                                    init() {
+                                        this.quill = new Quill(this.$refs.editorLabel, {
+                                            theme: 'snow',
+                                            placeholder: 'Digite e formate o texto...',
+                                            modules: {
+                                                toolbar: [
+                                                    ['bold', 'italic', 'underline', 'strike'],
+                                                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                    [{ 'color': [] }, { 'background': [] }],
+                                                    ['clean']
+                                                ]
+                                            }
+                                        });
+                                        this.quill.root.innerHTML = this.val || '';
+                                        this.quill.on('text-change', () => {
+                                            let html = this.quill.root.innerHTML;
+                                            this.val = (html === '<p><br></p>') ? '' : html;
+                                        });
+                                        window.addEventListener('sincronizar-quill-builder', () => {
+                                            setTimeout(() => {
+                                                if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                    this.quill.root.innerHTML = this.val || '';
+                                                }
+                                            }, 50);
+                                        });
+                                    }
+                                 }">
+                                <div x-ref="editorLabel"></div>
+                            </div>
                         </div>
                     @endif
 
@@ -738,6 +866,157 @@
                     </div>
 
                     <!-- ========================================================= -->
+                    <!-- NOVA CONFIGURAÇÃO: DICAS E ORIENTAÇÕES (LEGENDA / TOOLTIP / AMBOS) -->
+                    <!-- ========================================================= -->
+                    @if(!in_array($tipo, ['divider', 'spacer']))
+                        <div class="p-3.5 bg-purpura-50/40 border border-purpura-200 rounded-lg space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-fill ph-lightbulb text-purpura-600 text-base"></i> Dicas e Orientações
+                                </h5>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-700 mb-1">Exibição da Dica no Input</label>
+                                <select wire:model.live="configuracoes.dica_modo" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
+                                    <option value="nenhum">Sem dica / orientação</option>
+                                    <option value="legenda">Abaixo do input (Legenda)</option>
+                                    <option value="tooltip">Ícone ao lado do título (Tooltip)</option>
+                                    <option value="ambos">Ambos (Legenda + Tooltip)</option>
+                                </select>
+                            </div>
+
+                            @if(($configuracoes['dica_modo'] ?? 'nenhum') !== 'nenhum')
+                                <!-- 1ª DICA / ORIENTAÇÃO -->
+                                <div class="p-3 bg-white border border-gray-200 rounded-lg space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[11px] font-extrabold text-purpura-700 uppercase">
+                                            {{ ($configuracoes['dica_modo'] ?? '') === 'ambos' ? '1ª Dica / Orientação' : 'Texto da Dica / Orientação' }}
+                                        </span>
+                                    </div>
+
+                                    @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 1ª dica</label>
+                                            <select wire:model.live="configuracoes.dica_1_tipo" class="w-full text-xs rounded-md border-gray-300">
+                                                <option value="legenda">Legenda (Abaixo do Input)</option>
+                                                <option value="tooltip">Tooltip (Ícone Interativo)</option>
+                                            </select>
+                                        </div>
+                                    @endif
+
+                                    @if((($configuracoes['dica_modo'] ?? '') === 'tooltip') || (($configuracoes['dica_modo'] ?? '') === 'ambos' && ($configuracoes['dica_1_tipo'] ?? 'legenda') === 'tooltip'))
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Como acionar o Tooltip?</label>
+                                            <select wire:model.live="configuracoes.dica_1_trigger" class="w-full text-xs rounded-md border-gray-300">
+                                                <option value="hover">Ao passar o rato (Hover)</option>
+                                                <option value="click">Ao clicar no ícone (Click)</option>
+                                            </select>
+                                        </div>
+                                    @endif
+
+                                    <div class="builder-quill"
+                                         wire:ignore
+                                         x-data="{
+                                            val: @entangle('configuracoes.dica_1_texto').live,
+                                            quill: null,
+                                            init() {
+                                                this.quill = new Quill(this.$refs.editorDica1, {
+                                                    theme: 'snow',
+                                                    placeholder: 'Escreva a orientação aqui...',
+                                                    modules: {
+                                                        toolbar: [
+                                                            ['bold', 'italic', 'underline', 'strike'],
+                                                            [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                            [{ 'color': [] }, { 'background': [] }],
+                                                            ['clean']
+                                                        ]
+                                                    }
+                                                });
+                                                this.quill.root.innerHTML = this.val || '';
+                                                this.quill.on('text-change', () => {
+                                                    let html = this.quill.root.innerHTML;
+                                                    this.val = (html === '<p><br></p>') ? '' : html;
+                                                });
+                                                window.addEventListener('sincronizar-quill-builder', () => {
+                                                    setTimeout(() => {
+                                                        if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                            this.quill.root.innerHTML = this.val || '';
+                                                        }
+                                                    }, 50);
+                                                });
+                                            }
+                                         }">
+                                        <div x-ref="editorDica1"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 2ª DICA / ORIENTAÇÃO (APARECE QUANDO MODO = 'AMBOS') -->
+                                @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
+                                    <div class="p-3 bg-white border border-gray-200 rounded-lg space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-extrabold text-indigo-700 uppercase">2ª Dica / Orientação</span>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 2ª dica</label>
+                                            <select wire:model.live="configuracoes.dica_2_tipo" class="w-full text-xs rounded-md border-gray-300">
+                                                <option value="tooltip">Tooltip (Ícone Interativo)</option>
+                                                <option value="legenda">Legenda (Abaixo do Input)</option>
+                                            </select>
+                                        </div>
+
+                                        @if(($configuracoes['dica_2_tipo'] ?? 'tooltip') === 'tooltip')
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Como acionar o Tooltip?</label>
+                                                <select wire:model.live="configuracoes.dica_2_trigger" class="w-full text-xs rounded-md border-gray-300">
+                                                    <option value="hover">Ao passar o rato (Hover)</option>
+                                                    <option value="click">Ao clicar no ícone (Click)</option>
+                                                </select>
+                                            </div>
+                                        @endif
+
+                                        <div class="builder-quill"
+                                             wire:ignore
+                                             x-data="{
+                                                val: @entangle('configuracoes.dica_2_texto').live,
+                                                quill: null,
+                                                init() {
+                                                    this.quill = new Quill(this.$refs.editorDica2, {
+                                                        theme: 'snow',
+                                                        placeholder: 'Escreva a segunda orientação aqui...',
+                                                        modules: {
+                                                            toolbar: [
+                                                                ['bold', 'italic', 'underline', 'strike'],
+                                                                [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                                [{ 'color': [] }, { 'background': [] }],
+                                                                ['clean']
+                                                            ]
+                                                        }
+                                                    });
+                                                    this.quill.root.innerHTML = this.val || '';
+                                                    this.quill.on('text-change', () => {
+                                                        let html = this.quill.root.innerHTML;
+                                                        this.val = (html === '<p><br></p>') ? '' : html;
+                                                    });
+                                                    window.addEventListener('sincronizar-quill-builder', () => {
+                                                        setTimeout(() => {
+                                                            if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                                this.quill.root.innerHTML = this.val || '';
+                                                            }
+                                                        }, 50);
+                                                    });
+                                                }
+                                             }">
+                                            <div x-ref="editorDica2"></div>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+                    @endif
+
+                    <!-- ========================================================= -->
                     <!-- CONFIGURAÇÕES ESPECÍFICAS: ASSINATURA À MÃO ('signature') -->
                     <!-- ========================================================= -->
                     @if($tipo === 'signature')
@@ -752,14 +1031,14 @@
                                         <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="usuario" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
                                         <div class="flex flex-col">
                                             <span class="text-xs font-bold text-gray-900">Assinatura do Utilizador</span>
-                                            <span class="text-[10px] text-gray-500">Aparece no formulário como: <strong>"Sua assinatura"</strong></span>
+                                            <span class="text-[10px] text-gray-500">Padrão: <strong>"Sua assinatura"</strong></span>
                                         </div>
                                     </label>
                                     <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'responsavel') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
                                         <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="responsavel" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
                                         <div class="flex flex-col">
                                             <span class="text-xs font-bold text-gray-900">Assinatura do Responsável</span>
-                                            <span class="text-[10px] text-gray-500">Aparece no formulário como: <strong>"Assinatura do responsável"</strong></span>
+                                            <span class="text-[10px] text-gray-500">Padrão: <strong>"Assinatura do responsável"</strong></span>
                                         </div>
                                     </label>
                                 </div>
@@ -991,7 +1270,43 @@
                                 <option value="info_card">Caixa de Aviso (Azul)</option>
                             </select>
                             @if($subtipo === 'info_card')
-                                <textarea wire:model="configuracoes.descricao" rows="2" placeholder="Texto adicional de aviso" class="w-full text-xs rounded-lg border-gray-300"></textarea>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-gray-700 mb-1">Texto Adicional do Aviso</label>
+                                    <div class="builder-quill"
+                                         wire:ignore
+                                         x-data="{
+                                            val: @entangle('configuracoes.descricao').live,
+                                            quill: null,
+                                            init() {
+                                                this.quill = new Quill(this.$refs.editorAvisoDesc, {
+                                                    theme: 'snow',
+                                                    placeholder: 'Texto complementar do aviso...',
+                                                    modules: {
+                                                        toolbar: [
+                                                            ['bold', 'italic', 'underline', 'strike'],
+                                                            [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                            [{ 'color': [] }, { 'background': [] }],
+                                                            ['clean']
+                                                        ]
+                                                    }
+                                                });
+                                                this.quill.root.innerHTML = this.val || '';
+                                                this.quill.on('text-change', () => {
+                                                    let html = this.quill.root.innerHTML;
+                                                    this.val = (html === '<p><br></p>') ? '' : html;
+                                                });
+                                                window.addEventListener('sincronizar-quill-builder', () => {
+                                                    setTimeout(() => {
+                                                        if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                            this.quill.root.innerHTML = this.val || '';
+                                                        }
+                                                    }, 50);
+                                                });
+                                            }
+                                         }">
+                                        <div x-ref="editorAvisoDesc"></div>
+                                    </div>
+                                </div>
                             @endif
                         </div>
                     @elseif($tipo === 'media')
@@ -1071,7 +1386,7 @@
                                     <option value="">-- Sempre Visível --</option>
                                     @foreach($camposCadastrados as $c)
                                         @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
-                                            <option value="{{ $c->name }}">{{ Str::limit($c->label, 28) }} ({{ $c->name }})</option>
+                                            <option value="{{ $c->name }}">{{ Str::limit(strip_tags($c->label), 28) }} ({{ $c->name }})</option>
                                         @endif
                                     @endforeach
                                 </select>

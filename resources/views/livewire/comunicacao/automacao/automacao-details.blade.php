@@ -1,7 +1,7 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative">
     
     <x-page-header 
-        title="Detalhes da Automação" 
+        title="Detalhes da Automação: {{ $automacao->nome }}" 
         icon="ph ph-chart-line-up"
         badge="{{ $automacao->status ? 'Ativa' : 'Inativa' }}"
         :breadcrumbs="$breadcrumbs"
@@ -38,7 +38,7 @@
     <div class="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:bg-gray-800 dark:border-gray-700 mt-6">
         <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center dark:border-gray-700">
             <h3 class="font-bold text-gray-900 flex items-center gap-2 dark:text-white">
-                <i class="ph-fill ph-clock-counter-clockwise text-purpura-500"></i> Últimos Disparos
+                <i class="ph-fill ph-clock-counter-clockwise text-purpura-500"></i> Últimos Disparos e Leituras
             </h3>
         </div>
         
@@ -48,8 +48,9 @@
                     <tr>
                         <th class="px-6 py-4 font-bold">Data e Hora</th>
                         <th class="px-6 py-4 font-bold">Destinatário(s)</th>
+                        <th class="px-6 py-4 font-bold">Abertura / Cliques</th>
                         <th class="px-6 py-4 font-bold text-center">Status</th>
-                        <th class="px-6 py-4 font-bold text-right">Ações</th>
+                        <th class="px-6 py-4 font-bold text-right">Detalhes</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -67,26 +68,45 @@
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ \Illuminate\Support\Str::limit($primeiroEmail, 35) }}</span>
                                     @if($qtdTotal > 1)
-                                        <span class="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300" title="Existem mais destinatários neste disparo">
+                                        <span class="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">
                                             +{{ $qtdTotal - 1 }}
                                         </span>
                                     @endif
                                 </div>
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    @if($log->aberturas_count > 0)
+                                        <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <i class="ph-fill ph-envelope-open"></i> Aberto ({{ $log->aberturas_count }}x)
+                                        </span>
+                                    @else
+                                        <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                                            Não aberto
+                                        </span>
+                                    @endif
+
+                                    @if($log->cliques_count > 0)
+                                        <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purpura-50 text-purpura-700 border border-purpura-200">
+                                            <i class="ph-fill ph-cursor-click"></i> {{ $log->cliques_count }} {{ $log->cliques_count == 1 ? 'clique' : 'cliques' }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider border border-green-200 text-green-600 dark:border-green-800 dark:text-green-400">
+                                <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider border border-green-200 text-green-600">
                                     Entregue
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
-                                <button wire:click="showQuickView({{ $log->id }})" class="text-gray-400 hover:text-purpura-600 transition-colors" title="Ver Detalhes do Disparo">
+                                <button wire:click="showQuickView({{ $log->id }})" class="text-gray-400 hover:text-purpura-600 transition-colors" title="Ver Rastreamento de Cliques e Aberturas">
                                     <i class="text-xl ph ph-info"></i>
                                 </button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-16 text-center text-gray-400">
+                            <td colspan="5" class="px-6 py-16 text-center text-gray-400">
                                 <i class="ph ph-envelope-simple-open text-3xl mb-3 block"></i>
                                 <p class="font-medium text-gray-500">Nenhum histórico registado.</p>
                             </td>
