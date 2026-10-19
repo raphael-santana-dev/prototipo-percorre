@@ -286,6 +286,39 @@
                                         <option value="oeste">Oeste</option>
                                     </select>
                                 </div>
+
+                                @if(!empty($cursosBarradosPorIdade))
+                                    <div class="col-span-12 mt-2 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3">
+                                        <div class="flex items-start gap-2.5 text-amber-800 dark:text-amber-300">
+                                            <i class="ph-fill ph-cake text-xl text-amber-600 shrink-0 mt-0.5"></i>
+                                            <div class="text-xs leading-relaxed">
+                                                <p class="font-bold text-sm mb-1">Atenção ao limite de idade até o encerramento das matrículas:</p>
+                                                @foreach($cursosBarradosPorIdade as $b)
+                                                    <p>• O curso <strong>{{ $b['curso_nome'] }}</strong> ({{ $b['unidade_nome'] }}) permite candidatos de até <strong>{{ $b['idade_max'] }} anos</strong>, porém você completará <strong>{{ $b['idade_futura'] }} anos</strong> até o término do período de matrícula ({{ $b['data_limite'] }}).</p>
+                                                @endforeach
+                                            </div>
+                                        </div>
+
+                                        @if(!empty($sugestoesCursosIdade))
+                                            <div class="pt-2 border-t border-amber-200/70 dark:border-amber-800/60">
+                                                <p class="text-xs font-bold text-amber-900 dark:text-amber-200 mb-2">
+                                                    Sugestões de cursos disponíveis compatíveis com a sua idade:
+                                                </p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    @foreach($sugestoesCursosIdade as $sug)
+                                                        <button type="button"
+                                                                wire:click="selecionarSugestaoCurso({{ $sug['unidade_id'] }}, {{ $sug['curso_id'] }})"
+                                                                class="px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-purpura-50 border border-amber-300 hover:border-purpura-400 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200 shadow-sm transition flex items-center gap-1.5">
+                                                            <i class="ph-bold ph-graduation-cap text-purpura-600"></i>
+                                                            <span>{{ $sug['curso_nome'] }} — {{ $sug['unidade_nome'] }}</span>
+                                                            <span class="text-[10px] text-gray-400">({{ $sug['faixa'] }})</span>
+                                                        </button>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
                             
                                 @if(empty($data_nascimento) || empty($estado))
                                     <div class="col-span-12 mt-4 p-5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-md text-center">

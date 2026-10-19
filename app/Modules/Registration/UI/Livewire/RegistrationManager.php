@@ -265,7 +265,7 @@ class RegistrationManager extends Component
 
     protected function obterQueryFiltrada()
     {
-        $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao', 'contatos', 'comunicados']);
+        $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao', 'contatos']);
         
         if (!empty($this->filtroNome)) {
             $query->where(function($q) {
@@ -1108,21 +1108,33 @@ class RegistrationManager extends Component
     {
         if (!$this->contatoInscricaoId) return;
 
-        \App\Models\InscricaoContato::updateOrCreate(
-            ['id' => $this->contatoRegistroId],
-            [
-                'inscricao_id'   => $this->contatoInscricaoId,
-                'canal'          => $this->contatoCanal,
-                'data_contato'   => !empty($this->contatoData) ? $this->contatoData : now(),
-                'conteudo'       => trim($this->contatoConteudo) ?: null,
-                'houve_resposta' => $this->contatoHouveResposta,
-                'user_id'        => auth()->id(),
-                'user_nome'      => auth()->user()->name ?? 'Sistema',
-            ]
-        );
+        $dados = [
+            'inscricao_id'   => $this->contatoInscricaoId,
+            'canal'          => $this->contatoCanal,
+            'data_contato'   => !empty($this->contatoData) ? $this->contatoData : now(),
+            'conteudo'       => trim($this->contatoConteudo) ?: null,
+            'houve_resposta' => (bool) $this->contatoHouveResposta,
+            'user_id'        => auth()->id(),
+            'user_nome'      => auth()->user()->name ?? 'Sistema',
+        ];
+
+        if (!empty($this->contatoRegistroId)) {
+            $registro = \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)
+                ->find($this->contatoRegistroId);
+
+            if ($registro) {
+                $registro->update($dados);
+            } else {
+                $novo = \App\Models\InscricaoContato::create($dados);
+                $this->contatoRegistroId = $novo->id;
+            }
+        } else {
+            $novo = \App\Models\InscricaoContato::create($dados);
+            $this->contatoRegistroId = $novo->id;
+        }
 
         $this->carregarHistoricoContatosCanal();
-        $this->dispatch('sucesso', msg: 'Registro de contato salvo com sucesso!');
+        $this->dispatch('sucesso', msg: 'Tentativa de contato via ' . strtoupper($this->contatoCanal) . ' registrada!');
         $this->modalContatoAberto = false;
     }
 

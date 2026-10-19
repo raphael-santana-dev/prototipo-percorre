@@ -49,6 +49,9 @@ class UserManager extends Component
     public array $cursosSelecionados = [];
     public array $turnosSelecionados = [];
 
+    public $activeUnidadeId = null;
+    public $activeCursoId = null;
+
     public bool $acessoGlobalFinanceiro = false;
     public array $centrosCustoSelecionados = [];
     public array $expiracoesCentrosCusto = [];
@@ -69,7 +72,6 @@ class UserManager extends Component
         abort_if(!feature('usuario.listar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.listar'), 403);
 
-        // Garante a existência da permissão de visão global financeira no banco
         Permission::firstOrCreate(
             ['name' => 'financeiro.visao_global', 'guard_name' => 'web'],
             ['module' => 'financeiro', 'description' => 'Acesso global aos centros de custo e orçamentos']
@@ -84,6 +86,19 @@ class UserManager extends Component
         $this->resetInputFields();
         $this->aplicarRegrasCascata();
         $this->showModal = true;
+    }
+
+    public function setActiveUnidade($id)
+    {
+        $this->activeUnidadeId = $id;
+        $this->activeCursoId = null;
+        $this->aplicarRegrasCascata();
+    }
+
+    public function setActiveCurso($id)
+    {
+        $this->activeCursoId = $id;
+        $this->aplicarRegrasCascata();
     }
 
     // --- NAVEGAÇÃO DO WIZARD ---
@@ -140,16 +155,30 @@ class UserManager extends Component
 
     private function validarEtapa2(): void
     {
-        $this->validate([
+        $rules = [
             'roleName' => 'required|string|exists:roles,name',
             'unidadesSelecionadas' => 'nullable|array',
             'cursosSelecionados' => 'nullable|array',
             'turnosSelecionados' => 'nullable|array',
             'centrosCustoSelecionados' => 'nullable|array',
             'acessoGlobalFinanceiro' => 'boolean',
-        ], [
+        ];
+
+        $messages = [
             'roleName.required' => 'Selecione um Grupo Principal (Role) para o usuário.',
-        ]);
+        ];
+
+        // Se o usuário selecionou alguma unidade, exige que vincule pelo menos um curso e um turno correspondente
+        if (!empty($this->unidadesSelecionadas)) {
+            $rules['cursosSelecionados'] = 'required|array|min:1';
+            $rules['turnosSelecionados'] = 'required|array|min:1';
+            $messages['cursosSelecionados.required'] = 'Selecione ao menos um Curso vinculado à(s) unidade(s) escolhida(s).';
+            $messages['cursosSelecionados.min'] = 'Selecione ao menos um Curso vinculado à(s) unidade(s) escolhida(s).';
+            $messages['turnosSelecionados.required'] = 'Selecione ao menos um Turno vinculado ao(s) curso(s) escolhido(s).';
+            $messages['turnosSelecionados.min'] = 'Selecione ao menos um Turno vinculado ao(s) curso(s) escolhido(s).';
+        }
+
+        $this->validate($rules, $messages);
     }
 
     // --- REATIVIDADE DE ROLE E VÍNCULOS ---
@@ -161,11 +190,29 @@ class UserManager extends Component
 
     public function updatedUnidadesSelecionadas()
     {
+        $this->unidadesSelecionadas = array_values(array_filter(array_map('strval', $this->unidadesSelecionadas)));
+
+        if (empty($this->unidadesSelecionadas)) {
+            $this->activeUnidadeId = null;
+            $this->activeCursoId = null;
+        } elseif (!$this->activeUnidadeId || !in_array((string) $this->activeUnidadeId, $this->unidadesSelecionadas)) {
+            $this->activeUnidadeId = $this->unidadesSelecionadas[0];
+            $this->activeCursoId = null;
+        }
+
         $this->aplicarRegrasCascata();
     }
 
     public function updatedCursosSelecionados()
     {
+        $this->cursosSelecionados = array_values(array_filter(array_map('strval', $this->cursosSelecionados)));
+
+        if (empty($this->cursosSelecionados)) {
+            $this->activeCursoId = null;
+        } elseif (!$this->activeCursoId || !in_array((string) $this->activeCursoId, $this->cursosSelecionados)) {
+            $this->activeCursoId = $this->cursosSelecionados[0];
+        }
+
         $this->aplicarRegrasCascata();
     }
 
@@ -197,7 +244,6 @@ class UserManager extends Component
         ksort($agrupadas);
         $this->rolePermissionsPorModulo = $agrupadas;
 
-        // Remove das permissões extras aquelas que já pertencem à Role selecionada
         $this->selectedExtraPermissions = array_values(array_diff(
             array_map('strval', $this->selectedExtraPermissions),
             array_map('strval', $this->rolePermissionsIds)
@@ -206,31 +252,68 @@ class UserManager extends Component
 
     public function aplicarRegrasCascata(): void
     {
-        if (!empty($this->unidadesSelecionadas)) {
-            $this->cursosFiltrados = Curso::whereHas('unidades', function ($q) {
-                $q->whereIn('unidades.id', $this->unidadesSelecionadas);
-            })->whereIn('status', ['Ativo', '1', true])->get();
+        $unidadesIds = array_values(array_filter(array_map('intval', $this->unidadesSelecionadas)));
 
-            $idsCursosValidos = collect($this->cursosFiltrados)->pluck('id')->map(fn($id) => (string) $id)->toArray();
-            $this->cursosSelecionados = array_values(array_intersect($this->cursosSelecionados, $idsCursosValidos));
-        } else {
-            $this->cursosFiltrados = Curso::whereIn('status', ['Ativo', '1', true])->get();
+        if (empty($unidadesIds)) {
+            $this->cursosFiltrados = collect();
+            $this->turnosFiltrados = collect();
+            $this->cursosSelecionados = [];
+            $this->turnosSelecionados = [];
+            $this->activeUnidadeId = null;
+            $this->activeCursoId = null;
+            return;
         }
 
-        if (!empty($this->cursosSelecionados)) {
-            $turnosDisponiveis = collect();
-            $cursosValidosObj = Curso::with('turnosVinculados')->whereIn('id', $this->cursosSelecionados)->get();
-            foreach ($cursosValidosObj as $curso) {
-                foreach ($curso->turnosVinculados as $turno) {
-                    $turnosDisponiveis->put($turno->id, $turno);
-                }
-            }
-            $this->turnosFiltrados = $turnosDisponiveis->values()->all();
+        if (!$this->activeUnidadeId || !in_array((int) $this->activeUnidadeId, $unidadesIds)) {
+            $this->activeUnidadeId = $unidadesIds[0];
+        }
 
-            $idsTurnosValidos = collect($this->turnosFiltrados)->pluck('id')->map(fn($id) => (string) $id)->toArray();
-            $this->turnosSelecionados = array_values(array_intersect($this->turnosSelecionados, $idsTurnosValidos));
+        // Busca todos os cursos que pertencem às unidades marcadas
+        $cursosDasUnidadesMarcadas = Curso::with(['unidades', 'turnosVinculados'])
+            ->whereIn('status', ['Ativo', 'ativo', '1', true])
+            ->whereHas('unidades', function ($q) use ($unidadesIds) {
+                $q->whereIn('unidades.id', $unidadesIds);
+            })
+            ->orderBy('nome')
+            ->get();
+
+        // Limpa cursos selecionados que não pertençam mais a nenhuma unidade marcada
+        $idsCursosPermitidos = $cursosDasUnidadesMarcadas->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->cursosSelecionados = array_values(array_intersect(array_map('strval', $this->cursosSelecionados), $idsCursosPermitidos));
+
+        // Na Coluna 2, exibe os cursos vinculados especificamente à Unidade Ativa clicada
+        $this->cursosFiltrados = $cursosDasUnidadesMarcadas->filter(function ($curso) {
+            return $curso->unidades->contains('id', (int) $this->activeUnidadeId);
+        })->values();
+
+        // Se o curso ativo não estiver nos cursos da unidade ativa, seleciona o primeiro curso marcado dessa unidade (se houver)
+        $cursosDaUnidadeAtivaIds = $this->cursosFiltrados->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        if (!$this->activeCursoId || !in_array((string) $this->activeCursoId, $cursosDaUnidadeAtivaIds)) {
+            $marcadosNaUnidadeAtiva = array_values(array_intersect($this->cursosSelecionados, $cursosDaUnidadeAtivaIds));
+            $this->activeCursoId = $marcadosNaUnidadeAtiva[0] ?? ($cursosDaUnidadeAtivaIds[0] ?? null);
+        }
+
+        // Limpa turnos selecionados que não pertençam a nenhum curso selecionado
+        if (!empty($this->cursosSelecionados)) {
+            $cursosMarcadosModels = $cursosDasUnidadesMarcadas->whereIn('id', array_map('intval', $this->cursosSelecionados));
+            $idsTurnosPermitidos = $cursosMarcadosModels
+                ->flatMap(fn($c) => $c->turnosVinculados)
+                ->pluck('id')
+                ->unique()
+                ->map(fn($id) => (string) $id)
+                ->toArray();
+
+            $this->turnosSelecionados = array_values(array_intersect(array_map('strval', $this->turnosSelecionados), $idsTurnosPermitidos));
         } else {
-            $this->turnosFiltrados = Turno::all();
+            $this->turnosSelecionados = [];
+        }
+
+        // Na Coluna 3, exibe os turnos vinculados ao Curso Ativo clicado
+        if ($this->activeCursoId) {
+            $cursoAtivoObj = $cursosDasUnidadesMarcadas->firstWhere('id', (int) $this->activeCursoId);
+            $this->turnosFiltrados = $cursoAtivoObj ? $cursoAtivoObj->turnosVinculados->sortBy('nome')->values() : collect();
+        } else {
+            $this->turnosFiltrados = collect();
         }
     }
 
@@ -361,9 +444,11 @@ class UserManager extends Component
         $this->cursosSelecionados = $user->cursos->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->turnosSelecionados = $user->turnos->pluck('id')->map(fn($id) => (string) $id)->toArray();
 
+        $this->activeUnidadeId = $this->unidadesSelecionadas[0] ?? null;
+        $this->activeCursoId = $this->cursosSelecionados[0] ?? null;
+
         $this->aplicarRegrasCascata();
 
-        // Carrega dados do Financeiro via coleção em memória
         $this->acessoGlobalFinanceiro = $user->permissions->contains('name', 'financeiro.visao_global');
         $this->centrosCustoSelecionados = $user->centros_de_custo->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->expiracoesCentrosCusto = [];
@@ -374,7 +459,6 @@ class UserManager extends Component
             }
         }
 
-        // Carrega Permissões Extras Diretas
         $directPermissions = $user->permissions()->withPivot('expires_at')->get();
         foreach ($directPermissions as $perm) {
             if ($perm->name === 'financeiro.visao_global') {
@@ -423,6 +507,8 @@ class UserManager extends Component
         $this->unidadesSelecionadas = [];
         $this->cursosSelecionados = [];
         $this->turnosSelecionados = [];
+        $this->activeUnidadeId = null;
+        $this->activeCursoId = null;
 
         $this->acessoGlobalFinanceiro = false;
         $this->centrosCustoSelecionados = [];
@@ -501,7 +587,7 @@ class UserManager extends Component
         return view('livewire.corporate.user-manager', [
             'registros' => $query->paginate($this->porPagina),
             'roles' => Role::orderBy('name')->get(),
-            'todasUnidades' => Unidade::whereIn('status', ['Ativa', '1', true])->get(),
+            'todasUnidades' => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
             'todosCentrosCusto' => CentroCusto::where('disponivel_orcamento', true)->orderBy('codigo')->get(),
             'permissionsByModule' => $permissoesQuery->get()->groupBy('module'),
         ]);

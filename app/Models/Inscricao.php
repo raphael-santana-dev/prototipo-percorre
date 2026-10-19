@@ -106,6 +106,13 @@ class Inscricao extends Model
 
     public function contatos()
     {
-        return $this->hasMany(InscricaoContato::class, 'inscricao_id')->orderBy('data_contato', 'desc')->orderBy('id', 'desc');
+        return $this->hasMany(\App\Models\InscricaoContato::class, 'inscricao_id')
+                    ->orderBy('data_contato', 'desc')
+                    ->orderBy('id', 'desc');
+    }
+
+    public function comunicados()
+    {
+        return $this->hasMany(\App\Modules\Comunicacao\Domain\Models\Comunicado::class, 'inscricao_id');
     }
 }

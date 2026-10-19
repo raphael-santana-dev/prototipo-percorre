@@ -51,6 +51,9 @@ class Inscricao extends Component
     public $curso_interesse = null;
     public $turno_interesse = null;
 
+    public array $cursosBarradosPorIdade = [];
+    public array $sugestoesCursosIdade = [];
+
     public function mount()
     {
         $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
@@ -811,11 +814,74 @@ class Inscricao extends Component
         }
     }
 
+    /**
+     * Retorna a idade atual e a idade que o candidato terá até o encerramento da matrícula/inscrição.
+     */
+    private function obterIdadesParaValidacao(): array
+    {
+        $nascimento = Carbon::parse($this->data_nascimento)->startOfDay();
+        $idadeHoje = $nascimento->age;
+
+        $ciclo = Ciclo::find($this->cicloAtivoId);
+        $dataLimite = now();
+
+        if ($ciclo) {
+            $datasConsideradas = array_filter([
+                $ciclo->data_fim,
+                $ciclo->data_inicio_matricula,
+                $ciclo->data_fim_matricula,
+            ]);
+
+            foreach ($datasConsideradas as $dt) {
+                $carbonDt = Carbon::parse($dt);
+                if ($carbonDt->gt($dataLimite)) {
+                    $dataLimite = $carbonDt;
+                }
+            }
+        }
+
+        $idadeNoFimMatricula = $nascimento->diffInYears($dataLimite->endOfDay());
+
+        return [
+            'idade_hoje'        => (int) $idadeHoje,
+            'idade_fim_periodo' => (int) max($idadeHoje, $idadeNoFimMatricula),
+            'data_limite_fmt'   => $dataLimite->format('d/m/Y'),
+        ];
+    }
+
+    /**
+     * Verifica se a oferta é compatível com a idade atual e com a idade no período de matrícula.
+     */
+    private function ofertaCompativelComIdade($oferta, int $idadeHoje, int $idadeFimPeriodo, ?string &$motivoBloqueio = null): bool
+    {
+        $motivoBloqueio = null;
+
+        if ($oferta->idade_min !== null && $idadeHoje < (int) $oferta->idade_min) {
+            $motivoBloqueio = "Idade mínima exigida: {$oferta->idade_min} anos.";
+            return false;
+        }
+
+        if ($oferta->idade_max !== null) {
+            if ($idadeHoje > (int) $oferta->idade_max) {
+                $motivoBloqueio = "Idade máxima permitida: {$oferta->idade_max} anos.";
+                return false;
+            }
+            if ($idadeFimPeriodo > (int) $oferta->idade_max) {
+                $motivoBloqueio = "O curso permite até {$oferta->idade_max} anos, mas você completará {$idadeFimPeriodo} anos durante o período de inscrição/matrícula.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function atualizarDisponibilidade()
     {
         $this->unidadesDisponiveis = [];
         $this->cursosDisponiveis = [];
         $this->turnosDisponiveis = [];
+        $this->cursosBarradosPorIdade = [];
+        $this->sugestoesCursosIdade = [];
         $this->unidade = null;
         $this->curso = null;
         $this->turno = null;
@@ -823,27 +889,26 @@ class Inscricao extends Component
 
         if (!$this->estado || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idades = $this->obterIdadesParaValidacao();
+        $idadeHoje = $idades['idade_hoje'];
+        $idadeFim  = $idades['idade_fim_periodo'];
+
         $ofertasValidas = $this->getOfertasValidas();
         
-        $ofertasDisponiveis = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
+        $todasOfertasCiclo = \App\Models\OfertaVaga::with(['curso', 'unidade', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
-            })
             ->get();
 
         $unidadesDisponiveisList = collect();
+        $sugestoes = [];
+        $barrados = [];
         
-        foreach ($ofertasDisponiveis as $oferta) {
+        foreach ($todasOfertasCiclo as $oferta) {
+            if (!$oferta->curso || !$oferta->unidade) continue;
             if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             if (!in_array($oferta->unidade->status, ['Ativa', 'ativa', '1', 1, true], true)) continue;
             
             $estadoUnidade = $oferta->unidade->estado ?: trim(explode('-', $oferta->unidade->nome)[0]);
-
             if (strtoupper($estadoUnidade) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
                 continue;
             }
@@ -853,8 +918,32 @@ class Inscricao extends Component
                 if (!isset($ofertasValidas[$key])) continue;
             }
 
-            $unidadesDisponiveisList->put($oferta->unidade_id, $oferta->unidade->nome);
+            $motivo = null;
+            if ($this->ofertaCompativelComIdade($oferta, $idadeHoje, $idadeFim, $motivo)) {
+                $unidadesDisponiveisList->put($oferta->unidade_id, $oferta->unidade->nome);
+                $sugestoes["{$oferta->unidade_id}-{$oferta->curso_id}"] = [
+                    'unidade_id'   => $oferta->unidade_id,
+                    'unidade_nome' => $oferta->unidade->nome,
+                    'curso_id'     => $oferta->curso_id,
+                    'curso_nome'   => $oferta->curso->nome,
+                    'faixa'        => ($oferta->idade_min ?? 0) . ' a ' . ($oferta->idade_max ?? '99') . ' anos',
+                ];
+            } else {
+                // Guarda se foi barrado especificamente por fazer aniversário até a matrícula
+                if ($idadeHoje <= ($oferta->idade_max ?? 999) && $idadeFim > ($oferta->idade_max ?? 999)) {
+                    $barrados["{$oferta->unidade_id}-{$oferta->curso_id}"] = [
+                        'unidade_nome' => $oferta->unidade->nome,
+                        'curso_nome'   => $oferta->curso->nome,
+                        'idade_max'    => $oferta->idade_max,
+                        'idade_futura' => $idadeFim,
+                        'data_limite'  => $idades['data_limite_fmt'],
+                    ];
+                }
+            }
         }
+
+        $this->cursosBarradosPorIdade = array_values($barrados);
+        $this->sugestoesCursosIdade = array_values($sugestoes);
 
         if ($unidadesDisponiveisList->count() > 0) {
             $this->temVagasDisponiveis = true;
@@ -871,6 +960,18 @@ class Inscricao extends Component
         }
     }
 
+    public function selecionarSugestaoCurso(int $unidadeId, int $cursoId)
+    {
+        if (isset($this->unidadesDisponiveis[$unidadeId])) {
+            $this->unidade = $unidadeId;
+            $this->updatedUnidade($unidadeId);
+            if (isset($this->cursosDisponiveis[$cursoId])) {
+                $this->curso = $cursoId;
+                $this->updatedCurso($cursoId);
+            }
+        }
+    }
+
     public function updatedUnidade($unidadeId)
     {
         $this->curso = null;
@@ -880,27 +981,24 @@ class Inscricao extends Component
 
         if (!$unidadeId || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idades = $this->obterIdadesParaValidacao();
         $ofertasValidas = $this->getOfertasValidas();
         $unidadeSelecionada = \App\Modules\Unidade\Domain\Models\Unidade::find($unidadeId);
-
         $estadoUnidadeSelecionada = $unidadeSelecionada->estado ?: trim(explode('-', $unidadeSelecionada->nome)[0]);
 
         $ofertasDaUnidade = \App\Models\OfertaVaga::with(['curso', 'turno'])
             ->where('ciclo_id', $this->cicloAtivoId)
             ->where('unidade_id', $unidadeId)
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
-            })
             ->get(); 
 
         foreach ($ofertasDaUnidade as $oferta) {
-            if (!in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
+            if (!$oferta->curso || !in_array($oferta->curso->status, ['Ativo', 'ativo', '1', 1, true], true)) continue;
             
             if ($unidadeSelecionada && strtoupper($estadoUnidadeSelecionada) !== strtoupper($this->estado) && !$oferta->curso->permite_estado_diferente) {
+                continue;
+            }
+
+            if (!$this->ofertaCompativelComIdade($oferta, $idades['idade_hoje'], $idades['idade_fim_periodo'])) {
                 continue;
             }
 
@@ -929,22 +1027,20 @@ class Inscricao extends Component
 
         if (!$cursoId || !$this->unidade || !$this->data_nascimento) return;
 
-        $idade = Carbon::parse($this->data_nascimento)->age;
+        $idades = $this->obterIdadesParaValidacao();
         $ofertasValidas = $this->getOfertasValidas();
 
         $ofertasDoCurso = \App\Models\OfertaVaga::with('turno')
             ->where('ciclo_id', $this->cicloAtivoId)
             ->where('unidade_id', $this->unidade)
             ->where('curso_id', $cursoId)
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_min')->orWhere('idade_min', '<=', $idade);
-            })
-            ->where(function($q) use ($idade) {
-                $q->whereNull('idade_max')->orWhere('idade_max', '>=', $idade);
-            })
             ->get();
 
         foreach ($ofertasDoCurso as $oferta) {
+            if (!$this->ofertaCompativelComIdade($oferta, $idades['idade_hoje'], $idades['idade_fim_periodo'])) {
+                continue;
+            }
+
             if ($this->use_vacancy_limit && $ofertasValidas !== null) {
                 $key = "{$this->unidade}-{$cursoId}-{$oferta->turno_id}";
                 if (!isset($ofertasValidas[$key])) continue;

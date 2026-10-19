@@ -295,46 +295,46 @@
                         $cWpp   = $contatosInsc->where('canal', 'whatsapp');
                         $cTel   = $contatosInsc->where('canal', 'telefone');
 
-                        $temEmail = $cEmail->isNotEmpty();
+                        $temEmail  = $cEmail->isNotEmpty();
                         $respEmail = $cEmail->where('houve_resposta', true)->isNotEmpty();
 
-                        $temWpp = $cWpp->isNotEmpty();
+                        $temWpp  = $cWpp->isNotEmpty();
                         $respWpp = $cWpp->where('houve_resposta', true)->isNotEmpty();
 
-                        $temTel = $cTel->isNotEmpty();
+                        $temTel  = $cTel->isNotEmpty();
                         $respTel = $cTel->where('houve_resposta', true)->isNotEmpty();
                     @endphp
                     <div class="inline-flex items-center justify-center gap-1.5">
-                        {{-- Botão E-mail --}}
+                        {{-- Flag 1: E-mail --}}
                         <button type="button"
                                 wire:click="abrirModalContato({{ $inscricao->id }}, 'email')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temEmail ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-500 hover:border-blue-200 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temEmail ? 'Contato por E-mail registrado (' . $cEmail->count() . ') - Clique para ver/editar' : 'Registrar contato por E-mail' }}">
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temEmail ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-blue-600 hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temEmail ? 'E-mail: ' . $cEmail->count() . ' tentativa(s) registrada(s)' . ($respEmail ? ' (Respondido)' : '') : 'Registrar tentativa de contato por E-mail' }}">
                             <i class="{{ $temEmail ? 'ph-fill' : 'ph-bold' }} ph-envelope-simple text-sm"></i>
                             @if($respEmail)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
                             @endif
                         </button>
 
-                        {{-- Botão WhatsApp --}}
+                        {{-- Flag 2: WhatsApp --}}
                         <button type="button"
                                 wire:click="abrirModalContato({{ $inscricao->id }}, 'whatsapp')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temWpp ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-500 hover:border-emerald-200 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temWpp ? 'Contato por WhatsApp registrado (' . $cWpp->count() . ') - Clique para ver/editar' : 'Registrar contato por WhatsApp' }}">
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temWpp ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-emerald-600 hover:border-emerald-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temWpp ? 'WhatsApp: ' . $cWpp->count() . ' tentativa(s) registrada(s)' . ($respWpp ? ' (Respondido)' : '') : 'Registrar tentativa de contato por WhatsApp' }}">
                             <i class="{{ $temWpp ? 'ph-fill' : 'ph-bold' }} ph-whatsapp-logo text-sm"></i>
                             @if($respWpp)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-gray-900" title="Candidato respondeu"></span>
                             @endif
                         </button>
 
-                        {{-- Botão Telefone --}}
+                        {{-- Flag 3: Telefone --}}
                         <button type="button"
                                 wire:click="abrirModalContato({{ $inscricao->id }}, 'telefone')"
-                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition {{ $temTel ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-amber-500 hover:border-amber-200 dark:bg-gray-800 dark:border-gray-700' }}"
-                                title="{{ $temTel ? 'Contato por Telefone registrado (' . $cTel->count() . ') - Clique para ver/editar' : 'Registrar contato por Telefone' }}">
+                                class="relative w-7 h-7 rounded-lg flex items-center justify-center border transition-all shadow-2xs {{ $temTel ? 'bg-purpura-600 text-white border-purpura-700 hover:bg-purpura-700' : 'bg-gray-50 text-gray-400 border-gray-200 hover:text-purpura-600 hover:border-purpura-300 dark:bg-gray-800 dark:border-gray-700' }}"
+                                title="{{ $temTel ? 'Telefone: ' . $cTel->count() . ' tentativa(s) registrada(s)' . ($respTel ? ' (Atendido/Respondido)' : '') : 'Registrar tentativa de contato por Telefone' }}">
                             <i class="{{ $temTel ? 'ph-fill' : 'ph-bold' }} ph-phone-call text-sm"></i>
                             @if($respTel)
-                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Houve resposta"></span>
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-gray-900" title="Candidato atendeu/respondeu"></span>
                             @endif
                         </button>
                     </div>
