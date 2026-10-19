@@ -22,12 +22,14 @@ use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
 
+
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
 class RegistrationManager extends Component
 {
     use WithPagination;
     use ComPadraoListagem;
+    use \App\Traits\ComFiltroAvancado;
 
     public $filtroNome = '';
     public $filtroStatus = '';
@@ -66,6 +68,16 @@ class RegistrationManager extends Component
     public $acaoPendenteStatusId = null;
     public array $acaoPendenteIds = [];
     public string $acaoPendenteNomeStatus = '';
+
+    public bool $modalContatoAberto = false;
+    public ?int $contatoInscricaoId = null;
+    public string $contatoInscricaoNome = '';
+    public string $contatoCanal = 'whatsapp'; // email, whatsapp, telefone
+    public ?int $contatoRegistroId = null;
+    public $contatoData = '';
+    public string $contatoConteudo = '';
+    public bool $contatoHouveResposta = false;
+    public array $historicoContatosCanal = [];
     
     public function mount()
     {
@@ -86,6 +98,100 @@ class RegistrationManager extends Component
             $this->filtroCiclo = $cicloPadrao->id;
             $this->ciclo_id = $cicloPadrao->id; 
         }
+    }
+
+    public function getEsquemaFiltrosProperty(): array
+    {
+        $cicloIdRef = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
+
+        $dropdowns = Cache::remember('filtros_registration_arr', 3600, function() {
+            return [
+                'status'   => StatusInscricao::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'ciclos'   => Ciclo::orderBy('id', 'desc')->pluck('nome', 'id')->toArray(),
+                'unidades' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->pluck('nome', 'id')->toArray(),
+                'turnos'   => \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray(),
+                'cursos'   => \App\Models\Curso::whereIn('status', ['Ativo', '1', true])->pluck('nome', 'id')->toArray(),
+            ];
+        });
+
+        $etapasOpcoes = [];
+        if ($cicloIdRef) {
+            foreach (Etapa::where('ciclo_id', $cicloIdRef)->orderBy('numero')->get() as $et) {
+                $etapasOpcoes[(string) $et->numero] = "Passo {$et->numero} - {$et->nome}";
+            }
+        }
+        $etapasOpcoes['Finalizado'] = 'Finalizado (Concluído)';
+
+        $fixos = [
+            [
+                'key'          => 'status_inscricao_id',
+                'column'       => 'status_inscricao_id',
+                'label'        => 'Status da Inscrição',
+                'icon'         => 'ph-tag',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['status'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'          => 'unidade_id',
+                'column'       => 'unidade_id',
+                'label'        => 'Unidades (1 ou mais)',
+                'icon'         => 'ph-buildings',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['unidades'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'          => 'curso_id',
+                'column'       => 'curso_id',
+                'label'        => 'Cursos (1 ou mais)',
+                'icon'         => 'ph-graduation-cap',
+                'type'         => 'multiselect',
+                'options'      => $dropdowns['cursos'],
+                'default_open' => true,
+                'section'      => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'turno_id',
+                'column'  => 'turno_id',
+                'label'   => 'Turnos',
+                'icon'    => 'ph-clock',
+                'type'    => 'multiselect',
+                'options' => $dropdowns['turnos'],
+                'section' => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'etapa_atual',
+                'column'  => 'etapa_atual',
+                'label'   => 'Etapa do Funil',
+                'icon'    => 'ph-steps',
+                'type'    => 'multiselect',
+                'options' => $etapasOpcoes,
+                'section' => 'Filtros Principais',
+            ],
+            [
+                'key'     => 'created_at',
+                'column'  => 'created_at',
+                'label'   => 'Período de Inscrição',
+                'icon'    => 'ph-calendar',
+                'type'    => 'date_range',
+                'section' => 'Filtros Principais',
+            ],
+        ];
+
+        // Carrega automaticamente todos os campos dinâmicos do Ciclo selecionado
+        $dinamicos = [];
+        if ($cicloIdRef) {
+            $camposCiclo = \App\Models\CampoFormulario::where('ciclo_id', $cicloIdRef)
+                ->orderBy('etapa')
+                ->orderBy('ordem')
+                ->get();
+            $dinamicos = $this->mapearCamposDinamicosParaFiltro($camposCiclo);
+        }
+
+        return array_merge($fixos, $dinamicos);
     }
 
     protected function obterCicloPadrao(?int $cicloId = null): ?Ciclo
@@ -255,7 +361,7 @@ class RegistrationManager extends Component
 
     protected function obterQueryFiltrada()
     {
-        $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
+        $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao', 'contatos']);
         
         if (!empty($this->filtroNome)) {
             $query->where(function($q) {
@@ -277,7 +383,8 @@ class RegistrationManager extends Component
             }
         }
 
-        return $query; 
+        $this->aplicarFiltrosAvancadosNaQuery($query, $this->esquemaFiltros, 'inscricoes', 'dados_dinamicos');
+        return $query;
     }
 
     public function abrirRegras(int $id)
@@ -1044,6 +1151,7 @@ class RegistrationManager extends Component
         return [
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
+            ['key' => 'contatos', 'label' => 'Contatos', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'origem', 'label' => 'Origem', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
@@ -1052,6 +1160,97 @@ class RegistrationManager extends Component
             ['key' => 'status', 'label' => 'Status', 'sortable' => false],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
+    }
+    public function abrirModalContato(int $inscricaoId, string $canal)
+    {
+        $inscricao = Inscricao::with('contatos')->findOrFail($inscricaoId);
+        $this->contatoInscricaoId = $inscricao->id;
+        $this->contatoInscricaoNome = $inscricao->nome;
+        $this->contatoCanal = $canal;
+
+        $ultimo = $inscricao->contatos->where('canal', $canal)->first();
+
+        if ($ultimo) {
+            $this->contatoRegistroId = $ultimo->id;
+            $this->contatoData = $ultimo->data_contato ? $ultimo->data_contato->format('Y-m-d\TH:i') : now()->format('Y-m-d\TH:i');
+            $this->contatoConteudo = $ultimo->conteudo ?? '';
+            $this->contatoHouveResposta = (bool) $ultimo->houve_resposta;
+        } else {
+            $this->novoRegistroContatoNoModal();
+        }
+
+        $this->carregarHistoricoContatosCanal();
+        $this->modalContatoAberto = true;
+    }
+
+    public function novoRegistroContatoNoModal()
+    {
+        $this->contatoRegistroId = null;
+        $this->contatoData = now()->format('Y-m-d\TH:i');
+        $this->contatoConteudo = '';
+        $this->contatoHouveResposta = false;
+    }
+
+    public function editarRegistroContato(int $registroId)
+    {
+        $reg = \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)->findOrFail($registroId);
+        $this->contatoRegistroId = $reg->id;
+        $this->contatoCanal = $reg->canal;
+        $this->contatoData = $reg->data_contato ? $reg->data_contato->format('Y-m-d\TH:i') : now()->format('Y-m-d\TH:i');
+        $this->contatoConteudo = $reg->conteudo ?? '';
+        $this->contatoHouveResposta = (bool) $reg->houve_resposta;
+    }
+
+    public function salvarContato()
+    {
+        if (!$this->contatoInscricaoId) return;
+
+        $dados = [
+            'inscricao_id'   => $this->contatoInscricaoId,
+            'canal'          => $this->contatoCanal,
+            'data_contato'   => !empty($this->contatoData) ? $this->contatoData : now(),
+            'conteudo'       => trim($this->contatoConteudo) ?: null,
+            'houve_resposta' => (bool) $this->contatoHouveResposta,
+            'user_id'        => auth()->id(),
+            'user_nome'      => auth()->user()->name ?? 'Sistema',
+        ];
+
+        if (!empty($this->contatoRegistroId)) {
+            $registro = \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)
+                ->find($this->contatoRegistroId);
+
+            if ($registro) {
+                $registro->update($dados);
+            } else {
+                $novo = \App\Models\InscricaoContato::create($dados);
+                $this->contatoRegistroId = $novo->id;
+            }
+        } else {
+            $novo = \App\Models\InscricaoContato::create($dados);
+            $this->contatoRegistroId = $novo->id;
+        }
+
+        $this->carregarHistoricoContatosCanal();
+        $this->dispatch('sucesso', msg: 'Tentativa de contato via ' . strtoupper($this->contatoCanal) . ' registrada!');
+        $this->modalContatoAberto = false;
+    }
+
+    public function excluirRegistroContato(int $registroId)
+    {
+        \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)->where('id', $registroId)->delete();
+        $this->novoRegistroContatoNoModal();
+        $this->carregarHistoricoContatosCanal();
+        $this->dispatch('sucesso', msg: 'Registro de contato removido.');
+    }
+
+    private function carregarHistoricoContatosCanal()
+    {
+        $this->historicoContatosCanal = \App\Models\InscricaoContato::where('inscricao_id', $this->contatoInscricaoId)
+            ->where('canal', $this->contatoCanal)
+            ->orderBy('data_contato', 'desc')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->toArray();
     }
 
     public function selecionarTop($quantidade)

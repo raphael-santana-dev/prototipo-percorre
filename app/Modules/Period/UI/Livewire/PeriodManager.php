@@ -25,7 +25,8 @@ class PeriodManager extends Component
     public $modalAberto = false;
     public int $passoAtual = 1;
     public ?int $cicloIdEmEdicao = null;
-
+    public $data_inicio_matricula = '';
+    public $data_fim_matricula = '';
     public $nome, $ano, $semestre, $data_inicio, $data_fim, $status = false;
 
     public array $unidadesSelecionadas = []; 
@@ -164,7 +165,9 @@ class PeriodManager extends Component
             $ciclo = Ciclo::findOrFail($this->cicloIdEmEdicao);
             $ciclo->update([
                 'nome' => $nomeFinal, 'ano' => $this->ano, 'semestre' => $this->semestre,
-                'data_inicio' => $this->data_inicio, 'data_fim' => $this->data_fim, 'status' => $this->status
+                'data_inicio' => $this->data_inicio, 'data_fim' => $this->data_fim, 'status' => $this->status,
+                'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
+                'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
             ]);
         } else {
             $ciclo = Ciclo::create([
@@ -174,6 +177,7 @@ class PeriodManager extends Component
             ]);
             $this->cicloIdEmEdicao = $ciclo->id;
             $this->cicloCriadoId = $ciclo->id;
+            
         }
     }
 

@@ -97,13 +97,12 @@
                 </div>
             </div>
 
-            {{-- LINHA INFERIOR: Chips e Ações de Top X --}}
-            <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full border-t border-gray-100 dark:border-gray-800 pt-4 gap-4 relative z-30 overflow-visible"
-                 x-data="{ visible: [], allFilters: ['curso', 'unidade', 'data'], init() { if ($wire.filtroCurso) this.visible.push('curso'); if ($wire.filtroUnidade) this.visible.push('unidade'); if ($wire.filtroDataInicio || $wire.filtroDataFim) this.visible.push('data'); }, add(f) { if(!this.visible.includes(f)) this.visible.push(f); }, remove(f) { if (f === 'curso') $wire.set('filtroCurso', ''); if (f === 'unidade') $wire.set('filtroUnidade', ''); if (f === 'data') { $wire.set('filtroDataInicio', ''); $wire.set('filtroDataFim', ''); } this.visible = this.visible.filter(i => i !== f); }, get canAddMore() { return this.visible.length < this.allFilters.length; } }">
+            {{-- LINHA INFERIOR: Seletor de Ciclo Fixo + Botão Drawer de Filtros + Chips Ativos + Top X --}}
+            <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full border-t border-gray-100 dark:border-gray-800 pt-4 gap-4 relative z-30 overflow-visible">
                 
-                <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-visible">
+                <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto flex-1">
                     
-                    {{-- CHIP FIXO: CICLO (com opção "Qualquer") --}}
+                    {{-- CHIP FIXO: CICLO --}}
                     <div class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0 gap-1.5">
                         <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Ciclo</span>
                         <select wire:model.live="cicloId" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[170px] truncate">
@@ -129,72 +128,16 @@
                         @endif
                     </div>
 
-                    {{-- Chip Dinâmico: Curso --}}
-                    <div x-show="visible.includes('curso')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Curso</span>
-                        <select wire:model.live="filtroCurso" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
-                            <option value="">Qualquer</option>
-                            @foreach($cursosDb as $cur) <option value="{{ $cur->id }}">{{ $cur->nome }}</option> @endforeach
-                        </select>
-                        <button @click="remove('curso')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
+                    {{-- Botão Acionador do Navigation Drawer + Chips Dinâmicos --}}
+                    <div class="flex-1 min-w-[200px]">
+                        <x-dynamic-filter-chips 
+                            :chips="$this->obterChipsAtivos($this->esquemaFiltros)" 
+                            :showToggleDrawer="true" />
                     </div>
-
-                    {{-- Chip Dinâmico ou Fixo: Unidade --}}
-                    @if($unidadesDb->count() === 1)
-                        <div class="flex items-center h-9 px-2.5 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-800 shadow-sm shrink-0">
-                            <i class="ph-fill ph-map-pin mr-1.5 text-indigo-500"></i>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-300">{{ $unidadesDb->first()->nome }}</span>
-                        </div>
-                    @else
-                        <div x-show="visible.includes('unidade')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
-                            <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Unidade</span>
-                            <select wire:model.live="filtroUnidade" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-2 pr-7 text-gray-800 dark:text-gray-200 cursor-pointer font-medium max-w-[150px] truncate">
-                                <option value="">Qualquer</option>
-                                @foreach($unidadesDb as $uni) <option value="{{ $uni->id }}">{{ $uni->nome }}</option> @endforeach
-                            </select>
-                            <button @click="remove('unidade')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                        </div>
-                    @endif
-
-                    {{-- Chip Dinâmico: Data de/até --}}
-                    <div x-show="visible.includes('data')" x-cloak class="flex items-center h-9 px-1.5 rounded-lg border border-indigo-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm shrink-0">
-                        <span class="pl-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Data</span>
-                        <input type="date" wire:model.live="filtroDataInicio" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 px-2 text-gray-800 dark:text-gray-200 w-[115px] sm:w-[130px]" title="De">
-                        <span class="text-gray-400 text-[10px] font-bold uppercase">Até</span>
-                        <input type="date" wire:model.live="filtroDataFim" class="border-none shadow-none bg-transparent text-sm focus:ring-0 py-0 pl-1 pr-2 text-gray-800 dark:text-gray-200 w-[115px] sm:w-[130px]" title="Até">
-                        <button @click="remove('data')" class="pr-1 text-indigo-400 hover:text-indigo-600 flex items-center justify-center transition-colors"><i class="ph-bold ph-x text-sm"></i></button>
-                    </div>
-
-                    {{-- Dropdown Adicionar Filtro (z-[100] garantindo sobreposição limpa) --}}
-                    <div x-show="canAddMore" x-data="{ open: false }" class="relative ml-1 shrink-0" x-cloak>
-                        <button @click="open = !open" class="text-sm font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 transition-colors h-9 px-2 focus:outline-none">
-                            + Filtro
-                        </button>
-                        <div x-show="open" 
-                             @click.away="open = false" 
-                             class="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-[100] py-2" 
-                             x-cloak>
-                            <button x-show="!visible.includes('curso')" @click="add('curso'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                                <i class="ph-bold ph-graduation-cap text-gray-400 text-lg"></i> Curso
-                            </button>
-                            @if($unidadesDb->count() > 1)
-                            <button x-show="!visible.includes('unidade')" @click="add('unidade'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                                <i class="ph-bold ph-buildings text-gray-400 text-lg"></i> Unidade
-                            </button>
-                            @endif
-                            <button x-show="!visible.includes('data')" @click="add('data'); open = false" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3">
-                                <i class="ph-bold ph-calendar text-gray-400 text-lg"></i> Intervalo de Datas
-                            </button>
-                        </div>
-                    </div>
-
-                    <button x-show="$wire.filtroCurso || $wire.filtroUnidade || $wire.filtroDataInicio || $wire.filtroDataFim || $wire.filtroBusca" x-cloak wire:click="limparFiltros" @click="visible = []" class="text-sm font-bold text-gray-400 hover:text-red-500 flex items-center gap-1 h-9 px-2 ml-1 transition shrink-0">
-                        Limpar Todos
-                    </button>
                 </div>
 
                 @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                    <div class="flex flex-wrap items-center gap-3 text-sm mt-3 xl:mt-0 w-full xl:w-auto justify-start xl:justify-end shrink-0">
+                    <div class="flex flex-wrap items-center gap-3 text-sm mt-2 xl:mt-0 w-full xl:w-auto justify-start xl:justify-end shrink-0">
                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest hidden sm:inline-block">Seleção Rápida:</span>
                         <button wire:click="selecionarTop(10)" class="text-purpura-600 font-bold hover:underline">Top 10</button> &middot;
                         <button wire:click="selecionarTop(50)" class="text-purpura-600 font-bold hover:underline">Top 50</button> &middot;
@@ -373,7 +316,6 @@
         {{-- BARRA LATERAL: Relação de Vagas e Totalizadores --}}
         <div class="w-64 shrink-0 bg-transparent border-l border-gray-200 dark:border-gray-700 pl-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
             
-            {{-- Card de Ocupação e Relação de Vagas --}}
             @if(($relacaoVagas['total_vagas'] ?? 0) > 0)
                 <div class="border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl p-3.5 mb-3.5 shadow-sm">
                     <div class="flex items-center justify-between mb-1.5">
@@ -403,13 +345,11 @@
                 </div>
             @endif
 
-            {{-- Total Geral de Inscritos --}}
             <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 mb-4 text-center bg-white/40 dark:bg-gray-800/40">
                 <span class="block t-label-12-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total de Candidatos</span>
                 <span class="text-2xl font-black text-gray-800 dark:text-gray-200">{{ number_format($totalInscricoes, 0, ',', '.') }}</span>
             </div>
             
-            {{-- Distribuição por Status do Pipeline --}}
             <div class="space-y-0 flex-1 border-t border-gray-200 dark:border-gray-700">
                 @foreach($resumo as $id => $dado)
                     <div class="flex justify-between items-center text-sm py-2.5 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition px-1">
@@ -421,6 +361,12 @@
         </div>
 
     </div>
+
+    {{-- NAVIGATION DRAWER DE FILTROS AVANÇADOS DO KANBAN --}}
+    <x-dynamic-filter 
+        mode="drawer" 
+        :schema="$this->esquemaFiltros" 
+        :filtrosAtivos="$filtrosAvancados" />
 
     {{-- MODAL ANTI-SPAM --}}
     @if($modalAntiSpamAberto)

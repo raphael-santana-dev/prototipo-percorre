@@ -309,68 +309,100 @@
                                     @endif
                                 </div>
 
-                                {{-- 2.2. ATRIBUIÇÃO DE UNIDADE / CURSO / TURNO (QUALQUER ROLE) --}}
+                                {{-- 2.2. ATRIBUIÇÃO DE UNIDADE / CURSO / TURNO (ESTILO CASCATA DO CICLO) --}}
                                 <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
                                     <div class="mb-3">
                                         <h4 class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
-                                            <i class="text-ponkan-500 ph-fill ph-buildings text-lg"></i> Vínculos Acadêmicos / Operacionais (Unidades, Cursos e Turnos)
+                                            <i class="text-ponkan-500 ph-fill ph-tree-structure text-lg"></i> Vínculos Acadêmicos / Operacionais (Unidades, Cursos e Turnos)
                                         </h4>
-                                        <p class="text-xs text-gray-500">Opcional para qualquer perfil. Selecione uma ou mais Unidades, Cursos ou Turnos caso deseje vincular ou restringir a atuação do usuário. Deixe desmarcado para acesso irrestrito.</p>
+                                        <p class="text-xs text-gray-500">Selecione uma ou mais Unidades para listar os Cursos vinculados a ela e, ao selecionar o Curso, escolha os Turnos correspondentes. Deixe tudo desmarcado para visão Global.</p>
                                     </div>
 
-                                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                        {{-- Unidades --}}
-                                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl dark:bg-gray-900/50 dark:border-gray-700">
-                                            <label class="flex items-center justify-between mb-2 text-xs font-bold text-gray-800 dark:text-gray-200 uppercase border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                <span class="flex items-center gap-1.5"><i class="ph ph-buildings text-purpura-500"></i> Unidades</span>
+                                    <div class="flex flex-col md:flex-row h-[300px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-xs">
+                                        
+                                        {{-- COLUNA 1: UNIDADES --}}
+                                        <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                                <span class="text-[11px] font-bold uppercase text-gray-500">1. Unidades</span>
                                                 <span class="text-[10px] text-purpura-600 font-bold">{{ count($unidadesSelecionadas) }} sel.</span>
-                                            </label>
-                                            <div class="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar">
+                                            </div>
+                                            <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                                                 @foreach($todasUnidades as $unidade)
-                                                    <label class="flex items-center gap-2 p-1.5 transition-colors border border-transparent rounded cursor-pointer hover:bg-white dark:hover:bg-gray-800">
-                                                        <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $unidade->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $unidade->nome }}</span>
-                                                    </label>
+                                                    <div wire:key="usr-uni-{{ $unidade->id }}"
+                                                         wire:click="setActiveUnidade({{ $unidade->id }})"
+                                                         class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $unidade->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                                            <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $unidade->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $unidade->nome }}</span>
+                                                        </label>
+                                                        <i class="ph ph-caret-right text-base {{ $activeUnidadeId == $unidade->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                                    </div>
                                                 @endforeach
                                             </div>
                                         </div>
 
-                                        {{-- Cursos --}}
-                                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl dark:bg-gray-900/50 dark:border-gray-700">
-                                            <label class="flex items-center justify-between mb-2 text-xs font-bold text-gray-800 dark:text-gray-200 uppercase border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                <span class="flex items-center gap-1.5"><i class="ph ph-graduation-cap text-purpura-500"></i> Cursos</span>
+                                        {{-- COLUNA 2: CURSOS DA UNIDADE ATIVA --}}
+                                        <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-800/80">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                                <span class="text-[11px] font-bold uppercase text-gray-500">2. Cursos da Unidade</span>
                                                 <span class="text-[10px] text-purpura-600 font-bold">{{ count($cursosSelecionados) }} sel.</span>
-                                            </label>
-                                            <div class="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar">
-                                                @forelse($cursosFiltrados as $curso)
-                                                    <label class="flex items-center gap-2 p-1.5 transition-colors border border-transparent rounded cursor-pointer hover:bg-white dark:hover:bg-gray-800">
-                                                        <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $curso->nome }}</span>
-                                                    </label>
-                                                @empty
-                                                    <p class="text-[11px] text-gray-400 italic text-center mt-4">Nenhum curso disponível para o filtro atual.</p>
-                                                @endforelse
+                                            </div>
+                                            <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                                @if($activeUnidadeId && in_array((string) $activeUnidadeId, array_map('strval', $unidadesSelecionadas)))
+                                                    @forelse($cursosFiltrados as $curso)
+                                                        <div wire:key="usr-cur-{{ $activeUnidadeId }}-{{ $curso->id }}"
+                                                             wire:click="setActiveCurso({{ $curso->id }})"
+                                                             class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition {{ $activeCursoId == $curso->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                                            <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                                                <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $curso->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $curso->nome }}</span>
+                                                            </label>
+                                                            <i class="ph ph-caret-right text-base {{ $activeCursoId == $curso->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                                        </div>
+                                                    @empty
+                                                        <div class="h-full flex items-center justify-center text-center p-4 text-[11px] text-gray-400 font-bold">
+                                                            Nenhum curso vinculado a esta unidade.
+                                                        </div>
+                                                    @endforelse
+                                                @else
+                                                    <div class="h-full flex flex-col items-center justify-center text-center p-4 text-[11px] text-gray-400 font-bold uppercase">
+                                                        Marque e selecione uma Unidade
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
 
-                                        {{-- Turnos --}}
-                                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl dark:bg-gray-900/50 dark:border-gray-700">
-                                            <label class="flex items-center justify-between mb-2 text-xs font-bold text-gray-800 dark:text-gray-200 uppercase border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                <span class="flex items-center gap-1.5"><i class="ph ph-clock text-purpura-500"></i> Turnos</span>
+                                        {{-- COLUNA 3: TURNOS DO CURSO ATIVO --}}
+                                        <div class="flex-1 flex flex-col bg-gray-50/80 dark:bg-gray-900/30">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                                <span class="text-[11px] font-bold uppercase text-gray-500">3. Turnos do Curso</span>
                                                 <span class="text-[10px] text-purpura-600 font-bold">{{ count($turnosSelecionados) }} sel.</span>
-                                            </label>
-                                            <div class="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar">
-                                                @forelse($turnosFiltrados as $turno)
-                                                    <label class="flex items-center gap-2 p-1.5 transition-colors border border-transparent rounded cursor-pointer hover:bg-white dark:hover:bg-gray-800">
-                                                        <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $turno->nome }}</span>
-                                                    </label>
-                                                @empty
-                                                    <p class="text-[11px] text-gray-400 italic text-center mt-4">Nenhum turno disponível.</p>
-                                                @endforelse
+                                            </div>
+                                            <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                                @if($activeCursoId && in_array((string) $activeCursoId, array_map('strval', $cursosSelecionados)))
+                                                    @forelse($turnosFiltrados as $turno)
+                                                        <div wire:key="usr-tur-{{ $activeCursoId }}-{{ $turno->id }}" class="flex items-center p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition">
+                                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                                <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $turno->id }}" class="w-4 h-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $turno->nome }}</span>
+                                                            </label>
+                                                        </div>
+                                                    @empty
+                                                        <div class="h-full flex items-center justify-center text-center p-4 text-[11px] text-gray-400 font-bold">
+                                                            Nenhum turno vinculado a este curso.
+                                                        </div>
+                                                    @endforelse
+                                                @else
+                                                    <div class="h-full flex flex-col items-center justify-center text-center p-4 text-[11px] text-gray-400 font-bold uppercase">
+                                                        Marque e selecione um Curso
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
+
+                                    @error('cursosSelecionados') <span class="text-xs text-red-500 font-bold mt-1.5 block">{{ $message }}</span> @enderror
+                                    @error('turnosSelecionados') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                 </div>
 
                                 {{-- 2.3. ATRIBUIÇÃO DE CENTROS DE CUSTO (QUALQUER ROLE) --}}

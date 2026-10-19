@@ -8,6 +8,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Computed;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
+use Illuminate\Support\Facades\Schema;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes da Inscrição')]
@@ -33,6 +34,15 @@ class RegistrationDetails extends Component
     public function setAba($aba)
     {
         $this->abaAtiva = $aba;
+    }
+
+    #[Computed]
+    public function contatosRegistrados()
+    {
+        return \App\Models\InscricaoContato::where('inscricao_id', $this->inscricao->id)
+            ->orderBy('data_contato', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
     public function verConteudoEmail($logId)
@@ -92,7 +102,20 @@ class RegistrationDetails extends Component
     #[Computed]
     public function logsComunicacao()
     {
-        return \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::where('destinatario', $this->inscricao->email)
+        $temColunaInscricao = Schema::hasColumn('comunicacao_logs', 'inscricao_id');
+        $emailCandidato = trim((string) $this->inscricao->email);
+
+        return \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::query()
+            ->where(function ($q) use ($temColunaInscricao, $emailCandidato) {
+                if ($temColunaInscricao) {
+                    $q->where('inscricao_id', $this->inscricao->id);
+                    if ($emailCandidato !== '') {
+                        $q->orWhereRaw('LOWER(destinatario) = ?', [strtolower($emailCandidato)]);
+                    }
+                } else {
+                    $q->whereRaw('LOWER(destinatario) = ?', [strtolower($emailCandidato)]);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -175,6 +198,8 @@ class RegistrationDetails extends Component
         \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $this->inscricao);
 
         $this->inscricao->refresh(); 
+        unset($this->logsComunicacao);
+        unset($this->logsMovimentacao);
         $this->modalAntiSpamAberto = false;
         $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
     }

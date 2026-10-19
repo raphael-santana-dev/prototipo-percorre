@@ -103,4 +103,16 @@ class Inscricao extends Model
     {
         return $this->belongsTo(User::class, 'criado_por');
     }
+
+    public function contatos()
+    {
+        return $this->hasMany(\App\Models\InscricaoContato::class, 'inscricao_id')
+                    ->orderBy('data_contato', 'desc')
+                    ->orderBy('id', 'desc');
+    }
+
+    public function comunicados()
+    {
+        return $this->hasMany(\App\Modules\Comunicacao\Domain\Models\Comunicado::class, 'inscricao_id');
+    }
 }

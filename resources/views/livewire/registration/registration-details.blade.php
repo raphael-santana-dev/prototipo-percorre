@@ -453,73 +453,136 @@
         </div>
 
     @elseif($abaAtiva === 'comunicacao')
-        <div class="mt-6 card !p-0 overflow-hidden animate-fade-in-down w-full block">
-            <div class="p-6 md:p-8 border-b border-gray-100 dark:border-gray-700 w-full">
-                <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
-                    <i class="ph-fill ph-envelope-simple text-lg text-purpura-500"></i> Histórico de E-mails Disparados
-                </h3>
-            </div>
+        <div class="mt-6 space-y-6 animate-fade-in-down w-full block">
             
-            @if(count($this->logsComunicacao) > 0)
-                <div class="overflow-x-auto w-full">
-                    <table class="w-full min-w-full text-left whitespace-nowrap">
-                        <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
-                            <tr>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Assunto / Template</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Origem</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Gatilho</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Disparado por</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Data de Envio</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Status</th>
-                                <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            @foreach($this->logsComunicacao as $log)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                    <td class="px-6 py-4">
-                                        <div class="font-bold text-sm text-gray-900 dark:text-white">{{ \Illuminate\Support\Str::limit($log->assunto, 40) }}</div>
-                                        <div class="text-xs text-gray-500 mt-0.5">Template: {{ $log->template_nome ?? 'N/A' }}</div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span class="px-2.5 py-1 text-[10px] font-bold {{ strtolower($log->origem) === 'automação' || strtolower($log->origem) === 'automacao' ? 'text-purpura-700 bg-purpura-100 border border-purpura-200' : 'text-blue-700 bg-blue-100 border border-blue-200' }} rounded-full uppercase tracking-wider">
-                                            {{ $log->origem }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        {{ $log->gatilho ? str_replace('inscricao.status.', 'Status: ', $log->gatilho) : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 font-medium">
-                                        {{ $log->usuario_nome ?? 'Sistema' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        {{ $log->data_envio ? \Carbon\Carbon::parse($log->data_envio)->format('d/m/Y H:i') : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
-                                        @if($log->status === 'enviado')
-                                            <span class="px-2.5 py-1 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 rounded-full uppercase tracking-wider">Enviado</span>
-                                        @elseif($log->status === 'erro')
-                                            <span class="px-2.5 py-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 rounded-full uppercase tracking-wider" title="{{ $log->erro_mensagem }}">Erro</span>
-                                        @else
-                                            <span class="px-2.5 py-1 text-[10px] font-bold text-yellow-700 bg-yellow-100 border border-yellow-200 rounded-full uppercase tracking-wider">Pendente</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <button wire:click="verConteudoEmail({{ $log->id }})" class="p-2 bg-gray-100 dark:bg-gray-700 hover:bg-purpura-100 hover:text-purpura-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors shadow-sm" title="Visualizar E-mail">
-                                            <i class="ph-bold ph-eye text-lg"></i>
-                                        </button>
-                                    </td>
+            {{-- BLOCO 1: CONTATOS MANUAIS REGISTRADOS (WHATSAPP, TELEFONE, E-MAIL) --}}
+            <div class="card !p-0 overflow-hidden w-full block">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
+                        <i class="ph-fill ph-chat-circle-text text-lg text-emerald-500"></i> Contatos Registrados (WhatsApp / Telefone / E-mail)
+                    </h3>
+                    <span class="text-xs font-bold text-gray-400">{{ count($this->contatosRegistrados) }} registro(s)</span>
+                </div>
+
+                @if(count($this->contatosRegistrados) > 0)
+                    <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach($this->contatosRegistrados as $contato)
+                            <div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition">
+                                <div class="flex items-start gap-3.5">
+                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border
+                                        {{ $contato->canal === 'whatsapp' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ($contato->canal === 'email' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-600 border-amber-200') }}">
+                                        <i class="ph-fill {{ $contato->canal === 'whatsapp' ? 'ph-whatsapp-logo' : ($contato->canal === 'email' ? 'ph-envelope-simple' : 'ph-phone-call') }} text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="text-sm font-bold text-gray-900 dark:text-white uppercase">{{ $contato->canal }}</span>
+                                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $contato->houve_resposta ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600' }}">
+                                                {{ $contato->houve_resposta ? 'Houve Resposta' : 'Aguardando / Sem Resposta' }}
+                                            </span>
+                                            <span class="text-xs text-gray-400">• Registrado por {{ $contato->user_nome ?? 'Sistema' }}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-line">{{ $contato->conteudo ?: 'Contato registrado sem descrição detalhada.' }}</p>
+                                    </div>
+                                </div>
+                                <div class="text-xs font-bold text-gray-500 shrink-0">
+                                    {{ $contato->data_contato ? $contato->data_contato->format('d/m/Y \à\s H:i') : $contato->created_at->format('d/m/Y \à\s H:i') }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="py-10 text-center text-gray-400 text-sm">
+                        Nenhum contato manual (WhatsApp, Telefone ou E-mail) registrado para este candidato.
+                    </div>
+                @endif
+            </div>
+
+            {{-- BLOCO 2: HISTÓRICO DE E-MAILS DISPARADOS (AUTOMAÇÕES E COMUNICADOS) --}}
+            <div class="card !p-0 overflow-hidden w-full block">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between w-full">
+                    <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
+                        <i class="ph-fill ph-envelope-simple text-lg text-purpura-500"></i> Histórico de E-mails Disparados (Automações e Sistema)
+                    </h3>
+                    <span class="text-xs font-bold text-gray-400">{{ count($this->logsComunicacao) }} disparo(s)</span>
+                </div>
+                
+                @if(count($this->logsComunicacao) > 0)
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full min-w-full text-left whitespace-nowrap">
+                            <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
+                                <tr>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Assunto / Template</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Origem</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Gatilho</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Engajamento</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Data de Envio</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Status</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Ação</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="py-16 text-center text-gray-500 w-full">
-                    <i class="ph-fill ph-envelope-open text-5xl mb-3 text-gray-300"></i>
-                    <p class="font-medium text-sm">Nenhum e-mail disparado para este candidato.</p>
-                </div>
-            @endif
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach($this->logsComunicacao as $log)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <td class="px-6 py-4">
+                                            <div class="font-bold text-sm text-gray-900 dark:text-white">{{ \Illuminate\Support\Str::limit($log->assunto, 45) }}</div>
+                                            <div class="text-xs text-gray-500 mt-0.5">Template: {{ $log->template_nome ?? 'N/A' }}</div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2.5 py-1 text-[10px] font-bold {{ strtolower($log->origem ?? '') === 'automação' || strtolower($log->origem ?? '') === 'automacao' ? 'text-purpura-700 bg-purpura-100 border border-purpura-200' : 'text-blue-700 bg-blue-100 border border-blue-200' }} rounded-full uppercase tracking-wider">
+                                                {{ $log->origem ?? 'Automação' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                            {{ $log->gatilho ? str_replace('inscricao.status.', 'Status: ', $log->gatilho) : '-' }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-1.5">
+                                                @if(($log->aberturas_count ?? 0) > 0)
+                                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title="Primeira leitura em {{ $log->aberto_em ? \Carbon\Carbon::parse($log->aberto_em)->format('d/m/Y H:i') : '' }}">
+                                                        <i class="ph-fill ph-envelope-open"></i> Aberto ({{ $log->aberturas_count }}x)
+                                                    </span>
+                                                @else
+                                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                                                        Não aberto
+                                                    </span>
+                                                @endif
+
+                                                @if(($log->cliques_count ?? 0) > 0)
+                                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purpura-50 text-purpura-700 border border-purpura-200">
+                                                        <i class="ph-fill ph-cursor-click"></i> {{ $log->cliques_count }} clique(s)
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                            {{ $log->data_envio ? \Carbon\Carbon::parse($log->data_envio)->format('d/m/Y H:i') : $log->created_at->format('d/m/Y H:i') }}
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            @if($log->status === 'enviado')
+                                                <span class="px-2.5 py-1 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 rounded-full uppercase tracking-wider">Enviado</span>
+                                            @elseif($log->status === 'erro')
+                                                <span class="px-2.5 py-1 text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 rounded-full uppercase tracking-wider" title="{{ $log->erro_mensagem }}">Erro</span>
+                                            @else
+                                                <span class="px-2.5 py-1 text-[10px] font-bold text-yellow-700 bg-yellow-100 border border-yellow-200 rounded-full uppercase tracking-wider">Pendente</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button wire:click="verConteudoEmail({{ $log->id }})" class="p-2 bg-gray-100 dark:bg-gray-700 hover:bg-purpura-100 hover:text-purpura-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors shadow-sm" title="Visualizar E-mail">
+                                                <i class="ph-bold ph-eye text-lg"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="py-16 text-center text-gray-500 w-full">
+                        <i class="ph-fill ph-envelope-open text-5xl mb-3 text-gray-300"></i>
+                        <p class="font-medium text-sm">Nenhum e-mail disparado para este candidato.</p>
+                    </div>
+                @endif
+            </div>
         </div>
     @endif
 
