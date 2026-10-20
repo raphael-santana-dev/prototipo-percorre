@@ -5,6 +5,7 @@ namespace App\Modules\Website\UI\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Computed;
 use Livewire\WithFileUploads;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -115,6 +116,21 @@ class Inscricao extends Component
                 session()->forget('inscricao_retomada_id');
             }
         }
+    }
+
+    #[Computed]
+    public function bloqueioFaseSeguinte()
+    {
+        if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual >= $this->totalEtapas) {
+            return null;
+        }
+        
+        $proximaEtapa = $this->etapaAtual + 1;
+        
+        return \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
+            ->whereJsonContains('paginas', $proximaEtapa)
+            ->where('data_liberacao', '>', now())
+            ->first();
     }
 
     private function ofuscarEmail(?string $email): string
@@ -307,7 +323,6 @@ class Inscricao extends Component
         $this->nome = $inscricaoRetomada->nome !== 'Candidato em Preenchimento' ? $inscricaoRetomada->nome : $this->nome;
         $this->cpf = $inscricaoRetomada->cpf ?: $this->cpf;
         
-        // Aplicação de Ofuscação LGPD
         $this->emailOriginal = $inscricaoRetomada->email;
         $this->celularOriginal = $inscricaoRetomada->celular;
         $this->email = $this->ofuscarEmail($inscricaoRetomada->email);
@@ -593,6 +608,10 @@ class Inscricao extends Component
             }
             return;
         }
+
+        if ($this->bloqueioFaseSeguinte) {
+            return; 
+        }
         
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
         
@@ -607,25 +626,6 @@ class Inscricao extends Component
             'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
             'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
         ]);
-
-        // [NOVO] BLOQUEIO TEMPORAL DE FASES E REGISTRO DE PARADA
-        $proximaEtapa = $this->etapaAtual + 1;
-        
-        if ($this->etapaAtual < $this->totalEtapas) {
-            $faseBloqueada = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
-                ->whereJsonContains('paginas', $proximaEtapa)
-                ->where('data_liberacao', '>', now())
-                ->first();
-
-            if ($faseBloqueada) {
-                // Força o salvamento garantindo que registramos a etapa atual onde ele parou
-                $this->salvarRascunhoSilencioso(); 
-                
-                $dataLiberacaoFmt = \Carbon\Carbon::parse($faseBloqueada->data_liberacao)->format('d/m/Y \à\s H:i');
-                $this->dispatch('erro', msg: "A próxima parte da inscrição ({$faseBloqueada->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado, retorne neste horário!");
-                return;
-            }
-        }
 
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
@@ -815,30 +815,6 @@ class Inscricao extends Component
                 $this->turno = $t;
             }
         }
-    }
-
-    protected function rules()
-    {
-        return [
-            'nome' => 'required|min:3',
-            'email' => 'required|email',
-            'cpf' => [
-                'required',
-                function ($attribute, $value, $fail) {
-                    $c = preg_replace('/\D/', '', $value);
-                    if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
-                    for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                    if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-                    for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                    if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-                },
-                Rule::unique('inscricoes', 'cpf')->ignore($this->inscricaoId) 
-            ],
-            'nome_social' => 'required_if:possui_nome_social,sim',
-            'possui_deficiencia' => 'required',
-            'cep' => 'required',
-            'data_nascimento' => 'required|date',
-        ];
     }
 
     public function voltarEtapa()
