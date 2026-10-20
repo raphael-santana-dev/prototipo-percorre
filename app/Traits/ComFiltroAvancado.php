@@ -21,7 +21,7 @@ trait ComFiltroAvancado
     /**
      * Controla a abertura do painel/drawer de filtros
      */
-    public bool $painelFiltrosAberto = true;
+    public bool $painelFiltrosAberto = false;
     public bool $drawerFiltrosAberto = false;
 
     public function updatedFiltrosAvancados(): void

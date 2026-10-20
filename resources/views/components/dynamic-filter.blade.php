@@ -12,11 +12,15 @@
 
 @if($mode === 'sidebar')
     <aside x-show="$wire.painelFiltrosAberto"
-           x-transition:enter="transition ease-out duration-200"
-           x-transition:enter-start="opacity-0 -translate-x-4"
-           x-transition:enter-end="opacity-100 translate-x-0"
-           class="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xs flex flex-col overflow-hidden self-start sticky top-4 max-h-[calc(100vh-110px)]">
-        
+        x-cloak
+        x-transition:enter="transition-all ease-out duration-300"
+        x-transition:enter-start="opacity-0 -translate-x-4 max-w-0"
+        x-transition:enter-end="opacity-100 translate-x-0 max-w-[288px]"
+        x-transition:leave="transition-all ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-x-0 max-w-[288px]"
+        x-transition:leave-end="opacity-0 -translate-x-4 max-w-0"
+        class="w-full lg:w-72 shrink-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xs flex flex-col overflow-hidden self-start sticky top-4 max-h-[calc(100vh-110px)]">
+
         {{-- Cabeçalho da Sidebar de Filtros --}}
         <div class="px-4 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-2">

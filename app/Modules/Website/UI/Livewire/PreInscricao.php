@@ -146,23 +146,37 @@ class PreInscricao extends Component
         foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
-                $val = strtolower(trim((string)$valorGatilho));
-                $tgt = strtolower(trim((string)$campo->depende_valor));
                 $op = $campo->depende_operador ?? '=';
+                $tgt = strtolower(trim((string)$campo->depende_valor));
                 $condicaoAtendida = false;
 
-                switch($op) {
-                    case '=': $condicaoAtendida = ($val === $tgt); break;
-                    case '!=': $condicaoAtendida = ($val !== $tgt); break;
-                    case '>': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val > $tgt); break;
-                    case '<': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val < $tgt); break;
-                    case '>=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val >= $tgt); break;
-                    case '<=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val <= $tgt); break;
-                    case 'in': 
-                        $arrayAlvos = array_map('trim', explode(',', $tgt));
-                        $condicaoAtendida = in_array($val, $arrayAlvos);
-                        break;
+                if (is_array($valorGatilho)) {
+                    $arrayValores = array_map('strtolower', array_map('trim', $valorGatilho));
+                    $arrayAlvos = array_map('trim', explode(',', $tgt));
+                    
+                    switch($op) {
+                        case '=': $condicaoAtendida = in_array($tgt, $arrayValores); break;
+                        case '!=': $condicaoAtendida = !in_array($tgt, $arrayValores); break;
+                        case 'in': 
+                            $condicaoAtendida = !empty(array_intersect($arrayValores, $arrayAlvos)); 
+                            break;
+                    }
+                } else {
+                    $val = strtolower(trim((string)$valorGatilho));
+                    switch($op) {
+                        case '=': $condicaoAtendida = ($val === $tgt); break;
+                        case '!=': $condicaoAtendida = ($val !== $tgt); break;
+                        case '>': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val > $tgt); break;
+                        case '<': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val < $tgt); break;
+                        case '>=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val >= $tgt); break;
+                        case '<=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val <= $tgt); break;
+                        case 'in': 
+                            $arrayAlvos = array_map('trim', explode(',', $tgt));
+                            $condicaoAtendida = in_array($val, $arrayAlvos);
+                            break;
+                    }
                 }
+                
                 if (!$condicaoAtendida) continue; 
             }
 
