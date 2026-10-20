@@ -126,7 +126,23 @@
                     </div>
                     
                     <div class="{{ $cardClass }} rounded-xl p-6 md:p-10 card-form transition-all duration-300">
-                        <fieldset @if($this->bloqueioFaseSeguinte) disabled class="opacity-80 pointer-events-none" @endif>
+                        
+                        {{-- BLOQUEIO VISUAL CASO A PRÓXIMA FASE ESTEJA BLOQUEADA POR DATA --}}
+                        @if($this->bloqueioFaseSeguinte)
+                            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-start gap-3 shadow-sm text-amber-900 dark:text-amber-300">
+                                <i class="ph-fill ph-lock-key text-xl text-amber-600 shrink-0 mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm font-extrabold mb-1">Acesso Temporariamente Restrito</p>
+                                    <p class="font-medium leading-relaxed">
+                                        O seu progresso atual está salvo. A próxima fase <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
+                                        somente será liberada em <strong>{{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}</strong>. 
+                                        Até lá, os campos abaixo encontram-se em modo de visualização.
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
+                        <fieldset @if($this->bloqueioFaseSeguinte) disabled class="opacity-75" @endif>
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                                 @if($etapaAtual === 1)
                                     @php
@@ -156,7 +172,7 @@
                                         </div>
                                     @endif
 
-                                    {{-- ALERTA LGPD QUANDO RASCUNHO É RECUPERADO POR CPF + DATA DE NASCIMENTO --}}
+                                    {{-- ALERTA LGPD QUANDO RASCUNHO É RECUPERADO --}}
                                     @if(!empty($emailOriginal) || !empty($celularOriginal))
                                         <div class="col-span-12 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start gap-3 shadow-xs">
                                             <i class="ph-fill ph-shield-check text-blue-600 dark:text-blue-400 text-2xl mt-0.5 shrink-0"></i>
@@ -492,11 +508,11 @@
                             @endif
                             
                             @if($this->bloqueioFaseSeguinte)
-                                <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300">
-                                    <i class="ph-fill ph-lock-key text-lg text-amber-500"></i>
+                                <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 w-full sm:w-auto">
+                                    <i class="ph-fill ph-lock-key text-lg text-amber-500 shrink-0"></i>
                                     <span>
-                                        Sua inscrição está salva até aqui. A próxima fase <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
-                                        será liberada em {{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}.
+                                        A fase seguinte <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
+                                        será liberada em {{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}. O botão avançar reaparecerá no horário estipulado.
                                     </span>
                                 </div>
                             @else

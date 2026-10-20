@@ -328,6 +328,21 @@
                         
                         <td class="px-4 py-1.5 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
+                                <button type="button" 
+                                    x-data 
+                                    @click="
+                                        $wire.gerarLinkRetomada({{ $inscricao->id }}).then(() => {
+                                            // Ouve o evento emitido pelo backend e copia
+                                        });
+                                        window.addEventListener('copiar-para-clipboard', event => {
+                                            navigator.clipboard.writeText(event.detail.text);
+                                        }, { once: true });
+                                    "
+                                    class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" 
+                                    title="Copiar Link de Retomada">
+                                    <i class="text-lg ph-bold ph-link"></i>
+                                </button>
+
                                 <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                                 
                                 <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>

@@ -121,6 +121,8 @@ class Inscricao extends Component
     #[Computed]
     public function bloqueioFaseSeguinte()
     {
+        // A Página 1 (Fase 1) SEMPRE fica liberada para preenchimento. 
+        // O bloqueio temporal aplica-se apenas ao tentar avançar da Página 1 para a Página 2, ou da 2 para a 3, etc.
         if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual >= $this->totalEtapas) {
             return null;
         }
@@ -609,6 +611,22 @@ class Inscricao extends Component
             return;
         }
 
+        $proximaEtapa = $this->etapaAtual + 1;
+        
+        if ($this->etapaAtual < $this->totalEtapas) {
+            $faseBloqueada = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
+                ->whereJsonContains('paginas', $proximaEtapa)
+                ->where('data_liberacao', '>', now())
+                ->first();
+
+            if ($faseBloqueada) {
+                $this->salvarRascunhoSilencioso(); 
+                $dataLiberacaoFmt = \Carbon\Carbon::parse($faseBloqueada->data_liberacao)->format('d/m/Y \à\s H:i');
+                $this->dispatch('erro', msg: "A próxima fase ({$faseBloqueada->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado!");
+                return;
+            }
+        }
+
         if ($this->bloqueioFaseSeguinte) {
             return; 
         }
@@ -696,6 +714,30 @@ class Inscricao extends Component
             $this->dispatch('limpar-storage-inscricao');
             $this->dispatch('inscricao-concluida');
         }
+    }
+
+    protected function rules()
+    {
+        return [
+            'nome' => 'required|min:3',
+            'email' => 'required|email',
+            'cpf' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $c = preg_replace('/\D/', '', $value);
+                    if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                    for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                    for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                },
+                Rule::unique('inscricoes', 'cpf')->ignore($this->inscricaoId) 
+            ],
+            'nome_social' => 'required_if:possui_nome_social,sim',
+            'possui_deficiencia' => 'required',
+            'cep' => 'required',
+            'data_nascimento' => 'required|date',
+        ];
     }
 
     private function atualizarRankingInstantaneo()
