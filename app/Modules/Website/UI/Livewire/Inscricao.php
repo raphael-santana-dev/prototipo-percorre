@@ -119,10 +119,22 @@ class Inscricao extends Component
     }
 
     #[Computed]
+    public function bloqueioFaseAtual()
+    {
+        // A Página 1 NUNCA é bloqueada para preenchimento
+        if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual === 1) {
+            return null;
+        }
+        
+        return \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
+            ->whereJsonContains('paginas', $this->etapaAtual)
+            ->where('data_liberacao', '>', now())
+            ->first();
+    }
+
+    #[Computed]
     public function bloqueioFaseSeguinte()
     {
-        // A Página 1 (Fase 1) SEMPRE fica liberada para preenchimento. 
-        // O bloqueio temporal aplica-se apenas ao tentar avançar da Página 1 para a Página 2, ou da 2 para a 3, etc.
         if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual >= $this->totalEtapas) {
             return null;
         }
@@ -134,7 +146,6 @@ class Inscricao extends Component
             ->where('data_liberacao', '>', now())
             ->first();
     }
-
     private function ofuscarEmail(?string $email): string
     {
         if (!$email) return '';

@@ -112,14 +112,48 @@
 
                 @if($etapaAtual <= $totalEtapas)
                     
+                    @php
+                        // CÁLCULO DINÂMICO DA BARRA DE PROGRESSO
+                        $totalExibido = $totalEtapas;
+                        
+                        // Regra 1: Se não há vagas disponíveis e o candidato já preencheu os filtros de estado/nascimento (vai virar Lead)
+                        if (!$temVagasDisponiveis && !empty($data_nascimento) && !empty($estado)) {
+                            $totalExibido = 1;
+                        } else {
+                            // Regra 2: Ajustar o total de passos visíveis baseado apenas nas Fases liberadas
+                            if ($cicloAtivoId) {
+                                $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $cicloAtivoId)
+                                    ->where('data_liberacao', '>', now())
+                                    ->get();
+                                
+                                $paginasBloqueadas = [];
+                                foreach ($fasesFuturas as $fase) {
+                                    if (is_array($fase->paginas)) {
+                                        $paginasBloqueadas = array_merge($paginasBloqueadas, $fase->paginas);
+                                    }
+                                }
+                                
+                                if (!empty($paginasBloqueadas)) {
+                                    $primeiraBloqueada = min($paginasBloqueadas);
+                                    if ($primeiraBloqueada <= $totalEtapas && $primeiraBloqueada > 1) {
+                                        $totalExibido = $primeiraBloqueada - 1;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Fallback de segurança para a barra não quebrar caso a etapa atual supere o total exibido
+                        $totalExibido = max(1, max($etapaAtual, $totalExibido));
+                    @endphp
+
                     <div class="mb-8 progresso-container flex flex-col items-center sm:items-start">
                         <div class="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-lg text-gray-800 dark:text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-3 transition-colors duration-300">
                             <i class="ph-bold ph-list-numbers text-purpura-600 dark:text-yellow-400"></i>
-                            Passo {{ $etapaAtual }} de {{ $totalEtapas }}
+                            Passo {{ $etapaAtual }} de {{ $totalExibido }}
                         </div>
                         
                         <div class="flex gap-2 w-full bg-white/60 dark:bg-gray-900/40 p-1.5 rounded-full backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-inner transition-colors duration-300">
-                            @for($i = 1; $i <= $totalEtapas; $i++)
+                            @for($i = 1; $i <= $totalExibido; $i++)
                                 <div class="h-2 rounded-full w-full transition-all duration-500 {{ $etapaAtual >= $i ? 'bg-purpura-600 shadow-[0_0_8px_rgba(147,51,234,0.5)] dark:bg-yellow-400 dark:shadow-[0_0_10px_rgba(250,204,21,0.6)]' : 'bg-gray-300/80 dark:bg-white/20' }}"></div>
                             @endfor
                         </div>
@@ -127,22 +161,22 @@
                     
                     <div class="{{ $cardClass }} rounded-xl p-6 md:p-10 card-form transition-all duration-300">
                         
-                        {{-- BLOQUEIO VISUAL CASO A PRÓXIMA FASE ESTEJA BLOQUEADA POR DATA --}}
-                        @if($this->bloqueioFaseSeguinte)
+                        {{-- BLOQUEIO VISUAL CASO A FASE ATUAL ESTEJA BLOQUEADA POR DATA (PÁGINA 1 NUNCA ENTRA AQUI) --}}
+                        @if($this->bloqueioFaseAtual)
                             <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-start gap-3 shadow-sm text-amber-900 dark:text-amber-300">
                                 <i class="ph-fill ph-lock-key text-xl text-amber-600 shrink-0 mt-0.5"></i>
                                 <div>
                                     <p class="text-sm font-extrabold mb-1">Acesso Temporariamente Restrito</p>
                                     <p class="font-medium leading-relaxed">
-                                        O seu progresso atual está salvo. A próxima fase <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
-                                        somente será liberada em <strong>{{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}</strong>. 
-                                        Até lá, os campos abaixo encontram-se em modo de visualização.
+                                        Esta fase <strong>({{ $this->bloqueioFaseAtual->nome }})</strong> 
+                                        somente será liberada em <strong>{{ \Carbon\Carbon::parse($this->bloqueioFaseAtual->data_liberacao)->format('d/m/Y \à\s H:i') }}</strong>. 
+                                        Os campos abaixo encontram-se em modo de visualização.
                                     </p>
                                 </div>
                             </div>
                         @endif
 
-                        <fieldset @if($this->bloqueioFaseSeguinte) disabled class="opacity-75" @endif>
+                        <fieldset @if($this->bloqueioFaseAtual) disabled class="opacity-75 pointer-events-none" @endif>
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                                 @if($etapaAtual === 1)
                                     @php
@@ -507,12 +541,15 @@
                                 <div></div>
                             @endif
                             
-                            @if($this->bloqueioFaseSeguinte)
+                            @if($this->bloqueioFaseAtual)
+                                {{-- Oculta o botão avançar pois os campos estão bloqueados temporariamente --}}
+                                <div></div>
+                            @elseif($this->bloqueioFaseSeguinte)
                                 <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 w-full sm:w-auto">
                                     <i class="ph-fill ph-lock-key text-lg text-amber-500 shrink-0"></i>
                                     <span>
-                                        A fase seguinte <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
-                                        será liberada em {{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}. O botão avançar reaparecerá no horário estipulado.
+                                        O seu progresso está salvo! A fase seguinte <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
+                                        será liberada em {{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}. O botão de avançar reaparecerá no horário estipulado.
                                     </span>
                                 </div>
                             @else
