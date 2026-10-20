@@ -49,6 +49,21 @@
                 </td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
+                        
+                        <!-- Botão/Status da Suri -->
+                        @if(!$template->suri_template_id)
+                            @if(feature('template.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('template.editar')))
+                                <button wire:click="sincronizarSuri({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-green-500 hover:bg-green-50" title="Sincronizar com Suri">
+                                    <i class="text-lg ph ph-arrows-clockwise"></i>
+                                </button>
+                            @endif
+                        @else
+                            <span class="p-1.5 text-green-500" title="Sincronizado na Suri (ID: {{ $template->suri_template_id }})">
+                                <i class="text-lg ph-fill ph-whatsapp-logo"></i>
+                            </span>
+                        @endif
+
+                        <!-- Botões existentes -->
                         <button wire:click="preVisualizar({{ $template->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-800" title="Pré-visualizar E-mail">
                             <i class="text-lg ph ph-eye"></i>
                         </button>

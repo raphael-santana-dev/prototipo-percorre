@@ -5,6 +5,7 @@ namespace App\Modules\Comunicacao\UI\Livewire\Template;
 use Livewire\Component;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
 use App\Modules\Comunicacao\Services\EmailParserService;
+use App\Modules\Teste\Suri\Services\SuriApiService;
 use App\Helpers\BreadcrumbHelper;
 
 class TemplateForm extends Component
@@ -37,7 +38,7 @@ class TemplateForm extends Component
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
-    public function salvar()
+    public function salvar(SuriApiService $suriService) // Injete o serviço aqui
     {
         if ($this->templateId) {
             abort_if(!feature('template.editar'), 403);
@@ -59,13 +60,27 @@ class TemplateForm extends Component
             'corpo' => $this->corpo,
         ];
 
+        // Salva ou atualiza no banco local
         if ($this->templateId) {
-            EmailTemplate::findOrFail($this->templateId)->update($dados);
+            $template = EmailTemplate::findOrFail($this->templateId);
+            $template->update($dados);
         } else {
-            EmailTemplate::create($dados);
+            $template = EmailTemplate::create($dados);
         }
 
-        $this->dispatch('sucesso', msg: 'Template salvo com sucesso!');
+        // Sincroniza com a Suri se ainda não possuir ID
+        if (empty($template->suri_template_id)) {
+            $suriId = $suriService->syncTemplate($template);
+            
+            if ($suriId) {
+                $template->update(['suri_template_id' => $suriId]);
+            } else {
+                $this->dispatch('erro', msg: 'Template salvo localmente, mas falhou ao sincronizar com a Suri.');
+                return;
+            }
+        }
+
+        $this->dispatch('sucesso', msg: 'Template salvo e sincronizado com sucesso!');
         return redirect()->route('templates.index');
     }
 
