@@ -33,6 +33,11 @@ class Inscricao extends Component
     public $possui_nome_social = 'nao';
     public bool $autorizacao_uso_infos = false;
 
+    // Campos para controle de Ofuscação LGPD
+    public $emailOriginal, $celularOriginal;
+    public bool $editarEmail = false;
+    public bool $editarCelular = false;
+
     public bool $temVagasDisponiveis = true;
     public $camposDinamicos = [];
     public array $respostas = [];
@@ -45,7 +50,6 @@ class Inscricao extends Component
     public array $formSettings = [];
     public bool $use_vacancy_limit = false; 
 
-    // VARIÁVEIS PARA CAPTAÇÃO DE INTERESSE (LISTA DE ESPERA / LEADS)
     public bool $deseja_informar = false;
     public $unidade_interesse = null;
     public $curso_interesse = null;
@@ -105,26 +109,40 @@ class Inscricao extends Component
 
             if (session()->has('inscricao_retomada_id')) {
                 $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
-                
                 if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
                     $this->carregarModeloInscricao($inscricaoRetomada);
                 }
-                
                 session()->forget('inscricao_retomada_id');
             }
         }
     }
 
-    /**
-     * Restaura os dados vindos do localStorage ao abrir/recarregar a página
-     */
+    private function ofuscarEmail(?string $email): string
+    {
+        if (!$email) return '';
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) return $email;
+        $name = $parts[0];
+        $domain = $parts[1];
+        if (strlen($name) <= 2) return $name . '@' . $domain;
+        return substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 2, 2)) . '@' . $domain;
+    }
+
+    private function ofuscarTelefone(?string $telefone): string
+    {
+        if (!$telefone) return '';
+        if (strlen($telefone) >= 14) {
+            return substr($telefone, 0, 7) . '****-' . substr($telefone, -4);
+        }
+        return $telefone;
+    }
+
     public function restaurarRascunhoLocal(array $dados)
     {
         if ($this->isPreview || !$this->inscricoesAbertas || in_array($this->etapaAtual, [99, 100])) {
             return;
         }
 
-        // 1. Se já existir um inscricaoId salvo no localStorage ou CPF no banco, prioriza sincronizar com o banco
         if (!empty($dados['inscricaoId'])) {
             $inscBanco = InscricaoModel::where('id', $dados['inscricaoId'])
                 ->where('ciclo_id', $this->cicloAtivoId)
@@ -149,6 +167,8 @@ class Inscricao extends Component
 
         foreach ($camposFixos as $campo) {
             if (isset($dados[$campo]) && $dados[$campo] !== '' && $dados[$campo] !== null) {
+                if ($campo === 'email' && !empty($this->emailOriginal) && str_contains($dados[$campo], '*')) continue;
+                if ($campo === 'celular' && !empty($this->celularOriginal) && str_contains($dados[$campo], '*')) continue;
                 $this->{$campo} = $dados[$campo];
             }
         }
@@ -165,7 +185,6 @@ class Inscricao extends Component
             $this->etapaAtual = (int) $dados['etapaAtual'];
         }
 
-        // Recalcula disponibilidade de Unidades / Cursos / Turnos com base em nascimento + estado
         if ($this->estado && $this->data_nascimento) {
             $unidadeSalva = $dados['unidade'] ?? $this->unidade;
             $cursoSalvo   = $dados['curso'] ?? $this->curso;
@@ -186,41 +205,22 @@ class Inscricao extends Component
             }
         }
 
-        // Já registra ou atualiza o rascunho no banco caso tenha dados mínimos
         $this->salvarRascunhoSilencioso();
     }
 
-    /**
-     * Salva/atualiza automaticamente a inscrição como rascunho ("Inscrição Incompleta") no banco
-     * à medida que o usuário preenche os campos.
-     */
     public function salvarRascunhoSilencioso()
     {
         if ($this->isPreview || !$this->cicloAtivoId || in_array($this->etapaAtual, [99, 100])) {
             return;
         }
 
-        // Só cria o registro no banco quando houver pelo menos Nome, CPF, E-mail ou alguma resposta preenchida
         $temRespostas = !empty(array_filter($this->respostas, fn($v) => !empty($v)));
         if (empty($this->nome) && empty($this->cpf) && empty($this->email) && !$temRespostas) {
             return;
         }
 
-        // Se digitou um CPF que já existe no ciclo atual, vincula ao registro existente (se não estiver finalizado)
-        $cpfLimpo = preg_replace('/[^0-9]/', '', (string) $this->cpf);
-        if (!$this->inscricaoId && strlen($cpfLimpo) === 11) {
-            $existente = InscricaoModel::where('ciclo_id', $this->cicloAtivoId)
-                ->where(function ($q) use ($cpfLimpo) {
-                    $q->where('cpf', $this->cpf)->orWhere('cpf', $cpfLimpo);
-                })->first();
-
-            if ($existente) {
-                if (in_array((int)$existente->etapa_atual, [99, 100])) {
-                    return; // Já concluiu anteriormente
-                }
-                $this->inscricaoId = $existente->id;
-            }
-        }
+        $emailParaSalvar = (!$this->editarEmail && $this->emailOriginal && str_contains($this->email, '*')) ? $this->emailOriginal : $this->email;
+        $celularParaSalvar = (!$this->editarCelular && $this->celularOriginal && str_contains($this->celular, '*')) ? $this->celularOriginal : $this->celular;
 
         $statusIncompleto = \App\Models\StatusInscricao::where('nome', 'Inscrição Incompleta')->first();
 
@@ -231,8 +231,8 @@ class Inscricao extends Component
             'possui_nome_social' => $this->possui_nome_social ?? 'nao',
             'nome_social' => $this->nome_social,
             'cpf' => $this->cpf,
-            'email' => $this->email,
-            'celular' => $this->celular,
+            'email' => $this->emailOriginal ? $emailParaSalvar : $this->email,
+            'celular' => $this->celularOriginal ? $celularParaSalvar : $this->celular,
             'data_nascimento' => $this->data_nascimento ?: null,
             'cep' => $this->cep,
             'logradouro' => $this->logradouro,
@@ -265,6 +265,35 @@ class Inscricao extends Component
         $this->inscricaoId = $inscricao->id;
     }
 
+    public function tentarRecuperarRascunho()
+    {
+        if (empty($this->cpf) || empty($this->data_nascimento)) {
+            return;
+        }
+
+        $cpfLimpo = preg_replace('/[^0-9]/', '', (string) $this->cpf);
+        
+        if (strlen($cpfLimpo) === 11) {
+            $inscricaoRetomada = InscricaoModel::with('statusInscricao')
+                ->where(function($q) use ($cpfLimpo) {
+                    $q->where('cpf', $this->cpf)->orWhere('cpf', $cpfLimpo);
+                })
+                ->whereDate('data_nascimento', $this->data_nascimento)
+                ->where('ciclo_id', $this->cicloAtivoId)
+                ->first();
+
+            if ($inscricaoRetomada) {
+                if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
+                    $this->addError('cpf', 'Esta inscrição já está finalizada ou em lista de espera.');
+                    return;
+                }
+                
+                $this->carregarModeloInscricao($inscricaoRetomada);
+                $this->dispatch('sucesso', msg: 'Rascunho recuperado com sucesso! Seus dados foram carregados.');
+            }
+        }
+    }
+
     private function carregarModeloInscricao(InscricaoModel $inscricaoRetomada)
     {
         $this->inscricaoId = $inscricaoRetomada->id;
@@ -277,8 +306,15 @@ class Inscricao extends Component
 
         $this->nome = $inscricaoRetomada->nome !== 'Candidato em Preenchimento' ? $inscricaoRetomada->nome : $this->nome;
         $this->cpf = $inscricaoRetomada->cpf ?: $this->cpf;
-        $this->email = $inscricaoRetomada->email ?: $this->email;
-        $this->celular = $inscricaoRetomada->celular ?: $this->celular;
+        
+        // Aplicação de Ofuscação LGPD
+        $this->emailOriginal = $inscricaoRetomada->email;
+        $this->celularOriginal = $inscricaoRetomada->celular;
+        $this->email = $this->ofuscarEmail($inscricaoRetomada->email);
+        $this->celular = $this->ofuscarTelefone($inscricaoRetomada->celular);
+        $this->editarEmail = false;
+        $this->editarCelular = false;
+
         $this->data_nascimento = $inscricaoRetomada->data_nascimento ? $inscricaoRetomada->data_nascimento->format('Y-m-d') : $this->data_nascimento;
         $this->cep = $inscricaoRetomada->cep ?: $this->cep;
         $this->logradouro = $inscricaoRetomada->logradouro ?: $this->logradouro;
@@ -328,30 +364,6 @@ class Inscricao extends Component
         'data_nascimento.required' => 'A data de nascimento é obrigatória.',
         'celular.required' => 'O preenchimento do celular é obrigatório.',
     ];
-
-    public function updatedCpf($value)
-    {
-        $cpfLimpo = preg_replace('/[^0-9]/', '', $value);
-        
-        if (strlen($cpfLimpo) === 11) {
-            $inscricaoRetomada = InscricaoModel::with('statusInscricao')
-                ->where(function($q) use ($value, $cpfLimpo) {
-                    $q->where('cpf', $value)->orWhere('cpf', $cpfLimpo);
-                })
-                ->where('ciclo_id', $this->cicloAtivoId)
-                ->first();
-
-            if ($inscricaoRetomada) {
-                if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
-                    $this->addError('cpf', 'Este CPF já possui uma inscrição finalizada ou em lista de espera neste ciclo.');
-                    return;
-                }
-
-                $this->carregarModeloInscricao($inscricaoRetomada);
-                $this->dispatch('sucesso', msg: 'Encontramos uma inscrição em andamento! Recuperamos seus dados de onde você parou.');
-            }
-        }
-    }
 
     private function getOfertasValidas(): ?array
     {
@@ -404,22 +416,17 @@ class Inscricao extends Component
             foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
                 if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                     $valorGatilho = $this->respostas[$campo->depende_de] ?? $this->{$campo->depende_de} ?? null;
-                    
-                    // CORREÇÃO: Tratamento seguro para Arrays (Checkboxes) vs Strings
-                    $condicaoAtendida = false;
                     $op = $campo->depende_operador ?? '=';
                     $tgt = strtolower(trim((string)$campo->depende_valor));
+                    $condicaoAtendida = false;
 
                     if (is_array($valorGatilho)) {
                         $arrayValores = array_map('strtolower', array_map('trim', $valorGatilho));
                         $arrayAlvos = array_map('trim', explode(',', $tgt));
-                        
                         switch($op) {
                             case '=': $condicaoAtendida = in_array($tgt, $arrayValores); break;
                             case '!=': $condicaoAtendida = !in_array($tgt, $arrayValores); break;
-                            case 'in': 
-                                $condicaoAtendida = !empty(array_intersect($arrayValores, $arrayAlvos)); 
-                                break;
+                            case 'in': $condicaoAtendida = !empty(array_intersect($arrayValores, $arrayAlvos)); break;
                         }
                     } else {
                         $val = strtolower(trim((string)$valorGatilho));
@@ -436,7 +443,6 @@ class Inscricao extends Component
                                 break;
                         }
                     }
-
                     if (!$condicaoAtendida) continue; 
                 }
 
@@ -526,6 +532,10 @@ class Inscricao extends Component
 
     public function updated($propertyName)
     {
+        if (in_array($propertyName, ['cpf', 'data_nascimento'])) {
+            $this->tentarRecuperarRascunho();
+        }
+
         if (str_starts_with($propertyName, 'uploads.')) {
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
@@ -540,7 +550,6 @@ class Inscricao extends Component
             return;
         }
 
-        // Salva rascunho no banco automaticamente a cada campo preenchido
         $this->salvarRascunhoSilencioso();
 
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
@@ -599,7 +608,6 @@ class Inscricao extends Component
             'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
         ]);
 
-        // Processa o armazenamento dos uploads da etapa atual
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
                 $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
@@ -719,8 +727,8 @@ class Inscricao extends Component
             'possui_nome_social' => $this->possui_nome_social,
             'nome_social' => $this->nome_social,
             'cpf' => $this->cpf,
-            'email' => $this->email,
-            'celular' => $this->celular,
+            'email' => $this->emailOriginal && !$this->editarEmail && str_contains($this->email, '*') ? $this->emailOriginal : $this->email,
+            'celular' => $this->celularOriginal && !$this->editarCelular && str_contains($this->celular, '*') ? $this->celularOriginal : $this->celular,
             'data_nascimento' => $this->data_nascimento,
             'cep' => $this->cep,
             'logradouro' => $this->logradouro,
@@ -830,9 +838,6 @@ class Inscricao extends Component
         }
     }
 
-    /**
-     * Retorna a idade atual e a idade que o candidato terá até o encerramento da matrícula/inscrição.
-     */
     private function obterIdadesParaValidacao(): array
     {
         $nascimento = Carbon::parse($this->data_nascimento)->startOfDay();
@@ -865,9 +870,6 @@ class Inscricao extends Component
         ];
     }
 
-    /**
-     * Verifica se a oferta é compatível com a idade atual e com a idade no período de matrícula.
-     */
     private function ofertaCompativelComIdade($oferta, int $idadeHoje, int $idadeFimPeriodo, ?string &$motivoBloqueio = null): bool
     {
         $motivoBloqueio = null;
@@ -945,7 +947,6 @@ class Inscricao extends Component
                     'faixa'        => ($oferta->idade_min ?? 0) . ' a ' . ($oferta->idade_max ?? '99') . ' anos',
                 ];
             } else {
-                // Guarda se foi barrado especificamente por fazer aniversário até a matrícula
                 if ($idadeHoje <= ($oferta->idade_max ?? 999) && $idadeFim > ($oferta->idade_max ?? 999)) {
                     $barrados["{$oferta->unidade_id}-{$oferta->curso_id}"] = [
                         'unidade_nome' => $oferta->unidade->nome,

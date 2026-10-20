@@ -154,6 +154,19 @@
                                         <h4 class="text-xl font-bold {{ $textoForm }}">Dados Pessoais</h4>
                                     </div>
                                 @endif
+
+                                {{-- ALERTA LGPD QUANDO RASCUNHO É RECUPERADO POR CPF + DATA DE NASCIMENTO --}}
+                                @if(!empty($emailOriginal) || !empty($celularOriginal))
+                                    <div class="col-span-12 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start gap-3 shadow-xs">
+                                        <i class="ph-fill ph-shield-check text-blue-600 dark:text-blue-400 text-2xl mt-0.5 shrink-0"></i>
+                                        <div>
+                                            <h5 class="text-sm font-bold text-blue-900 dark:text-blue-200">Inscrição em andamento recuperada com segurança</h5>
+                                            <p class="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                                                Para proteção dos seus dados (LGPD), seu e-mail e telefone aparecem parcialmente ocultos. Caso precise alterá-los, clique em <strong>"Alterar"</strong> acima do respectivo campo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                @endif
                             
                                 <div class="col-span-12">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Nome Completo <span class="text-red-500">*</span></label>
@@ -189,20 +202,43 @@
                                     @error('cpf') <span class="text-red-500 dark:text-red-400 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                 </div>
 
-                                <div class="col-span-6 md:col-span-6">
+                                <div class="col-span-12 md:col-span-6">
                                     <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Data de Nascimento <span class="text-red-500">*</span></label>
                                     <input wire:model.live="data_nascimento" type="date" class="{{ $inputClassBase }} @error('data_nascimento') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @else @if(!empty($data_nascimento)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif @enderror">
                                     @error('data_nascimento') <span class="text-red-500 dark:text-red-400 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                 </div>
 
                                 <div class="col-span-12 md:col-span-6">
-                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Celular / Telefone <span class="text-red-500">*</span></label>
-                                    <input wire:model.live.debounce.500ms="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200">Celular / Telefone <span class="text-red-500">*</span></label>
+                                        @if(!$editarCelular && !empty($celularOriginal))
+                                            <button type="button" wire:click="$set('editarCelular', true); $set('celular', '');" class="text-xs font-bold text-purpura-600 hover:underline">
+                                                Alterar telefone
+                                            </button>
+                                        @endif
+                                    </div>
+                                    @if(!$editarCelular && !empty($celularOriginal))
+                                        <input type="text" value="{{ $celular }}" readonly class="w-full rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-100 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 font-mono cursor-not-allowed">
+                                    @else
+                                        <input wire:model.live.debounce.500ms="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
+                                    @endif
+                                    @error('celular') <span class="text-red-500 dark:text-red-400 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                 </div>
 
                                 <div class="col-span-12 md:col-span-6">
-                                    <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Email <span class="text-red-500">*</span></label>
-                                    <input wire:model.live.debounce.300ms="email" type="email" placeholder="seu@exemplo.com" class="{{ $inputClassBase }} @error('email') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @else @if(!empty($email)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif @enderror">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-sm font-semibold text-gray-800 dark:text-gray-200">Email <span class="text-red-500">*</span></label>
+                                        @if(!$editarEmail && !empty($emailOriginal))
+                                            <button type="button" wire:click="$set('editarEmail', true); $set('email', '');" class="text-xs font-bold text-purpura-600 hover:underline">
+                                                Alterar e-mail
+                                            </button>
+                                        @endif
+                                    </div>
+                                    @if(!$editarEmail && !empty($emailOriginal))
+                                        <input type="text" value="{{ $email }}" readonly class="w-full rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-100 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 font-mono cursor-not-allowed">
+                                    @else
+                                        <input wire:model.live.debounce.300ms="email" type="email" placeholder="seu@exemplo.com" class="{{ $inputClassBase }} @error('email') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @else @if(!empty($email)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif @enderror">
+                                    @endif
                                     @error('email') <span class="text-red-500 dark:text-red-400 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                 </div>
 

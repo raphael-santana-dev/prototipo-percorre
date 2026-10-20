@@ -503,17 +503,15 @@
                     </div>
                 </nav>
 
-                {{-- MAIN CONTEÚDO --}}
                 <main class="flex-1 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 custom-scrollbar">
-                    <div class="w-full min-h-full pt-6 pb-8">
+                    <div class="w-full min-h-full pt-6 pb-24">
                         <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
                             {{ $slot }}
                         </div>
                     </div>
                 </main>
             </div>
-
-            {{-- MENU MOBILE (DRAWER) --}}
+            
             <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
             <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
                 <div class="relative flex-shrink-0 h-40 overflow-hidden bg-petunia-900">
