@@ -608,6 +608,25 @@ class Inscricao extends Component
             'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
         ]);
 
+        // [NOVO] BLOQUEIO TEMPORAL DE FASES E REGISTRO DE PARADA
+        $proximaEtapa = $this->etapaAtual + 1;
+        
+        if ($this->etapaAtual < $this->totalEtapas) {
+            $faseBloqueada = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
+                ->whereJsonContains('paginas', $proximaEtapa)
+                ->where('data_liberacao', '>', now())
+                ->first();
+
+            if ($faseBloqueada) {
+                // Força o salvamento garantindo que registramos a etapa atual onde ele parou
+                $this->salvarRascunhoSilencioso(); 
+                
+                $dataLiberacaoFmt = \Carbon\Carbon::parse($faseBloqueada->data_liberacao)->format('d/m/Y \à\s H:i');
+                $this->dispatch('erro', msg: "A próxima parte da inscrição ({$faseBloqueada->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado, retorne neste horário!");
+                return;
+            }
+        }
+
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
                 $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
