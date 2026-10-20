@@ -273,25 +273,30 @@
                     </div>
                 </div>
 
-                @if($contextoTipo === 'formulario')
-                    <div>
-                        <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
-                        <div class="grid grid-cols-1 gap-1.5">
-                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-buildings text-base {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                <span class="text-[11px] font-bold">Unidades Ativas</span>
-                            </button>
-                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-graduation-cap text-base {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                <span class="text-[11px] font-bold">Cursos Ativos</span>
-                            </button>
-                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-clock text-base {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
-                                <span class="text-[11px] font-bold">Turnos Ativos</span>
-                            </button>
-                        </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
+                    <div class="grid grid-cols-1 gap-1.5">
+                        <button type="button" wire:click="setTipo('system', 'unidade')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-buildings text-base {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold">Unidades Ativas</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('system', 'curso')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-graduation-cap text-base {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold">Cursos Ativos</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('system', 'turno')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                            <i class="ph-bold ph-clock text-base {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <span class="text-[11px] font-bold">Turnos Ativos</span>
+                        </button>
+                        <button type="button" wire:click="setTipo('system', 'combo_academico')" class="flex items-center gap-2.5 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'combo_academico' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-purpura-200 bg-purpura-50/30 hover:border-purpura-400 text-gray-800' }}">
+                            <i class="ph-bold ph-tree-structure text-lg text-purpura-600"></i>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-[11px] font-extrabold text-purpura-900">Conjunto Unidade / Curso / Turno</span>
+                                <span class="text-[9px] text-gray-500 truncate">Gera os 3 campos com vínculo configurável</span>
+                            </div>
+                        </button>
                     </div>
-                @endif
+                </div>
 
             </div>
         </aside>
@@ -1253,11 +1258,46 @@
                             </div>
                         </div>
                     @elseif($tipo === 'system')
-                        <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
-                            <label class="flex items-center gap-2.5 cursor-pointer">
-                                <input type="checkbox" wire:model="configuracoes.aplicar_regras" class="h-4 w-4 text-purpura-600 rounded border-gray-300">
-                                <span class="text-xs text-gray-900 font-bold">Aplicar Regras de Cascata (Unidade → Curso)</span>
-                            </label>
+                        <div class="p-4 bg-purpura-50/50 border border-purpura-200 rounded-lg space-y-3">
+                            <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-tree-structure text-purpura-600 text-base"></i> Regras de Vínculo do Sistema
+                            </h5>
+
+                            @if($subtipo === 'combo_academico')
+                                <div class="p-2.5 bg-white border border-purpura-200 rounded-md text-[11px] text-purpura-800 font-medium leading-snug">
+                                    <i class="ph-fill ph-sparkle text-purpura-600"></i> Ao inserir este bloco, o sistema criará automaticamente os 3 campos: <strong>Unidade</strong>, <strong>Curso</strong> e <strong>Turno</strong> na página atual.
+                                </div>
+                            @endif
+
+                            @if(in_array($subtipo, ['unidade', 'combo_academico']))
+                                <label class="flex items-start gap-2.5 cursor-pointer pt-1">
+                                    <input type="checkbox" wire:model.live="configuracoes.filtrar_por_uf" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-900 font-bold">Filtrar Unidades pelo Estado (UF) do usuário?</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight">Se marcado, exibe apenas as unidades do mesmo estado preenchido no CEP/UF do formulário.</span>
+                                    </div>
+                                </label>
+                            @endif
+
+                            @if(in_array($subtipo, ['curso', 'combo_academico']))
+                                <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
+                                    <input type="checkbox" wire:model.live="configuracoes.vincular_curso_unidade" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-900 font-bold">Relacionar Cursos à Unidade escolhida?</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os cursos ativos independente da unidade.</span>
+                                    </div>
+                                </label>
+                            @endif
+
+                            @if(in_array($subtipo, ['turno', 'combo_academico']))
+                                <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
+                                    <input type="checkbox" wire:model.live="configuracoes.vincular_turno_curso" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-900 font-bold">Vincular Turnos ao Curso escolhido?</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os turnos ativos do sistema.</span>
+                                    </div>
+                                </label>
+                            @endif
                         </div>
                     @elseif($tipo === 'html')
                         <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">

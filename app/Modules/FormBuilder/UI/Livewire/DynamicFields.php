@@ -287,6 +287,34 @@ class DynamicFields extends Component
             $this->configuracoes['abrir_preview'] = $this->configuracoes['abrir_preview'] ?? true;
         }
 
+        if ($tipo === 'system') {
+            $this->configuracoes['filtrar_por_uf'] = $this->configuracoes['filtrar_por_uf'] ?? false;
+            $this->configuracoes['vincular_curso_unidade'] = $this->configuracoes['vincular_curso_unidade'] ?? true;
+            $this->configuracoes['vincular_turno_curso'] = $this->configuracoes['vincular_turno_curso'] ?? true;
+            $this->configuracoes['aplicar_regras'] = $this->configuracoes['aplicar_regras'] ?? true;
+
+            if (!$this->campoId) {
+                if ($subtipo === 'unidade') {
+                    $this->label = 'Unidade';
+                    $this->name = 'unidade_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'curso') {
+                    $this->label = 'Curso';
+                    $this->name = 'curso_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'turno') {
+                    $this->label = 'Turno';
+                    $this->name = 'turno_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'combo_academico') {
+                    $this->label = 'Unidade';
+                    $this->name = 'combo_acad_' . rand(10, 99);
+                    $this->largura = 4;
+                    $this->configuracoes['gerar_campos_combo'] = true;
+                }
+            }
+        }
+
         $this->dispatch(' sincronizar-quill-builder');
     }
 
@@ -671,6 +699,26 @@ class DynamicFields extends Component
         $exibirNoTopoSalvo = filter_var($this->configuracoes['exibir_no_topo'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $deveCriarEnderecoViaCep = ($this->tipo === 'text' && $this->subtipo === 'cep' && !empty($configToSave['viacep']) && (!$isEditing || !empty($this->configuracoes['criar_campos_endereco'])));
 
+        if ($this->tipo === 'system') {
+            $configToSave['filtrar_por_uf'] = filter_var($this->configuracoes['filtrar_por_uf'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['vincular_curso_unidade'] = filter_var($this->configuracoes['vincular_curso_unidade'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['vincular_turno_curso'] = filter_var($this->configuracoes['vincular_turno_curso'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['aplicar_regras'] = ($configToSave['vincular_curso_unidade'] || $configToSave['vincular_turno_curso']);
+        }
+
+        $deveCriarComboAcademico = ($this->tipo === 'system' && $this->subtipo === 'combo_academico' && !$isEditing);
+        if ($deveCriarComboAcademico) {
+            // O primeiro campo salvo passa a ser a Unidade cabeçalho do combo, e os outros 2 (Curso e Turno) são gerados na sequência
+            $this->subtipo = 'unidade';
+            $configToSave['combo_group'] = $nameSalvo;
+            $configToSave['combo_role'] = 'unidade';
+            $configToSave['combo_map'] = [
+                'unidade' => $nameSalvo,
+                'curso'   => $nameSalvo . '_curso',
+                'turno'   => $nameSalvo . '_turno',
+            ];
+        }
+
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
@@ -758,6 +806,10 @@ class DynamicFields extends Component
             $this->gerarCamposEnderecoViaCep($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo);
         }
 
+        if ($deveCriarComboAcademico) {
+            $this->gerarCamposComboAcademico($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo, $configToSave);
+        }
+
         $this->cancelarEdicao(); 
         $this->dispatch('sucesso', msg: $deveCriarEnderecoViaCep 
             ? 'Campo CEP e todos os campos de endereço (ViaCEP) foram adicionados com sucesso!' 
@@ -811,6 +863,68 @@ class DynamicFields extends Component
                     'viacep_parent' => $cepFieldName,
                     'viacep_target' => $item['sufixo'],
                     'exibir_no_topo' => $exibirNoTopo,
+                ],
+            ]);
+        }
+    }
+
+    private function gerarCamposComboAcademico(int $etapa, int $ordemUnidade, string $baseFieldName, bool $obrigatorio, bool $exibirNoTopo, array $cfgBase): void
+    {
+        $camposCombo = [
+            [
+                'sufixo'  => 'curso',
+                'subtipo' => 'curso',
+                'label'   => 'Curso',
+                'largura' => 4,
+            ],
+            [
+                'sufixo'  => 'turno',
+                'subtipo' => 'turno',
+                'label'   => 'Turno',
+                'largura' => 4,
+            ],
+        ];
+
+        $ordemAtual = $ordemUnidade;
+
+        foreach ($camposCombo as $item) {
+            $nomeCampo = $baseFieldName . '_' . $item['sufixo'];
+
+            $jaExiste = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('name', $nomeCampo)
+                ->exists();
+
+            if ($jaExiste) continue;
+
+            $ordemAtual++;
+
+            CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('etapa', $etapa)
+                ->where('tipo', '!=', 'config')
+                ->where('ordem', '>=', $ordemAtual)
+                ->increment('ordem');
+
+            CampoFormulario::create([
+                'ciclo_id'      => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+                'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+                'etapa'         => $etapa,
+                'ordem'         => $ordemAtual,
+                'label'         => $item['label'],
+                'name'          => $nomeCampo,
+                'tipo'          => 'system',
+                'subtipo'       => $item['subtipo'],
+                'largura'       => $item['largura'],
+                'obrigatorio'   => $obrigatorio,
+                'configuracoes' => [
+                    'combo_group'            => $baseFieldName,
+                    'combo_role'             => $item['subtipo'],
+                    'combo_parent_unidade'   => $baseFieldName,
+                    'combo_parent_curso'     => $baseFieldName . '_curso',
+                    'filtrar_por_uf'         => $cfgBase['filtrar_por_uf'] ?? false,
+                    'vincular_curso_unidade' => $cfgBase['vincular_curso_unidade'] ?? true,
+                    'vincular_turno_curso'   => $cfgBase['vincular_turno_curso'] ?? true,
+                    'aplicar_regras'         => ($cfgBase['vincular_curso_unidade'] ?? true) || ($cfgBase['vincular_turno_curso'] ?? true),
+                    'exibir_no_topo'         => $exibirNoTopo,
                 ],
             ]);
         }

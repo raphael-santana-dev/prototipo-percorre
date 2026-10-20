@@ -271,6 +271,18 @@ class PreInscricao extends Component
     public function updated($propertyName)
     {
         if (str_starts_with($propertyName, 'uploads.')) {
+
+            $changedKey = str_replace('respostas.', '', $propertyName);
+            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
+                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
+                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
+                    $this->respostas[$cSys->name] = '';
+                }
+                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
+                    $this->respostas[$cSys->name] = '';
+                }
+            }
+            
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
                 $this->validateOnly($propertyName, $regras, [
