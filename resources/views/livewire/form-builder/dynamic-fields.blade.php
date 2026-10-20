@@ -91,6 +91,9 @@
                     <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
                     <span class="hidden xl:inline ml-1" x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
                 </button>
+                <button type="button" wire:click="abrirModalFases" class="btn btn--secondary btn--medium flex items-center gap-2">
+                    <i class="ph-bold ph-calendar-plus text-purpura-600"></i> Agendamento de Fases
+                </button>
             </div>
 
             <button type="button" @click="$wire.set('drawerFormSettingsAberto', true)" class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2">
@@ -1576,4 +1579,95 @@
             </div>
         </div>
     </div>
+
+    {{-- MODAL DE GESTÃO DE FASES TEMPORAIS --}}
+    @if($modalFasesAberto)
+        <div class="fixed inset-0 z-[150] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="ph-fill ph-calendar-check text-purpura-600"></i> Gerenciador de Fases e Liberação
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Agrupe páginas do formulário em fases, defina datas de liberação automática e configure disparos de e-mail.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button wire:click="adicionarFase" class="btn btn--secondary btn--medium bg-white"><i class="ph-bold ph-plus text-purpura-600"></i> Nova Fase</button>
+                    <button wire:click="salvarFases" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm"><i class="ph-bold ph-floppy-disk"></i> Salvar Tudo</button>
+                    <button wire:click="$set('modalFasesAberto', false)" class="text-gray-400 hover:text-red-500 transition ml-2"><i class="ph-bold ph-x text-2xl"></i></button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+                @forelse($fasesConfig as $index => $fase)
+                    <div class="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm transition-colors hover:border-purpura-300">
+                        <div class="flex flex-col xl:flex-row gap-5">
+                            
+                            {{-- Nome e Páginas --}}
+                            <div class="flex-1 space-y-4 border-b xl:border-b-0 xl:border-r border-gray-100 dark:border-gray-700 pb-4 xl:pb-0 xl:pr-5">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome da Fase <span class="text-red-500">*</span></label>
+                                    <input type="text" wire:model="fasesConfig.{{ $index }}.nome" placeholder="Ex: Fase 2 - Envio de Documentos" class="w-full text-sm font-bold border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 focus:border-purpura-500">
+                                    @error('fasesConfig.'.$index.'.nome') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-2">Quais páginas compõem esta fase? <span class="text-red-500">*</span></label>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($paginasDisponiveis as $pag)
+                                            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer transition-colors {{ in_array($pag, $fasesConfig[$index]['paginas']) ? 'bg-purpura-50 border-purpura-300 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-50' }}">
+                                                <input type="checkbox" wire:model="fasesConfig.{{ $index }}.paginas" value="{{ $pag }}" class="w-3.5 h-3.5 text-purpura-600 rounded border-gray-300">
+                                                <span class="text-xs font-bold">Página {{ $pag }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    @error('fasesConfig.'.$index.'.paginas') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+
+                            {{-- Datas e Automação --}}
+                            <div class="flex-1 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Abre em (Liberação) <span class="text-red-500">*</span></label>
+                                        <input type="datetime-local" wire:model="fasesConfig.{{ $index }}.data_liberacao" class="w-full text-xs font-medium border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 focus:border-purpura-500">
+                                        @error('fasesConfig.'.$index.'.data_liberacao') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-ponkan-600">Encerra em (Opcional)</label>
+                                        <input type="datetime-local" wire:model="fasesConfig.{{ $index }}.data_encerramento" class="w-full text-xs font-medium border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 focus:border-purpura-500">
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 p-3 rounded-lg">
+                                    <label class="block text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase mb-1 flex items-center gap-1.5">
+                                        <i class="ph-bold ph-envelope-simple-open"></i> E-mail Automático de Aviso de Liberação (Opcional)
+                                    </label>
+                                    <select wire:model="fasesConfig.{{ $index }}.email_template_id" class="w-full text-xs font-medium border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-purpura-500 focus:border-purpura-500">
+                                        <option value="">Nenhum e-mail de aviso...</option>
+                                        @foreach($templatesDeEmail as $tId => $tNome)
+                                            <option value="{{ $tId }}">{{ $tNome }}</option>
+                                        @endforeach
+                                    </select>
+                                    <p class="text-[9px] text-blue-500 mt-1 leading-tight">Se selecionado, o Cron Job disparará este e-mail no exato momento da "Data de Liberação" para os candidatos que alcançaram a fase anterior.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center xl:pl-4 border-t xl:border-t-0 xl:border-l border-gray-100 dark:border-gray-700 pt-4 xl:pt-0">
+                                <button type="button" wire:click="removerFase({{ $index }})" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition" title="Excluir Fase">
+                                    <i class="ph-bold ph-trash text-xl"></i>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                @empty
+                    <div class="flex flex-col items-center justify-center p-12 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/30">
+                        <i class="ph-fill ph-calendar-plus text-5xl mb-3 text-gray-300"></i>
+                        <p class="font-bold text-sm text-gray-600 dark:text-gray-400">Nenhuma fase temporal configurada.</p>
+                        <p class="text-xs text-gray-500 mt-1">O formulário será percorrido de uma vez só da primeira à última página.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    @endif
 </div>

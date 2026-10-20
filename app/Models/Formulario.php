@@ -68,4 +68,9 @@ class Formulario extends Model
     {
         return $this->hasMany(RespostaFormulario::class, 'formulario_id');
     }
+    
+    public function fases()
+    {
+        return $this->hasMany(FormularioFase::class, 'formulario_id')->orderBy('data_liberacao', 'asc');
+    }
 }

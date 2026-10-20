@@ -60,6 +60,11 @@ class DynamicFields extends Component
 
     public $etapasDisponiveis = [];
 
+    public bool $modalFasesAberto = false;
+    public array $fasesConfig = []; 
+    public array $paginasDisponiveis = [];
+    public array $templatesDeEmail = [];
+
     public function mount($tipo, $id)
     {
         $this->contextoTipo = $tipo;
@@ -104,6 +109,85 @@ class DynamicFields extends Component
         $this->loadFormSettings();
         $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
+    }
+
+    public function abrirModalFases()
+    {
+        // Usa 'etapa' no banco de dados, mas trata como página no Modal
+        $this->paginasDisponiveis = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('tipo', '!=', 'config')
+            ->select('etapa') 
+            ->distinct()
+            ->orderBy('etapa')
+            ->pluck('etapa')
+            ->toArray();
+
+        $fasesDb = \App\Models\FormularioFase::where($this->getContextColumn(), $this->contextoId)
+            ->orderBy('data_liberacao', 'asc')
+            ->get();
+
+        $this->fasesConfig = [];
+        foreach ($fasesDb as $f) {
+            $this->fasesConfig[] = [
+                'id' => $f->id,
+                'nome' => $f->nome,
+                'paginas' => $f->paginas ?? [],
+                'data_liberacao' => $f->data_liberacao ? $f->data_liberacao->format('Y-m-d\TH:i') : '',
+                'data_encerramento' => $f->data_encerramento ? $f->data_encerramento->format('Y-m-d\TH:i') : '',
+                'email_template_id' => $f->email_template_id ?? '',
+            ];
+        }
+
+        $this->templatesDeEmail = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')->pluck('nome', 'id')->toArray();
+        $this->modalFasesAberto = true;
+    }
+
+    public function adicionarFase()
+    {
+        $this->fasesConfig[] = [
+            'id' => null, 'nome' => '', 'paginas' => [], 
+            'data_liberacao' => '', 'data_encerramento' => '', 'email_template_id' => ''
+        ];
+    }
+
+    public function removerFase($index)
+    {
+        $faseId = $this->fasesConfig[$index]['id'] ?? null;
+        if ($faseId) {
+            \App\Models\FormularioFase::find($faseId)->delete();
+        }
+        unset($this->fasesConfig[$index]);
+        $this->fasesConfig = array_values($this->fasesConfig);
+    }
+
+    public function salvarFases()
+    {
+        $this->validate([
+            'fasesConfig.*.nome' => 'required|string|max:255',
+            'fasesConfig.*.data_liberacao' => 'required|date',
+            'fasesConfig.*.paginas' => 'required|array|min:1',
+        ], [
+            'fasesConfig.*.nome.required' => 'O nome da fase é obrigatório.',
+            'fasesConfig.*.data_liberacao.required' => 'Defina a data de liberação da fase.',
+            'fasesConfig.*.paginas.required' => 'Selecione pelo menos uma página para esta fase.',
+        ]);
+
+        foreach ($this->fasesConfig as $cfg) {
+            \App\Models\FormularioFase::updateOrCreate(
+                ['id' => $cfg['id']],
+                [
+                    $this->getContextColumn() => $this->contextoId, // 'formulario_id' ou 'ciclo_id'
+                    'nome' => $cfg['nome'],
+                    'paginas' => array_map('intval', $cfg['paginas']),
+                    'data_liberacao' => $cfg['data_liberacao'],
+                    'data_encerramento' => !empty($cfg['data_encerramento']) ? $cfg['data_encerramento'] : null,
+                    'email_template_id' => !empty($cfg['email_template_id']) ? $cfg['email_template_id'] : null,
+                ]
+            );
+        }
+
+        $this->modalFasesAberto = false;
+        $this->dispatch('sucesso', msg: 'Fases, bloqueios de data e automações guardadas com sucesso!');
     }
 
     private function inicializarDefaultsDicas(): void
