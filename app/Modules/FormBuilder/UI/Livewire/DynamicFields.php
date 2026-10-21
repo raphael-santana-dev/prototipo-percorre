@@ -10,10 +10,12 @@ use App\Models\Etapa;
 use App\Models\Formulario;
 use App\Models\CampoFormulario;
 use Illuminate\Support\Str;
+use App\Traits\WithEditingLock; // Integração da Trait de Bloqueio
 
 class DynamicFields extends Component
 {
     use WithFileUploads;
+    use WithEditingLock; // Ativação da Trait de Bloqueio
     
     public $campoId = null;
     public $etapa = 1;
@@ -68,7 +70,12 @@ class DynamicFields extends Component
     public function mount($tipo, $id)
     {
         $this->contextoTipo = $tipo;
-        $this->contextoId = $id;
+        $this->contextoId = (int) $id;
+
+        // REGISTO DE LOCK (BLOQUEIO DE EDIÇÃO SIMULTÂNEA)
+        $this->resourceLockType = $tipo; // 'formulario' ou 'ciclo'
+        $this->resourceLockId = $this->contextoId;
+        $this->checkAndAcquireLock();
 
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
@@ -1044,11 +1051,10 @@ class DynamicFields extends Component
         $this->dispatch('sucesso', msg: 'Nova página adicionada!');
     }
 
-    public function atualizarNomeEtapa($id, $novoNome)
+    public function atualizarNomeEtapa($id,$novoNome)
     {
         if (!empty(trim($novoNome))) {
-            \App\Models\Etapa::where('id', $id)->update(['nome' => trim($novoNome)]);
-            $this->carregarEtapas();
+            \App\Models\Etapa::where('id',$id)->update(['nome' => trim($novoNome)]);$this->carregarEtapas();
         }
     }
 
@@ -1057,39 +1063,36 @@ class DynamicFields extends Component
         $etapa = \App\Models\Etapa::find($id);
         if (!$etapa) return;
 
-        if ($etapa->numero == 1) {
-            $this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
+        if ($etapa->numero == 1) {$this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
             return;
         }
         
-        $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+        $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(),$this->contextoId)
             ->where('etapa', $etapa->numero)
             ->where('tipo', '!=', 'config')
             ->exists();
             
-        if ($temCampos) {
-            $this->dispatch('erro', msg: 'Esta página possui campos. Mova-os ou exclua-os primeiro.');
+        if ($temCampos) {$this->dispatch('erro', msg: 'Esta página possui campos. Mova-os ou exclua-os primeiro.');
             return;
         }
         
-        $etapa->delete();
-        $this->carregarEtapas();
+        $etapa->delete();$this->carregarEtapas();
         
-        if ($this->etapa == $etapa->numero) {
-            $this->etapa = $this->etapasDisponiveis->first()->numero ?? 1;
+        if ($this->etapa ==$etapa->numero) {
+            $this->etapa =$this->etapasDisponiveis->first()->numero ?? 1;
         }
     }
 
     public function render()
     {
-        $camposCadastrados = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+        $camposCadastrados = CampoFormulario::where($this->getContextColumn(),$this->contextoId)
             ->where('tipo', '!=', 'config')
             ->orderBy('etapa')
             ->orderBy('ordem')
             ->orderBy('id')
             ->get();
             
-        $camposPorEtapa = $camposCadastrados->groupBy('etapa');
+        $camposPorEtapa =$camposCadastrados->groupBy('etapa');
 
         return view('livewire.form-builder.dynamic-fields', [
             'camposCadastrados' => $camposCadastrados,
