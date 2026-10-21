@@ -377,7 +377,6 @@
                     if (!function_exists('formatRichFormText')) {
                         function formatRichFormText($text) {
                             if (empty($text)) return '';
-                            // Se já possui tags HTML do Quill, sanitiza mantendo apenas tags visuais seguras
                             if ($text !== strip_tags($text)) {
                                 return strip_tags($text, '<strong><b><em><i><u><s><del><span><br><p><ul><ol><li><a>');
                             }
@@ -397,7 +396,7 @@
 
                 <!-- BARRA DE PÁGINAS / ETAPAS -->
                 <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2.5 flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 relative z-20">
-                    <button wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purpura-50 border border-purpura-200 rounded-lg text-xs font-bold text-purpura-700 hover:bg-purpura-100 transition">
+                    <button type="button" wire:click="adicionarEtapa" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purpura-50 border border-purpura-200 rounded-lg text-xs font-bold text-purpura-700 hover:bg-purpura-100 transition">
                         <i class="ph-bold ph-plus"></i> Nova Página
                     </button>
                     <div class="w-px h-5 bg-gray-200 mx-1 shrink-0"></div>
@@ -412,7 +411,7 @@
                                    value="{{ $et->nome }}" 
                                    class="w-28 border-none focus:ring-0 text-xs font-bold text-gray-700 px-2.5 py-1.5 bg-transparent">
                             @if($etapasDisponiveis->count() > 1)
-                                <button wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-2 py-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
+                                <button type="button" wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-2 py-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
                                     <i class="ph-bold ph-trash"></i>
                                 </button>
                             @endif
@@ -1530,8 +1529,7 @@
                          x-transition:leave="transform transition ease-in-out duration-300"
                          x-transition:leave-start="translate-x-0"
                          x-transition:leave-end="translate-x-full"
-                         class="pointer-events-auto w-screen max-w-md h-[100dvh] flex flex-col"
-                         @click.away="$wire.set('drawerFormSettingsAberto', false)">
+                         class="pointer-events-auto w-screen max-w-md h-[100dvh] flex flex-col">
                          
                         <form wire:submit.prevent="salvarFormSettings" class="flex flex-col h-full bg-white shadow-2xl overflow-hidden">
                             <div class="bg-gray-900 text-white px-6 py-4 shrink-0 flex items-center justify-between">
@@ -1643,7 +1641,7 @@
                 </div>
             </div>
         </div>
-    </fieldset>
+    </div>
 
     {{-- MODAL DE GESTÃO DE FASES TEMPORAIS --}}
     @if($modalFasesAberto)
@@ -1656,15 +1654,21 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Agrupe páginas do formulário em fases, defina datas de liberação automática e configure disparos de e-mail.</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button type="button" wire:click="adicionarFase" class="btn btn--secondary btn--medium bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"><i class="ph-bold ph-plus text-purpura-600 dark:text-purpura-400"></i> Nova Fase</button>
-                    <button type="button" wire:click="salvarFases" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm"><i class="ph-bold ph-floppy-disk"></i> Salvar Tudo</button>
-                    <button type="button" wire:click="$set('modalFasesAberto', false)" class="text-gray-400 hover:text-red-500 transition ml-2"><i class="ph-bold ph-x text-2xl"></i></button>
+                    <button type="button" wire:click="adicionarFase" class="btn btn--secondary btn--medium bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <i class="ph-bold ph-plus text-purpura-600 dark:text-purpura-400"></i> Nova Fase
+                    </button>
+                    <button type="button" wire:click="salvarFases" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
+                        <i class="ph-bold ph-floppy-disk"></i> Salvar Tudo
+                    </button>
+                    <button type="button" wire:click="$set('modalFasesAberto', false)" class="text-gray-400 hover:text-red-500 transition ml-2">
+                        <i class="ph-bold ph-x text-2xl"></i>
+                    </button>
                 </div>
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
                 @forelse($fasesConfig as $index => $fase)
-                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm transition-colors hover:border-purpura-300 dark:hover:border-purpura-600">
+                    <div wire:key="fase-item-{{ $index }}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm transition-colors hover:border-purpura-300 dark:hover:border-purpura-600">
                         <div class="flex flex-col xl:flex-row gap-5">
                             
                             {{-- Nome e Páginas --}}
@@ -1679,8 +1683,12 @@
                                     <label class="block text-[10px] font-bold text-gray-500 uppercase mb-2">Quais páginas compõem esta fase? <span class="text-red-500">*</span></label>
                                     <div class="flex flex-wrap gap-2">
                                         @foreach($paginasDisponiveis as $pag)
-                                            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer transition-colors {{ in_array($pag, $fasesConfig[$index]['paginas']) ? 'bg-purpura-50 border-purpura-300 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-900 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800' }}">
-                                                <input type="checkbox" wire:model="fasesConfig.{{ $index }}.paginas" value="{{ $pag }}" class="w-3.5 h-3.5 text-purpura-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-purpura-500">
+                                            @php
+                                                $paginasSelecionadas = array_map('strval', $fasesConfig[$index]['paginas'] ?? []);
+                                                $estaMarcada = in_array((string) $pag, $paginasSelecionadas, true);
+                                            @endphp
+                                            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer transition-colors {{ $estaMarcada ? 'bg-purpura-50 border-purpura-300 text-purpura-700 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-900 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800' }}">
+                                                <input type="checkbox" wire:model.live="fasesConfig.{{ $index }}.paginas" value="{{ (string) $pag }}" class="w-3.5 h-3.5 text-purpura-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 focus:ring-purpura-500">
                                                 <span class="text-xs font-bold">Página {{ $pag }}</span>
                                             </label>
                                         @endforeach
@@ -1729,7 +1737,7 @@
                     <div class="flex flex-col items-center justify-center p-12 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800/50">
                         <i class="ph-fill ph-calendar-plus text-5xl mb-3 text-gray-300 dark:text-gray-600"></i>
                         <p class="font-bold text-sm text-gray-600 dark:text-gray-400">Nenhuma fase temporal configurada.</p>
-                        <p class="text-xs text-gray-500 mt-1">O formulário será percorrido de uma vez só da primeira à última página.</p>
+                        <p class="text-xs text-gray-500 mt-1">Clique em "+ Nova Fase" no canto superior direito para agendar liberações de páginas.</p>
                     </div>
                 @endforelse
             </div>
