@@ -116,11 +116,9 @@
                         // CÁLCULO DINÂMICO DA BARRA DE PROGRESSO
                         $totalExibido = $totalEtapas;
                         
-                        // Regra 1: Se não há vagas disponíveis e o candidato já preencheu os filtros de estado/nascimento (vai virar Lead)
                         if (!$temVagasDisponiveis && !empty($data_nascimento) && !empty($estado)) {
                             $totalExibido = 1;
                         } else {
-                            // Regra 2: Ajustar o total de passos visíveis baseado apenas nas Fases liberadas
                             if ($cicloAtivoId) {
                                 $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $cicloAtivoId)
                                     ->where('data_liberacao', '>', now())
@@ -128,8 +126,9 @@
                                 
                                 $paginasBloqueadas = [];
                                 foreach ($fasesFuturas as $fase) {
-                                    if (is_array($fase->paginas)) {
-                                        $paginasBloqueadas = array_merge($paginasBloqueadas, $fase->paginas);
+                                    $paginas = is_string($fase->paginas) ? json_decode($fase->paginas, true) : $fase->paginas;
+                                    if (is_array($paginas)) {
+                                        $paginasBloqueadas = array_merge($paginasBloqueadas, $paginas);
                                     }
                                 }
                                 
@@ -142,7 +141,6 @@
                             }
                         }
 
-                        // Fallback de segurança para a barra não quebrar caso a etapa atual supere o total exibido
                         $totalExibido = max(1, max($etapaAtual, $totalExibido));
                     @endphp
 
@@ -542,7 +540,7 @@
                             @endif
                             
                             @if($this->bloqueioFaseAtual)
-                                {{-- Oculta o botão avançar pois os campos estão bloqueados temporariamente --}}
+                                {{-- Oculta o botão avançar pois a fase em ecrã está bloqueada --}}
                                 <div></div>
                             @elseif($this->bloqueioFaseSeguinte)
                                 <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 w-full sm:w-auto">

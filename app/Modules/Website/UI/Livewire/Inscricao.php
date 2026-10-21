@@ -34,7 +34,6 @@ class Inscricao extends Component
     public $possui_nome_social = 'nao';
     public bool $autorizacao_uso_infos = false;
 
-    // Campos para controle de Ofuscação LGPD
     public $emailOriginal, $celularOriginal;
     public bool $editarEmail = false;
     public bool $editarCelular = false;
@@ -121,15 +120,22 @@ class Inscricao extends Component
     #[Computed]
     public function bloqueioFaseAtual()
     {
-        // A Página 1 NUNCA é bloqueada para preenchimento
+        // A Página 1 nunca sofre bloqueio de edição
         if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual === 1) {
             return null;
         }
         
-        return \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
-            ->whereJsonContains('paginas', $this->etapaAtual)
+        $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
             ->where('data_liberacao', '>', now())
-            ->first();
+            ->get();
+
+        foreach ($fasesFuturas as $fase) {
+            $paginas = is_string($fase->paginas) ? json_decode($fase->paginas, true) : $fase->paginas;
+            if (is_array($paginas) && in_array($this->etapaAtual, $paginas)) {
+                return $fase;
+            }
+        }
+        return null;
     }
 
     #[Computed]
@@ -141,11 +147,19 @@ class Inscricao extends Component
         
         $proximaEtapa = $this->etapaAtual + 1;
         
-        return \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
-            ->whereJsonContains('paginas', $proximaEtapa)
+        $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
             ->where('data_liberacao', '>', now())
-            ->first();
+            ->get();
+
+        foreach ($fasesFuturas as $fase) {
+            $paginas = is_string($fase->paginas) ? json_decode($fase->paginas, true) : $fase->paginas;
+            if (is_array($paginas) && in_array($proximaEtapa, $paginas)) {
+                return $fase;
+            }
+        }
+        return null;
     }
+
     private function ofuscarEmail(?string $email): string
     {
         if (!$email) return '';
@@ -622,23 +636,10 @@ class Inscricao extends Component
             return;
         }
 
-        $proximaEtapa = $this->etapaAtual + 1;
-        
-        if ($this->etapaAtual < $this->totalEtapas) {
-            $faseBloqueada = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
-                ->whereJsonContains('paginas', $proximaEtapa)
-                ->where('data_liberacao', '>', now())
-                ->first();
-
-            if ($faseBloqueada) {
-                $this->salvarRascunhoSilencioso(); 
-                $dataLiberacaoFmt = \Carbon\Carbon::parse($faseBloqueada->data_liberacao)->format('d/m/Y \à\s H:i');
-                $this->dispatch('erro', msg: "A próxima fase ({$faseBloqueada->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado!");
-                return;
-            }
-        }
-
         if ($this->bloqueioFaseSeguinte) {
+            $this->salvarRascunhoSilencioso();
+            $dataLiberacaoFmt = \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i');
+            $this->dispatch('erro', msg: "A próxima fase ({$this->bloqueioFaseSeguinte->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado!");
             return; 
         }
         
