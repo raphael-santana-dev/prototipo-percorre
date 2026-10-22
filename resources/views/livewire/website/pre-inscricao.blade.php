@@ -14,7 +14,7 @@
 
 <div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
      x-data="{
-        storageKey: 'percorre_pre_inscricao_{{ $formulario->id }}',
+        storageKey: 'percorre_pre_inscricao_{{ $formulario->id }}{{ $isTeste ? '_TESTE' : '' }}',
         readyToSave: false,
         init() {
             const raw = localStorage.getItem(this.storageKey);
@@ -34,7 +34,7 @@
             this.readyToSave = true;
         },
         salvarNoLocalStorage() {
-            if (!this.readyToSave) return;
+            if (!this.readyToSave || @js($isPreview) || @js($isTeste)) return;
             if ($wire.finalizado) {
                 localStorage.removeItem(this.storageKey);
                 return;
@@ -68,6 +68,18 @@
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
     <div class="relative z-10 w-full {{ $formWidth }} mx-auto py-12 px-4 sm:px-6 flex-1 flex flex-col justify-center">
+        @if($isTeste)
+            <div class="mb-6 p-4 bg-amber-400 text-amber-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-md ring-2 ring-amber-500 z-50">
+                <span class="flex items-center gap-2">
+                    <i class="ph-fill ph-flask text-lg text-amber-800"></i> 
+                    MODO DE TESTE (SANDBOX): Você está testando esta pré-inscrição. Nenhum dado será gravado no banco de dados.
+                </span>
+                <button onclick="window.close()" class="px-3 py-1 bg-amber-900 text-amber-100 hover:bg-black hover:text-white transition-colors rounded text-[10px] font-extrabold uppercase tracking-wider">
+                    Encerrar Teste
+                </button>
+            </div>
+        @endif
+
         @if($finalizado)
             <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-emerald-500 transition-all duration-300">
                 <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-sm dark:bg-emerald-900/30 dark:border-emerald-800">

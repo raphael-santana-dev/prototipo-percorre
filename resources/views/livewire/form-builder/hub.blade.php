@@ -57,8 +57,121 @@
             </p>
             <span class="text-xs font-bold text-purpura-600 group-hover:underline">Criar Avulso →</span>
         </a>
-
     </div>
+
+    <!-- LISTAGEM DE FORMULÁRIOS POR ABA (PUBLICADOS VS RASCUNHOS) -->
+    <div class="mt-10 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div class="px-6 pt-4 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-800/40">
+            <div class="flex items-center gap-2">
+                <button type="button" 
+                        wire:click="$set('abaStatus', 'ativos')" 
+                        class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 {{ $abaStatus === 'ativos' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
+                    <i class="ph-fill ph-check-circle text-base"></i> Formulários Publicados
+                </button>
+
+                <button type="button" 
+                        wire:click="$set('abaStatus', 'rascunhos')" 
+                        class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 {{ $abaStatus === 'rascunhos' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200' }}">
+                    <i class="ph-fill ph-file-dashed text-base"></i> Rascunhos / Sem Vínculo
+                </button>
+            </div>
+
+            <button type="button" wire:click="criarFormularioAvulsoRascunho" class="mb-2 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-plus"></i> Novo Rascunho Rápido
+            </button>
+        </div>
+
+        <div class="divide-y divide-gray-100 dark:divide-gray-800">
+            @forelse($formulariosList ?? [] as $formItem)
+                <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-sm text-gray-900 dark:text-white">{{ $formItem->titulo }}</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded border {{ $formItem->is_rascunho ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
+                                {{ $formItem->is_rascunho ? 'Rascunho' : 'Publicado' }}
+                            </span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                {{ $formItem->tipo }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            @if($formItem->tipo === 'aprendizagem')
+                                Vínculo: <strong>{{ $formItem->faseAprendizagem?->ciclo?->nome ? $formItem->faseAprendizagem->ciclo->nome . ' — ' . $formItem->faseAprendizagem->nome : 'Sem Ciclo/Fase vinculado' }}</strong>
+                            @elseif($formItem->tipo === 'pre_inscricao')
+                                Captação: <strong>{{ $formItem->unidade->nome ?? 'Todas Unidades' }} / {{ $formItem->curso->nome ?? 'Todos Cursos' }}</strong>
+                            @else
+                                Slug: <span class="font-mono">/f/{{ $formItem->slug }}</span>
+                            @endif
+                            &middot; {{ $formItem->campos_count ?? 0 }} bloco(s)
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        @php
+                            $rotaTeste = $formItem->tipo === 'pre_inscricao'
+                                ? url('/pre-inscricao/' . $formItem->slug . '?modo=teste')
+                                : url('/f/' . $formItem->slug . '?modo=teste');
+                        @endphp
+                        @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                            <a href="{{ $rotaTeste }}" target="_blank" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Testar em modo Sandbox">
+                                <i class="ph-fill ph-flask"></i> Testar
+                            </a>
+                        @endif
+
+                        <a href="{{ route('construtor.campos', ['tipo' => 'formulario', 'id' => $formItem->id]) }}" class="px-3 py-1.5 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-200 rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                            <i class="ph-bold ph-pencil-simple"></i> Editar Campos
+                        </a>
+
+                        <button type="button" wire:click="alternarStatusRascunho({{ $formItem->id }})" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition {{ $formItem->is_rascunho ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600' : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300' }}">
+                            {{ $formItem->is_rascunho ? 'Publicar' : 'Mover p/ Rascunho' }}
+                        </button>
+                    </div>
+                </div>
+            @empty
+                <div class="p-8 text-center text-sm text-gray-500">
+                    Nenhum formulário encontrado na aba de <strong>{{ $abaStatus === 'rascunhos' ? 'Rascunhos' : 'Publicados' }}</strong>.
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+    <!-- Modal 4: VINCULAR FASE AO PUBLICAR RASCUNHO DE APRENDIZAGEM -->
+    @if($modalVincularAberto)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-orange-50">
+                    <h3 class="font-bold text-orange-900 text-sm flex items-center gap-2"><i class="ph-fill ph-link"></i> Vincular Ciclo/Fase para Publicar</h3>
+                    <button wire:click="$set('modalVincularAberto', false)" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <p class="text-xs text-gray-600">Este formulário de aprendizagem estava em rascunho sem vínculo. Escolha o Ciclo e a Fase para publicá-lo:</p>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">1. Ciclo de Aprendizagem</label>
+                        <select wire:model.live="aprendizagem.ciclo_id" class="w-full text-sm rounded-lg border-gray-300">
+                            <option value="">-- Selecione o Ciclo --</option>
+                            @foreach($ciclosAprendizagem as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
+                        </select>
+                        @error('aprendizagem.ciclo_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    @if($aprendizagem['ciclo_id'])
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">2. Fase do Ciclo</label>
+                            <select wire:model="aprendizagem.fase_id" class="w-full text-sm rounded-lg border-gray-300">
+                                <option value="">-- Selecione a Fase --</option>
+                                @foreach($fasesAprendizagem as $fase) <option value="{{ $fase['id'] }}">{{ $fase['nome'] }}</option> @endforeach
+                            </select>
+                            @error('aprendizagem.fase_id') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
+                </div>
+                <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+                    <button wire:click="$set('modalVincularAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg">Cancelar</button>
+                    <button wire:click="confirmarVinculoEPublicar" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Vincular e Publicar</button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- MODAIS DE CONTEXTO -->
 
@@ -139,7 +252,18 @@
                 </div>
                 <div class="p-5 space-y-4">
                     <p class="text-xs text-gray-500 leading-tight mb-2">Para criar as perguntas deste formulário, você precisa dizer a qual Ciclo e Fase de aprendizagem ele pertence.</p>
-                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Título do Formulário (Opcional)</label>
+                        <input type="text" wire:model="aprendizagem.titulo" placeholder="Ex: Autoavaliação Semestral" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-orange-500">
+                    </div>
+
+                    <label class="flex items-start gap-2.5 p-3 rounded-lg border border-amber-200 bg-amber-50/60 cursor-pointer">
+                        <input type="checkbox" wire:model.live="aprendizagem.is_rascunho" class="mt-0.5 rounded text-orange-600 focus:ring-orange-500 border-gray-300">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-amber-900">Criar como Rascunho (Vincular Ciclo/Fase depois)</span>
+                            <span class="text-[10px] text-amber-700">Você poderá montar todas as páginas e perguntas agora sem escolher a fase.</span>
+                        </div>
+                    </label>
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">1. Escolha o Ciclo de Aprendizagem</label>
                         <select wire:model.live="aprendizagem.ciclo_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-orange-500">

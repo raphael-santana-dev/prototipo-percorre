@@ -58,28 +58,54 @@ class Inscricao extends Component
 
     public array $cursosBarradosPorIdade = [];
     public array $sugestoesCursosIdade = [];
+    public ?string $slugProjeto = null;
 
-    public function mount()
+    public function mount(?string $slug_projeto = null)
     {
-        $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
-        $this->isTeste = request()->query('modo') === 'teste';
+        $this->slugProjeto = $slug_projeto;
 
-        if ($this->isPreview) {
+        $querPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
+        $querTeste   = request()->query('modo') === 'teste';
+
+        if ($querPreview || $querTeste) {
+            $temPermissao = auth()->check() && (
+                auth()->user()->hasAnyRole(['dev', 'admin']) || 
+                auth()->user()->can('formulario.testar') || 
+                auth()->user()->can('inscricao.criar')
+            );
+
+            abort_unless($temPermissao, 403, 'Acesso restrito: Você não possui permissão para utilizar o modo de teste/simulação.');
+        }
+
+        $this->isPreview = $querPreview;
+        $this->isTeste   = $querTeste;
+
+        $queryCiclo = Ciclo::with(['campos' => function($query) {
+            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+        }]);
+
+        if ($this->isPreview || $this->isTeste) {
             $cicloPreviewId = request()->query('ciclo_id');
-            $queryCiclo = Ciclo::with(['campos' => function($query) {
-                $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-            }]);
-
-            $ciclo = $cicloPreviewId 
-                ? $queryCiclo->find($cicloPreviewId) 
-                : ($queryCiclo->where('status', true)->latest('id')->first() ?? Ciclo::latest('id')->first());
+            if ($cicloPreviewId) {
+                $ciclo = $queryCiclo->find($cicloPreviewId);
+            } elseif ($this->slugProjeto) {
+                $ciclo = $queryCiclo->where('slug_projeto', $this->slugProjeto)->first();
+            } else {
+                $ciclo = $queryCiclo->where('tipo_ciclo', 'regular')->where('status', true)->latest('id')->first() 
+                         ?? Ciclo::latest('id')->first();
+            }
         } else {
-            $ciclo = Ciclo::with(['campos' => function($query) {
-                $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-            }])->where('status', true)
+            $queryVigente = $queryCiclo->where('status', true)
                 ->where('data_inicio', '<=', now())
-                ->where('data_fim', '>=', now())
-                ->first();
+                ->where('data_fim', '>=', now());
+
+            if ($this->slugProjeto) {
+                $ciclo = $queryVigente->where('tipo_ciclo', 'customizado')
+                    ->where('slug_projeto', $this->slugProjeto)
+                    ->first();
+            } else {
+                $ciclo = $queryVigente->where('tipo_ciclo', 'regular')->first();
+            }
         }
 
         if ($ciclo) {
@@ -735,21 +761,28 @@ class Inscricao extends Component
 
     protected function rules()
     {
+        $regrasCpf = [
+            'required',
+            function ($attribute, $value, $fail) {
+                $c = preg_replace('/\D/', '', $value);
+                if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+            },
+        ];
+
+        if (!$this->isTeste) {
+            $regrasCpf[] = Rule::unique('inscricoes', 'cpf')
+                ->where('ciclo_id', $this->cicloAtivoId)
+                ->ignore($this->inscricaoId);
+        }
+
         return [
             'nome' => 'required|min:3',
             'email' => 'required|email',
-            'cpf' => [
-                'required',
-                function ($attribute, $value, $fail) {
-                    $c = preg_replace('/\D/', '', $value);
-                    if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
-                    for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                    if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-                    for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                    if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-                },
-                Rule::unique('inscricoes', 'cpf')->ignore($this->inscricaoId) 
-            ],
+            'cpf' => $regrasCpf,
             'nome_social' => 'required_if:possui_nome_social,sim',
             'possui_deficiencia' => 'required',
             'cep' => 'required',

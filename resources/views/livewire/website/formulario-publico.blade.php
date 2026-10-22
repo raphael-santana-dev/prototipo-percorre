@@ -13,7 +13,7 @@
 
 <div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
      x-data="{
-        storageKey: 'percorre_form_publico_{{ $formulario->id }}',
+        storageKey: 'percorre_form_publico_{{ $formulario->id }}{{ $isTeste ? '_TESTE' : '' }}',
         readyToSave: false,
         init() {
             if (@js((bool) request()->query('preview')) || @js($bloqueado)) return;
@@ -35,7 +35,7 @@
             this.readyToSave = true;
         },
         salvarNoLocalStorage() {
-            if (!this.readyToSave || @js((bool) request()->query('preview')) || @js($bloqueado)) return;
+            if (!this.readyToSave || @js($isPreview) || @js($isTeste) || @js($bloqueado)) return;
             if ($wire.finalizado) {
                 localStorage.removeItem(this.storageKey);
                 return;
@@ -64,6 +64,17 @@
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
     <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
+        @if($isTeste)
+            <div class="mb-6 p-4 bg-amber-400 text-amber-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-md ring-2 ring-amber-500 z-50">
+                <span class="flex items-center gap-2">
+                    <i class="ph-fill ph-flask text-lg text-amber-800"></i> 
+                    MODO DE TESTE (SANDBOX): Você está testando este formulário. Nenhuma resposta será gravada no banco de dados.
+                </span>
+                <button onclick="window.close()" class="px-3 py-1 bg-amber-900 text-amber-100 hover:bg-black hover:text-white transition-colors rounded text-[10px] font-extrabold uppercase tracking-wider">
+                    Encerrar Teste
+                </button>
+            </div>
+        @endif
         
         @if($bloqueado)
             <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center transition-all duration-300 relative overflow-hidden">

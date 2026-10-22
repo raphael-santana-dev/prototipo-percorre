@@ -31,31 +31,49 @@ class FormularioPublico extends Component
     public string $mensagemBloqueio = '';
     public string $iconeBloqueio = 'ph-lock-key';
     public bool $exibirBotaoLogin = false;
-            public bool $isTeste = false;
+    public bool $isPreview = false;
+    public bool $isTeste = false;
 
 
     public array $formSettings = [];
 
     public function mount($slug)
     {
-        $this->isTeste = request()->query('modo') === 'teste';
+        $querPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
+        $querTeste   = request()->query('modo') === 'teste';
+
+        $temPermissaoTeste = auth('web')->check() && (
+            auth('web')->user()->hasAnyRole(['dev', 'admin']) || 
+            auth('web')->user()->can('formulario.testar') || 
+            auth('web')->user()->can('formulario.criar') ||
+            auth('web')->user()->can('inscricao.criar')
+        );
+
+        if (($querPreview || $querTeste) && !$temPermissaoTeste) {
+            abort(403, 'Acesso restrito: Você não possui permissão para testar formulários em modo Sandbox.');
+        }
+
         $query = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug);
 
-        if (!request()->query('preview')) {
+        // Permite abrir se for preview, teste ou se estiver ativo
+        if (!$querPreview && !$querTeste) {
             $query->where('status', true);
         }
         
         $this->formulario = $query->firstOrFail();
 
-        $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
-        $this->isTeste   = request()->query('modo') === 'teste';
-
-        // Se o formulário estiver em Rascunho, bloqueia o acesso público (exceto se for Admin em Preview ou Modo Teste)
-        if ($this->formulario->is_rascunho && !$this->isPreview && !$this->isTeste) {
-            abort(404, 'Este formulário encontra-se em fase de construção (Rascunho) e ainda não está aberto ao público.');
+        // Se o formulário estiver em Rascunho, exige permissão Spatie e força modo Teste
+        if ($this->formulario->is_rascunho) {
+            abort_unless($temPermissaoTeste, 403, 'Este formulário encontra-se em Rascunho e está restrito à equipe autorizada.');
+            if (!$querPreview) {
+                $querTeste = true;
+            }
         }
+
+        $this->isPreview = $querPreview;
+        $this->isTeste   = $querTeste;
 
         $this->camposDinamicos = $this->formulario->campos;
         
@@ -64,18 +82,20 @@ class FormularioPublico extends Component
             $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
         }
 
-        $agora = now();
-        
-        if ($this->formulario->data_inicio && $agora->lt($this->formulario->data_inicio)) {
-            $this->bloquearAcesso('Este formulário estará disponível a partir de ' . $this->formulario->data_inicio->format('d/m/Y \à\s H:i') . '.', 'ph-calendar-plus');
-            return;
-        }
-        if ($this->formulario->data_fim && $agora->gt($this->formulario->data_fim)) {
-            $this->bloquearAcesso('O período para responder a este formulário já foi encerrado.', 'ph-clock-countdown');
-            return;
+        if (!$this->isPreview && !$this->isTeste) {
+            $agora = now();
+            
+            if ($this->formulario->data_inicio && $agora->lt($this->formulario->data_inicio)) {
+                $this->bloquearAcesso('Este formulário estará disponível a partir de ' . $this->formulario->data_inicio->format('d/m/Y \à\s H:i') . '.', 'ph-calendar-plus');
+                return;
+            }
+            if ($this->formulario->data_fim && $agora->gt($this->formulario->data_fim)) {
+                $this->bloquearAcesso('O período para responder a este formulário já foi encerrado.', 'ph-clock-countdown');
+                return;
+            }
         }
 
-        if (!$this->formulario->acesso_livre) {
+        if (!$this->formulario->acesso_livre && !$this->isPreview && !$this->isTeste) {
             $liberado = false;
 
             if (!auth('web')->check() && !auth('student')->check()) {
@@ -214,13 +234,7 @@ class FormularioPublico extends Component
      */
     public function salvarRascunhoSilencioso()
     {
-        if ($this->isTeste) {
-            // Se for o método final de submissão, apenas avança para a tela de sucesso (etapa 99) sem gravar no BD
-            $this->etapaAtual = 99; 
-            return;
-        }
-        
-        if (request()->query('preview') || $this->bloqueado || $this->finalizado) {
+        if ($this->isPreview || $this->isTeste || $this->bloqueado || $this->finalizado) {
             return;
         }
 
@@ -415,18 +429,6 @@ class FormularioPublico extends Component
     public function updated($propertyName)
     {
         if (str_starts_with($propertyName, 'uploads.')) {
-
-            $changedKey = str_replace('respostas.', '', $propertyName);
-            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
-                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
-                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
-                    $this->respostas[$cSys->name] = '';
-                }
-                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
-                    $this->respostas[$cSys->name] = '';
-                }
-            }
-
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
                 $this->validateOnly($propertyName, $regras, [
@@ -441,6 +443,17 @@ class FormularioPublico extends Component
         }
 
         if (str_starts_with($propertyName, 'respostas.')) {
+            $changedKey = str_replace('respostas.', '', $propertyName);
+            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
+                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
+                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
+                    $this->respostas[$cSys->name] = '';
+                }
+                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
+                    $this->respostas[$cSys->name] = '';
+                }
+            }
+
             $this->salvarRascunhoSilencioso();
 
             $regras = $this->regrasPorEtapa($this->etapaAtual);
@@ -451,15 +464,14 @@ class FormularioPublico extends Component
                 ]);
             }
 
-            $fieldName = str_replace('respostas.', '', $propertyName);
-            $campoAlterado = $this->camposDinamicos->firstWhere('name', $fieldName);
+            $campoAlterado = $this->camposDinamicos->firstWhere('name', $changedKey);
 
             if ($campoAlterado && $campoAlterado->tipo === 'system') {
                 $cfg = is_string($campoAlterado->configuracoes) ? json_decode($campoAlterado->configuracoes, true) : ($campoAlterado->configuracoes ?? []);
                 $aplicarRegras = filter_var($cfg['aplicar_regras'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
                 if ($aplicarRegras) {
-                    $valorId = $this->respostas[$fieldName];
+                    $valorId = $this->respostas[$changedKey];
 
                     if ($campoAlterado->subtipo === 'unidade') {
                         $this->cursosDisponiveis = [];
@@ -516,7 +528,7 @@ class FormularioPublico extends Component
 
     public function avancarEtapa()
     {
-        if (request()->query('preview')) {
+        if ($this->isPreview) {
             if ($this->etapaAtual < $this->totalEtapas) {
                 $this->etapaAtual++;
             }
@@ -538,24 +550,26 @@ class FormularioPublico extends Component
             ]);
         }
 
-        foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
-            if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
-                $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
-                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+        if (!$this->isTeste) {
+            foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+                if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                    $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                    $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
 
-                if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
-                    $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
-                    foreach ($this->uploads[$campoFile->name] as $arquivo) {
-                        if ($arquivo) {
-                            $caminhos[] = $arquivo->store('formularios/uploads', 'public');
+                    if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                        $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                        foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                            if ($arquivo) {
+                                $caminhos[] = $arquivo->store('formularios/uploads', 'public');
+                            }
                         }
+                        $this->respostas[$campoFile->name] = $caminhos;
+                    } else {
+                        $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('formularios/uploads', 'public');
                     }
-                    $this->respostas[$campoFile->name] = $caminhos;
-                } else {
-                    $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('formularios/uploads', 'public');
-                }
 
-                unset($this->uploads[$campoFile->name]);
+                    unset($this->uploads[$campoFile->name]);
+                }
             }
         }
 
@@ -563,16 +577,18 @@ class FormularioPublico extends Component
             $this->etapaAtual++;
             $this->salvarRascunhoSilencioso();
         } else {
-            $registro = RespostaFormulario::updateOrCreate(
-                ['id' => $this->respostaId],
-                [
-                    'formulario_id' => $this->formulario->id,
-                    'user_id' => auth('web')->id() ?? auth('student')->id() ?? null,
-                    'respostas' => $this->respostas,
-                    'etapa_parada' => $this->etapaAtual
-                ]
-            );
-            $this->respostaId = $registro->id;
+            if (!$this->isTeste) {
+                $registro = RespostaFormulario::updateOrCreate(
+                    ['id' => $this->respostaId],
+                    [
+                        'formulario_id' => $this->formulario->id,
+                        'user_id' => auth('web')->id() ?? auth('student')->id() ?? null,
+                        'respostas' => $this->respostas,
+                        'etapa_parada' => $this->etapaAtual
+                    ]
+                );
+                $this->respostaId = $registro->id;
+            }
             $this->finalizado = true;
             $this->dispatch('limpar-storage-formulario');
         }

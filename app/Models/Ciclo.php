@@ -9,7 +9,7 @@ class Ciclo extends Model
 {
     use RegistraAuditoria;
     protected $fillable = [
-        'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'regras_pontuacao', 'slug', 'bloqueado'
+        'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'regras_pontuacao', 'slug', 'bloqueado','tipo_ciclo', 'slug_projeto'
     ];
 
     protected $casts = [
