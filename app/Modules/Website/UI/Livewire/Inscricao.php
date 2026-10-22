@@ -22,6 +22,7 @@ class Inscricao extends Component
     use WithFileUploads;
 
     public bool $isPreview = false;
+    public bool $isTeste = false; // Flag do Modo Sandbox (Solicitação 4)
 
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
@@ -61,6 +62,7 @@ class Inscricao extends Component
     public function mount()
     {
         $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
+        $this->isTeste = request()->query('modo') === 'teste';
 
         if ($this->isPreview) {
             $cicloPreviewId = request()->query('ciclo_id');
@@ -107,7 +109,7 @@ class Inscricao extends Component
                 }
             }
 
-            if (session()->has('inscricao_retomada_id')) {
+            if (!$this->isTeste && session()->has('inscricao_retomada_id')) {
                 $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
                 if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
                     $this->carregarModeloInscricao($inscricaoRetomada);
@@ -120,7 +122,6 @@ class Inscricao extends Component
     #[Computed]
     public function bloqueioFaseAtual()
     {
-        // A Página 1 nunca sofre bloqueio de edição
         if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual === 1) {
             return null;
         }
@@ -186,7 +187,7 @@ class Inscricao extends Component
             return;
         }
 
-        if (!empty($dados['inscricaoId'])) {
+        if (!$this->isTeste && !empty($dados['inscricaoId'])) {
             $inscBanco = InscricaoModel::where('id', $dados['inscricaoId'])
                 ->where('ciclo_id', $this->cicloAtivoId)
                 ->first();
@@ -253,7 +254,7 @@ class Inscricao extends Component
 
     public function salvarRascunhoSilencioso()
     {
-        if ($this->isPreview || !$this->cicloAtivoId || in_array($this->etapaAtual, [99, 100])) {
+        if ($this->isPreview || $this->isTeste || !$this->cicloAtivoId || in_array($this->etapaAtual, [99, 100])) {
             return;
         }
 
@@ -310,7 +311,7 @@ class Inscricao extends Component
 
     public function tentarRecuperarRascunho()
     {
-        if (empty($this->cpf) || empty($this->data_nascimento)) {
+        if ($this->isTeste || empty($this->cpf) || empty($this->data_nascimento)) {
             return;
         }
 
@@ -696,12 +697,14 @@ class Inscricao extends Component
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
                 
-                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
-                if ($inscricaoDB) {
-                    $inscricaoDB->update([
-                        'etapa_atual' => 100,
-                        'data_inscricao' => now()
-                    ]);
+                if (!$this->isTeste) {
+                    $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+                    if ($inscricaoDB) {
+                        $inscricaoDB->update([
+                            'etapa_atual' => 100,
+                            'data_inscricao' => now()
+                        ]);
+                    }
                 }
                 
                 $this->dispatch('limpar-storage-inscricao');
@@ -715,10 +718,12 @@ class Inscricao extends Component
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
         } else {
-            $inscricaoDB = InscricaoModel::find($this->inscricaoId);
-            if ($inscricaoDB) {
-                $inscricaoDB->update(['etapa_atual' => 99]);
-                \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
+            if (!$this->isTeste) {
+                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+                if ($inscricaoDB) {
+                    $inscricaoDB->update(['etapa_atual' => 99]);
+                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
+                }
             }
 
             $this->etapaAtual = 99; 
@@ -754,7 +759,7 @@ class Inscricao extends Component
 
     private function atualizarRankingInstantaneo()
     {
-        if (!$this->cicloAtivoId) return;
+        if (!$this->cicloAtivoId || $this->isTeste) return;
 
         \Illuminate\Support\Facades\DB::table('inscricoes')
             ->where('ciclo_id', $this->cicloAtivoId)
@@ -793,6 +798,8 @@ class Inscricao extends Component
 
     private function salvarProgresso($statusForcado = null)
     {
+        if ($this->isTeste) return;
+
         $dados = [
             'ciclo_id' => $this->cicloAtivoId,
             'etapa_atual' => $this->etapaAtual,

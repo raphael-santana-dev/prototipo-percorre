@@ -22,7 +22,7 @@ class Formulario extends Model
         'ciclo_id', 
         'unidade_id', 
         'curso_id', 
-        'ciclo_aprendizagem_fase_id'
+        'ciclo_aprendizagem_fase_id', 'is_rascunho'
     ];
 
     protected $casts = [
@@ -36,6 +36,7 @@ class Formulario extends Model
         'cursos_permitidos' => 'array',
         'turnos_permitidas' => 'array',
         'data_inicio' => 'datetime',
+        'is_rascunho' => 'boolean',
         'data_fim' => 'datetime',
     ];
 
@@ -72,5 +73,15 @@ class Formulario extends Model
     public function fases()
     {
         return $this->hasMany(FormularioFase::class, 'formulario_id')->orderBy('data_liberacao', 'asc');
+    }
+
+    public function scopeAtivos($query)
+    {
+        return $query->where('is_rascunho', false);
+    }
+
+    public function scopeRascunhos($query)
+    {
+        return $query->where('is_rascunho', true);
     }
 }

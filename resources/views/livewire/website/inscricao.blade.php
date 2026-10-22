@@ -14,7 +14,7 @@
 
 <div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
      x-data="{
-        storageKey: 'percorre_inscricao_ciclo_{{ $cicloAtivoId ?? 'default' }}',
+        storageKey: 'percorre_inscricao_ciclo_{{ $cicloAtivoId ?? 'default' }}{{ $isTeste ? '_TESTE' : '' }}',
         readyToSave: false,
         init() {
             if (@js($isPreview) || !@js($inscricoesAbertas)) return;
@@ -36,7 +36,7 @@
             this.readyToSave = true;
         },
         salvarNoLocalStorage() {
-            if (!this.readyToSave || @js($isPreview)) return;
+            if (!this.readyToSave || @js($isPreview) || @js($isTeste)) return;
             if ([99, 100].includes(Number($wire.etapaAtual))) {
                 localStorage.removeItem(this.storageKey);
                 return;
@@ -110,10 +110,21 @@
                     </div>
                 @endif
 
+                @if($isTeste)
+                    <div class="mb-6 p-4 bg-amber-400 text-amber-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-md ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 z-50">
+                        <span class="flex items-center gap-2">
+                            <i class="ph-fill ph-flask text-lg text-amber-800"></i> 
+                            MODO DE TESTE ATIVADO: A testar como um candidato real, mas nenhum dado será gravado na base de dados.
+                        </span>
+                        <button onclick="window.close()" class="px-3 py-1 bg-amber-900 text-amber-100 hover:bg-black hover:text-white transition-colors rounded text-[10px] font-extrabold uppercase tracking-wider">
+                            Encerrar Teste
+                        </button>
+                    </div>
+                @endif
+
                 @if($etapaAtual <= $totalEtapas)
                     
                     @php
-                        // CÁLCULO DINÂMICO DA BARRA DE PROGRESSO
                         $totalExibido = $totalEtapas;
                         
                         if (!$temVagasDisponiveis && !empty($data_nascimento) && !empty($estado)) {
@@ -159,7 +170,6 @@
                     
                     <div class="{{ $cardClass }} rounded-xl p-6 md:p-10 card-form transition-all duration-300">
                         
-                        {{-- BLOQUEIO VISUAL CASO A FASE ATUAL ESTEJA BLOQUEADA POR DATA (PÁGINA 1 NUNCA ENTRA AQUI) --}}
                         @if($this->bloqueioFaseAtual)
                             <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-start gap-3 shadow-sm text-amber-900 dark:text-amber-300">
                                 <i class="ph-fill ph-lock-key text-xl text-amber-600 shrink-0 mt-0.5"></i>
@@ -204,7 +214,6 @@
                                         </div>
                                     @endif
 
-                                    {{-- ALERTA LGPD QUANDO RASCUNHO É RECUPERADO --}}
                                     @if(!empty($emailOriginal) || !empty($celularOriginal))
                                         <div class="col-span-12 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start gap-3 shadow-xs">
                                             <i class="ph-fill ph-shield-check text-blue-600 dark:text-blue-400 text-2xl mt-0.5 shrink-0"></i>
@@ -540,7 +549,6 @@
                             @endif
                             
                             @if($this->bloqueioFaseAtual)
-                                {{-- Oculta o botão avançar pois a fase em ecrã está bloqueada --}}
                                 <div></div>
                             @elseif($this->bloqueioFaseSeguinte)
                                 <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 w-full sm:w-auto">
@@ -553,8 +561,8 @@
                             @else
                                 <button type="button" wire:click="avancarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                     <span wire:loading.remove wire:target="avancarEtapa, uploads">
-                                        @if($isPreview && $etapaAtual === $totalEtapas)
-                                            Finalizar
+                                        @if(($isPreview || $isTeste) && $etapaAtual === $totalEtapas)
+                                            Finalizar Simulação
                                         @else
                                             {{ $etapaAtual === $totalEtapas ? 'Finalizar Inscrição' : 'Próximo Passo' }}
                                         @endif

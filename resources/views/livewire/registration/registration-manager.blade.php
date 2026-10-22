@@ -49,8 +49,8 @@
                         </div>
                         
                         <div class="mt-6 flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-5">
-                            <a href="{{ url('/inscricao') }}" target="_blank" class="text-sm font-bold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center gap-1 transition-colors">
-                                Testar Formulário <i class="ph-bold ph-arrow-up-right"></i>
+                            <a href="{{ url('/inscricao?modo=teste') }}" target="_blank" class="text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 transition-colors bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                                <i class="ph-fill ph-flask"></i> Testar em Sandbox
                             </a>
                             <button @click="navigator.clipboard.writeText(document.getElementById('linkPublicoInscricao').value); $dispatch('sucesso', {msg: 'Link Público copiado!'}); showEmbedInscricao = false;" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
                                 <i class="ph-bold ph-copy"></i> Copiar Link

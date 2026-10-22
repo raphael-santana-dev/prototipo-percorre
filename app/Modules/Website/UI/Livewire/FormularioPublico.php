@@ -31,11 +31,14 @@ class FormularioPublico extends Component
     public string $mensagemBloqueio = '';
     public string $iconeBloqueio = 'ph-lock-key';
     public bool $exibirBotaoLogin = false;
+            public bool $isTeste = false;
+
 
     public array $formSettings = [];
 
     public function mount($slug)
     {
+        $this->isTeste = request()->query('modo') === 'teste';
         $query = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug);
@@ -202,6 +205,12 @@ class FormularioPublico extends Component
      */
     public function salvarRascunhoSilencioso()
     {
+        if ($this->isTeste) {
+            // Se for o método final de submissão, apenas avança para a tela de sucesso (etapa 99) sem gravar no BD
+            $this->etapaAtual = 99; 
+            return;
+        }
+        
         if (request()->query('preview') || $this->bloqueado || $this->finalizado) {
             return;
         }

@@ -33,9 +33,12 @@ class PreInscricao extends Component
     public $unidade_interesse = null;
     public $curso_interesse = null;
     public $turno_interesse = null;
+            public bool $isTeste = false;
+
 
     public function mount($slug)
     {
+        $this->isTeste = request()->query('modo') === 'teste';
         $this->formulario = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug)
@@ -101,6 +104,12 @@ class PreInscricao extends Component
 
     public function salvarRascunhoSilencioso()
     {
+        if ($this->isTeste) {
+            // Se for o método final de submissão, apenas avança para a tela de sucesso (etapa 99) sem gravar no BD
+            $this->etapaAtual = 99; 
+            return;
+        }
+        
         if ($this->finalizado) return;
 
         $temPreenchimento = !empty(array_filter($this->respostas, function ($v) {
