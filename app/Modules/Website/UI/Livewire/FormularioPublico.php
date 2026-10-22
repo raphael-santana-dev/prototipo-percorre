@@ -48,6 +48,15 @@ class FormularioPublico extends Component
         }
         
         $this->formulario = $query->firstOrFail();
+
+        $this->isPreview = filter_var(request()->query('preview', false), FILTER_VALIDATE_BOOLEAN);
+        $this->isTeste   = request()->query('modo') === 'teste';
+
+        // Se o formulário estiver em Rascunho, bloqueia o acesso público (exceto se for Admin em Preview ou Modo Teste)
+        if ($this->formulario->is_rascunho && !$this->isPreview && !$this->isTeste) {
+            abort(404, 'Este formulário encontra-se em fase de construção (Rascunho) e ainda não está aberto ao público.');
+        }
+
         $this->camposDinamicos = $this->formulario->campos;
         
         $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');

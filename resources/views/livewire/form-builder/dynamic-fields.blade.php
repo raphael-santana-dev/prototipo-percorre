@@ -146,6 +146,17 @@
                     </button>
                 </div>
 
+                {{-- BOTÃO DE TESTE SANDBOX DIRETO DO CONSTRUTOR --}}
+                @php
+                    $urlTeste = $contextoTipo === 'ciclo' 
+                        ? url('/inscricao?modo=teste&ciclo_id=' . $contextoId) 
+                        : url('/f/' . $slug . '?modo=teste');
+                @endphp
+                <a href="{{ $urlTeste }}" target="_blank" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1.5" title="Testar preenchimento sem salvar dados no banco">
+                    <i class="ph-fill ph-flask text-sm text-amber-600"></i>
+                    <span class="hidden md:inline">Testar Formulário</span>
+                </a>
+
                 <button type="button" @click="$wire.set('drawerFormSettingsAberto', true)" class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2">
                     <i class="ph-bold ph-sliders-horizontal text-sm text-purpura-400"></i>
                     <span>Configurações do Formulário</span>
