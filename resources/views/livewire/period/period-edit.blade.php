@@ -53,7 +53,7 @@
         <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
             <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
                 <h3 class="t-body-16-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais</h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, os semestres e a janela de tempo.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, a modalidade do ciclo, os semestres e a janela de tempo.</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="md:col-span-2">
@@ -75,6 +75,28 @@
                     @error('semestre') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div>
+                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Modalidade do Ciclo *</label>
+                    <select wire:model.live="tipo_ciclo" class="w-full">
+                        <option value="regular">Regular (URL padrão /inscricao)</option>
+                        <option value="customizado">Projeto Customizado (URL própria /inscricao/{slug})</option>
+                    </select>
+                </div>
+
+                @if($tipo_ciclo === 'customizado')
+                    <div>
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Slug da URL do Projeto *</label>
+                        <div class="flex items-center">
+                            <span class="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-xs font-mono text-gray-500">/inscricao/</span>
+                            <input type="text" wire:model="slug_projeto" placeholder="projeto-verao-2026" class="w-full !rounded-l-none font-mono text-sm">
+                        </div>
+                        @error('slug_projeto') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+                @endif
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
                     <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Abertura *</label>
@@ -101,7 +123,7 @@
             <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                 <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                 <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                    Ativar este ciclo imediatamente (desativará outros ciclos ativos)
+                    Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
                 </label>
             </div>
         </div>
@@ -250,7 +272,7 @@
 
                         <div class="w-full xl:w-20 shrink-0">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
-                            <input type="number" wire:model="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
+                            <input type="number" wire:model.live="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
                         </div>
                         <div class="w-full xl:w-20 shrink-0">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
