@@ -298,8 +298,8 @@ class RegistrationManager extends Component
 
         $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf);
 
-        if (Inscricao::where('cpf', $cpfLimpo)->exists()) {
-            $this->addError('cpf', 'Este CPF já está cadastrado no sistema.');
+        if (Inscricao::where('cpf', $cpfLimpo)->where('ciclo_id', $this->ciclo_id)->exists()) {
+            $this->addError('cpf', 'Este CPF já está cadastrado neste ciclo.');
             return;
         }
 

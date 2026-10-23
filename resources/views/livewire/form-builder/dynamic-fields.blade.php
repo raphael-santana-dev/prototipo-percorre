@@ -476,19 +476,29 @@
                                     <div class="flex-1 h-px ml-2 bg-gray-200"></div>
                                 </div>
 
-                                @foreach($gruposRender as $grupo)
-                                    @if($grupo['titulo'] === 'placeholder_dados_pessoais')
-                                        <div class="w-full my-6 pointer-events-none">
-                                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50 opacity-70">
-                                                <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                                    <i class="ph-fill ph-lock-key"></i> Dados Pessoais (Campos Padrões do Sistema)
-                                                </h4>
-                                                <div class="grid grid-cols-2 gap-3">
-                                                    <div class="h-9 bg-gray-200 rounded-md"></div>
-                                                    <div class="h-9 bg-gray-200 rounded-md"></div>
+                                    @foreach($gruposRender as $grupo)
+                                        @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                                        @php
+                                            $showPersonal = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                                            $showAddress  = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_address'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                                            $showCourse   = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_course'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                                        @endphp
+                                        @if($showPersonal || $showAddress || $showCourse)
+                                            <div class="w-full my-6 pointer-events-none">
+                                                <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50 opacity-70">
+                                                    <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                        <i class="ph-fill ph-lock-key"></i> Campos Fixos Ativos:
+                                                        @if($showPersonal) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Dados Pessoais</span> @endif
+                                                        @if($showAddress) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Endereço</span> @endif
+                                                        @if($showCourse) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Unidade/Curso/Turno</span> @endif
+                                                    </h4>
+                                                    <div class="grid grid-cols-2 gap-3">
+                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
+                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        @endif
                                     @else
                                         @if($grupo['titulo'])
                                             <div class="mb-3 mt-2 border-b border-gray-200 pb-1.5 w-full">
@@ -1641,6 +1651,43 @@
                                         </div>
                                     </label>
                                 </div>
+
+                                @if($contextoTipo === 'ciclo' && $isCicloCustomizado)
+                                    <div class="bg-indigo-50/60 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3.5">
+                                        <div class="border-b border-indigo-200 dark:border-indigo-800 pb-2">
+                                            <h4 class="text-xs font-extrabold text-indigo-900 dark:text-indigo-300 uppercase flex items-center gap-1.5">
+                                                <i class="ph-fill ph-sliders-horizontal text-indigo-600"></i> Campos Fixos (Projeto Customizado)
+                                            </h4>
+                                            <p class="text-[10px] text-indigo-700 dark:text-indigo-400 mt-0.5">
+                                                Escolha quais blocos padrão do sistema devem aparecer na 1ª Página deste projeto:
+                                            </p>
+                                        </div>
+
+                                        <label class="flex items-start gap-2.5 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="formSettings.enable_fixed_personal" class="mt-0.5 w-4 h-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500">
+                                            <div class="text-xs">
+                                                <span class="font-bold text-gray-900 dark:text-white block">Exibir Dados Pessoais Fixos</span>
+                                                <span class="text-[10px] text-gray-500">Nome, CPF, Nascimento, E-mail, Celular e PcD.</span>
+                                            </div>
+                                        </label>
+
+                                        <label class="flex items-start gap-2.5 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="formSettings.enable_fixed_address" class="mt-0.5 w-4 h-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500">
+                                            <div class="text-xs">
+                                                <span class="font-bold text-gray-900 dark:text-white block">Exibir Endereço Fixo (CEP)</span>
+                                                <span class="text-[10px] text-gray-500">CEP, Logradouro, Número, Bairro, Cidade, UF e Região.</span>
+                                            </div>
+                                        </label>
+
+                                        <label class="flex items-start gap-2.5 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="formSettings.enable_fixed_course" class="mt-0.5 w-4 h-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500">
+                                            <div class="text-xs">
+                                                <span class="font-bold text-gray-900 dark:text-white block">Exibir Seleção de Curso (Unidade / Curso / Turno)</span>
+                                                <span class="text-[10px] text-gray-500">Se desmarcado, oculta os selects nativos de Unidade, Curso e Turno.</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-200 dark:border-gray-700 shrink-0">

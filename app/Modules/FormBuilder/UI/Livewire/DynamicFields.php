@@ -45,6 +45,8 @@ class DynamicFields extends Component
     public $slug = '';
     public $bg_image_upload;
     public $link_file_upload;
+    public bool $isCicloCustomizado = false;
+
     public array $formSettings = [
         'bg_image' => null,
         'bg_color' => '#ffffff',
@@ -53,6 +55,9 @@ class DynamicFields extends Component
         'form_width' => 'max-w-4xl',
         'translucent_card' => false,
         'use_vacancy_limit' => false,
+        'enable_fixed_personal' => true,
+        'enable_fixed_address' => true,
+        'enable_fixed_course' => true,
     ];
 
     public string $contextoTipo; 
@@ -80,7 +85,8 @@ class DynamicFields extends Component
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
             $this->contextoNome = $model->nome;
-            $this->badgeContexto = 'Inscrição Oficial';
+            $this->isCicloCustomizado = ($model->tipo_ciclo ?? 'regular') === 'customizado';
+            $this->badgeContexto = $this->isCicloCustomizado ? 'Projeto Customizado' : 'Inscrição Oficial';
         } else {
             $model = \App\Models\Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])->findOrFail($id);
             

@@ -48,9 +48,13 @@ class RetomarInscricao extends Component
         $dataBanco = $this->inscricao->data_nascimento ? $this->inscricao->data_nascimento->format('Y-m-d') : null;
 
         if ($cpfLimpo === $cpfBanco && $this->data_nascimento === $dataBanco) {
-            
             session()->put('inscricao_retomada_id', $this->inscricao->id);
             
+            $ciclo = $this->inscricao->ciclo;
+            if ($ciclo && ($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && !empty($ciclo->slug_projeto)) {
+                return redirect()->route('publico.inscricao', ['slug_projeto' => $ciclo->slug_projeto]);
+            }
+
             return redirect()->to('/inscricao');
         }
 

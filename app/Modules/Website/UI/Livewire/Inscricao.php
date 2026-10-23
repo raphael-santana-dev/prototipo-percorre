@@ -60,6 +60,10 @@ class Inscricao extends Component
     public array $sugestoesCursosIdade = [];
     public ?string $slugProjeto = null;
 
+    public bool $exibirDadosPessoaisFixos = true;
+    public bool $exibirEnderecoFixo = true;
+    public bool $exibirSelecaoCursoFixo = true;
+
     public function mount(?string $slug_projeto = null)
     {
         $this->slugProjeto = $slug_projeto;
@@ -116,6 +120,16 @@ class Inscricao extends Component
             $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
             if ($cfg && $cfg->configuracoes) {
                 $this->formSettings = is_string($cfg->configuracoes) ? json_decode($cfg->configuracoes, true) : $cfg->configuracoes;
+
+                if (($ciclo->tipo_ciclo ?? 'regular') === 'customizado') {
+                    $this->exibirDadosPessoaisFixos = filter_var($this->formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                    $this->exibirEnderecoFixo       = filter_var($this->formSettings['enable_fixed_address'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                    $this->exibirSelecaoCursoFixo   = filter_var($this->formSettings['enable_fixed_course'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                } else {
+                    $this->exibirDadosPessoaisFixos = true;
+                    $this->exibirEnderecoFixo       = true;
+                    $this->exibirSelecaoCursoFixo   = true;
+                }
                 if (isset($this->formSettings['use_vacancy_limit'])) {
                     $this->use_vacancy_limit = filter_var($this->formSettings['use_vacancy_limit'], FILTER_VALIDATE_BOOLEAN);
                 }
@@ -466,7 +480,7 @@ class Inscricao extends Component
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
-        if ($etapa === 1) {
+        if ($etapa === 1 && $this->exibirSelecaoCursoFixo) {
             if ($this->temVagasDisponiveis && $this->estado && ($this->data_nascimento < date('Y-m-d'))) {
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
@@ -705,8 +719,7 @@ class Inscricao extends Component
             }
         }
 
-        if ($this->etapaAtual === 1 && $this->temVagasDisponiveis && $this->use_vacancy_limit) {
-            $ofertasValidas = $this->getOfertasValidas();
+        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo && $this->temVagasDisponiveis && $this->use_vacancy_limit) {            $ofertasValidas = $this->getOfertasValidas();
             if ($ofertasValidas !== null && $this->unidade && $this->curso && $this->turno) {
                 $key = "{$this->unidade}-{$this->curso}-{$this->turno}";
                 if (!isset($ofertasValidas[$key])) {
@@ -718,7 +731,7 @@ class Inscricao extends Component
             }
         }
 
-        if ($this->etapaAtual === 1) {
+        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo) {
             if (!$this->temVagasDisponiveis && ($this->data_nascimento < date('Y-m-d')) && $this->estado) {
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
@@ -761,33 +774,40 @@ class Inscricao extends Component
 
     protected function rules()
     {
-        $regrasCpf = [
-            'required',
-            function ($attribute, $value, $fail) {
-                $c = preg_replace('/\D/', '', $value);
-                if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
-                for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-                for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
-            },
-        ];
+        $regras = [];
 
-        if (!$this->isTeste) {
-            $regrasCpf[] = Rule::unique('inscricoes', 'cpf')
-                ->where('ciclo_id', $this->cicloAtivoId)
-                ->ignore($this->inscricaoId);
+        if ($this->exibirDadosPessoaisFixos) {
+            $regrasCpf = [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $c = preg_replace('/\D/', '', $value);
+                    if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
+                    for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                    for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
+                    if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
+                },
+            ];
+
+            if (!$this->isTeste) {
+                $regrasCpf[] = Rule::unique('inscricoes', 'cpf')
+                    ->where('ciclo_id', $this->cicloAtivoId)
+                    ->ignore($this->inscricaoId);
+            }
+
+            $regras['nome'] = 'required|min:3';
+            $regras['email'] = 'required|email';
+            $regras['cpf'] = $regrasCpf;
+            $regras['nome_social'] = 'required_if:possui_nome_social,sim';
+            $regras['possui_deficiencia'] = 'required';
+            $regras['data_nascimento'] = 'required|date';
         }
 
-        return [
-            'nome' => 'required|min:3',
-            'email' => 'required|email',
-            'cpf' => $regrasCpf,
-            'nome_social' => 'required_if:possui_nome_social,sim',
-            'possui_deficiencia' => 'required',
-            'cep' => 'required',
-            'data_nascimento' => 'required|date',
-        ];
+        if ($this->exibirEnderecoFixo) {
+            $regras['cep'] = 'required';
+        }
+
+        return $regras;
     }
 
     private function atualizarRankingInstantaneo()
@@ -920,6 +940,11 @@ class Inscricao extends Component
 
     public function updatedDataNascimento()
     { 
+        if (!$this->exibirSelecaoCursoFixo) {
+            $this->temVagasDisponiveis = true;
+            return;
+        }
+
         if ($this->data_nascimento < date('Y-m-d')) {
             $this->atualizarDisponibilidade(); 
         } else {
@@ -984,6 +1009,11 @@ class Inscricao extends Component
 
     public function atualizarDisponibilidade()
     {
+        if (!$this->exibirSelecaoCursoFixo) {
+            $this->temVagasDisponiveis = true;
+            return;
+        }
+        
         $this->unidadesDisponiveis = [];
         $this->cursosDisponiveis = [];
         $this->turnosDisponiveis = [];
