@@ -15,14 +15,26 @@ class Formulario extends Model
     
 
     protected $fillable = [
-        'titulo', 'slug', 'descricao', 'status', 'tipo',
-        'data_inicio', 'data_fim', 'acesso_livre', 
-        'apenas_estudantes', 'roles_permitidas', 'users_permitidos',
-        'unidades_permitidas', 'cursos_permitidos', 'turnos_permitidas', 'exigir_email',
-        'ciclo_id', 
-        'unidade_id', 
-        'curso_id', 
-        'ciclo_aprendizagem_fase_id', 'is_rascunho'
+        'titulo',
+        'descricao',
+        'slug',
+        'tipo',
+        'is_rascunho',
+        'status',
+        'ciclo_id',
+        'unidade_id',
+        'curso_id',
+        'ciclo_aprendizagem_fase_id',
+        'acesso_livre',
+        'exigir_email',
+        'apenas_estudantes',
+        'roles_permitidas',
+        'users_permitidos',
+        'unidades_permitidas',
+        'cursos_permitidos',
+        'turnos_permitidas',
+        'data_inicio',
+        'data_fim',
     ];
 
     protected $casts = [

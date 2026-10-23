@@ -383,9 +383,11 @@ class FormularioPublico extends Component
 
             $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
 
+            
+
             if ($campo->subtipo === 'email') {
                 $ruleStr[] = 'email';
-                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);
@@ -404,7 +406,7 @@ class FormularioPublico extends Component
                         if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
                     };
                 }
-                if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);

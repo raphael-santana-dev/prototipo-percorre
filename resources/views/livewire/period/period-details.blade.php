@@ -1,5 +1,11 @@
 <div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
     
+    @php
+        $urlPublicaCiclo = (($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && !empty($ciclo->slug_projeto))
+            ? url('/inscricao/' . $ciclo->slug_projeto)
+            : url('/inscricao');
+    @endphp
+
     <x-page-header 
         :title="$ciclo->nome"
         icon="ph ph-calendar-check"
@@ -9,6 +15,12 @@
             <span class="px-2.5 py-1 rounded-lg border text-[10px] uppercase font-bold tracking-wider {{ $ciclo->status ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800' : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600' }}">
                 {{ $ciclo->status ? 'Ativo' : 'Encerrado' }}
             </span>
+
+            @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                <a href="{{ $urlPublicaCiclo . '?modo=teste&ciclo_id=' . $ciclo->id }}" target="_blank" class="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg shadow-sm transition" title="Testar inscrição sem salvar dados no banco">
+                    <i class="ph-fill ph-flask text-sm text-amber-600"></i> Testar (Sandbox)
+                </a>
+            @endif
 
             <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-purpura-600 rounded-lg shadow-sm hover:bg-purpura-700 transition">
                 <i class="ph-fill ph-kanban text-sm"></i> Fluxo
@@ -35,7 +47,7 @@
         </x-slot>
 
         <x-slot name="filters">
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <span class="flex items-center gap-1.5">
                     <i class="ph-bold ph-calendar-blank text-sm text-purpura-500"></i>
                     <span>{{ $ciclo->ano }} / {{ $ciclo->semestre }}º Semestre</span>
@@ -48,6 +60,17 @@
                     <span class="text-gray-400">até</span>
                     <b class="text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($ciclo->data_fim)->format('d/m/Y') }}</b>
                 </span>
+                <span class="hidden sm:inline text-gray-300 dark:text-gray-600">•</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-purpura-50 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 text-purpura-700 dark:text-purpura-300 font-bold">
+                    <i class="ph-fill ph-flag-banner text-sm"></i>
+                    <span>Fase Liberada: {{ $ciclo->fase_atual_nome }}</span>
+                </span>
+                @if(($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && $ciclo->slug_projeto)
+                    <span class="hidden sm:inline text-gray-300 dark:text-gray-600">•</span>
+                    <a href="{{ url('/inscricao/' . $ciclo->slug_projeto) }}" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono text-[11px] font-bold hover:underline">
+                        /inscricao/{{ $ciclo->slug_projeto }} <i class="ph-bold ph-arrow-up-right"></i>
+                    </a>
+                @endif
             </div>
         </x-slot>
     </x-page-header>
@@ -269,12 +292,12 @@
             <div class="flex items-center gap-2">
                 @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                     <button wire:click="recalcularPontuacoes" 
-                            wire:confirm="Processar pontuação dos alunos Deste Ciclo?"
+                            wire:confirm="Processar pontuação dos alunos deste Ciclo?"
                             class="flex items-center px-3 py-1.5 gap-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-800">
                         <i class="ph-bold ph-calculator text-sm"></i> Recalcular Pontuação
                     </button>
                     <button wire:click="gerarRanking" 
-                            wire:confirm="Gerar ranking para os alunos Deste Ciclo?"
+                            wire:confirm="Gerar ranking para os alunos deste Ciclo?"
                             class="flex items-center px-3 py-1.5 gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-bold rounded-lg text-xs shadow-sm transition dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-800">
                         <i class="ph-bold ph-medal text-sm"></i> Gerar Ranking
                     </button>
@@ -375,6 +398,18 @@
                         
                         <td class="px-4 py-2 text-right">
                             <div class="flex items-center justify-end gap-1">
+                                <button type="button" 
+                                        x-data 
+                                        @click="
+                                            $wire.gerarLinkRetomada({{ $inscricao->id }}).then(() => {});
+                                            window.addEventListener('copiar-para-clipboard', event => {
+                                                navigator.clipboard.writeText(event.detail.text);
+                                            }, { once: true });
+                                        "
+                                        class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" 
+                                        title="Gerar e Copiar Link de Retomada">
+                                    <i class="text-base ph-bold ph-link"></i>
+                                </button>
                                 <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 rounded transition" title="Visualização Rápida">
                                     <i class="text-base ph ph-info"></i>
                                 </button>
@@ -445,7 +480,7 @@
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <td class="p-3 text-center text-[11px] font-bold text-gray-400">{{ $index + 1 }}</td>
                                 <td class="p-3">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $regra['campo'] ?? 'N/A' }}</span>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $regra['campo'] ?? 'Regra Global' }}</span>
                                 </td>
                                 <td class="p-3 text-center">
                                     <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-bold rounded border border-gray-200 dark:border-gray-600">
@@ -459,7 +494,7 @@
                                 </td>
                                 <td class="p-3 text-center">
                                     <span class="inline-flex items-center px-2 py-0.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-[11px] font-black rounded border border-green-200 dark:border-green-800">
-                                        +{{ $regra['pontos'] ?? 0 }}
+                                        +{{ $regra['pontos'] ?? 0 }}{{ ($regra['tipo_regra'] ?? '') === 'multiplicador_percentual' ? '%' : '' }}
                                     </span>
                                 </td>
                             </tr>
@@ -500,7 +535,7 @@
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                     <thead class="bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Etapa</th>
+                            <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Página</th>
                             <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 text-center">Ordem</th>
                             <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pergunta / Rótulo</th>
                             <th class="p-3 font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo (Componente)</th>
@@ -517,7 +552,7 @@
                                     #{{ $campo->ordem }}
                                 </td>
                                 <td class="p-3">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ $campo->label }}</span>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white block">{{ strip_tags($campo->label) }}</span>
                                     <span class="text-[10px] text-gray-400 font-mono">{{ $campo->name }}</span>
                                 </td>
                                 <td class="p-3">
