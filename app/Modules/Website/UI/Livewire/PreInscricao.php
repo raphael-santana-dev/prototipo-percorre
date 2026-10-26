@@ -56,16 +56,18 @@ class PreInscricao extends Component
 
         $query = Formulario::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
-        }])->where('slug', $slug)
-           ->where('tipo', 'pre_inscricao');
+        }])->where('slug', $slug);
 
         if (!$querPreview && !$querTeste) {
             $query->where('status', true);
         }
-
+        
         $this->formulario = $query->firstOrFail();
 
-        if ($this->formulario->is_rascunho) {
+        // Só trata como rascunho restrito se estiver marcado como rascunho E inativo (status = false)
+        $isRascunhoReal = (bool) ($this->formulario->is_rascunho ?? false) && !$this->formulario->status;
+
+        if ($isRascunhoReal) {
             abort_unless($temPermissaoTeste, 403, 'Este formulário encontra-se em Rascunho e está restrito à equipe autorizada.');
             if (!$querPreview) {
                 $querTeste = true;

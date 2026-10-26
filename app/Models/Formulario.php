@@ -52,6 +52,16 @@ class Formulario extends Model
         'data_fim' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Formulario $formulario) {
+            // Se o formulário está sendo salvo como Ativo (status = true), garante que não fique preso como rascunho
+            if ($formulario->status && \Illuminate\Support\Facades\Schema::hasColumn('formularios', 'is_rascunho')) {
+                $formulario->is_rascunho = false;
+            }
+        });
+    }
+
     public function faseAprendizagem()
     {
         return $this->belongsTo(CicloAprendizagemFase::class, 'ciclo_aprendizagem_fase_id');
