@@ -347,6 +347,32 @@ class FormularioPublico extends Component
                 continue;
             }
 
+            if ($campo->tipo === 'matriz') {
+                $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $linhas = $cfg['linhas'] ?? [];
+                $qtdLinhas = count($linhas);
+
+                if ($campo->obrigatorio && $qtdLinhas > 0) {
+                    $regras['respostas.' . $campo->name] = [
+                        'required',
+                        'array',
+                        function ($attribute, $value, $fail) use ($linhas, $campo) {
+                            if (!is_array($value)) {
+                                return $fail('Responda a todos os itens de "' . strip_tags($campo->label) . '".');
+                            }
+                            foreach ($linhas as $idx => $textoLinha) {
+                                if (!isset($value[$idx]) || trim((string) $value[$idx]) === '') {
+                                    return $fail("Por favor, selecione uma opção para todas as linhas (item pendente: \"{$textoLinha}\").");
+                                }
+                            }
+                        }
+                    ];
+                } else {
+                    $regras['respostas.' . $campo->name] = ['nullable', 'array'];
+                }
+                continue;
+            }
+
             if ($campo->tipo === 'file') {
                 $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
                 $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
