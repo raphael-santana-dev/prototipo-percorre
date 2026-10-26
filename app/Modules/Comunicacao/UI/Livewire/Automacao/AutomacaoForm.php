@@ -3,9 +3,11 @@
 namespace App\Modules\Comunicacao\UI\Livewire\Automacao;
 
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 use App\Modules\Comunicacao\Domain\Models\Automacao;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
 use App\Models\StatusInscricao;
+use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Str;
 
 class AutomacaoForm extends Component
@@ -15,31 +17,31 @@ class AutomacaoForm extends Component
     public $evento_gatilho = '';
     public $template_id = '';
     public $tipo_acao = 'enviar_email';
-    public $status = true;
+    public bool $status = true;
 
-    public $eventosDisponiveis = [];
+    public array $eventosDisponiveis = [];
+    public array $breadcrumbs = [];
 
     public function mount($id = null)
     {
-        $statusInscricoes = \App\Models\StatusInscricao::orderBy('nome')->get();
+        $statusInscricoes = StatusInscricao::orderBy('nome')->get();
         foreach ($statusInscricoes as $st) {
-            $slug = \Illuminate\Support\Str::slug($st->nome, '_');
+            $slug = Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
 
-        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro (Link de Retomada)';
-        
-        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa "Finalizado")';
-        
-        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Solicitação de Cadastro de Inscrição';
-        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Aluno solicita reabertura de fase';
-        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Professor solicita reabertura de matriz';
-        $this->eventosDisponiveis['usuario.criado'] = 'Usuário: Novo Cadastro de Usuário';
-
-        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_equipe'] = 'Aprendizagem: Nova Avaliação (Notificar Equipe IOS)';
+        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
+        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
+        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Coordenação: Solicitação de Cadastro de Inscrição';
+        $this->eventosDisponiveis['inscricao.solicitacao_alteracao'] = 'Coordenação: Solicitação de Alteração em Ciclo Bloqueado';
+        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Avaliação: Aluno solicita reabertura de fase';
+        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Avaliação: Professor solicita reabertura de matriz';
+        $this->eventosDisponiveis['usuario.criado'] = 'Corporativo: Novo Cadastro de Usuário';
+        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_equipe'] = 'Aprendizagem: Nova Avaliação (Notificar Equipe)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_aluno'] = 'Aprendizagem: Nova Avaliação (Notificar Aluno)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa'] = 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
         $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
+
         if ($id) {
             abort_if(!feature('automacao.editar'), 403);
             abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
@@ -50,33 +52,59 @@ class AutomacaoForm extends Component
             $this->evento_gatilho = $automacao->evento_gatilho;
             $this->template_id = $automacao->template_id;
             $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
-            $this->status = $automacao->status;
+            $this->status = (bool) $automacao->status;
+        } else {
+            abort_if(!feature('automacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
+
+        $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    #[Computed]
+    public function templateSelecionado()
+    {
+        if (empty($this->template_id)) {
+            return null;
+        }
+        return EmailTemplate::find($this->template_id);
     }
 
     public function salvar()
     {
+        if ($this->automacaoId) {
+            abort_if(!feature('automacao.editar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+        } else {
+            abort_if(!feature('automacao.criar'), 403);
+            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
+        }
+
         $this->validate([
-            'nome' => 'required|string|max:255',
+            'nome'           => 'required|string|min:3|max:255',
             'evento_gatilho' => 'required|string',
-            'template_id' => 'required|exists:email_templates,id',
-            'tipo_acao' => 'required|string',
+            'template_id'    => 'required|exists:email_templates,id',
+            'tipo_acao'      => 'required|string',
+        ], [
+            'nome.required'           => 'Defina um nome identificador para esta regra.',
+            'evento_gatilho.required' => 'Selecione qual evento do sistema disparará esta automação.',
+            'template_id.required'    => 'Selecione o template de mensagem que será enviado.',
         ]);
 
         $dados = [
-            'nome' => $this->nome,
+            'nome'           => $this->nome,
             'evento_gatilho' => $this->evento_gatilho,
-            'template_id' => $this->template_id,
-            'tipo_acao' => $this->tipo_acao,
-            'status' => $this->status,
+            'template_id'    => $this->template_id,
+            'tipo_acao'      => $this->tipo_acao,
+            'status'         => (bool) $this->status,
         ];
 
         if ($this->automacaoId) {
             Automacao::findOrFail($this->automacaoId)->update($dados);
-            session()->flash('sucesso', 'Automação atualizada com sucesso!');
+            $this->dispatch('sucesso', msg: 'Regra de automação atualizada com sucesso!');
         } else {
             Automacao::create($dados);
-            session()->flash('sucesso', 'Automação criada com sucesso!');
+            $this->dispatch('sucesso', msg: 'Nova regra de automação criada com sucesso!');
         }
 
         return redirect()->route('automacoes.index');
