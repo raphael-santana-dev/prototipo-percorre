@@ -23,7 +23,7 @@ class Inscricao extends Component
     use \App\Traits\WithFichaPdfDownload;
 
     public bool $isPreview = false;
-    public bool $isTeste = false; // Flag do Modo Sandbox (Solicitação 4)
+    public bool $isTeste = false; 
 
     public int $etapaAtual = 1;
     public int $totalEtapas = 1;
@@ -166,7 +166,6 @@ class Inscricao extends Component
         if ($this->isPreview || !$this->cicloAtivoId || $this->etapaAtual === 1) {
             return null;
         }
-        
         $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
             ->where('data_liberacao', '>', now())
             ->get();
@@ -188,7 +187,6 @@ class Inscricao extends Component
         }
         
         $proximaEtapa = $this->etapaAtual + 1;
-        
         $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
             ->where('data_liberacao', '>', now())
             ->get();
@@ -200,26 +198,6 @@ class Inscricao extends Component
             }
         }
         return null;
-    }
-
-    private function ofuscarEmail(?string $email): string
-    {
-        if (!$email) return '';
-        $parts = explode('@', $email);
-        if (count($parts) !== 2) return $email;
-        $name = $parts[0];
-        $domain = $parts[1];
-        if (strlen($name) <= 2) return $name . '@' . $domain;
-        return substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 2, 2)) . '@' . $domain;
-    }
-
-    private function ofuscarTelefone(?string $telefone): string
-    {
-        if (!$telefone) return '';
-        if (strlen($telefone) >= 14) {
-            return substr($telefone, 0, 7) . '****-' . substr($telefone, -4);
-        }
-        return $telefone;
     }
 
     public function restaurarRascunhoLocal(array $dados)
@@ -436,19 +414,6 @@ class Inscricao extends Component
         $this->restaurarDeDadosSalvos();
     }
 
-    protected $messages = [
-        'nome.required' => 'O preenchimento do nome é obrigatório.',
-        'email.required' => 'O preenchimento do email é obrigatório.',
-        'email.email' => 'Informe um email válido.',
-        'cpf.required' => 'O preenchimento do CPF é obrigatório.',
-        'cpf.unique' => 'Este CPF já está cadastrado em nosso sistema.',
-        'nome_social.required_if' => 'Preencha o nome social ou marque "Não".',
-        'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos para concluir a inscrição.',
-        'cep.required' => 'O CEP é obrigatório.',
-        'data_nascimento.required' => 'A data de nascimento é obrigatória.',
-        'celular.required' => 'O preenchimento do celular é obrigatório.',
-    ];
-
     private function getOfertasValidas(): ?array
     {
         if (!$this->use_vacancy_limit) return null;
@@ -476,6 +441,26 @@ class Inscricao extends Component
             }
         }
         return $validas;
+    }
+
+    private function ofuscarEmail(?string $email): string
+    {
+        if (!$email) return '';
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) return $email;
+        $name = $parts[0];
+        $domain = $parts[1];
+        if (strlen($name) <= 2) return $name . '@' . $domain;
+        return substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 2, 2)) . '@' . $domain;
+    }
+
+    private function ofuscarTelefone(?string $telefone): string
+    {
+        if (!$telefone) return '';
+        if (strlen($telefone) >= 14) {
+            return substr($telefone, 0, 7) . '****-' . substr($telefone, -4);
+        }
+        return $telefone;
     }
 
     protected function regrasPorEtapa($etapa)
@@ -556,14 +541,14 @@ class Inscricao extends Component
                         } else {
                             $regras['uploads.' . $campo->name] = 'nullable|array';
                         }
-                        $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                        $regras['uploads.' . $campo->name . '.*'] = $baseRule;
                     } else {
                         if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
                             $baseRule[] = 'required';
                         } else {
                             $baseRule[] = 'nullable';
                         }
-                        $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                        $regras['uploads.' . $campo->name] = $baseRule;
                     }
                     continue;
                 }
@@ -576,8 +561,8 @@ class Inscricao extends Component
 
                 if ($campo->subtipo === 'email') {
                     $ruleStr[] = 'email';
-                    if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                        $ruleStr[] = \Illuminate\Validation\Rule::unique('inscricoes', 'dados_dinamicos->' . $campo->name)
+                    if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        $ruleStr[] = Rule::unique('inscricoes', 'dados_dinamicos->' . $campo->name)
                             ->where('ciclo_id', $this->cicloAtivoId)
                             ->ignore($this->inscricaoId);
                     }
@@ -595,8 +580,8 @@ class Inscricao extends Component
                             if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF dinâmico informado é inválido.');
                         };
                     }
-                    if (filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                        $ruleStr[] = \Illuminate\Validation\Rule::unique('inscricoes', 'dados_dinamicos->' . $campo->name)
+                    if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                        $ruleStr[] = Rule::unique('inscricoes', 'dados_dinamicos->' . $campo->name)
                             ->where('ciclo_id', $this->cicloAtivoId)
                             ->ignore($this->inscricaoId);
                     }
@@ -606,9 +591,15 @@ class Inscricao extends Component
                 if ($campo->subtipo === 'date') $ruleStr[] = 'date';
                 if ($campo->tamanho_min !== null) $ruleStr[] = 'min:'.$campo->tamanho_min;
                 if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
-                if (!empty($campo->regras_validacao)) $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
+
+                if (!empty($campo->regras_validacao)) {
+                    $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
+                }
                 
-                $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
+                if (!empty($ruleStr)) {
+                    // ARRAY DIRETO, NADA DE IMPLODE
+                    $regras['respostas.' . $campo->name] = $ruleStr;
+                }
             }
         }
         return $regras;
@@ -720,7 +711,8 @@ class Inscricao extends Component
             }
         }
 
-        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo && $this->temVagasDisponiveis && $this->use_vacancy_limit) {            $ofertasValidas = $this->getOfertasValidas();
+        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo && $this->temVagasDisponiveis && $this->use_vacancy_limit) {            
+            $ofertasValidas = $this->getOfertasValidas();
             if ($ofertasValidas !== null && $this->unidade && $this->curso && $this->turno) {
                 $key = "{$this->unidade}-{$this->curso}-{$this->turno}";
                 if (!isset($ofertasValidas[$key])) {

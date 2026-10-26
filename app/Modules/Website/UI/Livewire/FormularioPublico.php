@@ -4,10 +4,14 @@ namespace App\Modules\Website\UI\Livewire;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
+use Illuminate\Validation\Rule;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
+use Carbon\Carbon;
+use App\Models\Curso;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 
 #[Layout('components.layouts.public')]
 class FormularioPublico extends Component
@@ -20,6 +24,7 @@ class FormularioPublico extends Component
     public $camposDinamicos = [];
     public $respostas = [];
     public array $uploads = [];
+    
     public array $unidadesDisponiveis = [];
     public array $cursosDisponiveis = [];
     public array $turnosDisponiveis = [];
@@ -32,9 +37,9 @@ class FormularioPublico extends Component
     public string $mensagemBloqueio = '';
     public string $iconeBloqueio = 'ph-lock-key';
     public bool $exibirBotaoLogin = false;
+    
     public bool $isPreview = false;
     public bool $isTeste = false;
-
 
     public array $formSettings = [];
 
@@ -58,14 +63,12 @@ class FormularioPublico extends Component
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
         }])->where('slug', $slug);
 
-        // Permite abrir se for preview, teste ou se estiver ativo
         if (!$querPreview && !$querTeste) {
             $query->where('status', true);
         }
         
         $this->formulario = $query->firstOrFail();
 
-        // Se o formulário estiver em Rascunho, exige permissão Spatie e força modo Teste
         if ($this->formulario->is_rascunho) {
             abort_unless($temPermissaoTeste, 403, 'Este formulário encontra-se em Rascunho e está restrito à equipe autorizada.');
             if (!$querPreview) {
@@ -178,9 +181,6 @@ class FormularioPublico extends Component
         }
     }
 
-    /**
-     * Restaura os dados salvos no localStorage ao reabrir o formulário
-     */
     public function restaurarRascunhoLocal(array $dados)
     {
         if (request()->query('preview') || $this->bloqueado || $this->finalizado) {
@@ -209,17 +209,16 @@ class FormularioPublico extends Component
             $this->etapaAtual = (int) $dados['etapaAtual'];
         }
 
-        // Recarrega cascatas de Unidade -> Curso -> Turno se houver campos 'system'
         foreach ($this->camposDinamicos->where('tipo', 'system') as $campoSys) {
             $cfg = is_string($campoSys->configuracoes) ? json_decode($campoSys->configuracoes, true) : ($campoSys->configuracoes ?? []);
             if (filter_var($cfg['aplicar_regras'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 $valId = $this->respostas[$campoSys->name] ?? null;
                 if ($campoSys->subtipo === 'unidade' && $valId) {
-                    $this->cursosDisponiveis = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+                    $this->cursosDisponiveis = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
                         ->whereHas('unidades', fn($q) => $q->where('unidades.id', $valId))
                         ->pluck('nome', 'id')->toArray();
                 } elseif ($campoSys->subtipo === 'curso' && $valId) {
-                    $curso = \App\Models\Curso::find($valId);
+                    $curso = Curso::find($valId);
                     if ($curso && method_exists($curso, 'turnosVinculados')) {
                         $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
                     }
@@ -230,9 +229,6 @@ class FormularioPublico extends Component
         $this->salvarRascunhoSilencioso();
     }
 
-    /**
-     * Registra/atualiza a resposta no banco em tempo real enquanto o usuário preenche
-     */
     public function salvarRascunhoSilencioso()
     {
         if ($this->isPreview || $this->isTeste || $this->bloqueado || $this->finalizado) {
@@ -275,17 +271,17 @@ class FormularioPublico extends Component
             $aplicarRegras = filter_var($cfg['aplicar_regras'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             if ($campo->subtipo === 'unidade') {
-                $this->unidadesDisponiveis = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
+                $this->unidadesDisponiveis = Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
             } 
             elseif ($campo->subtipo === 'curso') {
                 if (!$aplicarRegras) {
-                    $this->cursosDisponiveis = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
+                    $this->cursosDisponiveis = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
                 }
             } 
             elseif ($campo->subtipo === 'turno') {
                 if (!$aplicarRegras) {
-                    if (class_exists(\App\Modules\Turno\Domain\Models\Turno::class)) {
-                        $this->turnosDisponiveis = \App\Modules\Turno\Domain\Models\Turno::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
+                    if (class_exists(Turno::class)) {
+                        $this->turnosDisponiveis = Turno::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->pluck('nome', 'id')->toArray();
                     }
                 }
             }
@@ -303,6 +299,8 @@ class FormularioPublico extends Component
         }
 
         foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+            
+            // Verificação de condicional
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
                 $op = $campo->depende_operador ?? '=';
@@ -365,31 +363,32 @@ class FormularioPublico extends Component
                     } else {
                         $regras['uploads.' . $campo->name] = 'nullable|array';
                     }
-                    $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                    $regras['uploads.' . $campo->name . '.*'] = $baseRule;
                 } else {
                     if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
                         $baseRule[] = 'required';
                     } else {
                         $baseRule[] = 'nullable';
                     }
-                    $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                    $regras['uploads.' . $campo->name] = $baseRule;
                 }
-
                 continue;
             }
 
+            // --- REGRA ARRAY: Prevenção do erro "Closure could not be converted to string" ---
             $ruleStr = [];
-            if ($campo->obrigatorio) $ruleStr[] = 'required';
-            else $ruleStr[] = 'nullable';
+            if ($campo->obrigatorio) {
+                $ruleStr[] = 'required';
+            } else {
+                $ruleStr[] = 'nullable';
+            }
 
             $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-
-            
 
             if ($campo->subtipo === 'email') {
                 $ruleStr[] = 'email';
                 if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                    $ruleStr[] = Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);
                 }
@@ -408,7 +407,7 @@ class FormularioPublico extends Component
                     };
                 }
                 if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                    $ruleStr[] = Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);
                 }
@@ -420,12 +419,16 @@ class FormularioPublico extends Component
             if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
 
             if (!empty($campo->regras_validacao)) {
-                $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
+                // Junta a string de validação separada por pipe no array principal
+                $regrasPersonalizadas = explode('|', $campo->regras_validacao);
+                $ruleStr = array_merge($ruleStr, $regrasPersonalizadas);
             }
+            
             if (!empty($ruleStr)) {
-                $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
+                $regras['respostas.' . $campo->name] = $ruleStr;
             }
         }
+        
         return $regras;
     }
 
@@ -436,10 +439,10 @@ class FormularioPublico extends Component
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
                 $this->validateOnly($propertyName, $regras, [
                     'uploads.*.required' => 'O envio de arquivo é obrigatório.',
-                    'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-                    'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-                    'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-                    'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
+                    'uploads.*.max'      => 'O arquivo excede o tamanho máximo permitido.',
+                    'uploads.*.mimes'    => 'Formato de arquivo não suportado.',
+                    'uploads.*.*.max'    => 'Um dos arquivos excede o tamanho máximo.',
+                    'uploads.*.*.mimes'  => 'Um dos arquivos possui formato não suportado.',
                 ]);
             }
             return;
@@ -463,7 +466,7 @@ class FormularioPublico extends Component
             if (array_key_exists($propertyName, $regras)) {
                 $this->validateOnly($propertyName, $regras, [
                     'respostas.*.required' => 'Este campo é obrigatório.',
-                    'respostas.*.email' => 'Informe um e-mail válido.'
+                    'respostas.*.email'    => 'Informe um e-mail válido.'
                 ]);
             }
 
@@ -480,7 +483,7 @@ class FormularioPublico extends Component
                         $this->cursosDisponiveis = [];
                         $this->turnosDisponiveis = [];
                         if ($valorId) {
-                            $this->cursosDisponiveis = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
+                            $this->cursosDisponiveis = Curso::whereIn('status', ['Ativo', 'ativo', '1', true])
                                 ->whereHas('unidades', function ($q) use ($valorId) {
                                     $q->where('unidades.id', $valorId);
                                 })->pluck('nome', 'id')->toArray();
@@ -493,7 +496,7 @@ class FormularioPublico extends Component
                     elseif ($campoAlterado->subtipo === 'curso') {
                         $this->turnosDisponiveis = [];
                         if ($valorId) {
-                            $curso = \App\Models\Curso::find($valorId);
+                            $curso = Curso::find($valorId);
                             if ($curso && method_exists($curso, 'turnosVinculados')) {
                                 $this->turnosDisponiveis = $curso->turnosVinculados()->pluck('nome', 'id')->toArray();
                             }
@@ -543,13 +546,13 @@ class FormularioPublico extends Component
         if (!empty($regras)) {
             $this->validate($regras, [
                 'respostas.*.required' => 'Este campo é obrigatório.',
-                'respostas.*.email' => 'Informe um e-mail válido.',
-                'respostas.*.numeric' => 'Este campo aceita apenas números.',
-                'uploads.*.required' => 'O envio de arquivo é obrigatório.',
-                'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-                'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-                'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-                'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
+                'respostas.*.email'    => 'Informe um e-mail válido.',
+                'respostas.*.numeric'  => 'Este campo aceita apenas números.',
+                'uploads.*.required'   => 'O envio de arquivo é obrigatório.',
+                'uploads.*.max'        => 'O arquivo excede o tamanho máximo.',
+                'uploads.*.mimes'      => 'Formato de arquivo não suportado.',
+                'uploads.*.*.max'      => 'Um dos arquivos excede o tamanho.',
+                'uploads.*.*.mimes'    => 'Um formato de arquivo não é suportado.',
             ]);
         }
 
@@ -585,9 +588,9 @@ class FormularioPublico extends Component
                     ['id' => $this->respostaId],
                     [
                         'formulario_id' => $this->formulario->id,
-                        'user_id' => auth('web')->id() ?? auth('student')->id() ?? null,
-                        'respostas' => $this->respostas,
-                        'etapa_parada' => $this->etapaAtual
+                        'user_id'       => auth('web')->id() ?? auth('student')->id() ?? null,
+                        'respostas'     => $this->respostas,
+                        'etapa_parada'  => $this->etapaAtual
                     ]
                 );
                 $this->respostaId = $registro->id;

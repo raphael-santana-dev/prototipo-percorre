@@ -35,7 +35,7 @@
                         </div>
                         
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 text-left whitespace-normal">
-                            O link oficial redireciona o candidato para o <b>Ciclo Ativo</b> de forma automática. Copie o iframe para embutir no seu site, ou use o Link Público para enviar via WhatsApp/E-mail.
+                            O link oficial redireciona o candidato para o <b>Ciclo Regular Ativo</b> de forma automática. Para projetos customizados, selecione o ciclo no filtro e este link será atualizado.
                         </p>
                         
                         <div class="space-y-4 text-left">
@@ -58,7 +58,7 @@
                         <div class="mt-6 flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-5">
                             @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
                                 <a href="{{ $urlInscricaoModal }}?modo=teste" target="_blank" class="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
-                                    <i class="ph-fill ph-flask"></i> Testar em Sandbox <i class="ph-bold ph-arrow-up-right"></i>
+                                    <i class="ph-fill ph-flask"></i> Testar (Sandbox) <i class="ph-bold ph-arrow-up-right"></i>
                                 </a>
                             @else
                                 <span></span>

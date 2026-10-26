@@ -4,8 +4,8 @@ namespace App\Modules\Website\UI\Livewire;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
+use Illuminate\Validation\Rule;
 use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 use App\Modules\Unidade\Domain\Models\Unidade;
@@ -114,8 +114,8 @@ class PreInscricao extends Component
         if ($this->deseja_informar) {
             $respostasPayload['_interesse_captacao'] = [
                 'unidade_id' => $this->unidade_interesse,
-                'curso_id' => $this->curso_interesse,
-                'turno_id' => $this->turno_interesse,
+                'curso_id'   => $this->curso_interesse,
+                'turno_id'   => $this->turno_interesse,
             ];
         }
 
@@ -123,174 +123,14 @@ class PreInscricao extends Component
             ['id' => $this->respostaId],
             [
                 'formulario_id' => $this->formulario->id,
-                'user_id' => auth()->check() ? auth()->id() : null,
-                'respostas' => $respostasPayload,
-                'etapa_parada' => $this->etapaAtual,
+                'user_id'       => auth()->check() ? auth()->id() : null,
+                'respostas'     => $respostasPayload,
+                'etapa_parada'  => $this->etapaAtual,
             ]
         );
 
         $this->respostaId = $registro->id;
     }
-
-    public function updated($propertyName)
-    {
-        if (str_starts_with($propertyName, 'uploads.')) {
-            $regras = $this->regrasPorEtapa($this->etapaAtual);
-            if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
-                $this->validateOnly($propertyName, $regras, [
-                    'uploads.*.required' => 'O envio do arquivo é obrigatório.',
-                    'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-                    'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-                    'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-                    'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
-                ]);
-            }
-            return;
-        }
-
-        if (str_starts_with($propertyName, 'respostas.')) {
-            $changedKey = str_replace('respostas.', '', $propertyName);
-            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
-                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
-                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
-                    $this->respostas[$cSys->name] = '';
-                }
-                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
-                    $this->respostas[$cSys->name] = '';
-                }
-            }
-        }
-
-        $this->salvarRascunhoSilencioso();
-
-        if (str_starts_with($propertyName, 'respostas.')) {
-            $regras = $this->regrasPorEtapa($this->etapaAtual);
-            if (array_key_exists($propertyName, $regras)) {
-                $this->validateOnly($propertyName, $regras, [
-                    'respostas.*.required' => 'Este campo é obrigatório.',
-                    'respostas.*.email' => 'Indique um e-mail válido.'
-                ]);
-            }
-        }
-    }
-
-    public function avancarEtapa()
-    {
-        if ($this->isPreview) {
-            if ($this->etapaAtual < $this->totalEtapas) {
-                $this->etapaAtual++;
-            }
-            return;
-        }
-
-        $regras = $this->regrasPorEtapa($this->etapaAtual);
-
-        if (!empty($regras)) {
-            $this->validate($regras, [
-                'unidade_interesse.required' => 'A unidade de interesse é obrigatória.',
-                'curso_interesse.required' => 'O curso de interesse é obrigatório.',
-                'turno_interesse.required' => 'O turno de interesse é obrigatório.',
-                'respostas.*.required' => 'Este campo é obrigatório.',
-                'respostas.*.email' => 'Indique um e-mail válido.',
-                'respostas.*.numeric' => 'Este campo aceita apenas números.',
-                'uploads.*.required' => 'O envio do arquivo é obrigatório.',
-                'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-                'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-                'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-                'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
-            ]);
-        }
-
-        if (!$this->isTeste) {
-            foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
-                if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
-                    $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
-                    $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
-
-                    if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
-                        $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
-                        foreach ($this->uploads[$campoFile->name] as $arquivo) {
-                            if ($arquivo) {
-                                $caminhos[] = $arquivo->store('pre_inscricoes/uploads', 'public');
-                            }
-                        }
-                        $this->respostas[$campoFile->name] = $caminhos;
-                    } else {
-                        $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('pre_inscricoes/uploads', 'public');
-                    }
-
-                    unset($this->uploads[$campoFile->name]);
-                }
-            }
-        }
-
-        if ($this->etapaAtual < $this->totalEtapas) {
-            $this->etapaAtual++;
-            $this->salvarRascunhoSilencioso();
-        } else {
-            if ($this->deseja_informar) {
-                $this->respostas['_interesse_captacao'] = [
-                    'unidade_id' => $this->unidade_interesse,
-                    'curso_id' => $this->curso_interesse,
-                    'turno_id' => $this->turno_interesse,
-                ];
-            }
-
-            if (!$this->isTeste) {
-                $registro = RespostaFormulario::updateOrCreate(
-                    ['id' => $this->respostaId],
-                    [
-                        'formulario_id' => $this->formulario->id,
-                        'user_id' => auth()->check() ? auth()->id() : null,
-                        'respostas' => $this->respostas,
-                        'etapa_parada' => $this->etapaAtual
-                    ]
-                );
-                $this->respostaId = $registro->id;
-            }
-            $this->finalizado = true;
-            $this->dispatch('limpar-storage-pre-inscricao');
-        }
-    }
-
-    public function restaurarRascunhoLocal(array $dados)
-    {
-        if ($this->finalizado) return;
-
-        if (!empty($dados['respostaId'])) {
-            $respBanco = RespostaFormulario::where('id', $dados['respostaId'])
-                ->where('formulario_id', $this->formulario->id)
-                ->first();
-
-            if ($respBanco) {
-                $this->respostaId = $respBanco->id;
-            }
-        }
-
-        foreach (['deseja_informar', 'unidade_interesse', 'curso_interesse', 'turno_interesse'] as $campoFixo) {
-            if (isset($dados[$campoFixo]) && $dados[$campoFixo] !== '' && $dados[$campoFixo] !== null) {
-                $this->{$campoFixo} = $dados[$campoFixo];
-            }
-        }
-
-        if (!empty($dados['respostas']) && is_array($dados['respostas'])) {
-            foreach ($dados['respostas'] as $k => $v) {
-                if ($v !== '' && $v !== null) {
-                    $this->respostas[$k] = $v;
-                }
-            }
-        }
-
-        if (!empty($dados['etapaAtual']) && is_numeric($dados['etapaAtual']) && $dados['etapaAtual'] <= $this->totalEtapas) {
-            $this->etapaAtual = (int) $dados['etapaAtual'];
-        }
-
-        $this->salvarRascunhoSilencioso();
-    }
-
-    
-
-    
 
     protected function regrasPorEtapa($etapa)
     {
@@ -298,11 +138,12 @@ class PreInscricao extends Component
 
         if ($etapa === 1 && $this->deseja_informar) {
             $regras['unidade_interesse'] = 'required';
-            $regras['curso_interesse'] = 'required';
-            $regras['turno_interesse'] = 'required';
+            $regras['curso_interesse']   = 'required';
+            $regras['turno_interesse']   = 'required';
         }
 
         foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+            
             if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
                 $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
                 $op = $campo->depende_operador ?? '=';
@@ -365,28 +206,32 @@ class PreInscricao extends Component
                     } else {
                         $regras['uploads.' . $campo->name] = 'nullable|array';
                     }
-                    $regras['uploads.' . $campo->name . '.*'] = implode('|', $baseRule);
+                    $regras['uploads.' . $campo->name . '.*'] = $baseRule;
                 } else {
                     if ($campo->obrigatorio && !$jaPossuiArquivo && empty($this->uploads[$campo->name])) {
                         $baseRule[] = 'required';
                     } else {
                         $baseRule[] = 'nullable';
                     }
-                    $regras['uploads.' . $campo->name] = implode('|', $baseRule);
+                    $regras['uploads.' . $campo->name] = $baseRule;
                 }
                 continue;
             }
 
+            // --- REGRA ARRAY ---
             $ruleStr = [];
-            if ($campo->obrigatorio) $ruleStr[] = 'required';
-            else $ruleStr[] = 'nullable';
+            if ($campo->obrigatorio) {
+                $ruleStr[] = 'required';
+            } else {
+                $ruleStr[] = 'nullable';
+            }
 
             $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
 
             if ($campo->subtipo === 'email') {
                 $ruleStr[] = 'email';
                 if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                    $ruleStr[] = Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);
                 }
@@ -405,7 +250,7 @@ class PreInscricao extends Component
                     };
                 }
                 if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $ruleStr[] = \Illuminate\Validation\Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
+                    $ruleStr[] = Rule::unique('resposta_formularios', 'respostas->' . $campo->name)
                         ->where('formulario_id', $this->formulario->id)
                         ->ignore($this->respostaId);
                 }
@@ -417,17 +262,57 @@ class PreInscricao extends Component
             if ($campo->tamanho_max !== null) $ruleStr[] = 'max:'.$campo->tamanho_max;
 
             if (!empty($campo->regras_validacao)) {
-                $ruleStr = array_merge($ruleStr, explode('|', $campo->regras_validacao));
+                $regrasPersonalizadas = explode('|', $campo->regras_validacao);
+                $ruleStr = array_merge($ruleStr, $regrasPersonalizadas);
             }
             if (!empty($ruleStr)) {
-                $regras['respostas.' . $campo->name] = implode('|', $ruleStr);
+                $regras['respostas.' . $campo->name] = $ruleStr;
             }
         }
-
         return $regras;
     }
 
-    
+    public function updated($propertyName)
+    {
+        if (str_starts_with($propertyName, 'uploads.')) {
+            $regras = $this->regrasPorEtapa($this->etapaAtual);
+            if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
+                $this->validateOnly($propertyName, $regras, [
+                    'uploads.*.required' => 'O envio do arquivo é obrigatório.',
+                    'uploads.*.max'      => 'O arquivo excede o tamanho máximo permitido.',
+                    'uploads.*.mimes'    => 'Formato de arquivo não suportado.',
+                    'uploads.*.*.max'    => 'Um dos arquivos excede o tamanho.',
+                    'uploads.*.*.mimes'  => 'Um dos formatos não é suportado.',
+                ]);
+            }
+            return;
+        }
+
+        if (str_starts_with($propertyName, 'respostas.')) {
+            $changedKey = str_replace('respostas.', '', $propertyName);
+            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
+                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
+                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
+                    $this->respostas[$cSys->name] = '';
+                }
+                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
+                    $this->respostas[$cSys->name] = '';
+                }
+            }
+        }
+
+        $this->salvarRascunhoSilencioso();
+
+        if (str_starts_with($propertyName, 'respostas.')) {
+            $regras = $this->regrasPorEtapa($this->etapaAtual);
+            if (array_key_exists($propertyName, $regras)) {
+                $this->validateOnly($propertyName, $regras, [
+                    'respostas.*.required' => 'Este campo é obrigatório.',
+                    'respostas.*.email'    => 'Indique um e-mail válido.'
+                ]);
+            }
+        }
+    }
 
     public function removerArquivo(string $campoName, $index = null)
     {
@@ -452,7 +337,83 @@ class PreInscricao extends Component
         $this->salvarRascunhoSilencioso();
     }
 
-    
+    public function avancarEtapa()
+    {
+        if ($this->isPreview) {
+            if ($this->etapaAtual < $this->totalEtapas) {
+                $this->etapaAtual++;
+            }
+            return;
+        }
+
+        $regras = $this->regrasPorEtapa($this->etapaAtual);
+
+        if (!empty($regras)) {
+            $this->validate($regras, [
+                'unidade_interesse.required' => 'A unidade de interesse é obrigatória.',
+                'curso_interesse.required'   => 'O curso de interesse é obrigatório.',
+                'turno_interesse.required'   => 'O turno de interesse é obrigatório.',
+                'respostas.*.required'       => 'Este campo é obrigatório.',
+                'respostas.*.email'          => 'Indique um e-mail válido.',
+                'respostas.*.numeric'        => 'Este campo aceita apenas números.',
+                'uploads.*.required'         => 'O envio do arquivo é obrigatório.',
+                'uploads.*.max'              => 'O arquivo excede o tamanho máximo.',
+                'uploads.*.mimes'            => 'Formato de arquivo não suportado.',
+                'uploads.*.*.max'            => 'Um arquivo excede o tamanho.',
+                'uploads.*.*.mimes'          => 'Um formato de arquivo não é suportado.',
+            ]);
+        }
+
+        if (!$this->isTeste) {
+            foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+                if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                    $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                    $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+
+                    if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                        $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                        foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                            if ($arquivo) {
+                                $caminhos[] = $arquivo->store('pre_inscricoes/uploads', 'public');
+                            }
+                        }
+                        $this->respostas[$campoFile->name] = $caminhos;
+                    } else {
+                        $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('pre_inscricoes/uploads', 'public');
+                    }
+                    unset($this->uploads[$campoFile->name]);
+                }
+            }
+        }
+
+        if ($this->etapaAtual < $this->totalEtapas) {
+            $this->etapaAtual++;
+            $this->salvarRascunhoSilencioso();
+        } else {
+            if ($this->deseja_informar) {
+                $this->respostas['_interesse_captacao'] = [
+                    'unidade_id' => $this->unidade_interesse,
+                    'curso_id'   => $this->curso_interesse,
+                    'turno_id'   => $this->turno_interesse,
+                ];
+            }
+
+            if (!$this->isTeste) {
+                $registro = RespostaFormulario::updateOrCreate(
+                    ['id' => $this->respostaId],
+                    [
+                        'formulario_id' => $this->formulario->id,
+                        'user_id'       => auth()->check() ? auth()->id() : null,
+                        'respostas'     => $this->respostas,
+                        'etapa_parada'  => $this->etapaAtual
+                    ]
+                );
+                $this->respostaId = $registro->id;
+            }
+            $this->finalizado = true;
+            $this->dispatch('limpar-storage-pre-inscricao');
+        }
+    }
 
     public function render()
     {
@@ -462,8 +423,8 @@ class PreInscricao extends Component
 
         return view('livewire.website.pre-inscricao', [
             'unidadesInteresseDb' => $unidadesInteresseDb,
-            'cursosInteresseDb' => $cursosInteresseDb,
-            'turnosInteresseDb' => $turnosInteresseDb,
+            'cursosInteresseDb'   => $cursosInteresseDb,
+            'turnosInteresseDb'   => $turnosInteresseDb,
         ])->title($this->formulario->titulo);
     }
 }
