@@ -19,25 +19,28 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ 
-          tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-          toggleTema() {
-              this.tema = this.tema === 'light' ? 'dark' : 'light';
-              localStorage.setItem('tema_sistema', this.tema);
-              if (this.tema === 'dark') {
-                  document.documentElement.classList.add('dark');
-              } else {
-                  document.documentElement.classList.remove('dark');
+@if(app()->environment('production'))
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+@else
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+          x-data="{ 
+              tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+              toggleTema() {
+                  this.tema = this.tema === 'light' ? 'dark' : 'light';
+                  localStorage.setItem('tema_sistema', this.tema);
+                  if (this.tema === 'dark') {
+                      document.documentElement.classList.add('dark');
+                  } else {
+                      document.documentElement.classList.remove('dark');
+                  }
               }
-          }
-      }" 
-      x-init="
-          if (tema === 'dark') { document.documentElement.classList.add('dark'); }
-          else { document.documentElement.classList.remove('dark'); }
-      "
-      :class="tema === 'dark' ? 'dark h-full' : 'h-full'">
-
+          }" 
+          x-init="
+              if (tema === 'dark') { document.documentElement.classList.add('dark'); }
+              else { document.documentElement.classList.remove('dark'); }
+          "
+          :class="tema === 'dark' ? 'dark h-full' : 'h-full'">
+@endif
       
 <head>
     <meta charset="utf-8">
@@ -46,15 +49,17 @@
     <title>{{ $title ?? 'Instituto Percorre' }}</title>
 
     <script>
-        (function() {
-            const temaSalvo = localStorage.getItem('tema_sistema');
-            const prefereEscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (temaSalvo === 'dark' || (!temaSalvo && prefereEscuro)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        })();
+        @if(!app()->environment('production'))
+            (function() {
+                const temaSalvo = localStorage.getItem('tema_sistema');
+                const prefereEscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (temaSalvo === 'dark' || (!temaSalvo && prefereEscuro)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            })();
+        @endif
     </script>
 
     @includeIf('components.partials.analytics-heatmap')
@@ -91,12 +96,14 @@
                     </div>
 
                     <div class="hidden items-center gap-4 md:flex">
-                        <button @click="toggleTema()" type="button" title="Alternar Tema" class="p-2 rounded-full flex items-center justify-center text-white/90 transition-colors hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-800">
-                            <i class="ph ph-moon text-xl" x-show="tema === 'light'"></i>
-                            <i class="ph ph-sun text-xl text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
-                        </button>
+                        @if(!app()->environment('production'))
+                            <button @click="toggleTema()" type="button" title="Alternar Tema" class="p-2 rounded-full flex items-center justify-center text-white/90 transition-colors hover:bg-white/10 dark:text-gray-300 dark:hover:bg-gray-800">
+                                <i class="ph ph-moon text-xl" x-show="tema === 'light'"></i>
+                                <i class="ph ph-sun text-xl text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
+                            </button>
 
-                        <div class="w-px h-5 bg-white/20 dark:bg-gray-700"></div>
+                            <div class="w-px h-5 bg-white/20 dark:bg-gray-700"></div>
+                        @endif
 
                         @if($isLoggedIn)
                             <div class="flex items-center gap-4">
@@ -107,18 +114,22 @@
                                 <livewire:portal.auth.logout-button />
                             </div>
                         @else
-                            <a href="{{ route('login') }}" class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm flex items-center gap-2">
-                                Acessar Conta <i class="ph-bold ph-sign-in text-sm"></i>
-                            </a>
+                            @if(!app()->environment('production'))
+                                <a href="{{ route('login') }}" class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors shadow-sm flex items-center gap-2">
+                                    Acessar Conta <i class="ph-bold ph-sign-in text-sm"></i>
+                                </a>
+                            @endif
                         @endif
                     </div>
 
-                    <div class="flex md:hidden">
-                        <button @click="toggleTema()" type="button" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-300">
-                            <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
-                            <i class="text-lg ph ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
-                        </button>
-                    </div>
+                    @if(!app()->environment('production'))
+                        <div class="flex md:hidden">
+                            <button @click="toggleTema()" type="button" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-300">
+                                <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
+                                <i class="text-lg ph ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
+                            </button>
+                        </div>
+                    @endif
 
                 </div>
             </div>
@@ -145,9 +156,11 @@
                     </div>
                     <livewire:portal.auth.logout-button cssClass="w-full flex items-center justify-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-red-600 border border-red-200 rounded-full hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20 transition-colors" />
                 @else
-                    <a href="{{ route('login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
-                        <i class="text-base ph ph-sign-in"></i> Acessar Conta
-                    </a>
+                    @if(!app()->environment('production'))
+                        <a href="{{ route('login') }}" class="flex items-center justify-center w-full gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#310B47] bg-[#FFA301] hover:bg-[#e08e00] rounded-full transition-colors">
+                            <i class="text-base ph ph-sign-in"></i> Acessar Conta
+                        </a>
+                    @endif
                 @endif
             </div>
             
@@ -163,13 +176,12 @@
     <main class="flex-1 flex flex-col relative">
         {{ $slot }}
 
-        @if(request()->query('embed'))
+        @if(request()->query('embed') && !app()->environment('production'))
             <button @click="toggleTema()" type="button" title="Alternar Tema" class="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 bg-white border border-gray-200 rounded-full shadow-lg text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition-all duration-300">
                 <i class="text-2xl ph-fill ph-moon" x-show="tema === 'light'"></i>
                 <i class="text-2xl ph-fill ph-sun text-[#FFA301]" x-show="tema === 'dark'" x-cloak></i>
             </button>
         @endif
-
     </main>
 
     @if(!request()->query('embed'))

@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-      :class="{ 'dark': tema === 'dark' }"
-      class="h-full">
+@if(app()->environment('production'))
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+    @else
+        <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+            x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
+            x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
+            :class="{ 'dark': tema === 'dark' }"
+            class="h-full">
+    @endif
 
     <head>
         <meta charset="utf-8">
@@ -12,15 +16,17 @@
         <title>{{ $title ?? 'Sistema Administrativo' }}</title>
         
         <script>
+        @if(!app()->environment('production'))
             if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
-            (function () {
-                var d = document.documentElement;
-                d.dataset.layout  = localStorage.getItem('layoutMode') || 'left';
-                d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
-            })();
-        </script>
+        @endif
+        (function () {
+            var d = document.documentElement;
+            d.dataset.layout  = localStorage.getItem('layoutMode') || 'left'; /* (ou 'top' no portal do aluno) */
+            d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
+        })();
+    </script>
 
         @includeIf('components.partials.analytics-heatmap')
         
@@ -327,11 +333,11 @@
                                 </a>
 
                                 {{-- Troca de tema protegida por feature e permissão --}}
-                                @if(feature('tema.alterar') && auth()->user()->can('tema.alterar'))
-                                <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
-                                    <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
-                                    <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
-                                </button>
+                                @if(!app()->environment('production'))
+                                    <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
+                                        <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
+                                        <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                                    </button>
                                 @endif
                                 
                                 <button @click="toggleLayout()" class="hidden md:flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alterar Posição do Menu">
