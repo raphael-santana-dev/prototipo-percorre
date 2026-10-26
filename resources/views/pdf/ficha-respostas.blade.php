@@ -368,13 +368,8 @@
         </div>
 
         <div class="signature-area">
-            @if(!empty($assinatura_base64))
-                <div class="signature-image-wrapper">
-                    <img src="{{ $assinatura_base64 }}" class="signature-image" alt="Assinatura Digital">
-                </div>
-            @else
-                <div class="signature-spacer"></div>
-            @endif
+           
+            <div class="signature-spacer"></div>
 
             <div class="signature-line"></div>
             <div class="signer-name">{{ $nome_assinante }}</div>
