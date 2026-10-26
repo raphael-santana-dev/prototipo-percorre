@@ -504,7 +504,7 @@
                 </nav>
 
                 <main class="flex-1 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 custom-scrollbar">
-                    <div class="w-full min-h-full pt-6 pb-24">
+                    <div class="w-full min-h-full pt-6">
                         <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
                             {{ $slot }}
                         </div>
