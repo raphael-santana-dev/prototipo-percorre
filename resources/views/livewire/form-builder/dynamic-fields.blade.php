@@ -466,6 +466,12 @@
                                     </button>
                                 </div>
                             @endif
+
+                            <div class="pl-2 border-l border-gray-700">
+                                <button type="button" wire:click="excluirCamposSelecionados" wire:confirm="Tem certeza de que deseja excluir permanentemente todos os inputs selecionados?" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1">
+                                    <i class="ph-bold ph-trash"></i> Excluir Selecionados
+                                </button>
+                            </div>
                         </div>
                     </div>
                 @endif

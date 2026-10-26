@@ -807,6 +807,48 @@ class DynamicFields extends Component
         $this->dispatch('sincronizar-quill-builder');
     }
 
+    /**
+     * Exclui em lote todos os campos marcados na seleção múltipla
+     */
+    public function excluirCamposSelecionados(): void
+    {
+        if ($this->isLockedByOther || empty($this->camposSelecionados)) return;
+
+        $colunaFk = $this->getContextColumn();
+
+        // Identifica quais etapas contêm os campos que serão excluídos para reindexá-las depois
+        $etapasAfetadas = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->distinct()
+            ->pluck('etapa')
+            ->toArray();
+
+        DB::transaction(function () use ($colunaFk, $etapasAfetadas) {
+            // Executa a exclusão dos blocos selecionados
+            CampoFormulario::where($colunaFk, $this->contextoId)
+                ->whereIn('id', $this->camposSelecionados)
+                ->where('tipo', '!=', 'config')
+                ->delete();
+
+            // Reindexa a ordem de cada página afetada para não deixar "buracos" na numeração
+            foreach ($etapasAfetadas as $numEtapa) {
+                $this->reindexarOrdensDaEtapa((int) $numEtapa);
+            }
+        });
+
+        $qtdRemovida = count($this->camposSelecionados);
+        $this->limparSelecaoCampos();
+
+        if ($this->campoId && in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->cancelarEdicao();
+        } else {
+            $this->atualizarProximaOrdem();
+        }
+
+        $this->dispatch('sucesso', msg: "{$qtdRemovida} bloco(s) excluído(s) com sucesso!");
+    }
+
     public function cancelarEdicao()
     {
         $this->camposSelecionados = [];
