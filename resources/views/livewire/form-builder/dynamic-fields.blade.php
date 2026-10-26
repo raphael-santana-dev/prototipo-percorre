@@ -607,9 +607,10 @@
                                                             <div class="flex items-center gap-2 flex-wrap">
                                                                 {{-- Checkbox para selecionar múltiplos inputs --}}
                                                                 <input type="checkbox"
-                                                                       wire:click.stop="toggleSelecionarCampo({{ $c->id }})"
-                                                                       @checked($isSelecionadoLote)
-                                                                       class="w-3.5 h-3.5 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 cursor-pointer shrink-0"
+                                                                       wire:model.live="camposSelecionados"
+                                                                       value="{{ (string) $c->id }}"
+                                                                       @click.stop
+                                                                       class="w-4 h-4 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 cursor-pointer shrink-0"
                                                                        title="Selecionar para mover em lote">
 
                                                                 @if(!in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link']))
@@ -887,9 +888,28 @@
                 </div>
             </div>
 
-            <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO (SÓ APARECE QUANDO SELECIONADO) -->
+            <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO -->
             <aside class="w-80 xl:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
-                @if($painelCampoAtivo || $campoId)
+                @if(count($camposSelecionados) > 1)
+                    {{-- ESTADO 1: MÚLTIPLOS INPUTS SELECIONADOS (OCULTA CONFIGURAÇÕES INDIVIDUAIS) --}}
+                    <div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400 shadow-xs">
+                            <i class="ph-fill ph-stack text-3xl"></i>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[11px] font-extrabold uppercase tracking-wider mb-2">
+                            {{ count($camposSelecionados) }} Inputs Selecionados
+                        </span>
+                        <h4 class="text-sm font-extrabold text-gray-900 dark:text-white">Modo de Movimentação em Lote</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                            As configurações individuais ficam ocultas quando mais de um input está selecionado. Utilize a barra superior escura para mover os itens em bloco.
+                        </p>
+                        <button type="button" wire:click="limparSelecaoCampos" class="mt-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="ph-bold ph-x"></i> Desmarcar Todos
+                        </button>
+                    </div>
+
+                @elseif($painelCampoAtivo || $campoId)
+                    {{-- ESTADO 2: APENAS 1 INPUT EM INCLUSÃO OU EDIÇÃO --}}
                     <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
                         <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
                             <i class="ph-fill ph-sliders text-purpura-600 text-base"></i> {{ $campoId ? 'Editar Input' : 'Novo Input' }}

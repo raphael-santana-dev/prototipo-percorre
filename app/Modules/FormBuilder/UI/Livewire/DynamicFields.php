@@ -133,17 +133,49 @@ class DynamicFields extends Component
         $this->painelCampoAtivo = false;
     }
 
-    // =========================================================================
-    // SELEÇÃO MÚLTIPLA E MOVIMENTAÇÃO DE INPUTS EM LOTE
-    // =========================================================================
+    public function updatedCamposSelecionados(): void
+    {
+        $this->camposSelecionados = array_values(array_unique(array_map('strval', $this->camposSelecionados)));
+
+        // Se o utilizador tinha 1 campo aberto em edição ($campoId) e marcou outro checkbox diferente,
+        // adiciona automaticamente o campo que estava em edição ao lote para formar os 2 selecionados:
+        if ($this->campoId && count($this->camposSelecionados) === 1 && !in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->camposSelecionados[] = (string) $this->campoId;
+        }
+
+        // Quando houver mais de 1 input selecionado, oculta imediatamente a configuração individual
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
+        } elseif (count($this->camposSelecionados) === 1) {
+            // Se restar apenas 1 selecionado, carrega-o para edição
+            $unicoId = (int) $this->camposSelecionados[0];
+            if ($this->campoId !== $unicoId) {
+                $this->editar($unicoId);
+            }
+        }
+    }
 
     public function toggleSelecionarCampo(int $id): void
     {
         $idStr = (string) $id;
+
+        // Se já havia um campo diferente aberto em edição ($campoId), inclui-o na seleção múltipla
+        if ($this->campoId && (string) $this->campoId !== $idStr && !in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->camposSelecionados[] = (string) $this->campoId;
+        }
+
         if (in_array($idStr, $this->camposSelecionados, true)) {
             $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, [$idStr]));
         } else {
             $this->camposSelecionados[] = $idStr;
+        }
+
+        $this->camposSelecionados = array_values(array_unique(array_map('strval', $this->camposSelecionados)));
+
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
         }
     }
 
@@ -164,6 +196,11 @@ class DynamicFields extends Component
             $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, $idsEtapa));
         } else {
             $this->camposSelecionados = array_values(array_unique(array_merge($this->camposSelecionados, $idsEtapa)));
+        }
+
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
         }
     }
 
@@ -485,6 +522,7 @@ class DynamicFields extends Component
 
     public function setTipo($tipo, $subtipo = 'text')
     {
+        $this->camposSelecionados = [];
         $this->painelCampoAtivo = true;
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
@@ -695,6 +733,7 @@ class DynamicFields extends Component
     public function editar($id)
     {
         $campo = CampoFormulario::findOrFail($id);
+        $this->camposSelecionados = [(string) $campo->id];
         $this->painelCampoAtivo = true;
         $this->campoId = $campo->id;
         $this->etapa = $campo->etapa;
@@ -770,6 +809,7 @@ class DynamicFields extends Component
 
     public function cancelarEdicao()
     {
+        $this->camposSelecionados = [];
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
