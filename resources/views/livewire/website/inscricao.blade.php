@@ -606,7 +606,16 @@
                         Fique de olho em nossas redes sociais, em breve divulgaremos a lista de selecionados.<br>
                         Qualquer dúvida, acione nossa Central de Atendimento. Desejamos muito sucesso!
                     </p>
-                    <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">Voltar ao Início</button>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <button type="button" wire:click="baixarFichaPdf" wire:loading.attr="disabled" class="bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 inline-flex items-center gap-2">
+                            <i class="ph-bold ph-file-pdf text-lg" wire:loading.remove wire:target="baixarFichaPdf"></i>
+                            <i class="ph-bold ph-spinner animate-spin text-lg" wire:loading wire:target="baixarFichaPdf"></i>
+                            <span>Baixar Ficha de Inscrição (PDF)</span>
+                        </button>
+                        <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">
+                            Voltar ao Início
+                        </button>
+                    </div>
                 </div>
                 @endif
 
@@ -619,7 +628,16 @@
                     <p class="text-gray-700 dark:text-gray-300 mb-8 leading-relaxed font-medium">
                         Seus dados foram salvos no banco de dados. Enviaremos uma notificação assim que novas vagas forem abertas para o seu perfil e localidade.
                     </p>
-                    <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">Voltar ao Início</button>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <button type="button" wire:click="baixarFichaPdf" wire:loading.attr="disabled" class="bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 inline-flex items-center gap-2">
+                            <i class="ph-bold ph-file-pdf text-lg" wire:loading.remove wire:target="baixarFichaPdf"></i>
+                            <i class="ph-bold ph-spinner animate-spin text-lg" wire:loading wire:target="baixarFichaPdf"></i>
+                            <span>Baixar Comprovante (PDF)</span>
+                        </button>
+                        <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">
+                            Voltar ao Início
+                        </button>
+                    </div>
                 </div>
                 @endif
                 

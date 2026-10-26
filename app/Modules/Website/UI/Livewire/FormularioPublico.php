@@ -13,6 +13,7 @@ use App\Models\RespostaFormulario;
 class FormularioPublico extends Component
 {
     use WithFileUploads;
+    use \App\Traits\WithFichaPdfDownload;
 
     public Formulario $formulario;
     public $respostaId = null;

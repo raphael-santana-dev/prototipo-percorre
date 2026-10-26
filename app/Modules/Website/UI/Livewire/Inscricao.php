@@ -20,6 +20,7 @@ class Inscricao extends Component
 {
     use \App\Traits\WithCepConsulta;
     use WithFileUploads;
+    use \App\Traits\WithFichaPdfDownload;
 
     public bool $isPreview = false;
     public bool $isTeste = false; // Flag do Modo Sandbox (Solicitação 4)

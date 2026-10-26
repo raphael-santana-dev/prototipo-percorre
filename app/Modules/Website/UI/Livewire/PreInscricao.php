@@ -16,6 +16,7 @@ use App\Modules\Turno\Domain\Models\Turno;
 class PreInscricao extends Component
 {
     use WithFileUploads;
+    use \App\Traits\WithFichaPdfDownload;
 
     public Formulario $formulario;
     public $respostaId = null;

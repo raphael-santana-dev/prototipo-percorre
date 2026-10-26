@@ -81,14 +81,14 @@
         @endif
 
         @if($finalizado)
-            <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-emerald-500 transition-all duration-300">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-sm dark:bg-emerald-900/30 dark:border-emerald-800">
-                    <i class="ph-fill ph-check-circle text-4xl"></i>
-                </div>
-                <h2 class="text-3xl font-extrabold {{ $textoForm }} mb-4">Interesse Registado!</h2>
-                <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-lg mx-auto">Agradecemos o seu interesse. Entraremos em contacto assim que abrirmos novas turmas.</p>
-                
-                <button type="button" onclick="window.location.reload()" class="mt-8 inline-flex items-center gap-2 bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
+            <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button type="button" wire:click="baixarFichaPdf" wire:loading.attr="disabled" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow-sm transition duration-200">
+                    <i class="ph-bold ph-file-pdf text-lg" wire:loading.remove wire:target="baixarFichaPdf"></i>
+                    <i class="ph-bold ph-spinner animate-spin text-lg" wire:loading wire:target="baixarFichaPdf"></i>
+                    <span>Baixar Ficha Preenchida (PDF)</span>
+                </button>
+
+                <button type="button" onclick="window.location.reload()" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
                     <i class="ph-bold ph-arrow-counter-clockwise"></i> Preencher Novamente
                 </button>
             </div>
