@@ -175,7 +175,7 @@
                         <i class="ph-fill ph-squares-four text-purpura-600 text-base"></i> Tipos de Inputs
                     </span>
                     @if($campoId)
-                        <button type="button" wire:click="cancelarEdicao" class="text-[10px] font-bold text-purpura-600 hover:underline flex items-center gap-1">
+                        <button type="button" wire:click="iniciarNovoCampo" class="text-[10px] font-bold text-purpura-600 hover:underline flex items-center gap-1">
                             <i class="ph-bold ph-plus"></i> Novo
                         </button>
                     @endif
@@ -187,43 +187,43 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Texto e Entradas</p>
                         <div class="grid grid-cols-2 gap-1.5">
-                            <button type="button" wire:click="setTipo('text', 'text')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'text' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-text-t text-base {{ $tipo == 'text' && $subtipo == 'text' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'text')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'text' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-text-t text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'text' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Texto Curto</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'email')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'email' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-envelope-simple text-base {{ $tipo == 'text' && $subtipo == 'email' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'email')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'email' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-envelope-simple text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'email' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">E-mail</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'number')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'number' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-hash text-base {{ $tipo == 'text' && $subtipo == 'number' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'number')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'number' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-hash text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'number' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Número</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'money')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'money' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-currency-circle-dollar text-base {{ $tipo == 'text' && $subtipo == 'money' ? 'text-purpura-600' : 'text-emerald-600' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'money')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'money' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-currency-circle-dollar text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'money' ? 'text-purpura-600' : 'text-emerald-600' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Moeda (R$)</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'tel')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'tel' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-device-mobile text-base {{ $tipo == 'text' && $subtipo == 'tel' ? 'text-purpura-600' : 'text-blue-500' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'tel')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'tel' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-device-mobile text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'tel' ? 'text-purpura-600' : 'text-blue-500' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Telefone</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'cpf')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cpf' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-identification-card text-base {{ $tipo == 'text' && $subtipo == 'cpf' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'cpf')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cpf' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-identification-card text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cpf' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
                                 <span class="text-[11px] font-bold truncate">CPF</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'cnpj')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cnpj' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-buildings text-base {{ $tipo == 'text' && $subtipo == 'cnpj' ? 'text-purpura-600' : 'text-amber-600' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'cnpj')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cnpj' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-buildings text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cnpj' ? 'text-purpura-600' : 'text-amber-600' }}"></i>
                                 <span class="text-[11px] font-bold truncate">CNPJ</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'cep')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'cep' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-map-pin-line text-base {{ $tipo == 'text' && $subtipo == 'cep' ? 'text-purpura-600' : 'text-rose-500' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'cep')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cep' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-map-pin-line text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'cep' ? 'text-purpura-600' : 'text-rose-500' }}"></i>
                                 <span class="text-[11px] font-bold truncate">CEP (ViaCEP)</span>
                             </button>
                         </div>
@@ -233,18 +233,18 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Datas e Horas</p>
                         <div class="grid grid-cols-2 gap-1.5">
-                            <button type="button" wire:click="setTipo('text', 'date')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'date' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-calendar-blank text-base {{ $tipo == 'text' && $subtipo == 'date' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'date')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'date' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-calendar-blank text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'date' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Data</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'time')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'time' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-clock text-base {{ $tipo == 'text' && $subtipo == 'time' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'time')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'time' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-clock text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'time' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Hora</span>
                             </button>
 
-                            <button type="button" wire:click="setTipo('text', 'datetime-local')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'text' && $subtipo == 'datetime-local' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-calendar-check text-base {{ $tipo == 'text' && $subtipo == 'datetime-local' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('text', 'datetime-local')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'datetime-local' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-calendar-check text-base {{ $painelCampoAtivo && $tipo == 'text' && $subtipo == 'datetime-local' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Data e Hora Completa</span>
                             </button>
                         </div>
@@ -254,16 +254,16 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Anexos e Assinatura</p>
                         <div class="grid grid-cols-1 gap-1.5">
-                            <button type="button" wire:click="setTipo('signature', 'usuario')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'signature' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-signature text-xl {{ $tipo == 'signature' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
+                            <button type="button" wire:click="setTipo('signature', 'usuario')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'signature' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-signature text-xl {{ $painelCampoAtivo && $tipo == 'signature' ? 'text-purpura-600' : 'text-indigo-500' }}"></i>
                                 <div class="flex flex-col min-w-0">
                                     <span class="text-xs font-bold">Assinatura à Mão</span>
                                     <span class="text-[10px] text-gray-500 truncate">Desenho (Utilizador/Responsável)</span>
                                 </div>
                             </button>
 
-                            <button type="button" wire:click="setTipo('file', 'file')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'file' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-upload-simple text-xl {{ $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('file', 'file')" class="flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'file' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-upload-simple text-xl {{ $painelCampoAtivo && $tipo == 'file' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <div class="flex flex-col min-w-0">
                                     <span class="text-xs font-bold">Upload / Anexos</span>
                                     <span class="text-[10px] text-gray-500 truncate">Imagens, vídeos e documentos</span>
@@ -276,28 +276,28 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Seleção e Escolhas</p>
                         <div class="grid grid-cols-2 gap-1.5">
-                            <button type="button" wire:click="setTipo('select')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'select' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-caret-circle-down text-base {{ $tipo == 'select' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('select')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'select' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-caret-circle-down text-base {{ $painelCampoAtivo && $tipo == 'select' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Dropdown</span>
                             </button>
-                            <button type="button" wire:click="setTipo('radio')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'radio' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-radio-button text-base {{ $tipo == 'radio' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('radio')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'radio' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-radio-button text-base {{ $painelCampoAtivo && $tipo == 'radio' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Múltipla Esc.</span>
                             </button>
-                            <button type="button" wire:click="setTipo('check')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'check' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-check-square-offset text-base {{ $tipo == 'check' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('check')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'check' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-check-square-offset text-base {{ $painelCampoAtivo && $tipo == 'check' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Checkboxes</span>
                             </button>
-                            <button type="button" wire:click="setTipo('scale')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'scale' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-linear-scale text-base {{ $tipo == 'scale' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('scale')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'scale' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-linear-scale text-base {{ $painelCampoAtivo && $tipo == 'scale' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Escala Num.</span>
                             </button>
-                            <button type="button" wire:click="setTipo('matriz')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-table text-base {{ $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('matriz')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'matriz' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-table text-base {{ $painelCampoAtivo && $tipo == 'matriz' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Matriz</span>
                             </button>
-                            <button type="button" wire:click="setTipo('rating')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-star text-base {{ $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('rating')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'rating' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-star text-base {{ $painelCampoAtivo && $tipo == 'rating' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Estrelas</span>
                             </button>
                         </div>
@@ -307,32 +307,32 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Links, Documentos e Layout</p>
                         <div class="grid grid-cols-2 gap-1.5">
-                            <button type="button" wire:click="setTipo('link', 'link')" class="col-span-2 flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $tipo == 'link' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-link-simple text-xl {{ $tipo == 'link' ? 'text-purpura-600' : 'text-blue-600' }}"></i>
+                            <button type="button" wire:click="setTipo('link', 'link')" class="col-span-2 flex items-center gap-3 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'link' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-link-simple text-xl {{ $painelCampoAtivo && $tipo == 'link' ? 'text-purpura-600' : 'text-blue-600' }}"></i>
                                 <div class="flex flex-col min-w-0">
                                     <span class="text-xs font-bold">Link externo</span>
                                     <span class="text-[10px] text-gray-500 truncate">URL externa, página ou PDF/Word/Excel</span>
                                 </div>
                             </button>
 
-                            <button type="button" wire:click="setTipo('html', 'p')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'html' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-article text-base {{ $tipo == 'html' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('html', 'p')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'html' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-article text-base {{ $painelCampoAtivo && $tipo == 'html' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Texto / Aviso</span>
                             </button>
-                            <button type="button" wire:click="setTipo('media', 'image')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'media' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-image text-base {{ $tipo == 'media' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('media', 'image')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'media' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-image text-base {{ $painelCampoAtivo && $tipo == 'media' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Mídia Visual</span>
                             </button>
-                            <button type="button" wire:click="setTipo('social')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'social' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-share-network text-base {{ $tipo == 'social' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('social')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'social' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-share-network text-base {{ $painelCampoAtivo && $tipo == 'social' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Redes Sociais</span>
                             </button>
-                            <button type="button" wire:click="setTipo('divider')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'divider' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-minus text-base {{ $tipo == 'divider' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('divider')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'divider' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-minus text-base {{ $painelCampoAtivo && $tipo == 'divider' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Divisória</span>
                             </button>
-                            <button type="button" wire:click="setTipo('spacer', 'spacer')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'spacer' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-arrows-out-line-horizontal text-base {{ $tipo == 'spacer' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('spacer', 'spacer')" class="col-span-2 flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'spacer' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-arrows-out-line-horizontal text-base {{ $painelCampoAtivo && $tipo == 'spacer' ? 'text-purpura-500' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold truncate">Espaço em Branco (Colunas)</span>
                             </button>
                         </div>
@@ -341,19 +341,19 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Integração do Sistema</p>
                         <div class="grid grid-cols-1 gap-1.5">
-                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-buildings text-base {{ $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('system', 'unidade')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'unidade' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-buildings text-base {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'unidade' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold">Unidades Ativas</span>
                             </button>
-                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-graduation-cap text-base {{ $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('system', 'curso')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'curso' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-graduation-cap text-base {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'curso' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold">Cursos Ativos</span>
                             </button>
-                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
-                                <i class="ph-bold ph-clock text-base {{ $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
+                            <button type="button" wire:click="setTipo('system', 'turno')" class="flex items-center gap-2 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'turno' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 hover:border-purpura-300 text-gray-700' }}">
+                                <i class="ph-bold ph-clock text-base {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'turno' ? 'text-purpura-600' : 'text-gray-400' }}"></i>
                                 <span class="text-[11px] font-bold">Turnos Ativos</span>
                             </button>
-                            <button type="button" wire:click="setTipo('system', 'combo_academico')" class="flex items-center gap-2.5 p-2.5 border rounded-lg text-left transition {{ $tipo == 'system' && $subtipo == 'combo_academico' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-purpura-200 bg-purpura-50/30 hover:border-purpura-400 text-gray-800' }}">
+                            <button type="button" wire:click="setTipo('system', 'combo_academico')" class="flex items-center gap-2.5 p-2.5 border rounded-lg text-left transition {{ $painelCampoAtivo && $tipo == 'system' && $subtipo == 'combo_academico' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-purpura-200 bg-purpura-50/30 hover:border-purpura-400 text-gray-800' }}">
                                 <i class="ph-bold ph-tree-structure text-lg text-purpura-600"></i>
                                 <div class="flex flex-col min-w-0">
                                     <span class="text-[11px] font-extrabold text-purpura-900">Conjunto Unidade / Curso / Turno</span>
@@ -423,13 +423,52 @@
                                    value="{{ $et->nome }}" 
                                    class="w-28 border-none focus:ring-0 text-xs font-bold text-gray-700 px-2.5 py-1.5 bg-transparent">
                             @if($etapasDisponiveis->count() > 1)
-                                <button type="button" wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página vazia?" class="px-2 py-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
+                                <button type="button" wire:click="excluirEtapa({{ $et->id }})" wire:confirm="Excluir esta página? As páginas seguintes serão renumeradas automaticamente." class="px-2 py-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition border-l border-gray-100">
                                     <i class="ph-bold ph-trash"></i>
                                 </button>
                             @endif
                         </div>
                     @endforeach
                 </div>
+
+                <!-- BARRA DE MOVIMENTAÇÃO EM LOTE (MULTI-SELECT) -->
+                @if(count($camposSelecionados) > 0)
+                    <div class="bg-gray-900 text-white px-5 py-2.5 border-b border-gray-800 flex flex-wrap items-center justify-between gap-3 shrink-0 relative z-30 shadow-md">
+                        <div class="flex items-center gap-2.5">
+                            <span class="px-2 py-0.5 bg-purpura-600 rounded text-xs font-extrabold">{{ count($camposSelecionados) }}</span>
+                            <span class="text-xs font-bold">input(s) selecionado(s)</span>
+                            <button type="button" wire:click="selecionarTodosDaEtapa({{ $etapa }})" class="text-[11px] font-semibold text-purpura-300 hover:underline ml-2">
+                                Selecionar/Desmarcar Página #{{ $etapa }}
+                            </button>
+                            <button type="button" wire:click="limparSelecaoCampos" class="text-[11px] text-gray-400 hover:text-white ml-2">
+                                Limpar seleção
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" wire:click="moverSelecionadosNaMesmaEtapa('topo')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-bold flex items-center gap-1 border border-gray-700 transition" title="Mover selecionados para o início da página">
+                                <i class="ph-bold ph-arrow-line-up text-purpura-400"></i> Início da Pág.
+                            </button>
+                            <button type="button" wire:click="moverSelecionadosNaMesmaEtapa('fim')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-bold flex items-center gap-1 border border-gray-700 transition" title="Mover selecionados para o fim da página">
+                                <i class="ph-bold ph-arrow-line-down text-purpura-400"></i> Fim da Pág.
+                            </button>
+
+                            @if($etapasDisponiveis->count() > 1)
+                                <div class="flex items-center gap-1.5 pl-2 border-l border-gray-700">
+                                    <select wire:model="etapaDestinoLote" class="bg-gray-800 border-gray-700 text-white text-xs rounded-lg py-1 pl-2.5 pr-7 focus:ring-purpura-500">
+                                        <option value="">Mover para página...</option>
+                                        @foreach($etapasDisponiveis as $etDestino)
+                                            <option value="{{ $etDestino->numero }}">Página #{{ $etDestino->numero }} - {{ $etDestino->nome }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="moverCamposSelecionadosParaEtapa" class="px-3 py-1 bg-purpura-600 hover:bg-purpura-700 text-white rounded-lg text-xs font-bold transition shadow-xs">
+                                        Mover Selecionados
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
 
                 <!-- CANVAS DE PREVIEW (SCROLLÁVEL) -->
                 <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center z-10">
@@ -438,7 +477,7 @@
                         <div class="mb-8 border-b border-gray-200 pb-4 flex items-center justify-between">
                             <div>
                                 <h2 class="text-2xl font-extrabold {{ $textoForm }}">{{ $contextoNome }}</h2>
-                                <p class="text-xs text-gray-500 mt-0.5">Clique num bloco abaixo para editar as definições à direita.</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Clique num bloco abaixo para editar ou marque as caixas para mover múltiplos inputs.</p>
                             </div>
                         </div>
 
@@ -473,6 +512,9 @@
                                         }
                                     @endphp
                                     <h3 class="text-lg font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
+                                    <button type="button" wire:click="selecionarTodosDaEtapa({{ $numEtapa }})" class="text-[10px] font-bold text-purpura-600 hover:underline px-2 py-0.5 rounded bg-purpura-50 border border-purpura-200">
+                                        Selecionar página
+                                    </button>
                                     <div class="flex-1 h-px ml-2 bg-gray-200"></div>
                                 </div>
 
@@ -511,6 +553,7 @@
                                             @foreach($grupo['campos'] as $c)
                                                 @php 
                                                     $isActive = $campoId == $c->id; 
+                                                    $isSelecionadoLote = in_array((string) $c->id, $camposSelecionados, true);
                                                     $larguraSolicitada = (int) $c->largura;
 
                                                     if ($larguraSolicitada === 0) {
@@ -552,7 +595,7 @@
                                                     }
                                                 @endphp
 
-                                                <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60' }}" wire:click="editar({{ $c->id }})">
+                                                <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : ($isSelecionadoLote ? 'ring-2 ring-indigo-500 bg-indigo-50/30 p-3' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60') }}" wire:click="editar({{ $c->id }})">
                                                     
                                                     <div class="absolute right-2 -top-3 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
                                                         <button type="button" wire:click.stop="editar({{ $c->id }})" class="p-1.5 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-sm"></i></button>
@@ -561,9 +604,16 @@
 
                                                     <div class="relative z-10">
                                                         <div class="flex justify-between items-start mb-1.5 gap-2">
-                                                            @if(!in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link']))
-                                                                <div class="flex items-center gap-1.5 flex-wrap">
-                                                                    <label class="block text-xs font-bold text-gray-800">
+                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                                {{-- Checkbox para selecionar múltiplos inputs --}}
+                                                                <input type="checkbox"
+                                                                       wire:click.stop="toggleSelecionarCampo({{ $c->id }})"
+                                                                       @checked($isSelecionadoLote)
+                                                                       class="w-3.5 h-3.5 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 cursor-pointer shrink-0"
+                                                                       title="Selecionar para mover em lote">
+
+                                                                @if(!in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link']))
+                                                                    <label class="block text-xs font-bold text-gray-800 cursor-pointer">
                                                                         @if($c->tipo === 'signature')
                                                                             {!! formatRichFormText($c->label ?: (($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura')) !!}
                                                                         @else
@@ -590,10 +640,8 @@
                                                                             </div>
                                                                         </div>
                                                                     @endif
-                                                                </div>
-                                                            @else
-                                                                <span></span>
-                                                            @endif
+                                                                @endif
+                                                            </div>
                                                             <span class="text-[10px] font-mono font-bold bg-white text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 shrink-0">#{{ $c->ordem }}</span>
                                                         </div>
 
@@ -615,6 +663,8 @@
                                                                 </div>
                                                                 @if($c->subtipo === 'cep' && !empty($cfg['viacep']))
                                                                     <span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[9px] font-bold shrink-0">ViaCEP Ativo</span>
+                                                                @elseif($c->subtipo === 'date' && !empty($cfg['calcular_idade']))
+                                                                    <span class="px-1.5 py-0.5 bg-purpura-50 text-purpura-700 border border-purpura-200 rounded text-[9px] font-bold shrink-0"><i class="ph-fill ph-cake"></i> Calcula Idade</span>
                                                                 @elseif(!empty($cfg['viacep_parent']))
                                                                     <span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[9px] font-bold shrink-0">Auto (ViaCEP)</span>
                                                                 @endif
@@ -830,225 +880,189 @@
                                     <i class="ph ph-list-plus text-3xl text-gray-400"></i>
                                 </div>
                                 <h3 class="text-base font-bold text-gray-900 mb-1">Formulário Vazio</h3>
-                                <p class="text-gray-500 text-xs max-w-xs">Selecione um tipo de input na coluna da esquerda e configure-o na coluna da direita.</p>
+                                <p class="text-gray-500 text-xs max-w-xs">Selecione um tipo de input na coluna da esquerda para iniciar a configuração.</p>
                             </div>
                         @endforelse
                     </div>
                 </div>
             </div>
 
-            <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO -->
+            <!-- COLUNA 3 (DIREITA): CONFIGURAÇÃO DO INPUT ATIVO (SÓ APARECE QUANDO SELECIONADO) -->
             <aside class="w-80 xl:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
-                <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                        <i class="ph-fill ph-sliders text-purpura-600 text-base"></i> {{ $campoId ? 'Editar Input' : 'Configurar Input' }}
-                    </span>
-                    @if($campoId)
-                        <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-indigo-200">Em Edição</span>
-                    @endif
-                </div>
-
-                <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
-                    <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-4">
-                        
-                        <!-- PÁGINA E ORDEM -->
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Página (Fase) e Posição</label>
-                            <div class="grid grid-cols-2 gap-2.5">
-                                <select wire:model.live="etapa" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700">
-                                    @foreach($etapasDisponiveis as $et)
-                                        <option value="{{ $et->numero }}">{{ $et->nome }}</option>
-                                    @endforeach
-                                </select>
-                                <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700 text-center">
-                            </div>
-                            @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
-
-                            @if($etapa == 1 && $contextoTipo === 'ciclo')
-                                <label class="flex items-center gap-2.5 p-2.5 mt-2.5 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer">
-                                    <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300">
-                                    <div class="flex flex-col">
-                                        <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
-                                        <span class="text-[10px] text-indigo-700">Antes dos dados pessoais fixos.</span>
-                                    </div>
-                                </label>
+                @if($painelCampoAtivo || $campoId)
+                    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                            <i class="ph-fill ph-sliders text-purpura-600 text-base"></i> {{ $campoId ? 'Editar Input' : 'Novo Input' }}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            @if($campoId)
+                                <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-indigo-200">Em Edição</span>
                             @endif
+                            <button type="button" wire:click="cancelarEdicao" class="text-gray-400 hover:text-red-500 p-1 rounded transition" title="Fechar painel">
+                                <i class="ph-bold ph-x text-sm"></i>
+                            </button>
                         </div>
+                    </div>
 
-                        <hr class="border-gray-100">
-
-                        <!-- TÍTULO / LABEL COM EDITOR QUILL BÁSICO -->
-                        @if(!in_array($tipo, ['divider', 'spacer']))
+                    <form wire:submit.prevent="salvar" class="flex-1 flex flex-col overflow-hidden">
+                        <div class="p-5 overflow-y-auto flex-1 custom-scrollbar space-y-4">
+                            
+                            <!-- PÁGINA E ORDEM -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                    {{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : ($tipo === 'link' ? 'Texto de Exibição do Link / Botão' : 'Título da Pergunta') }} <span class="text-red-500">*</span>
-                                </label>
-                                
-                                <div class="builder-quill"
-                                     wire:ignore
-                                     x-data="{
-                                        val: @entangle('label').live,
-                                        quill: null,
-                                        init() {
-                                            this.quill = new Quill(this.$refs.editorLabel, {
-                                                theme: 'snow',
-                                                placeholder: 'Digite e formate o texto...',
-                                                modules: {
-                                                    toolbar: [
-                                                        ['bold', 'italic', 'underline', 'strike'],
-                                                        [{ 'size': ['small', false, 'large', 'huge'] }],
-                                                        [{ 'color': [] }, { 'background': [] }],
-                                                        ['clean']
-                                                    ]
-                                                }
-                                            });
-                                            this.quill.root.innerHTML = this.val || '';
-                                            this.quill.on('text-change', () => {
-                                                let html = this.quill.root.innerHTML;
-                                                this.val = (html === '<p><br></p>') ? '' : html;
-                                            });
-                                            window.addEventListener('sincronizar-quill-builder', () => {
-                                                setTimeout(() => {
-                                                    if (this.quill.root.innerHTML !== (this.val || '')) {
-                                                        this.quill.root.innerHTML = this.val || '';
-                                                    }
-                                                }, 50);
-                                            });
-                                        }
-                                     }">
-                                    <div x-ref="editorLabel"></div>
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Página (Fase) e Posição</label>
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <select wire:model.live="etapa" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700">
+                                        @foreach($etapasDisponiveis as $et)
+                                            <option value="{{ $et->numero }}">{{ $et->nome }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="number" wire:model="ordem" min="1" max="{{ $this->limiteOrdem() }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-gray-50 font-semibold text-gray-700 text-center">
                                 </div>
-                            </div>
-                        @endif
+                                @error('ordem') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
 
-                        <!-- ID NO BANCO E LARGURA -->
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">ID no Banco <span class="text-red-500">*</span></label>
-                                <input type="text" wire:model="name" class="w-full text-[11px] rounded-lg border-gray-300 shadow-sm bg-gray-100 text-gray-600 font-mono">
-                                @error('name') <span class="text-[10px] text-red-500 mt-0.5 block">{{ $message }}</span> @enderror
+                                @if($etapa == 1 && $contextoTipo === 'ciclo')
+                                    <label class="flex items-center gap-2.5 p-2.5 mt-2.5 border border-indigo-200 bg-indigo-50 rounded-lg cursor-pointer">
+                                        <input type="checkbox" wire:model="configuracoes.exibir_no_topo" class="h-4 w-4 text-indigo-600 rounded border-indigo-300">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs text-indigo-900 font-bold">Exibir no Topo da Etapa 1</span>
+                                            <span class="text-[10px] text-indigo-700">Antes dos dados pessoais fixos.</span>
+                                        </div>
+                                    </label>
+                                @endif
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">Largura na Grelha</label>
-                                <select wire:model="largura" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
-                                    <option value="12">100% (12/12)</option>
-                                    <option value="9">75% (9/12)</option>
-                                    <option value="8">66% (8/12)</option>
-                                    <option value="6">50% (6/12)</option>
-                                    <option value="4">33% (4/12)</option>
-                                    <option value="3">25% (3/12)</option>
-                                    <option value="2">16% (2/12)</option>
-                                    <option value="1">8% (1/12)</option>
-                                    <option value="0">Ocupar Restante</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <!-- ========================================================= -->
-                        <!-- NOVA CONFIGURAÇÃO: DICAS E ORIENTAÇÕES (LEGENDA / TOOLTIP / AMBOS) -->
-                        <!-- ========================================================= -->
-                        @if(!in_array($tipo, ['divider', 'spacer']))
-                            <div class="p-3.5 bg-purpura-50/40 border border-purpura-200 rounded-lg space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <i class="ph-fill ph-lightbulb text-purpura-600 text-base"></i> Dicas e Orientações
-                                    </h5>
-                                </div>
+                            <hr class="border-gray-100">
 
+                            <!-- TÍTULO / LABEL COM EDITOR QUILL BÁSICO -->
+                            @if(!in_array($tipo, ['divider', 'spacer']))
                                 <div>
-                                    <label class="block text-[11px] font-bold text-gray-700 mb-1">Exibição da Dica no Input</label>
-                                    <select wire:model.live="configuracoes.dica_modo" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
-                                        <option value="nenhum">Sem dica / orientação</option>
-                                        <option value="legenda">Abaixo do input (Legenda)</option>
-                                        <option value="tooltip">Ícone ao lado do título (Tooltip)</option>
-                                        <option value="ambos">Ambos (Legenda + Tooltip)</option>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                        {{ in_array($tipo, ['html', 'media']) ? 'Conteúdo Principal (Texto/Título)' : ($tipo === 'link' ? 'Texto de Exibição do Link / Botão' : 'Título da Pergunta') }} <span class="text-red-500">*</span>
+                                    </label>
+                                    
+                                    <div class="builder-quill"
+                                         wire:ignore
+                                         x-data="{
+                                            val: @entangle('label').live,
+                                            quill: null,
+                                            init() {
+                                                this.quill = new Quill(this.$refs.editorLabel, {
+                                                    theme: 'snow',
+                                                    placeholder: 'Digite e formate o texto...',
+                                                    modules: {
+                                                        toolbar: [
+                                                            ['bold', 'italic', 'underline', 'strike'],
+                                                            [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                            [{ 'color': [] }, { 'background': [] }],
+                                                            ['clean']
+                                                        ]
+                                                    }
+                                                });
+                                                this.quill.root.innerHTML = this.val || '';
+                                                this.quill.on('text-change', () => {
+                                                    let html = this.quill.root.innerHTML;
+                                                    this.val = (html === '<p><br></p>') ? '' : html;
+                                                });
+                                                window.addEventListener('sincronizar-quill-builder', () => {
+                                                    setTimeout(() => {
+                                                        if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                            this.quill.root.innerHTML = this.val || '';
+                                                        }
+                                                    }, 50);
+                                                });
+                                            }
+                                         }">
+                                        <div x-ref="editorLabel"></div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- ID NO BANCO E LARGURA -->
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">ID no Banco <span class="text-red-500">*</span></label>
+                                    <input type="text" wire:model="name" class="w-full text-[11px] rounded-lg border-gray-300 shadow-sm bg-gray-100 text-gray-600 font-mono">
+                                    @error('name') <span class="text-[10px] text-red-500 mt-0.5 block">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">Largura na Grelha</label>
+                                    <select wire:model="largura" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                        <option value="12">100% (12/12)</option>
+                                        <option value="9">75% (9/12)</option>
+                                        <option value="8">66% (8/12)</option>
+                                        <option value="6">50% (6/12)</option>
+                                        <option value="4">33% (4/12)</option>
+                                        <option value="3">25% (3/12)</option>
+                                        <option value="2">16% (2/12)</option>
+                                        <option value="1">8% (1/12)</option>
+                                        <option value="0">Ocupar Restante</option>
                                     </select>
                                 </div>
+                            </div>
 
-                                @if(($configuracoes['dica_modo'] ?? 'nenhum') !== 'nenhum')
-                                    <!-- 1ª DICA / ORIENTAÇÃO -->
-                                    <div class="p-3 bg-white border border-gray-200 rounded-lg space-y-2.5">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[11px] font-extrabold text-purpura-700 uppercase">
-                                                {{ ($configuracoes['dica_modo'] ?? '') === 'ambos' ? '1ª Dica / Orientação' : 'Texto da Dica / Orientação' }}
+                            <!-- ========================================================= -->
+                            <!-- CONFIGURAÇÃO: DATA DE NASCIMENTO (CALCULAR IDADE)         -->
+                            <!-- ========================================================= -->
+                            @if($tipo === 'text' && $subtipo === 'date')
+                                <div class="p-3.5 bg-purpura-50/50 border border-purpura-200 rounded-lg">
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="configuracoes.calcular_idade" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-gray-900 flex items-center gap-1">
+                                                <i class="ph-fill ph-cake text-purpura-600"></i> Data de Nascimento (Calcular Idade)
+                                            </span>
+                                            <span class="text-[10px] text-gray-600 leading-tight mt-0.5">
+                                                Calcula e exibe automaticamente a idade em anos ao preencher esta data no formulário.
                                             </span>
                                         </div>
+                                    </label>
+                                </div>
+                            @endif
 
-                                        @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 1ª dica</label>
-                                                <select wire:model.live="configuracoes.dica_1_tipo" class="w-full text-xs rounded-md border-gray-300">
-                                                    <option value="legenda">Legenda (Abaixo do Input)</option>
-                                                    <option value="tooltip">Tooltip (Ícone Interativo)</option>
-                                                </select>
-                                            </div>
-                                        @endif
-
-                                        @if((($configuracoes['dica_modo'] ?? '') === 'tooltip') || (($configuracoes['dica_modo'] ?? '') === 'ambos' && ($configuracoes['dica_1_tipo'] ?? 'legenda') === 'tooltip'))
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Como acionar o Tooltip?</label>
-                                                <select wire:model.live="configuracoes.dica_1_trigger" class="w-full text-xs rounded-md border-gray-300">
-                                                    <option value="hover">Ao passar o rato (Hover)</option>
-                                                    <option value="click">Ao clicar no ícone (Click)</option>
-                                                </select>
-                                            </div>
-                                        @endif
-
-                                        <div class="builder-quill"
-                                             wire:ignore
-                                             x-data="{
-                                                val: @entangle('configuracoes.dica_1_texto').live,
-                                                quill: null,
-                                                init() {
-                                                    this.quill = new Quill(this.$refs.editorDica1, {
-                                                        theme: 'snow',
-                                                        placeholder: 'Escreva a orientação aqui...',
-                                                        modules: {
-                                                            toolbar: [
-                                                                ['bold', 'italic', 'underline', 'strike'],
-                                                                [{ 'size': ['small', false, 'large', 'huge'] }],
-                                                                [{ 'color': [] }, { 'background': [] }],
-                                                                ['clean']
-                                                            ]
-                                                        }
-                                                    });
-                                                    this.quill.root.innerHTML = this.val || '';
-                                                    this.quill.on('text-change', () => {
-                                                        let html = this.quill.root.innerHTML;
-                                                        this.val = (html === '<p><br></p>') ? '' : html;
-                                                    });
-                                                    window.addEventListener('sincronizar-quill-builder', () => {
-                                                        setTimeout(() => {
-                                                            if (this.quill.root.innerHTML !== (this.val || '')) {
-                                                                this.quill.root.innerHTML = this.val || '';
-                                                            }
-                                                        }, 50);
-                                                    });
-                                                }
-                                             }">
-                                            <div x-ref="editorDica1"></div>
-                                        </div>
+                            <!-- ========================================================= -->
+                            <!-- DICAS E ORIENTAÇÕES (LEGENDA / TOOLTIP / AMBOS)           -->
+                            <!-- ========================================================= -->
+                            @if(!in_array($tipo, ['divider', 'spacer']))
+                                <div class="p-3.5 bg-purpura-50/40 border border-purpura-200 rounded-lg space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
+                                            <i class="ph-fill ph-lightbulb text-purpura-600 text-base"></i> Dicas e Orientações
+                                        </h5>
                                     </div>
 
-                                    <!-- 2ª DICA / ORIENTAÇÃO (APARECE QUANDO MODO = 'AMBOS') -->
-                                    @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-gray-700 mb-1">Exibição da Dica no Input</label>
+                                        <select wire:model.live="configuracoes.dica_modo" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500 bg-white">
+                                            <option value="nenhum">Sem dica / orientação</option>
+                                            <option value="legenda">Abaixo do input (Legenda)</option>
+                                            <option value="tooltip">Ícone ao lado do título (Tooltip)</option>
+                                            <option value="ambos">Ambos (Legenda + Tooltip)</option>
+                                        </select>
+                                    </div>
+
+                                    @if(($configuracoes['dica_modo'] ?? 'nenhum') !== 'nenhum')
+                                        <!-- 1ª DICA / ORIENTAÇÃO -->
                                         <div class="p-3 bg-white border border-gray-200 rounded-lg space-y-2.5">
                                             <div class="flex items-center justify-between">
-                                                <span class="text-[11px] font-extrabold text-indigo-700 uppercase">2ª Dica / Orientação</span>
+                                                <span class="text-[11px] font-extrabold text-purpura-700 uppercase">
+                                                    {{ ($configuracoes['dica_modo'] ?? '') === 'ambos' ? '1ª Dica / Orientação' : 'Texto da Dica / Orientação' }}
+                                                </span>
                                             </div>
 
-                                            <div>
-                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 2ª dica</label>
-                                                <select wire:model.live="configuracoes.dica_2_tipo" class="w-full text-xs rounded-md border-gray-300">
-                                                    <option value="tooltip">Tooltip (Ícone Interativo)</option>
-                                                    <option value="legenda">Legenda (Abaixo do Input)</option>
-                                                </select>
-                                            </div>
+                                            @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 1ª dica</label>
+                                                    <select wire:model.live="configuracoes.dica_1_tipo" class="w-full text-xs rounded-md border-gray-300">
+                                                        <option value="legenda">Legenda (Abaixo do Input)</option>
+                                                        <option value="tooltip">Tooltip (Ícone Interativo)</option>
+                                                    </select>
+                                                </div>
+                                            @endif
 
-                                            @if(($configuracoes['dica_2_tipo'] ?? 'tooltip') === 'tooltip')
+                                            @if((($configuracoes['dica_modo'] ?? '') === 'tooltip') || (($configuracoes['dica_modo'] ?? '') === 'ambos' && ($configuracoes['dica_1_tipo'] ?? 'legenda') === 'tooltip'))
                                                 <div>
                                                     <label class="block text-[10px] font-bold text-gray-600 mb-1">Como acionar o Tooltip?</label>
-                                                    <select wire:model.live="configuracoes.dica_2_trigger" class="w-full text-xs rounded-md border-gray-300">
+                                                    <select wire:model.live="configuracoes.dica_1_trigger" class="w-full text-xs rounded-md border-gray-300">
                                                         <option value="hover">Ao passar o rato (Hover)</option>
                                                         <option value="click">Ao clicar no ícone (Click)</option>
                                                     </select>
@@ -1058,12 +1072,12 @@
                                             <div class="builder-quill"
                                                  wire:ignore
                                                  x-data="{
-                                                    val: @entangle('configuracoes.dica_2_texto').live,
+                                                    val: @entangle('configuracoes.dica_1_texto').live,
                                                     quill: null,
                                                     init() {
-                                                        this.quill = new Quill(this.$refs.editorDica2, {
+                                                        this.quill = new Quill(this.$refs.editorDica1, {
                                                             theme: 'snow',
-                                                            placeholder: 'Escreva a segunda orientação aqui...',
+                                                            placeholder: 'Escreva a orientação aqui...',
                                                             modules: {
                                                                 toolbar: [
                                                                     ['bold', 'italic', 'underline', 'strike'],
@@ -1087,450 +1101,525 @@
                                                         });
                                                     }
                                                  }">
-                                                <div x-ref="editorDica2"></div>
+                                                <div x-ref="editorDica1"></div>
                                             </div>
+                                        </div>
+
+                                        <!-- 2ª DICA / ORIENTAÇÃO (APARECE QUANDO MODO = 'AMBOS') -->
+                                        @if(($configuracoes['dica_modo'] ?? '') === 'ambos')
+                                            <div class="p-3 bg-white border border-gray-200 rounded-lg space-y-2.5">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[11px] font-extrabold text-indigo-700 uppercase">2ª Dica / Orientação</span>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-gray-600 mb-1">Posição desta 2ª dica</label>
+                                                    <select wire:model.live="configuracoes.dica_2_tipo" class="w-full text-xs rounded-md border-gray-300">
+                                                        <option value="tooltip">Tooltip (Ícone Interativo)</option>
+                                                        <option value="legenda">Legenda (Abaixo do Input)</option>
+                                                    </select>
+                                                </div>
+
+                                                @if(($configuracoes['dica_2_tipo'] ?? 'tooltip') === 'tooltip')
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-gray-600 mb-1">Como acionar o Tooltip?</label>
+                                                        <select wire:model.live="configuracoes.dica_2_trigger" class="w-full text-xs rounded-md border-gray-300">
+                                                            <option value="hover">Ao passar o rato (Hover)</option>
+                                                            <option value="click">Ao clicar no ícone (Click)</option>
+                                                        </select>
+                                                    </div>
+                                                @endif
+
+                                                <div class="builder-quill"
+                                                     wire:ignore
+                                                     x-data="{
+                                                        val: @entangle('configuracoes.dica_2_texto').live,
+                                                        quill: null,
+                                                        init() {
+                                                            this.quill = new Quill(this.$refs.editorDica2, {
+                                                                theme: 'snow',
+                                                                placeholder: 'Escreva a segunda orientação aqui...',
+                                                                modules: {
+                                                                    toolbar: [
+                                                                        ['bold', 'italic', 'underline', 'strike'],
+                                                                        [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                                        [{ 'color': [] }, { 'background': [] }],
+                                                                        ['clean']
+                                                                    ]
+                                                                }
+                                                            });
+                                                            this.quill.root.innerHTML = this.val || '';
+                                                            this.quill.on('text-change', () => {
+                                                                let html = this.quill.root.innerHTML;
+                                                                this.val = (html === '<p><br></p>') ? '' : html;
+                                                            });
+                                                            window.addEventListener('sincronizar-quill-builder', () => {
+                                                                setTimeout(() => {
+                                                                    if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                                        this.quill.root.innerHTML = this.val || '';
+                                                                    }
+                                                                }, 50);
+                                                            });
+                                                        }
+                                                     }">
+                                                    <div x-ref="editorDica2"></div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endif
+                                </div>
+                            @endif
+
+                            <!-- ========================================================= -->
+                            <!-- CONFIGURAÇÕES ESPECÍFICAS: ASSINATURA À MÃO ('signature') -->
+                            <!-- ========================================================= -->
+                            @if($tipo === 'signature')
+                                <div class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3">
+                                    <h5 class="font-bold text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-bold ph-signature text-indigo-600 text-base"></i> Configuração da Assinatura
+                                    </h5>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1.5">Quem irá assinar este campo?</label>
+                                        <div class="space-y-2">
+                                            <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'usuario') === 'usuario' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
+                                                <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="usuario" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs font-bold text-gray-900">Assinatura do Utilizador</span>
+                                                    <span class="text-[10px] text-gray-500">Padrão: <strong>"Sua assinatura"</strong></span>
+                                                </div>
+                                            </label>
+                                            <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'responsavel') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
+                                                <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="responsavel" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs font-bold text-gray-900">Assinatura do Responsável</span>
+                                                    <span class="text-[10px] text-gray-500">Padrão: <strong>"Assinatura do responsável"</strong></span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- ========================================================= -->
+                            <!-- CONFIGURAÇÕES ESPECÍFICAS: LINK / ARQUIVO ('link')        -->
+                            <!-- ========================================================= -->
+                            @if($tipo === 'link')
+                                <div class="p-4 bg-blue-50/60 border border-blue-200 rounded-lg space-y-3.5">
+                                    <h5 class="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-bold ph-link-simple text-blue-600 text-base"></i> Configuração do Link / Arquivo
+                                    </h5>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Tipo de Destino</label>
+                                        <select wire:model.live="configuracoes.tipo_destino" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                            <option value="externo">Link Externo (URL Completa)</option>
+                                            <option value="interno">Página ou Rota Interna do Sistema</option>
+                                            <option value="arquivo">Arquivo Interno (Upload PDF, Word ou Excel)</option>
+                                        </select>
+                                    </div>
+
+                                    @if(($configuracoes['tipo_destino'] ?? 'externo') === 'arquivo')
+                                        <div class="space-y-3 pt-1">
+                                            <div>
+                                                <label class="block text-xs font-bold text-gray-700 mb-1">Upload do Documento (PDF, Word, Excel)</label>
+                                                <input type="file" wire:model="link_file_upload" accept=".pdf,.doc,.docx,.xls,.xlsx" class="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 bg-white border border-gray-300 rounded-lg p-1">
+                                                <div wire:loading wire:target="link_file_upload" class="text-[11px] text-blue-600 font-bold mt-1 flex items-center gap-1">
+                                                    <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo...
+                                                </div>
+                                                @error('link_file_upload') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+
+                                                @if(!empty($configuracoes['arquivo_nome']) && !$link_file_upload)
+                                                    <div class="mt-2 p-2 bg-white border border-blue-200 rounded flex items-center justify-between text-[11px]">
+                                                        <span class="font-bold text-gray-700 truncate"><i class="ph-fill ph-check-circle text-emerald-500 mr-1"></i> {{ $configuracoes['arquivo_nome'] }}</span>
+                                                        <span class="uppercase font-mono text-[10px] px-1.5 py-0.5 bg-gray-100 rounded">{{ $configuracoes['arquivo_extensao'] ?? '' }}</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            <div class="space-y-2 border-t border-blue-200/70 pt-2.5">
+                                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                                    <input type="checkbox" wire:model="configuracoes.abrir_preview" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-bold text-gray-800">Abrir pré-visualização no navegador</span>
+                                                        <span class="text-[10px] text-gray-500">Exibe o leitor integrado na própria página.</span>
+                                                    </div>
+                                                </label>
+
+                                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                                    <input type="checkbox" wire:model="configuracoes.permitir_download" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-bold text-gray-800">Permitir o download do arquivo</span>
+                                                        <span class="text-[10px] text-gray-500">Se desmarcado, oculta o botão de transferir.</span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                                {{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? 'Caminho Interno (ex: /portal ou /inscricao)' : 'URL Externa (https://...)' }}
+                                            </label>
+                                            <input type="text" wire:model="configuracoes.url" placeholder="{{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? '/portal' : 'https://exemplo.com.br' }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500">
+                                            @error('configuracoes.url') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                         </div>
                                     @endif
-                                @endif
-                            </div>
-                        @endif
-
-                        <!-- ========================================================= -->
-                        <!-- CONFIGURAÇÕES ESPECÍFICAS: ASSINATURA À MÃO ('signature') -->
-                        <!-- ========================================================= -->
-                        @if($tipo === 'signature')
-                            <div class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-3">
-                                <h5 class="font-bold text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-signature text-indigo-600 text-base"></i> Configuração da Assinatura
-                                </h5>
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Quem irá assinar este campo?</label>
-                                    <div class="space-y-2">
-                                        <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'usuario') === 'usuario' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
-                                            <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="usuario" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
-                                            <div class="flex flex-col">
-                                                <span class="text-xs font-bold text-gray-900">Assinatura do Utilizador</span>
-                                                <span class="text-[10px] text-gray-500">Padrão: <strong>"Sua assinatura"</strong></span>
-                                            </div>
-                                        </label>
-                                        <label class="flex items-start gap-2.5 p-2.5 bg-white border rounded-lg cursor-pointer transition {{ ($configuracoes['tipo_assinante'] ?? 'responsavel') === 'responsavel' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200' }}">
-                                            <input type="radio" wire:model.live="configuracoes.tipo_assinante" value="responsavel" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
-                                            <div class="flex flex-col">
-                                                <span class="text-xs font-bold text-gray-900">Assinatura do Responsável</span>
-                                                <span class="text-[10px] text-gray-500">Padrão: <strong>"Assinatura do responsável"</strong></span>
-                                            </div>
-                                        </label>
-                                    </div>
                                 </div>
-                            </div>
-                        @endif
+                            @endif
 
-                        <!-- ========================================================= -->
-                        <!-- CONFIGURAÇÕES ESPECÍFICAS: LINK / ARQUIVO ('link')        -->
-                        <!-- ========================================================= -->
-                        @if($tipo === 'link')
-                            <div class="p-4 bg-blue-50/60 border border-blue-200 rounded-lg space-y-3.5">
-                                <h5 class="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-link-simple text-blue-600 text-base"></i> Configuração do Link / Arquivo
-                                </h5>
-
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Tipo de Destino</label>
-                                    <select wire:model.live="configuracoes.tipo_destino" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <option value="externo">Link Externo (URL Completa)</option>
-                                        <option value="interno">Página ou Rota Interna do Sistema</option>
-                                        <option value="arquivo">Arquivo Interno (Upload PDF, Word ou Excel)</option>
-                                    </select>
-                                </div>
-
-                                @if(($configuracoes['tipo_destino'] ?? 'externo') === 'arquivo')
-                                    <div class="space-y-3 pt-1">
-                                        <div>
-                                            <label class="block text-xs font-bold text-gray-700 mb-1">Upload do Documento (PDF, Word, Excel)</label>
-                                            <input type="file" wire:model="link_file_upload" accept=".pdf,.doc,.docx,.xls,.xlsx" class="block w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 bg-white border border-gray-300 rounded-lg p-1">
-                                            <div wire:loading wire:target="link_file_upload" class="text-[11px] text-blue-600 font-bold mt-1 flex items-center gap-1">
-                                                <i class="ph-bold ph-spinner animate-spin"></i> A carregar arquivo...
-                                            </div>
-                                            @error('link_file_upload') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
-
-                                            @if(!empty($configuracoes['arquivo_nome']) && !$link_file_upload)
-                                                <div class="mt-2 p-2 bg-white border border-blue-200 rounded flex items-center justify-between text-[11px]">
-                                                    <span class="font-bold text-gray-700 truncate"><i class="ph-fill ph-check-circle text-emerald-500 mr-1"></i> {{ $configuracoes['arquivo_nome'] }}</span>
-                                                    <span class="uppercase font-mono text-[10px] px-1.5 py-0.5 bg-gray-100 rounded">{{ $configuracoes['arquivo_extensao'] ?? '' }}</span>
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        <div class="space-y-2 border-t border-blue-200/70 pt-2.5">
-                                            <label class="flex items-center gap-2.5 cursor-pointer">
-                                                <input type="checkbox" wire:model="configuracoes.abrir_preview" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
-                                                <div class="flex flex-col">
-                                                    <span class="text-xs font-bold text-gray-800">Abrir pré-visualização no navegador</span>
-                                                    <span class="text-[10px] text-gray-500">Exibe o leitor integrado na própria página.</span>
-                                                </div>
-                                            </label>
-
-                                            <label class="flex items-center gap-2.5 cursor-pointer">
-                                                <input type="checkbox" wire:model="configuracoes.permitir_download" class="rounded text-blue-600 border-gray-300 focus:ring-blue-500">
-                                                <div class="flex flex-col">
-                                                    <span class="text-xs font-bold text-gray-800">Permitir o download do arquivo</span>
-                                                    <span class="text-[10px] text-gray-500">Se desmarcado, oculta o botão de transferir.</span>
-                                                </div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                @else
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                                            {{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? 'Caminho Interno (ex: /portal ou /inscricao)' : 'URL Externa (https://...)' }}
-                                        </label>
-                                        <input type="text" wire:model="configuracoes.url" placeholder="{{ ($configuracoes['tipo_destino'] ?? 'externo') === 'interno' ? '/portal' : 'https://exemplo.com.br' }}" class="w-full text-xs rounded-lg border-gray-300 shadow-sm focus:border-blue-500">
-                                        @error('configuracoes.url') <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-
-                        <!-- ========================================================= -->
-                        <!-- CONFIGURAÇÕES ESPECÍFICAS: CEP COM VIACEP AUTOMÁTICO      -->
-                        <!-- ========================================================= -->
-                        @if($tipo === 'text' && $subtipo === 'cep')
-                            <div class="p-4 bg-rose-50/60 border border-rose-200 rounded-lg space-y-3">
-                                <h5 class="font-bold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-map-pin-line text-rose-600 text-base"></i> Automação ViaCEP
-                                </h5>
-                                <label class="flex items-start gap-2.5 cursor-pointer">
-                                    <input type="checkbox" wire:model.live="configuracoes.viacep" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
-                                    <div class="flex flex-col">
-                                        <span class="text-xs font-bold text-gray-900">Consultar ViaCEP automaticamente?</span>
-                                        <span class="text-[10px] text-gray-600 leading-tight mt-0.5">Ao digitar os 8 dígitos do CEP no formulário, consulta a API e preenche os campos de endereço.</span>
-                                    </div>
-                                </label>
-
-                                @if(!empty($configuracoes['viacep']) && !$campoId)
-                                    <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-rose-200/70">
-                                        <input type="checkbox" wire:model="configuracoes.criar_campos_endereco" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
+                            <!-- ========================================================= -->
+                            <!-- CONFIGURAÇÕES ESPECÍFICAS: CEP COM VIACEP AUTOMÁTICO      -->
+                            <!-- ========================================================= -->
+                            @if($tipo === 'text' && $subtipo === 'cep')
+                                <div class="p-4 bg-rose-50/60 border border-rose-200 rounded-lg space-y-3">
+                                    <h5 class="font-bold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-bold ph-map-pin-line text-rose-600 text-base"></i> Automação ViaCEP
+                                    </h5>
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="configuracoes.viacep" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
                                         <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-rose-900">Gerar campos de endereço automaticamente</span>
-                                            <span class="text-[10px] text-rose-700 leading-tight mt-0.5">Cria automaticamente: Logradouro, Número, Complemento, Bairro, Cidade e Estado (UF).</span>
+                                            <span class="text-xs font-bold text-gray-900">Consultar ViaCEP automaticamente?</span>
+                                            <span class="text-[10px] text-gray-600 leading-tight mt-0.5">Ao digitar os 8 dígitos do CEP no formulário, consulta a API e preenche os campos de endereço.</span>
                                         </div>
                                     </label>
-                                @endif
-                            </div>
-                        @endif
 
-                        <!-- CONFIGURAÇÕES DE TEXTO / NÚMEROS / MÁSCARAS -->
-                        @if($tipo === 'text' && in_array($subtipo, ['text', 'number', 'cpf', 'cnpj', 'tel', 'email']))
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                
-                                @if($subtipo === 'number')
+                                    @if(!empty($configuracoes['viacep']) && !$campoId)
+                                        <label class="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-rose-200/70">
+                                            <input type="checkbox" wire:model="configuracoes.criar_campos_endereco" class="mt-0.5 rounded text-rose-600 border-gray-300 focus:ring-rose-500">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-rose-900">Gerar campos de endereço automaticamente</span>
+                                                <span class="text-[10px] text-rose-700 leading-tight mt-0.5">Cria automaticamente: Logradouro, Número, Complemento, Bairro, Cidade e Estado (UF).</span>
+                                            </div>
+                                        </label>
+                                    @endif
+                                </div>
+                            @endif
+
+                            <!-- CONFIGURAÇÕES DE TEXTO / NÚMEROS / MÁSCARAS -->
+                            @if($tipo === 'text' && in_array($subtipo, ['text', 'number', 'cpf', 'cnpj', 'tel', 'email']))
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                                    
+                                    @if($subtipo === 'number')
+                                        <div class="grid grid-cols-2 gap-2.5">
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Mínimo</label>
+                                                <input type="number" wire:model="tamanho_min" class="w-full text-xs rounded-lg border-gray-300">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Máximo</label>
+                                                <input type="number" wire:model="tamanho_max" class="w-full text-xs rounded-lg border-gray-300">
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara do Input (x-mask)</label>
+                                            <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                        </div>
+                                    @endif
+
+                                    @if(in_array($subtipo, ['cpf', 'email']))
+                                        <div class="border-t border-gray-200 pt-3 space-y-2.5">
+                                            @if($subtipo === 'cpf')
+                                                <label class="flex items-start gap-2 cursor-pointer">
+                                                    <input type="checkbox" wire:model.live="configuracoes.validar_cpf" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-bold text-gray-800">Validar CPF (Cálculo Real)</span>
+                                                        <span class="text-[10px] text-gray-500 leading-tight">Impede CPFs falsos (ex: 111.111.111-11).</span>
+                                                    </div>
+                                                </label>
+                                            @endif
+
+                                            <label class="flex items-start gap-2 cursor-pointer">
+                                                <input type="checkbox" wire:model.live="configuracoes.unico" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs font-bold text-gray-800">Travar Resposta Única</span>
+                                                    <span class="text-[10px] text-gray-500 leading-tight">O utilizador só poderá preencher o formulário uma vez com este {{ strtoupper($subtipo) }}.</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
+                            <!-- CONFIGURAÇÕES DE UPLOAD DE ARQUIVOS -->
+                            @if($tipo === 'file')
+                                <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                                    <h5 class="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
+                                    </h5>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria de Arquivos</label>
+                                        <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300">
+                                            <option value="todos">Todos os Tipos</option>
+                                            <option value="imagem">Apenas Imagens</option>
+                                            <option value="video">Apenas Vídeos</option>
+                                            <option value="documento">Apenas Documentos</option>
+                                            <option value="custom">Personalizado</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Extensões Permitidas</label>
+                                        <input type="text" wire:model="configuracoes.extensoes_permitidas" class="w-full text-xs font-mono rounded-md border-gray-300">
+                                    </div>
                                     <div class="grid grid-cols-2 gap-2.5">
                                         <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Mínimo</label>
-                                            <input type="number" wire:model="tamanho_min" class="w-full text-xs rounded-lg border-gray-300">
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1">Máx. (MB)</label>
+                                            <input type="number" min="1" max="100" wire:model="configuracoes.max_size_mb" class="w-full text-xs rounded-md border-gray-300">
                                         </div>
-                                        <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Valor Máximo</label>
-                                            <input type="number" wire:model="tamanho_max" class="w-full text-xs rounded-lg border-gray-300">
-                                        </div>
-                                    </div>
-                                @else
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-gray-600 mb-1">Máscara do Input (x-mask)</label>
-                                        <input type="text" wire:model="regex_mascara" placeholder="Ex: 999.999.999-99" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                    </div>
-                                @endif
-
-                                @if(in_array($subtipo, ['cpf', 'email']))
-                                    <div class="border-t border-gray-200 pt-3 space-y-2.5">
-                                        @if($subtipo === 'cpf')
-                                            <label class="flex items-start gap-2 cursor-pointer">
-                                                <input type="checkbox" wire:model.live="configuracoes.validar_cpf" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
-                                                <div class="flex flex-col">
-                                                    <span class="text-xs font-bold text-gray-800">Validar CPF (Cálculo Real)</span>
-                                                    <span class="text-[10px] text-gray-500 leading-tight">Impede CPFs falsos (ex: 111.111.111-11).</span>
-                                                </div>
-                                            </label>
-                                        @endif
-
-                                        <label class="flex items-start gap-2 cursor-pointer">
-                                            <input type="checkbox" wire:model.live="configuracoes.unico" class="mt-0.5 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
-                                            <div class="flex flex-col">
-                                                <span class="text-xs font-bold text-gray-800">Travar Resposta Única</span>
-                                                <span class="text-[10px] text-gray-500 leading-tight">O utilizador só poderá preencher o formulário uma vez com este {{ strtoupper($subtipo) }}.</span>
+                                        @if(!empty($configuracoes['aceita_multiplos']))
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">Qtd. Máx.</label>
+                                                <input type="number" min="2" max="20" wire:model="configuracoes.max_arquivos" class="w-full text-xs rounded-md border-gray-300">
                                             </div>
-                                        </label>
+                                        @endif
                                     </div>
-                                @endif
-                            </div>
-                        @endif
+                                    <label class="flex items-center gap-2 cursor-pointer pt-1">
+                                        <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300">
+                                        <span class="text-xs text-gray-700 font-bold">Permitir múltiplos arquivos?</span>
+                                    </label>
+                                </div>
+                            @endif
 
-                        <!-- CONFIGURAÇÕES DE UPLOAD DE ARQUIVOS -->
-                        @if($tipo === 'file')
-                            <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-                                <h5 class="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-upload-simple text-purpura-600"></i> Parâmetros de Upload
-                                </h5>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria de Arquivos</label>
-                                    <select wire:model.live="configuracoes.tipo_arquivo" class="w-full text-xs rounded-md border-gray-300">
-                                        <option value="todos">Todos os Tipos</option>
-                                        <option value="imagem">Apenas Imagens</option>
-                                        <option value="video">Apenas Vídeos</option>
-                                        <option value="documento">Apenas Documentos</option>
-                                        <option value="custom">Personalizado</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-700 mb-1">Extensões Permitidas</label>
-                                    <input type="text" wire:model="configuracoes.extensoes_permitidas" class="w-full text-xs font-mono rounded-md border-gray-300">
-                                </div>
-                                <div class="grid grid-cols-2 gap-2.5">
+                            @if(in_array($tipo, ['select', 'radio', 'check']))
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Máx. (MB)</label>
-                                        <input type="number" min="1" max="100" wire:model="configuracoes.max_size_mb" class="w-full text-xs rounded-md border-gray-300">
+                                        <label class="block text-xs font-bold text-gray-700">Opções de Resposta (1 por linha)</label>
+                                        <textarea wire:model="opcoes" rows="4" placeholder="Sim&#10;Não" class="w-full text-xs rounded-lg border-gray-300 mt-1"></textarea>
                                     </div>
-                                    @if(!empty($configuracoes['aceita_multiplos']))
+                                    @if(in_array($tipo, ['radio', 'check']))
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">Qtd. Máx.</label>
-                                            <input type="number" min="2" max="20" wire:model="configuracoes.max_arquivos" class="w-full text-xs rounded-md border-gray-300">
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">Alinhamento</label>
+                                            <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-xs rounded-lg border-gray-300">
+                                                <option value="horizontal">Horizontal (Lado a Lado)</option>
+                                                <option value="vertical">Vertical (Lista)</option>
+                                            </select>
                                         </div>
                                     @endif
                                 </div>
-                                <label class="flex items-center gap-2 cursor-pointer pt-1">
-                                    <input type="checkbox" wire:model.live="configuracoes.aceita_multiplos" class="rounded text-purpura-600 border-gray-300">
-                                    <span class="text-xs text-gray-700 font-bold">Permitir múltiplos arquivos?</span>
-                                </label>
-                            </div>
-                        @endif
-
-                        @if(in_array($tipo, ['select', 'radio', 'check']))
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700">Opções de Resposta (1 por linha)</label>
-                                    <textarea wire:model="opcoes" rows="4" placeholder="Sim&#10;Não" class="w-full text-xs rounded-lg border-gray-300 mt-1"></textarea>
-                                </div>
-                                @if(in_array($tipo, ['radio', 'check']))
+                            @elseif($tipo === 'matriz')
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 mb-1">Alinhamento</label>
-                                        <select wire:model.live="configuracoes.layout_opcoes" class="w-full text-xs rounded-lg border-gray-300">
-                                            <option value="horizontal">Horizontal (Lado a Lado)</option>
-                                            <option value="vertical">Vertical (Lista)</option>
-                                        </select>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Linhas (1 por linha)</label>
+                                        <textarea wire:model.live="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300"></textarea>
                                     </div>
-                                @endif
-                            </div>
-                        @elseif($tipo === 'matriz')
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Linhas (1 por linha)</label>
-                                    <textarea wire:model.live="matriz_linhas" rows="3" class="w-full text-xs rounded-lg border-gray-300"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Colunas (separadas por vírgula)</label>
-                                    <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300">
-                                </div>
-                            </div>
-                        @elseif($tipo === 'system')
-                            <div class="p-4 bg-purpura-50/50 border border-purpura-200 rounded-lg space-y-3">
-                                <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="ph-bold ph-tree-structure text-purpura-600 text-base"></i> Regras de Vínculo do Sistema
-                                </h5>
-
-                                @if($subtipo === 'combo_academico')
-                                    <div class="p-2.5 bg-white border border-purpura-200 rounded-md text-[11px] text-purpura-800 font-medium leading-snug">
-                                        <i class="ph-fill ph-sparkle text-purpura-600"></i> Ao inserir este bloco, o sistema criará automaticamente os 3 campos: <strong>Unidade</strong>, <strong>Curso</strong> e <strong>Turno</strong> na página atual.
-                                    </div>
-                                @endif
-
-                                @if(in_array($subtipo, ['unidade', 'combo_academico']))
-                                    <label class="flex items-start gap-2.5 cursor-pointer pt-1">
-                                        <input type="checkbox" wire:model.live="configuracoes.filtrar_por_uf" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
-                                        <div class="flex flex-col">
-                                            <span class="text-xs text-gray-900 font-bold">Filtrar Unidades pelo Estado (UF) do usuário?</span>
-                                            <span class="text-[10px] text-gray-500 leading-tight">Se marcado, exibe apenas as unidades do mesmo estado preenchido no CEP/UF do formulário.</span>
-                                        </div>
-                                    </label>
-                                @endif
-
-                                @if(in_array($subtipo, ['curso', 'combo_academico']))
-                                    <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
-                                        <input type="checkbox" wire:model.live="configuracoes.vincular_curso_unidade" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
-                                        <div class="flex flex-col">
-                                            <span class="text-xs text-gray-900 font-bold">Relacionar Cursos à Unidade escolhida?</span>
-                                            <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os cursos ativos independente da unidade.</span>
-                                        </div>
-                                    </label>
-                                @endif
-
-                                @if(in_array($subtipo, ['turno', 'combo_academico']))
-                                    <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
-                                        <input type="checkbox" wire:model.live="configuracoes.vincular_turno_curso" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
-                                        <div class="flex flex-col">
-                                            <span class="text-xs text-gray-900 font-bold">Vincular Turnos ao Curso escolhido?</span>
-                                            <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os turnos ativos do sistema.</span>
-                                        </div>
-                                    </label>
-                                @endif
-                            </div>
-                        @elseif($tipo === 'html')
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
-                                <label class="block text-xs font-bold text-gray-700">Estilo do Texto</label>
-                                <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
-                                    <option value="h1">Título Grande (H1)</option>
-                                    <option value="h2">Título Médio (H2)</option>
-                                    <option value="h3">Título Pequeno (H3)</option>
-                                    <option value="p">Parágrafo Normal</option>
-                                    <option value="info_card">Caixa de Aviso (Azul)</option>
-                                </select>
-                                @if($subtipo === 'info_card')
                                     <div>
-                                        <label class="block text-[11px] font-bold text-gray-700 mb-1">Texto Adicional do Aviso</label>
-                                        <div class="builder-quill"
-                                             wire:ignore
-                                             x-data="{
-                                                val: @entangle('configuracoes.descricao').live,
-                                                quill: null,
-                                                init() {
-                                                    this.quill = new Quill(this.$refs.editorAvisoDesc, {
-                                                        theme: 'snow',
-                                                        placeholder: 'Texto complementar do aviso...',
-                                                        modules: {
-                                                            toolbar: [
-                                                                ['bold', 'italic', 'underline', 'strike'],
-                                                                [{ 'size': ['small', false, 'large', 'huge'] }],
-                                                                [{ 'color': [] }, { 'background': [] }],
-                                                                ['clean']
-                                                            ]
-                                                        }
-                                                    });
-                                                    this.quill.root.innerHTML = this.val || '';
-                                                    this.quill.on('text-change', () => {
-                                                        let html = this.quill.root.innerHTML;
-                                                        this.val = (html === '<p><br></p>') ? '' : html;
-                                                    });
-                                                    window.addEventListener('sincronizar-quill-builder', () => {
-                                                        setTimeout(() => {
-                                                            if (this.quill.root.innerHTML !== (this.val || '')) {
-                                                                this.quill.root.innerHTML = this.val || '';
-                                                            }
-                                                        }, 50);
-                                                    });
-                                                }
-                                             }">
-                                            <div x-ref="editorAvisoDesc"></div>
-                                        </div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Colunas (separadas por vírgula)</label>
+                                        <input type="text" wire:model.live="matriz_colunas" class="w-full text-xs rounded-lg border-gray-300">
                                     </div>
-                                @endif
-                            </div>
-                        @elseif($tipo === 'media')
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
-                                <label class="block text-xs font-bold text-gray-700">Tipo de Mídia</label>
-                                <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
-                                    <option value="image">Imagem Estática</option>
-                                    <option value="video">Vídeo Externo</option>
-                                </select>
-                                <input type="url" wire:model="configuracoes.url" placeholder="URL da Imagem ou YouTube" class="w-full text-xs rounded-lg border-gray-300">
-                            </div>
-                        @elseif($tipo === 'social')
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
-                                <label class="block text-xs font-bold text-gray-900 mb-2">Redes Solicitadas</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    @php
-                                        $redesOpcoes = [
-                                            'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
-                                            'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
-                                            'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
-                                            'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
-                                            'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
-                                            'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
-                                        ];
-                                    @endphp
-                                    @foreach($redesOpcoes as $key => $rede)
-                                        <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 rounded border border-gray-200">
-                                            <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-3.5 h-3.5 text-purpura-600 rounded">
-                                            <i class="ph-fill {{ $rede['icon'] }}"></i>
-                                            <span class="text-[11px] font-bold text-gray-700">{{ $rede['nome'] }}</span>
+                                    <p class="text-[10px] text-gray-500 leading-tight">
+                                        <i class="ph-fill ph-info text-purpura-600"></i> Se marcado como <strong>Campo Obrigatório</strong> abaixo, o utilizador terá de responder a todas as linhas desta matriz.
+                                    </p>
+                                </div>
+                            @elseif($tipo === 'system')
+                                <div class="p-4 bg-purpura-50/50 border border-purpura-200 rounded-lg space-y-3">
+                                    <h5 class="font-bold text-xs text-purpura-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-bold ph-tree-structure text-purpura-600 text-base"></i> Regras de Vínculo do Sistema
+                                    </h5>
+
+                                    @if($subtipo === 'combo_academico')
+                                        <div class="p-2.5 bg-white border border-purpura-200 rounded-md text-[11px] text-purpura-800 font-medium leading-snug">
+                                            <i class="ph-fill ph-sparkle text-purpura-600"></i> Ao inserir este bloco, o sistema criará automaticamente os 3 campos: <strong>Unidade</strong>, <strong>Curso</strong> e <strong>Turno</strong> na página atual.
+                                        </div>
+                                    @endif
+
+                                    @if(in_array($subtipo, ['unidade', 'combo_academico']))
+                                        <label class="flex items-start gap-2.5 cursor-pointer pt-1">
+                                            <input type="checkbox" wire:model.live="configuracoes.filtrar_por_uf" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs text-gray-900 font-bold">Filtrar Unidades pelo Estado (UF) do usuário?</span>
+                                                <span class="text-[10px] text-gray-500 leading-tight">Se marcado, exibe apenas as unidades do mesmo estado preenchido no CEP/UF do formulário.</span>
+                                            </div>
                                         </label>
-                                    @endforeach
+                                    @endif
+
+                                    @if(in_array($subtipo, ['curso', 'combo_academico']))
+                                        <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
+                                            <input type="checkbox" wire:model.live="configuracoes.vincular_curso_unidade" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs text-gray-900 font-bold">Relacionar Cursos à Unidade escolhida?</span>
+                                                <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os cursos ativos independente da unidade.</span>
+                                            </div>
+                                        </label>
+                                    @endif
+
+                                    @if(in_array($subtipo, ['turno', 'combo_academico']))
+                                        <label class="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-purpura-200/60">
+                                            <input type="checkbox" wire:model.live="configuracoes.vincular_turno_curso" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs text-gray-900 font-bold">Vincular Turnos ao Curso escolhido?</span>
+                                                <span class="text-[10px] text-gray-500 leading-tight">Se desmarcado, lista todos os turnos ativos do sistema.</span>
+                                            </div>
+                                        </label>
+                                    @endif
                                 </div>
-                            </div>
-                        @elseif($tipo === 'rating')
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">Total de Estrelas</label>
-                                <input type="number" wire:model="configuracoes.max_stars" min="3" max="10" placeholder="5" class="w-full text-xs rounded-lg border-gray-300">
-                            </div>
-                        @elseif($tipo === 'scale')
-                            <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-700 mb-1">Escala de 0 a:</label>
-                                    <select wire:model="configuracoes.escala_maxima" class="w-full text-xs rounded-lg border-gray-300">
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
+                            @elseif($tipo === 'html')
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                                    <label class="block text-xs font-bold text-gray-700">Estilo do Texto</label>
+                                    <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
+                                        <option value="h1">Título Grande (H1)</option>
+                                        <option value="h2">Título Médio (H2)</option>
+                                        <option value="h3">Título Pequeno (H3)</option>
+                                        <option value="p">Parágrafo Normal</option>
+                                        <option value="info_card">Caixa de Aviso (Azul)</option>
                                     </select>
+                                    @if($subtipo === 'info_card')
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-gray-700 mb-1">Texto Adicional do Aviso</label>
+                                            <div class="builder-quill"
+                                                 wire:ignore
+                                                 x-data="{
+                                                    val: @entangle('configuracoes.descricao').live,
+                                                    quill: null,
+                                                    init() {
+                                                        this.quill = new Quill(this.$refs.editorAvisoDesc, {
+                                                            theme: 'snow',
+                                                            placeholder: 'Texto complementar do aviso...',
+                                                            modules: {
+                                                                toolbar: [
+                                                                    ['bold', 'italic', 'underline', 'strike'],
+                                                                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                                                                    [{ 'color': [] }, { 'background': [] }],
+                                                                    ['clean']
+                                                                ]
+                                                            }
+                                                        });
+                                                        this.quill.root.innerHTML = this.val || '';
+                                                        this.quill.on('text-change', () => {
+                                                            let html = this.quill.root.innerHTML;
+                                                            this.val = (html === '<p><br></p>') ? '' : html;
+                                                        });
+                                                        window.addEventListener('sincronizar-quill-builder', () => {
+                                                            setTimeout(() => {
+                                                                if (this.quill.root.innerHTML !== (this.val || '')) {
+                                                                    this.quill.root.innerHTML = this.val || '';
+                                                                }
+                                                            }, 50);
+                                                        });
+                                                    }
+                                                 }">
+                                                <div x-ref="editorAvisoDesc"></div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <input type="text" wire:model="configuracoes.label_min" placeholder="Rótulo Mín (0)" class="w-full text-xs rounded-lg border-gray-300">
-                                    <input type="text" wire:model="configuracoes.label_max" placeholder="Rótulo Máx" class="w-full text-xs rounded-lg border-gray-300">
+                            @elseif($tipo === 'media')
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                                    <label class="block text-xs font-bold text-gray-700">Tipo de Mídia</label>
+                                    <select wire:model.live="subtipo" class="w-full text-xs rounded-lg border-gray-300">
+                                        <option value="image">Imagem Estática</option>
+                                        <option value="video">Vídeo Externo</option>
+                                    </select>
+                                    <input type="url" wire:model="configuracoes.url" placeholder="URL da Imagem ou YouTube" class="w-full text-xs rounded-lg border-gray-300">
                                 </div>
-                            </div>
-                        @endif
-
-                        <!-- OBRIGATORIEDADE -->
-                        @if(!in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
-                            <label class="flex items-center gap-2.5 p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                                <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
-                                <div class="flex flex-col">
-                                    <span class="text-xs text-gray-900 font-bold">Campo Obrigatório</span>
-                                    <span class="text-[10px] text-gray-500">Impede o avanço sem preenchimento.</span>
-                                </div>
-                            </label>
-                        @endif
-
-                        <!-- CONDICIONAL -->
-                        <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="border border-yellow-200 rounded-lg overflow-hidden">
-                            <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-2.5 bg-yellow-50 hover:bg-yellow-100 transition text-xs font-bold text-yellow-800">
-                                <span class="flex items-center gap-1.5"><i class="ph-fill ph-git-branch text-yellow-600 text-base"></i> Exibição Condicional</span>
-                                <i class="ph ph-caret-down transition-transform" :class="openCond ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="openCond" x-collapse x-cloak class="p-3 bg-white border-t border-yellow-200 space-y-2.5">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-yellow-700 mb-1">Mostrar SOMENTE SE:</label>
-                                    <select wire:model.live="depende_de" class="w-full text-xs rounded-lg border-yellow-300">
-                                        <option value="">-- Sempre Visível --</option>
-                                        @foreach($camposCadastrados as $c)
-                                            @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
-                                                <option value="{{ $c->name }}">{{ Str::limit(strip_tags($c->label), 28) }} ({{ $c->name }})</option>
-                                            @endif
+                            @elseif($tipo === 'social')
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <label class="block text-xs font-bold text-gray-900 mb-2">Redes Solicitadas</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        @php
+                                            $redesOpcoes = [
+                                                'instagram' => ['nome' => 'Instagram', 'icon' => 'ph-instagram-logo text-pink-500'],
+                                                'facebook' => ['nome' => 'Facebook', 'icon' => 'ph-facebook-logo text-blue-600'],
+                                                'youtube' => ['nome' => 'YouTube', 'icon' => 'ph-youtube-logo text-red-600'],
+                                                'tiktok' => ['nome' => 'TikTok', 'icon' => 'ph-tiktok-logo text-black'],
+                                                'vsco' => ['nome' => 'VSCO', 'icon' => 'ph-aperture text-gray-800'],
+                                                'linkedin' => ['nome' => 'LinkedIn', 'icon' => 'ph-linkedin-logo text-blue-700']
+                                            ];
+                                        @endphp
+                                        @foreach($redesOpcoes as $key => $rede)
+                                            <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 rounded border border-gray-200">
+                                                <input type="checkbox" wire:model="configuracoes.redes_permitidas" value="{{ $key }}" class="w-3.5 h-3.5 text-purpura-600 rounded">
+                                                <i class="ph-fill {{ $rede['icon'] }}"></i>
+                                                <span class="text-[11px] font-bold text-gray-700">{{ $rede['nome'] }}</span>
+                                            </label>
                                         @endforeach
-                                    </select>
-                                </div>
-                                @if(!empty($depende_de))
-                                    <div class="grid grid-cols-3 gap-1.5">
-                                        <select wire:model="depende_operador" class="col-span-1 text-xs rounded-lg border-gray-300">
-                                            <option value="=">Igual</option>
-                                            <option value="!=">Dif.</option>
-                                            <option value=">">Maior</option>
-                                            <option value="<">Menor</option>
-                                        </select>
-                                        <input type="text" wire:model="depende_valor" placeholder="Valor esperado" class="col-span-2 text-xs rounded-lg border-gray-300">
                                     </div>
-                                @endif
+                                </div>
+                            @elseif($tipo === 'rating')
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1">Total de Estrelas</label>
+                                    <input type="number" wire:model="configuracoes.max_stars" min="3" max="10" placeholder="5" class="w-full text-xs rounded-lg border-gray-300">
+                                </div>
+                            @elseif($tipo === 'scale')
+                                <div class="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2.5">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">Escala de 0 a:</label>
+                                        <select wire:model="configuracoes.escala_maxima" class="w-full text-xs rounded-lg border-gray-300">
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" wire:model="configuracoes.label_min" placeholder="Rótulo Mín (0)" class="w-full text-xs rounded-lg border-gray-300">
+                                        <input type="text" wire:model="configuracoes.label_max" placeholder="Rótulo Máx" class="w-full text-xs rounded-lg border-gray-300">
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- OBRIGATORIEDADE -->
+                            @if(!in_array($tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
+                                <label class="flex items-center gap-2.5 p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                                    <input type="checkbox" wire:model="obrigatorio" class="h-4 w-4 text-purpura-600 rounded border-gray-300 focus:ring-purpura-500">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-900 font-bold">Campo Obrigatório</span>
+                                        <span class="text-[10px] text-gray-500">Impede o avanço sem preenchimento.</span>
+                                    </div>
+                                </label>
+                            @endif
+
+                            <!-- CONDICIONAL -->
+                            <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="border border-yellow-200 rounded-lg overflow-hidden">
+                                <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-2.5 bg-yellow-50 hover:bg-yellow-100 transition text-xs font-bold text-yellow-800">
+                                    <span class="flex items-center gap-1.5"><i class="ph-fill ph-git-branch text-yellow-600 text-base"></i> Exibição Condicional</span>
+                                    <i class="ph ph-caret-down transition-transform" :class="openCond ? 'rotate-180' : ''"></i>
+                                </button>
+                                <div x-show="openCond" x-collapse x-cloak class="p-3 bg-white border-t border-yellow-200 space-y-2.5">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-yellow-700 mb-1">Mostrar SOMENTE SE:</label>
+                                        <select wire:model.live="depende_de" class="w-full text-xs rounded-lg border-yellow-300">
+                                            <option value="">-- Sempre Visível --</option>
+                                            @foreach($camposCadastrados as $c)
+                                                @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
+                                                    <option value="{{ $c->name }}">{{ Str::limit(strip_tags($c->label), 28) }} ({{ $c->name }})</option>
+                                                @endif
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @if(!empty($depende_de))
+                                        <div class="grid grid-cols-3 gap-1.5">
+                                            <select wire:model="depende_operador" class="col-span-1 text-xs rounded-lg border-gray-300">
+                                                <option value="=">Igual</option>
+                                                <option value="!=">Dif.</option>
+                                                <option value=">">Maior</option>
+                                                <option value="<">Menor</option>
+                                            </select>
+                                            <input type="text" wire:model="depende_valor" placeholder="Valor esperado" class="col-span-2 text-xs rounded-lg border-gray-300">
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
+
                         </div>
 
+                        <!-- RODAPÉ DE SALVAMENTO DO INPUT -->
+                        <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-2">
+                            <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="flex-1 bg-purpura-600 text-white py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-purpura-700 transition flex justify-center items-center gap-1.5">
+                                <i class="ph-bold ph-floppy-disk text-base"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
+                            </button>
+                        </div>
+                    </form>
+                @else
+                    <div class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                        <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center mb-3">
+                            <i class="ph-duotone ph-cursor-click text-2xl text-purpura-500"></i>
+                        </div>
+                        <p class="text-xs font-extrabold text-gray-700 dark:text-gray-200">Nenhum Input Selecionado</p>
+                        <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                            Clique em um <strong>Tipo de Input</strong> na coluna da esquerda para incluir um novo bloco, ou clique sobre um <strong>campo existente</strong> no centro para editar suas configurações.
+                        </p>
                     </div>
-
-                    <!-- RODAPÉ DE SALVAMENTO DO INPUT -->
-                    <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-2">
-                        @if($campoId)
-                            <button type="button" wire:click="cancelarEdicao" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition">Cancelar</button>
-                        @endif
-                        <button type="submit" class="flex-1 bg-purpura-600 text-white py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-purpura-700 transition flex justify-center items-center gap-1.5">
-                            <i class="ph-bold ph-floppy-disk text-base"></i> {{ $campoId ? 'Atualizar Bloco' : 'Inserir Bloco' }}
-                        </button>
-                    </div>
-                </form>
+                @endif
             </aside>
         </div>
     </fieldset>

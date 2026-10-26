@@ -10,6 +10,7 @@ use App\Models\Etapa;
 use App\Models\Formulario;
 use App\Models\CampoFormulario;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use App\Traits\WithEditingLock;
 
 class DynamicFields extends Component
@@ -39,6 +40,13 @@ class DynamicFields extends Component
     public array $configuracoes = [];
     public $matriz_linhas = '';
     public $matriz_colunas = '';
+
+    // Controle de exibição do painel direito de configuração do input
+    public bool $painelCampoAtivo = false;
+
+    // Seleção múltipla de inputs para movimentação em lote
+    public array $camposSelecionados = [];
+    public $etapaDestinoLote = '';
 
     public bool $drawerFormSettingsAberto = false;
 
@@ -122,13 +130,171 @@ class DynamicFields extends Component
         $this->loadFormSettings();
         $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
+        $this->painelCampoAtivo = false;
     }
+
+    // =========================================================================
+    // SELEÇÃO MÚLTIPLA E MOVIMENTAÇÃO DE INPUTS EM LOTE
+    // =========================================================================
+
+    public function toggleSelecionarCampo(int $id): void
+    {
+        $idStr = (string) $id;
+        if (in_array($idStr, $this->camposSelecionados, true)) {
+            $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, [$idStr]));
+        } else {
+            $this->camposSelecionados[] = $idStr;
+        }
+    }
+
+    public function selecionarTodosDaEtapa(?int $numEtapa = null): void
+    {
+        $alvoEtapa = $numEtapa ?: (int) $this->etapa;
+
+        $idsEtapa = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $alvoEtapa)
+            ->where('tipo', '!=', 'config')
+            ->pluck('id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+
+        $todosJaSelecionados = !empty($idsEtapa) && empty(array_diff($idsEtapa, $this->camposSelecionados));
+
+        if ($todosJaSelecionados) {
+            $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, $idsEtapa));
+        } else {
+            $this->camposSelecionados = array_values(array_unique(array_merge($this->camposSelecionados, $idsEtapa)));
+        }
+    }
+
+    public function limparSelecaoCampos(): void
+    {
+        $this->camposSelecionados = [];
+        $this->etapaDestinoLote = '';
+    }
+
+    public function moverCamposSelecionadosParaEtapa(): void
+    {
+        if ($this->isLockedByOther) return;
+
+        $destino = (int) $this->etapaDestinoLote;
+        if ($destino < 1 || empty($this->camposSelecionados)) {
+            $this->dispatch('erro', msg: 'Selecione uma página de destino e pelo menos um campo.');
+            return;
+        }
+
+        $colunaFk = $this->getContextColumn();
+
+        $camposMover = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
+        if ($camposMover->isEmpty()) {
+            return;
+        }
+
+        $etapasAfetadas = $camposMover->pluck('etapa')->push($destino)->unique()->values()->toArray();
+
+        DB::transaction(function () use ($colunaFk, $destino, $camposMover, $etapasAfetadas) {
+            $maxOrdemDestino = CampoFormulario::where($colunaFk, $this->contextoId)
+                ->where('etapa', $destino)
+                ->where('tipo', '!=', 'config')
+                ->whereNotIn('id', $camposMover->pluck('id'))
+                ->max('ordem') ?? 0;
+
+            foreach ($camposMover as $campo) {
+                $maxOrdemDestino++;
+                $campo->update([
+                    'etapa' => $destino,
+                    'ordem' => $maxOrdemDestino,
+                ]);
+            }
+
+            foreach ($etapasAfetadas as $numEtapa) {
+                $this->reindexarOrdensDaEtapa((int) $numEtapa);
+            }
+        });
+
+        $qtd = $camposMover->count();
+        $this->etapa = $destino;
+        $this->limparSelecaoCampos();
+        $this->atualizarProximaOrdem();
+
+        $this->dispatch('sucesso', msg: "{$qtd} campo(s) movido(s) para a Página #{$destino}!");
+    }
+
+    public function moverSelecionadosNaMesmaEtapa(string $posicao = 'topo'): void
+    {
+        if ($this->isLockedByOther || empty($this->camposSelecionados)) return;
+
+        $colunaFk = $this->getContextColumn();
+
+        $etapasDosSelecionados = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->distinct()
+            ->pluck('etapa')
+            ->toArray();
+
+        DB::transaction(function () use ($colunaFk, $etapasDosSelecionados, $posicao) {
+            foreach ($etapasDosSelecionados as $numEtapa) {
+                $todosDaEtapa = CampoFormulario::where($colunaFk, $this->contextoId)
+                    ->where('etapa', $numEtapa)
+                    ->where('tipo', '!=', 'config')
+                    ->orderBy('ordem')
+                    ->orderBy('id')
+                    ->get();
+
+                $selecionados = $todosDaEtapa->filter(fn($c) => in_array((string) $c->id, $this->camposSelecionados, true));
+                $naoSelecionados = $todosDaEtapa->reject(fn($c) => in_array((string) $c->id, $this->camposSelecionados, true));
+
+                $novaLista = ($posicao === 'topo')
+                    ? $selecionados->concat($naoSelecionados)
+                    : $naoSelecionados->concat($selecionados);
+
+                $ordem = 1;
+                foreach ($novaLista as $item) {
+                    if ((int) $item->ordem !== $ordem) {
+                        $item->update(['ordem' => $ordem]);
+                    }
+                    $ordem++;
+                }
+            }
+        });
+
+        $this->atualizarProximaOrdem();
+        $this->dispatch('sucesso', msg: 'Posição dos campos selecionados atualizada!');
+    }
+
+    private function reindexarOrdensDaEtapa(int $numeroEtapa): void
+    {
+        $campos = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $numeroEtapa)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get();
+
+        $ordem = 1;
+        foreach ($campos as $c) {
+            if ((int) $c->ordem !== $ordem) {
+                $c->update(['ordem' => $ordem]);
+            }
+            $ordem++;
+        }
+    }
+
+    // =========================================================================
+    // FASES TEMPORAIS
+    // =========================================================================
 
     public function abrirModalFases()
     {
         $this->carregarEtapas();
 
-        // Combina páginas cadastradas na tabela Etapas + páginas com campos na tabela CampoFormulario
         $paginasEtapas = collect($this->etapasDisponiveis)->pluck('numero')->toArray();
         $paginasCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
             ->where('tipo', '!=', 'config')
@@ -139,7 +305,6 @@ class DynamicFields extends Component
         $todasPaginas = array_unique(array_merge($paginasEtapas, $paginasCampos));
         sort($todasPaginas);
 
-        // Exclui a Página 1 da seleção de bloqueio (ou mantém todas visíveis, convertidas em int)
         $this->paginasDisponiveis = array_values(array_filter(array_map('intval', $todasPaginas), fn($p) => $p > 0));
 
         $fasesDb = \App\Models\FormularioFase::where($this->getContextColumn(), $this->contextoId)
@@ -228,13 +393,13 @@ class DynamicFields extends Component
 
     private function inicializarDefaultsDicas(): void
     {
-        $this->configuracoes['dica_modo'] = $this->configuracoes['dica_modo'] ?? 'nenhum'; // nenhum, legenda, tooltip, ambos
+        $this->configuracoes['dica_modo'] = $this->configuracoes['dica_modo'] ?? 'nenhum';
         $this->configuracoes['dica_1_texto'] = $this->configuracoes['dica_1_texto'] ?? '';
-        $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda'; // legenda ou tooltip
-        $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover'; // hover ou click
+        $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda';
+        $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover';
         $this->configuracoes['dica_2_texto'] = $this->configuracoes['dica_2_texto'] ?? '';
-        $this->configuracoes['dica_2_tipo'] = $this->configuracoes['dica_2_tipo'] ?? 'tooltip'; // legenda ou tooltip
-        $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover'; // hover ou click
+        $this->configuracoes['dica_2_tipo'] = $this->configuracoes['dica_2_tipo'] ?? 'tooltip';
+        $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover';
     }
 
     public function updatedConfiguracoesDicaModo($valor)
@@ -312,8 +477,15 @@ class DynamicFields extends Component
         }
     }
 
+    public function iniciarNovoCampo(): void
+    {
+        $this->cancelarEdicao();
+        $this->painelCampoAtivo = true;
+    }
+
     public function setTipo($tipo, $subtipo = 'text')
     {
+        $this->painelCampoAtivo = true;
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
@@ -375,6 +547,13 @@ class DynamicFields extends Component
                 if (!$this->campoId && empty($this->label)) {
                     $this->label = 'Valor (R$)';
                     $this->name = 'valor_' . rand(10, 99);
+                    $this->largura = 4;
+                }
+            } elseif ($subtipo === 'date') {
+                $this->configuracoes['calcular_idade'] = $this->configuracoes['calcular_idade'] ?? false;
+                if (!$this->campoId && empty($this->label)) {
+                    $this->label = 'Data de Nascimento';
+                    $this->name = 'data_nascimento_' . rand(10, 99);
                     $this->largura = 4;
                 }
             }
@@ -516,6 +695,7 @@ class DynamicFields extends Component
     public function editar($id)
     {
         $campo = CampoFormulario::findOrFail($id);
+        $this->painelCampoAtivo = true;
         $this->campoId = $campo->id;
         $this->etapa = $campo->etapa;
         $this->ordem = $campo->ordem;
@@ -550,6 +730,10 @@ class DynamicFields extends Component
         if ($campo->tipo === 'text' && $campo->subtipo === 'cep') {
             $this->configuracoes['viacep'] = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $this->configuracoes['criar_campos_endereco'] = false;
+        }
+
+        if ($campo->tipo === 'text' && $campo->subtipo === 'date') {
+            $this->configuracoes['calcular_idade'] = filter_var($config['calcular_idade'] ?? false, FILTER_VALIDATE_BOOLEAN);
         }
 
         if ($campo->tipo === 'file') {
@@ -593,6 +777,7 @@ class DynamicFields extends Component
             'configuracoes', 'matriz_linhas', 'matriz_colunas', 'link_file_upload'
         ]);
         
+        $this->painelCampoAtivo = false;
         $this->configuracoes = [];
         $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
@@ -722,6 +907,8 @@ class DynamicFields extends Component
             } elseif ($this->subtipo === 'cep') {
                 $this->regex_mascara = '99999-999';
                 $configToSave['viacep'] = filter_var($this->configuracoes['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            } elseif ($this->subtipo === 'date') {
+                $configToSave['calcular_idade'] = filter_var($this->configuracoes['calcular_idade'] ?? false, FILTER_VALIDATE_BOOLEAN);
             }
         }
         
@@ -1060,7 +1247,14 @@ class DynamicFields extends Component
             ->where('ordem', '>', $ordemExcluida)
             ->decrement('ordem');
 
-        $this->atualizarProximaOrdem();
+        $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, [(string) $id]));
+
+        if ($this->campoId == $id) {
+            $this->cancelarEdicao();
+        } else {
+            $this->atualizarProximaOrdem();
+        }
+
         $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
     }
 
@@ -1089,13 +1283,16 @@ class DynamicFields extends Component
         $etapa = \App\Models\Etapa::find($id);
         if (!$etapa) return;
 
-        if ($etapa->numero == 1) {
+        $numeroRemovido = (int) $etapa->numero;
+        $colunaFk = $this->getContextColumn();
+
+        if ($numeroRemovido === 1) {
             $this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
             return;
         }
         
-        $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
-            ->where('etapa', $etapa->numero)
+        $temCampos = \App\Models\CampoFormulario::where($colunaFk, $this->contextoId)
+            ->where('etapa', $numeroRemovido)
             ->where('tipo', '!=', 'config')
             ->exists();
             
@@ -1104,12 +1301,62 @@ class DynamicFields extends Component
             return;
         }
         
-        $etapa->delete();
+        DB::transaction(function () use ($etapa, $numeroRemovido, $colunaFk) {
+            // 1. Exclui a página selecionada
+            $etapa->delete();
+
+            // 2. Decrementa o número da etapa nos campos de todas as páginas seguintes
+            \App\Models\CampoFormulario::where($colunaFk, $this->contextoId)
+                ->where('etapa', '>', $numeroRemovido)
+                ->where('tipo', '!=', 'config')
+                ->decrement('etapa');
+
+            // 3. Reordena sequencialmente (1, 2, 3...) as páginas restantes na tabela Etapas
+            $etapasRestantes = \App\Models\Etapa::where($colunaFk, $this->contextoId)
+                ->orderBy('numero', 'asc')
+                ->get();
+
+            foreach ($etapasRestantes as $idx => $etapaRestante) {
+                $novoNumero = $idx + 1;
+                if ((int) $etapaRestante->numero !== $novoNumero) {
+                    $novoNome = preg_replace('/^(\d+)(º\s*Fase|ª\s*Fase|ª\s*Etapa|º\s*Passo)$/iu', $novoNumero . '$2', trim($etapaRestante->nome));
+                    $novoNome = preg_replace('/^(Página|Etapa|Fase|Passo)\s+\d+$/iu', '$1 ' . $novoNumero, $novoNome);
+
+                    $etapaRestante->update([
+                        'numero' => $novoNumero,
+                        'nome'   => $novoNome,
+                    ]);
+                }
+            }
+
+            // 4. Atualiza também a numeração nas Fases Temporais (FormularioFase)
+            if (class_exists(\App\Models\FormularioFase::class)) {
+                $fases = \App\Models\FormularioFase::where($colunaFk, $this->contextoId)->get();
+                foreach ($fases as $fase) {
+                    $pags = is_string($fase->paginas) ? json_decode($fase->paginas, true) : ($fase->paginas ?? []);
+                    if (is_array($pags)) {
+                        $novasPags = [];
+                        foreach ($pags as $p) {
+                            $pInt = (int) $p;
+                            if ($pInt === $numeroRemovido) continue;
+                            $novasPags[] = $pInt > $numeroRemovido ? ($pInt - 1) : $pInt;
+                        }
+                        $fase->update(['paginas' => array_values(array_unique($novasPags))]);
+                    }
+                }
+            }
+        });
+
         $this->carregarEtapas();
         
-        if ($this->etapa == $etapa->numero) {
-            $this->etapa = $this->etapasDisponiveis->first()->numero ?? 1;
+        if ((int) $this->etapa === $numeroRemovido) {
+            $this->etapa = max(1, $numeroRemovido - 1);
+        } elseif ((int) $this->etapa > $numeroRemovido) {
+            $this->etapa = (int) $this->etapa - 1;
         }
+
+        $this->atualizarProximaOrdem();
+        $this->dispatch('sucesso', msg: 'Página removida e numeração das páginas seguintes atualizada!');
     }
 
     public function render()
