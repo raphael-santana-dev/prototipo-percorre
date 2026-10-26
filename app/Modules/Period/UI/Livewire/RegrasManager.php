@@ -7,11 +7,14 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Ciclo;
 use App\Models\CampoFormulario;
+use App\Traits\WithEditingLock;
 
 #[Layout('components.layouts.app')]
 #[Title('Regras de Pontuação')]
 class RegrasManager extends Component
 {
+    use WithEditingLock;
+
     public Ciclo $ciclo;
     public array $regras = []; 
     public array $camposDisponiveis = [];
@@ -22,6 +25,11 @@ class RegrasManager extends Component
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403, 'Acesso restrito.');
 
         $this->ciclo = Ciclo::findOrFail($id);
+
+        // REGISTO DE LOCK (BLOQUEIO DE EDIÇÃO SIMULTÂNEA)
+        $this->resourceLockType = 'ciclo_regras';
+        $this->resourceLockId = (int) $this->ciclo->id;
+        $this->checkAndAcquireLock();
         
         $regrasDb = is_string($this->ciclo->regras_pontuacao) 
                     ? json_decode($this->ciclo->regras_pontuacao, true) 
@@ -46,15 +54,16 @@ class RegrasManager extends Component
             ['name' => 'idade', 'label' => 'Idade (Calculada pela Data de Nascimento)'],
             ['name' => 'estado', 'label' => 'Estado (UF)'],
             ['name' => 'cidade', 'label' => 'Cidade'],
+            ['name' => 'unidade_id', 'label' => 'Unidade Selecionada (ID)'],
             ['name' => 'curso_id', 'label' => 'Curso Selecionado (ID)'],
             ['name' => 'turno_id', 'label' => 'Turno Selecionado (ID)'],
             ['name' => 'possui_deficiencia', 'label' => 'Possui Deficiência? (sim/nao)'],
         ];
 
         $dinamicos = CampoFormulario::where('ciclo_id', $this->ciclo->id)
-            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social'])
+            ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social', 'spacer', 'link'])
             ->get()
-            ->map(fn($c) => ['name' => $c->name, 'label' => $c->label . ' (Dinâmico)'])
+            ->map(fn($c) => ['name' => $c->name, 'label' => strip_tags($c->label) . ' (Dinâmico)'])
             ->toArray();
 
         $this->camposDisponiveis = array_merge($fixos, $dinamicos);
@@ -62,18 +71,22 @@ class RegrasManager extends Component
 
     public function addRegra()
     {
+        if ($this->isLockedByOther) return;
+
         $this->regras[] = [
             'tipo_regra' => 'padrao', 
-            'escopo' => 'especifico',
-            'campo' => '',
-            'operador' => '=',
-            'valor' => '',
-            'pontos' => 0
+            'escopo'     => 'especifico',
+            'campo'      => '',
+            'operador'   => '=',
+            'valor'      => '',
+            'pontos'     => 0
         ];
     }
 
     public function removeRegra($index)
     {
+        if ($this->isLockedByOther) return;
+
         unset($this->regras[$index]);
         $this->regras = array_values($this->regras); 
     }
@@ -82,18 +95,23 @@ class RegrasManager extends Component
     {
         abort_if(!feature('ciclo.regras'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403);
+
+        if ($this->isLockedByOther) {
+            $this->dispatch('erro', msg: 'Edição bloqueada por outro utilizador.');
+            return;
+        }
         
         $rules = [
             'regras.*.tipo_regra' => 'required|in:padrao,bonus_por_acerto,multiplicador_percentual',
-            'regras.*.escopo' => 'nullable|in:todos,especifico',
-            'regras.*.pontos' => 'required|numeric',
+            'regras.*.escopo'     => 'nullable|in:todos,especifico',
+            'regras.*.pontos'     => 'required|numeric',
         ];
 
         $messages = [
             'regras.*.tipo_regra.required' => 'Escolha o tipo de cálculo.',
-            'regras.*.pontos.required' => 'A pontuação é obrigatória.',
-            'regras.*.campo.required' => 'Escolha um campo.',
-            'regras.*.valor.required' => 'Informe o valor esperado.',
+            'regras.*.pontos.required'     => 'A pontuação é obrigatória.',
+            'regras.*.campo.required'      => 'Escolha um campo.',
+            'regras.*.valor.required'      => 'Informe o valor esperado.',
         ];
 
         foreach ($this->regras as $index => $regra) {

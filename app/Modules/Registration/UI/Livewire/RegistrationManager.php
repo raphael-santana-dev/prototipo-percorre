@@ -100,6 +100,16 @@ class RegistrationManager extends Component
         }
     }
 
+    public function gerarLinkRetomada(int $id)
+    {
+        $inscricao = Inscricao::findOrFail($id);
+        $token = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
+        $urlRetomada = route('inscricao.retomar', ['token' => $token]);
+
+        $this->dispatch('sucesso', msg: "Link gerado com sucesso! Copiado para a área de transferência.");
+        $this->dispatch('copiar-para-clipboard', text: $urlRetomada);
+    }
+
     public function getEsquemaFiltrosProperty(): array
     {
         $cicloIdRef = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
@@ -288,8 +298,8 @@ class RegistrationManager extends Component
 
         $cpfLimpo = preg_replace('/[^0-9]/', '', $this->cpf);
 
-        if (Inscricao::where('cpf', $cpfLimpo)->exists()) {
-            $this->addError('cpf', 'Este CPF já está cadastrado no sistema.');
+        if (Inscricao::where('cpf', $cpfLimpo)->where('ciclo_id', $this->ciclo_id)->exists()) {
+            $this->addError('cpf', 'Este CPF já está cadastrado neste ciclo.');
             return;
         }
 

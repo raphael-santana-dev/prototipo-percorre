@@ -26,6 +26,7 @@ Schedule::call(function () {
 Schedule::job(new AtualizarStatusConteudoJob)->everyMinute();
 
 Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
+Schedule::command('fases:processar')->everyMinute()->withoutOverlapping();
 
 Schedule::job(new RevogarPermissoesExpiradasJob)->dailyAt('00:00');
 

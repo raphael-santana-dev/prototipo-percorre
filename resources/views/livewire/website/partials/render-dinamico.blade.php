@@ -835,17 +835,99 @@
                     @enderror
                 </div>
                 
-            @elseif($campo->tipo === 'system')
+           @elseif($campo->tipo === 'system')
                 @php
                     $opcoesSistema = [];
-                    if ($campo->subtipo === 'unidade' && isset($unidadesDisponiveis)) $opcoesSistema =$unidadesDisponiveis;
-                    elseif ($campo->subtipo === 'curso' && isset($cursosDisponiveis)) $opcoesSistema =$cursosDisponiveis;
-                    elseif ($campo->subtipo === 'turno' && isset($turnosDisponiveis)) $opcoesSistema =$turnosDisponiveis;
+                    $filtrarPorUf = filter_var($config['filtrar_por_uf'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $vincularCursoUnidade = filter_var($config['vincular_curso_unidade'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
+                    $vincularTurnoCurso = filter_var($config['vincular_turno_curso'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
+
+                    // Descobre UF preenchida pelo candidato (campo fixo ou campo ViaCEP dinâmico)
+                    $ufCandidato = $estado ?? null;
+                    if (empty($ufCandidato) && !empty($respostas) && is_array($respostas)) {
+                        foreach ($respostas as $kResp => $vResp) {
+                            if (($kResp === 'uf' || str_ends_with($kResp, '_uf') || $kResp === 'estado') && !empty($vResp) && is_string($vResp)) {
+                                $ufCandidato = trim($vResp);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Descobre Unidade e Curso selecionados (no combo ou em outro campo system da página)
+                    $parentUnidadeKey = $config['combo_parent_unidade'] ?? null;
+                    $parentCursoKey   = $config['combo_parent_curso'] ?? null;
+
+                    $unidadeEscolhidaId = ($parentUnidadeKey && isset($respostas[$parentUnidadeKey])) ? $respostas[$parentUnidadeKey] : null;
+                    $cursoEscolhidoId   = ($parentCursoKey && isset($respostas[$parentCursoKey])) ? $respostas[$parentCursoKey] : null;
+
+                    if (!$unidadeEscolhidaId && isset($camposVigentes)) {
+                        $campoUni = collect($camposVigentes)->where('tipo', 'system')->firstWhere('subtipo', 'unidade');
+                        if ($campoUni && !empty($respostas[$campoUni->name])) {
+                            $unidadeEscolhidaId = $respostas[$campoUni->name];
+                        }
+                    }
+                    if (!$cursoEscolhidoId && isset($camposVigentes)) {
+                        $campoCur = collect($camposVigentes)->where('tipo', 'system')->firstWhere('subtipo', 'curso');
+                        if ($campoCur && !empty($respostas[$campoCur->name])) {
+                            $cursoEscolhidoId = $respostas[$campoCur->name];
+                        }
+                    }
+
+                    if ($campo->subtipo === 'unidade') {
+                        $queryUni = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome');
+                        $listaUni = $queryUni->get();
+
+                        if ($filtrarPorUf && !empty($ufCandidato)) {
+                            $listaUni = $listaUni->filter(function ($u) use ($ufCandidato) {
+                                $ufU = $u->estado ?: trim(explode('-', $u->nome)[0]);
+                                return strtoupper($ufU) === strtoupper($ufCandidato);
+                            });
+                        }
+                        $opcoesSistema = $listaUni->pluck('nome', 'id')->toArray();
+
+                    } elseif ($campo->subtipo === 'curso') {
+                        $queryCur = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome');
+                        if ($vincularCursoUnidade) {
+                            if (!empty($unidadeEscolhidaId)) {
+                                $queryCur->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadeEscolhidaId));
+                                $opcoesSistema = $queryCur->pluck('nome', 'id')->toArray();
+                            } else {
+                                $opcoesSistema = [];
+                            }
+                        } else {
+                            $opcoesSistema = $queryCur->pluck('nome', 'id')->toArray();
+                        }
+
+                    } elseif ($campo->subtipo === 'turno') {
+                        if ($vincularTurnoCurso) {
+                            if (!empty($cursoEscolhidoId)) {
+                                $cursoObj = \App\Models\Curso::with('turnosVinculados')->find($cursoEscolhidoId);
+                                $opcoesSistema = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome')->pluck('nome', 'id')->toArray() : [];
+                            } else {
+                                $opcoesSistema = [];
+                            }
+                        } else {
+                            $opcoesSistema = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray();
+                        }
+                    }
                 @endphp
                 
-                <select wire:model.live="respostas.{{ $campo->name }}" class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
-                    <option value="">Selecione...</option>
-                    @foreach($opcoesSistema as $id =>$nome)
+                <select wire:model.live="respostas.{{ $campo->name }}"
+                        @if($campo->subtipo === 'curso' && $vincularCursoUnidade && empty($unidadeEscolhidaId)) disabled @endif
+                        @if($campo->subtipo === 'turno' && $vincularTurnoCurso && empty($cursoEscolhidoId)) disabled @endif
+                        class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
+                    <option value="">
+                        @if($campo->subtipo === 'unidade' && $filtrarPorUf && empty($ufCandidato))
+                            Preencha o CEP/UF primeiro...
+                        @elseif($campo->subtipo === 'curso' && $vincularCursoUnidade && empty($unidadeEscolhidaId))
+                            Selecione a Unidade primeiro...
+                        @elseif($campo->subtipo === 'turno' && $vincularTurnoCurso && empty($cursoEscolhidoId))
+                            Selecione o Curso primeiro...
+                        @else
+                            Selecione...
+                        @endif
+                    </option>
+                    @foreach($opcoesSistema as $id => $nome)
                         <option value="{{ $id }}">{{ $nome }}</option>
                     @endforeach
                 </select>

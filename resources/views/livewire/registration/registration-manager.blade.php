@@ -20,6 +20,13 @@
                 <div x-show="showEmbedInscricao" x-cloak class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4" x-transition.opacity>
                     <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl max-w-lg w-full" @click.away="showEmbedInscricao = false" x-transition>
                         
+                        @php
+                            $cicloModalRef = !empty($filtroCiclo) ? \App\Models\Ciclo::find($filtroCiclo) : null;
+                            $urlInscricaoModal = ($cicloModalRef && ($cicloModalRef->tipo_ciclo ?? 'regular') === 'customizado' && !empty($cicloModalRef->slug_projeto))
+                                ? url('/inscricao/' . $cicloModalRef->slug_projeto)
+                                : url('/inscricao');
+                        @endphp
+
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <i class="ph-fill ph-code text-purpura-600"></i> Integrar Inscrição Oficial
@@ -27,14 +34,14 @@
                             <button @click="showEmbedInscricao = false" class="text-gray-400 hover:text-red-500 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
                         </div>
                         
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            O link oficial redireciona o candidato para o <b>Ciclo Ativo</b> de forma automática. Copie o iframe para embutir no seu site, ou use o Link Público para enviar via WhatsApp/E-mail.
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 text-left whitespace-normal">
+                            O link oficial redireciona o candidato para o <b>Ciclo Regular Ativo</b> de forma automática. Para projetos customizados, selecione o ciclo no filtro e este link será atualizado.
                         </p>
                         
                         <div class="space-y-4 text-left">
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Código Iframe (Embed)</label>
-                                <textarea id="embedCodeInscricaoOficial" readonly class="w-full text-xs font-mono p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:ring-purpura-500 focus:border-purpura-500" rows="3">&lt;iframe src=&quot;{{ url('/inscricao?embed=true') }}&quot; width=&quot;100%&quot; height=&quot;800&quot; frameborder=&quot;0&quot; style=&quot;border:none; background:transparent;&quot;&gt;&lt;/iframe&gt;</textarea>
+                                <textarea id="embedCodeInscricaoOficial" readonly class="w-full text-xs font-mono p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:ring-purpura-500 focus:border-purpura-500" rows="3">&lt;iframe src=&quot;{{ $urlInscricaoModal }}?embed=true&quot; width=&quot;100%&quot; height=&quot;800&quot; frameborder=&quot;0&quot; style=&quot;border:none; background:transparent;&quot;&gt;&lt;/iframe&gt;</textarea>
                                 <div class="flex justify-end mt-1">
                                     <button @click="navigator.clipboard.writeText(document.getElementById('embedCodeInscricaoOficial').value); $dispatch('sucesso', {msg: 'Código Iframe copiado!'});" class="text-xs font-bold text-purpura-600 hover:text-purpura-800 dark:text-purpura-400 transition-colors">
                                         Copiar Iframe
@@ -44,14 +51,18 @@
 
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Link Público Direto</label>
-                                <input type="text" id="linkPublicoInscricao" readonly value="{{ url('/inscricao') }}" class="w-full text-sm p-2.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:ring-purpura-500 focus:border-purpura-500">
+                                <input type="text" id="linkPublicoInscricao" readonly value="{{ $urlInscricaoModal }}" class="w-full text-sm p-2.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:ring-purpura-500 focus:border-purpura-500">
                             </div>
                         </div>
                         
                         <div class="mt-6 flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-5">
-                            <a href="{{ url('/inscricao') }}" target="_blank" class="text-sm font-bold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center gap-1 transition-colors">
-                                Testar Formulário <i class="ph-bold ph-arrow-up-right"></i>
-                            </a>
+                            @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                                <a href="{{ $urlInscricaoModal }}?modo=teste" target="_blank" class="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+                                    <i class="ph-fill ph-flask"></i> Testar (Sandbox) <i class="ph-bold ph-arrow-up-right"></i>
+                                </a>
+                            @else
+                                <span></span>
+                            @endif
                             <button @click="navigator.clipboard.writeText(document.getElementById('linkPublicoInscricao').value); $dispatch('sucesso', {msg: 'Link Público copiado!'}); showEmbedInscricao = false;" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
                                 <i class="ph-bold ph-copy"></i> Copiar Link
                             </button>
@@ -328,6 +339,21 @@
                         
                         <td class="px-4 py-1.5 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
+                                <button type="button" 
+                                    x-data 
+                                    @click="
+                                        $wire.gerarLinkRetomada({{ $inscricao->id }}).then(() => {
+                                            // Ouve o evento emitido pelo backend e copia
+                                        });
+                                        window.addEventListener('copiar-para-clipboard', event => {
+                                            navigator.clipboard.writeText(event.detail.text);
+                                        }, { once: true });
+                                    "
+                                    class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-600" 
+                                    title="Copiar Link de Retomada">
+                                    <i class="text-lg ph-bold ph-link"></i>
+                                </button>
+
                                 <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                                 
                                 <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>

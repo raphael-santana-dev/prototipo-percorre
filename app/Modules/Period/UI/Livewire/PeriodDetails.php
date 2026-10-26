@@ -53,7 +53,7 @@ class PeriodDetails extends Component
         abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
 
-        $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos'])->findOrFail($id);
+        $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos', 'fases'])->findOrFail($id);
         
         $this->regrasDecodificadas = is_string($this->ciclo->regras_pontuacao) 
             ? json_decode($this->ciclo->regras_pontuacao, true) 
@@ -68,8 +68,19 @@ class PeriodDetails extends Component
         abort_if(!feature('ciclo.editar'), 403);
         abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
-        $this->traitToggleStatus($id);
-        $this->ciclo->refresh(); 
+        $ciclo = Ciclo::findOrFail($id);
+        $novoStatus = !$ciclo->status;
+
+        // Se for um ciclo regular sendo ativado, desativa apenas os outros ciclos regulares
+        if ($novoStatus && ($ciclo->tipo_ciclo ?? 'regular') === 'regular') {
+            Ciclo::where('tipo_ciclo', 'regular')
+                ->where('id', '!=', $ciclo->id)
+                ->update(['status' => false]);
+        }
+
+        $ciclo->update(['status' => $novoStatus]);
+        $this->ciclo->refresh();
+        $this->dispatch('sucesso', msg: 'Status do ciclo atualizado com sucesso!');
     }
 
     public function updating($nomePropriedade)
@@ -147,6 +158,16 @@ class PeriodDetails extends Component
             $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
             $this->showQuickView($id);
         }
+    }
+
+    public function gerarLinkRetomada(int $id)
+    {
+        $inscricao = Inscricao::findOrFail($id);
+        $token = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
+        $urlRetomada = route('inscricao.retomar', ['token' => $token]);
+
+        $this->dispatch('sucesso', msg: 'Link de Retomada gerado! Copiado para a área de transferência.');
+        $this->dispatch('copiar-para-clipboard', text: $urlRetomada);
     }
 
     public function showQuickView(int $id)
@@ -231,17 +252,17 @@ class PeriodDetails extends Component
         
         $trackingScore = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
-            'arquivo_nome' => '1/2: Recálculo Global de Pontuação', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '1/2: Recálculo de Pontuação (' . $this->ciclo->nome . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         $trackingRank = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => '2/2: Geração de Ranking Global', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => '2/2: Geração de Ranking (' . $this->ciclo->nome . ')', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
         \Illuminate\Support\Facades\Bus::chain([
-            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id),
-            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id)
+            new \App\Jobs\RecalcularPontuacoesGlobaisJob($trackingScore->id, $this->ciclo->id),
+            new \App\Jobs\GerarRankingGlobalJob($trackingRank->id, $this->ciclo->id)
         ])->dispatch();
         
         $this->dispatch('sucesso', msg: "Processamento iniciado! Acompanhe o progresso no Gerenciador de Integrações.");
@@ -254,10 +275,10 @@ class PeriodDetails extends Component
 
         $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',
-            'arquivo_nome' => 'Geração de Ranking Global (Job)', 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
+            'arquivo_nome' => 'Geração de Ranking: ' . $this->ciclo->nome, 'status' => 'na_fila', 'total_linhas' => 0, 'linhas_processadas' => 0,
         ]);
 
-        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id))->afterResponse();
+        dispatch(new \App\Jobs\GerarRankingGlobalJob($tracking->id, $this->ciclo->id))->afterResponse();
         $this->dispatch('sucesso', msg: "O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).");
     }
 

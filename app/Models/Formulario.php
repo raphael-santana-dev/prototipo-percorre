@@ -15,14 +15,26 @@ class Formulario extends Model
     
 
     protected $fillable = [
-        'titulo', 'slug', 'descricao', 'status', 'tipo',
-        'data_inicio', 'data_fim', 'acesso_livre', 
-        'apenas_estudantes', 'roles_permitidas', 'users_permitidos',
-        'unidades_permitidas', 'cursos_permitidos', 'turnos_permitidas', 'exigir_email',
-        'ciclo_id', 
-        'unidade_id', 
-        'curso_id', 
-        'ciclo_aprendizagem_fase_id'
+        'titulo',
+        'descricao',
+        'slug',
+        'tipo',
+        'is_rascunho',
+        'status',
+        'ciclo_id',
+        'unidade_id',
+        'curso_id',
+        'ciclo_aprendizagem_fase_id',
+        'acesso_livre',
+        'exigir_email',
+        'apenas_estudantes',
+        'roles_permitidas',
+        'users_permitidos',
+        'unidades_permitidas',
+        'cursos_permitidos',
+        'turnos_permitidas',
+        'data_inicio',
+        'data_fim',
     ];
 
     protected $casts = [
@@ -36,6 +48,7 @@ class Formulario extends Model
         'cursos_permitidos' => 'array',
         'turnos_permitidas' => 'array',
         'data_inicio' => 'datetime',
+        'is_rascunho' => 'boolean',
         'data_fim' => 'datetime',
     ];
 
@@ -67,5 +80,20 @@ class Formulario extends Model
     public function respostas()
     {
         return $this->hasMany(RespostaFormulario::class, 'formulario_id');
+    }
+    
+    public function fases()
+    {
+        return $this->hasMany(FormularioFase::class, 'formulario_id')->orderBy('data_liberacao', 'asc');
+    }
+
+    public function scopeAtivos($query)
+    {
+        return $query->where('is_rascunho', false);
+    }
+
+    public function scopeRascunhos($query)
+    {
+        return $query->where('is_rascunho', true);
     }
 }

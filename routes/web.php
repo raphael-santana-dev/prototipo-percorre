@@ -19,14 +19,26 @@ use App\Modules\Website\UI\Livewire\PreInscricao;
 use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
-Route::get('/inscricao', \App\Modules\Website\UI\Livewire\Inscricao::class)->name('publico.inscricao');
+
+// Retomada de Inscrição (deve vir antes de /inscricao/{slug_projeto?})
 Route::get('/retomar-inscricao/{token}', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class)
     ->name('inscricao.retomar');
+Route::get('/inscricao/retomar/{token}', \App\Modules\Registration\UI\Livewire\RetomarInscricao::class);
+
+// Inscrição Oficial Regular (/inscricao) e Projetos Customizados (/inscricao/{slug_projeto})
+Route::get('/inscricao/{slug_projeto?}', \App\Modules\Website\UI\Livewire\Inscricao::class)
+    ->name('publico.inscricao');
+
+// Formulários Públicos Gerais e Pré-Inscrição (Acesso Público)
 Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
     ->name('formularios.publico')
     ->middleware('throttle:30,1');
 
-    Route::get('/portal', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class)->name('portal.index');
+Route::get('/pre-inscricao/{slug}', PreInscricao::class)
+    ->name('pre-inscricao.publico')
+    ->middleware('throttle:30,1');
+
+Route::get('/portal', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class)->name('portal.index');
 Route::get('/portal/{slug}', \App\Modules\Conteudo\UI\Livewire\ConteudoPublico::class)->name('conteudo.show');
 
 Route::middleware('guest:student,company,web')->group(function () {
@@ -35,7 +47,7 @@ Route::middleware('guest:student,company,web')->group(function () {
 
 Route::get('/login', \App\Modules\Auth\UI\Livewire\Login::class)
     ->name('login')
-    ->middleware(['guest:web,student,company', 'throttle:5,1']); // Ex: Máx 5 tentativas por minuto
+    ->middleware(['guest:web,student,company', 'throttle:5,1']);
 
 Route::middleware('guest:student,company,web')->group(function () {
     Route::get('/esqueci-senha', \App\Modules\Portal\UI\Livewire\Auth\ForgotPassword::class)->name('password.request');
@@ -60,7 +72,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/conteudo', \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class)->name('conteudo.index');
     Route::get('/conteudo/novo', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.create');
     Route::get('/conteudo/{id}/editar', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.edit');
-
 
     Route::get('/dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');
@@ -98,12 +109,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/matriculas/acompanhamento', \App\Modules\Matricula\UI\Livewire\ProcessoMatriculaManager::class)->name('matriculas.acompanhamento');
     
     Route::get('/formularios', \App\Modules\Forms\UI\Livewire\FormManager::class)->name('formularios.index');
-    
     Route::get('/formularios/novo', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.create');
     Route::get('/formularios/{id}/editar', \App\Modules\Forms\UI\Livewire\FormEdit::class)->name('formularios.edit');
     Route::get('/formularios/{id}/planilha', \App\Modules\Forms\UI\Livewire\FormSpreadsheet::class)->name('formularios.planilha');
     Route::get('/formularios/respostas/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\ResponseDetails::class)->name('formularios.respostas.show')->where('id', '[0-9]+');
-    
     Route::get('/formularios/{id}/{slug?}', \App\Modules\Forms\UI\Livewire\FormDetails::class)->name('formularios.show')->where('id', '[0-9]+');
     
     Route::get('/construtor/{tipo}/{id}/{slug?}', DynamicFields::class)->name('construtor.campos')->where('id', '[0-9]+');
@@ -134,7 +143,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/turmas/{id}/editar', \App\Modules\GestaoEducacional\UI\Livewire\Turma\Detalhes::class)->name('turmas.edit');
     Route::get('/aprendizagem', \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class)->name('aprendizagem.index');
     Route::get('/aprendizagem/{id}/acompanhamento', Acompanhamento::class)->name('acompanhamento.index');
-    Route::get('/pre-inscricao/{slug}', PreInscricao::class);
 
     Route::get('/auditoria', \App\Modules\Auditoria\UI\Livewire\AuditoriaManager::class)->name('auditoria.index');
     

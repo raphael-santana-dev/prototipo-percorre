@@ -36,7 +36,8 @@ class TemplateManager extends Component
         return [
             ['key' => 'id', 'label' => '#ID', 'sortable' => true, 'class' => 'w-16'],
             ['key' => 'nome', 'label' => 'Nome do Template', 'sortable' => true],
-            ['key' => 'assunto', 'label' => 'Assunto do E-mail', 'sortable' => true],
+            ['key' => 'canal', 'label' => 'Canal', 'sortable' => true, 'class' => 'w-36 text-center'],
+            ['key' => 'assunto', 'label' => 'Assunto / Resumo', 'sortable' => true],
             ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'text-right w-32'],
         ];
     }
@@ -44,17 +45,30 @@ class TemplateManager extends Component
     public function preVisualizar($id)
     {
         $template = EmailTemplate::findOrFail($id);
+        $canal = $template->canal ?? 'email';
+        $botoes = is_array($template->botoes) ? $template->botoes : [];
 
-        $conteudoHtml = $template->corpo ?? $template->conteudo ?? $template->html ?? '<p class="text-gray-500 italic">Sem conteúdo disponível.</p>';
+        $conteudoHtml = $template->corpo ?? '<p class="text-gray-500 italic">Sem conteúdo disponível.</p>';
 
         $html = '<div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mt-2 shadow-inner">';
-        $html .= '  <div class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700">';
-        $html .= '      <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Assunto do E-mail:</span>';
-        $html .= '      <span class="block text-sm font-bold text-gray-900 dark:text-gray-100">' . $template->assunto . '</span>';
+        $html .= '  <div class="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">';
+        $html .= '      <div><span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Assunto:</span>';
+        $html .= '      <span class="block text-sm font-bold text-gray-900 dark:text-gray-100">' . e($template->assunto) . '</span></div>';
+        $html .= '      <span class="px-2.5 py-1 text-[10px] font-bold uppercase rounded bg-purpura-100 text-purpura-700">' . strtoupper($canal) . '</span>';
         $html .= '  </div>';
-        $html .= '  <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">';
-        $html .=        $conteudoHtml;
-        $html .= '  </div>';
+        $html .= '  <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">' . $conteudoHtml . '</div>';
+
+        if (!empty($botoes)) {
+            $html .= '<div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1.5">';
+            $html .= '<span class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Botões / Opções Configuradas:</span>';
+            foreach ($botoes as $b) {
+                if (empty($b['texto'])) continue;
+                $infoUrl = !empty($b['url']) ? ' <span class="text-gray-400 font-mono">(' . e($b['url']) . ')</span>' : '';
+                $html .= '<div class="px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 rounded text-xs font-bold text-purpura-700">' . e($b['texto']) . $infoUrl . '</div>';
+            }
+            $html .= '</div>';
+        }
+
         $html .= '</div>';
 
         $this->dispatch('load-quick-view', [
