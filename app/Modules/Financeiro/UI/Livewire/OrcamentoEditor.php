@@ -664,7 +664,7 @@ class OrcamentoEditor extends Component
         ]);
 
         $this->modalConfirmarEnvioAberto = false;
-        $this->notificarAvaliadoresPorEmail();
+        \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarSubmissaoParaAprovacao($this->orcamento, auth()->user());
         $this->dispatch('sucesso', msg: 'Orçamento submetido para aprovação com sucesso!');
 
         return redirect()->route('financeiro.orcamentos');
@@ -688,6 +688,9 @@ class OrcamentoEditor extends Component
 
         $this->orcamento->refresh();
         $this->atualizarBloqueioGlobal();
+
+        \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarIntegracaoProtheus($this->orcamento, auth()->user());
+
         $this->dispatch('sucesso', msg: 'Orçamento finalizado e dados consolidados para a Tabela Intermediária do Protheus!');
     }
 

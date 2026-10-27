@@ -69,7 +69,19 @@ class OrcamentoManager extends Component
         app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($orcamento);
         $orcamento->update(['status' => 'Finalizado – Integrado ao Protheus']);
 
+        \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarIntegracaoProtheus($orcamento, auth()->user());
+
         $this->dispatch('sucesso', msg: "Orçamento #{$orcamento->id} finalizado e preparado para integração com a Tabela Intermediária do Protheus!");
+    }
+
+    public function sincronizarCadastrosProtheus()
+    {
+        $resultado = ProtheusOrcamentoService::sincronizarCadastrosBase();
+        if ($resultado['sucesso']) {
+            $this->dispatch('sucesso', msg: $resultado['mensagem']);
+        } else {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+        }
     }
 
     public function sincronizarProtheus()

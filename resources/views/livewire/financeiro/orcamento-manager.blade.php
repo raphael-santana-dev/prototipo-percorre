@@ -6,10 +6,16 @@
             </h1>
             <p class="text-sm text-gray-500 mt-1">Gestão, simulação e envio de orçamentos por centro de custo.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" wire:click="sincronizarCadastrosProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+                <i class="ph-bold ph-database" wire:loading.class="animate-spin" wire:target="sincronizarCadastrosProtheus"></i>
+                <span wire:loading.remove wire:target="sincronizarCadastrosProtheus">Sincronizar C. Custo e Naturezas</span>
+                <span wire:loading wire:target="sincronizarCadastrosProtheus">Sincronizando...</span>
+            </button>
+
+            <button type="button" wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-gray-900 border border-gray-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-black transition flex items-center gap-2">
                 <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
-                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Protheus</span>
+                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Orçamentos</span>
                 <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
             </button>
         </div>
