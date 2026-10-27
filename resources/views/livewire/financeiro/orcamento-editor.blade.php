@@ -1,4 +1,4 @@
-<div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800"
+<div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800 w-full"
      x-data="{ modoExpandido: true, navbarOculta: true }"
      x-init="
         document.body.classList.toggle('modo-expandido', modoExpandido);
@@ -6,10 +6,12 @@
         $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
         $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
      "
-     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px] h-[calc(100vh-140px)]'">
+     :class="modoExpandido ? 'flex-1 h-full border-0 rounded-none' : 'min-h-[720px] h-[calc(100vh-140px)]'">
 
     <style>
-        body.modo-expandido main { overflow: hidden !important; }
+        body.modo-expandido main { overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+        body.modo-expandido main > div { padding-top: 0 !important; padding-bottom: 0 !important; flex: 1 !important; display: flex !important; flex-direction: column !important; height: 100% !important; min-height: 0 !important; }
+        body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; flex: 1 !important; display: flex !important; flex-direction: column !important; height: 100% !important; min-height: 0 !important; }
         body.navbar-oculta .js-topnav, body.navbar-oculta header, body.navbar-oculta .js-sidebar { display: none !important; }
     </style>
 
@@ -47,7 +49,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
+            <button type="button" @click="modoExpandido = !modoExpandido; if (!modoExpandido) navbarOculta = false;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
                 <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                 <span x-text="modoExpandido ? 'Compactar' : 'Tela Cheia'"></span>
             </button>
@@ -101,22 +103,22 @@
     </div>
 
     {{-- 2. CAMPOS DO CABEÇALHO DO ORÇAMENTO --}}
-    <div class="px-5 py-3.5 bg-white border-b border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
+    <div class="px-5 py-3 bg-white border-b border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
         <div class="sm:col-span-2">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Ano <span class="text-red-500">*</span></label>
-            <input type="text" value="{{ $orcamento->ano }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
+            <input type="text" value="{{ $orcamento->ano }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
         </div>
         <div class="sm:col-span-2">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">C. Custo <span class="text-red-500">*</span></label>
-            <input type="text" value="{{ $orcamento->ccusto }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
+            <input type="text" value="{{ $orcamento->ccusto }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
         </div>
         <div class="sm:col-span-5">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Nome / Centro de Custo</label>
-            <input type="text" value="{{ $ccNome }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800">
+            <input type="text" value="{{ $ccNome }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800">
         </div>
         <div class="sm:col-span-3">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Status <span class="text-red-500">*</span></label>
-            <div class="w-full h-8 px-2.5 text-xs border rounded flex items-center font-medium truncate {{ $corStatusOrcamento }}">
+            <div class="w-full py-1.5 px-2.5 text-xs border rounded flex items-center font-medium truncate {{ $corStatusOrcamento }}">
                 {{ $orcamento->status }}
             </div>
         </div>
@@ -137,11 +139,11 @@
         </div>
     @endif
 
-    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS COM SCROLL HORIZONTAL) | DIREITA (DESPESA SELECIONADA - MESES) --}}
-    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-[380px]">
+    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS) | DIREITA (DESPESA SELECIONADA - MESES) --}}
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-0">
         
         {{-- COLUNA ESQUERDA (8 COLUNAS): TABELA DE DESPESAS --}}
-        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white">
+        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white min-h-0">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesas ({{ count($itensOrcamento) }})</span>
                 <span class="text-[11px] text-gray-500">
@@ -149,8 +151,8 @@
                 </span>
             </div>
 
-            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
-                <table class="w-full min-w-[1180px] text-left border-collapse text-xs whitespace-nowrap">
+            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar min-h-0">
+                <table class="w-full min-w-[1220px] text-left border-collapse text-xs whitespace-nowrap">
                     <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                         <tr>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-20 min-w-[80px]">
@@ -161,11 +163,11 @@
                                     <span>ID Desp</span>
                                 </div>
                             </th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[220px]">Desc Desp</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[230px]">Desc Desp</th>
                             <th class="py-2 px-2 border-r border-gray-200 font-medium text-center min-w-[90px]">Comentário</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[210px]">Natureza</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[220px]">Natureza</th>
                             <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[200px]">Descrição Natureza</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[150px]">Cenário</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[165px]">Cenário</th>
                             <th class="py-2 px-3 border-r border-gray-200 font-medium text-right min-w-[120px]">Total Item</th>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center min-w-[150px]">Status</th>
                             <th class="py-2 px-3 font-medium text-center min-w-[175px]">Ação</th>
@@ -202,7 +204,7 @@
                                 wire:click="selecionarItem({{ $index }})"
                                 class="cursor-pointer transition-colors {{ $isSelecionado ? 'bg-sky-100/80 text-gray-900' : 'hover:bg-gray-50' }}">
                                 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px]" @click.stop>
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px] align-middle" @click.stop>
                                     <div class="flex items-center gap-1.5">
                                         @if($podeEditarLinha)
                                             <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $tempId }}" class="rounded border-gray-300 text-gray-900 focus:ring-0">
@@ -211,32 +213,32 @@
                                     </div>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[220px]">
+                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[230px] align-middle">
                                     @if($podeEditarLinha)
                                         <input type="text"
                                                wire:key="desc-input-{{ $tempId }}"
                                                value="{{ $item['descricao'] }}"
                                                wire:change="atualizarCampoItem('{{ $tempId }}', 'descricao', $event.target.value)"
                                                placeholder="Descreva a despesa..."
-                                               class="w-full min-w-[200px] h-7 px-2 text-xs bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
+                                               class="w-full min-w-[210px] py-1 px-2 text-xs leading-normal bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
                                     @else
-                                        <span class="block truncate max-w-[230px]" title="{{ $item['descricao'] }}">{{ $item['descricao'] ?: '-' }}</span>
+                                        <span class="block truncate max-w-[240px]" title="{{ $item['descricao'] }}">{{ $item['descricao'] ?: '-' }}</span>
                                     @endif
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px]" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px] align-middle" @click.stop>
                                     <button type="button"
                                             wire:click="abrirComentariosDoItem({{ $index }})"
-                                            class="px-2 py-0.5 text-[11px] rounded border {{ $qtdComentariosItem > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
+                                            class="px-2 py-1 text-[11px] rounded border {{ $qtdComentariosItem > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
                                         Memo {{ $qtdComentariosItem > 0 ? "({$qtdComentariosItem})" : '' }}
                                     </button>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 font-mono min-w-[210px]">
+                                <td class="py-1.5 px-2 border-r border-gray-200 font-mono min-w-[220px] align-middle">
                                     @if($podeEditarLinha)
                                         <select wire:key="nat-select-{{ $tempId }}"
                                                 wire:change="atualizarCampoItem('{{ $tempId }}', 'natureza_codigo', $event.target.value)"
-                                                class="w-full min-w-[195px] h-7 px-2 text-xs bg-white border border-gray-300 rounded">
+                                                class="w-full min-w-[205px] py-1 pl-2.5 pr-7 text-xs leading-normal bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
                                             <option value="">Selecione...</option>
                                             @foreach($todasNaturezas as $nat)
                                                 <option value="{{ $nat->codigo }}" @selected(($item['natureza_codigo'] ?? '') === $nat->codigo)>
@@ -249,15 +251,15 @@
                                     @endif
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px]" title="{{ $item['natureza_nome'] }}">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px] align-middle" title="{{ $item['natureza_nome'] }}">
                                     {{ $item['natureza_nome'] ?: '-' }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[150px]">
+                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[165px] align-middle">
                                     @if($podeEditarLinha)
                                         <select wire:key="cen-select-{{ $tempId }}"
                                                 wire:change="atualizarCampoItem('{{ $tempId }}', 'cenario', $event.target.value)"
-                                                class="w-full min-w-[135px] h-7 px-2 text-xs bg-white border border-gray-300 rounded">
+                                                class="w-full min-w-[150px] py-1 pl-2.5 pr-7 text-xs leading-normal bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
                                             @foreach($cenariosDisponiveis as $codCen => $labelCen)
                                                 <option value="{{ $codCen }}" @selected(($item['cenario'] ?? '1') == $codCen)>{{ $labelCen }}</option>
                                             @endforeach
@@ -267,17 +269,17 @@
                                     @endif
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px]">
+                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px] align-middle">
                                     {{ number_format($somaItem, 2, ',', '.') }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px]">
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px] align-middle">
                                     <span class="inline-block px-2 py-0.5 text-[10px] rounded border {{ $badgeStatusItem }}">
                                         {{ $statusItem }}
                                     </span>
                                 </td>
 
-                                <td class="py-1.5 px-2 text-center min-w-[175px]" @click.stop>
+                                <td class="py-1.5 px-2 text-center min-w-[175px] align-middle" @click.stop>
                                     <div class="flex items-center justify-center gap-1">
                                         @if(in_array($statusItem, ['Aprovada', 'Aprovado'], true))
                                             <span class="text-[11px] text-emerald-700 flex items-center gap-1">
@@ -319,8 +321,8 @@
             </div>
         </div>
 
-        {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA (ISOLADA POR WIRE:KEY DO ITEM ATUAL) --}}
-        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white"
+        {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA --}}
+        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white min-h-0"
              wire:key="painel-direito-item-{{ $itemAtual['temp_id'] ?? 'vazio' }}">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesa selecionada</span>
@@ -332,7 +334,7 @@
             </div>
 
             @if($itemAtual)
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div class="flex-1 overflow-auto custom-scrollbar min-h-0">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                             <tr>
@@ -362,7 +364,7 @@
                                                    wire:key="input-mes-{{ $itemAtual['temp_id'] }}-{{ $sigla }}"
                                                    value="{{ $valAtual }}"
                                                    wire:change="atualizarValorMes('{{ $itemAtual['temp_id'] }}', '{{ $sigla }}', $event.target.value)"
-                                                   class="w-full h-7 px-2 text-right font-mono text-xs bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
+                                                   class="w-full py-1 px-2 text-right font-mono text-xs leading-normal bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
                                         @else
                                             <span class="font-mono text-gray-800 px-2">{{ number_format($valAtual, 2, ',', '.') }}</span>
                                         @endif
@@ -407,16 +409,16 @@
             $totalGeralAno += $somaMes;
         }
     @endphp
-    <div class="bg-gray-50 border-t border-gray-300 px-5 py-3.5 shrink-0">
-        <div class="text-xs font-semibold text-gray-800 border-b border-gray-200 pb-1.5 mb-3">
+    <div class="bg-gray-50 border-t border-gray-300 px-5 py-3 shrink-0">
+        <div class="text-xs font-semibold text-gray-800 border-b border-gray-200 pb-1.5 mb-2.5">
             Totais (Soma Mensal de Todas as Despesas do Orçamento)
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2.5">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
             @foreach($mesesConfig as $sigla => $nomeMes)
                 <div>
                     <label class="block text-[10px] text-gray-500 mb-0.5">{{ $nomeMes }}</label>
-                    <div class="w-full h-8 px-2.5 bg-white border border-gray-300 rounded flex items-center justify-end font-mono text-xs text-gray-800">
+                    <div class="w-full py-1.5 px-2.5 bg-white border border-gray-300 rounded flex items-center justify-end font-mono text-xs text-gray-800">
                         {{ number_format($totaisGeraisMes[$sigla], 2, ',', '.') }}
                     </div>
                 </div>
@@ -424,7 +426,7 @@
 
             <div class="col-span-2 sm:col-span-1 lg:col-span-2">
                 <label class="block text-[10px] font-semibold text-gray-700 mb-0.5">Total Ano (R$)</label>
-                <div class="w-full h-8 px-3 bg-gray-900 text-white border border-gray-900 rounded flex items-center justify-end font-mono text-xs font-semibold">
+                <div class="w-full py-1.5 px-3 bg-gray-900 text-white border border-gray-900 rounded flex items-center justify-end font-mono text-xs font-semibold">
                     {{ number_format($totalGeralAno, 2, ',', '.') }}
                 </div>
             </div>
@@ -524,7 +526,7 @@
                 @else
                     <div class="p-3 bg-white border-b border-gray-200">
                         <label class="block text-[10px] text-gray-500 uppercase mb-1">Despesa Selecionada</label>
-                        <select wire:model.live="itemComentarioId" class="w-full text-xs border-gray-300 rounded">
+                        <select wire:model.live="itemComentarioId" class="w-full py-1.5 pl-2.5 pr-7 text-xs leading-normal border-gray-300 rounded">
                             <option value="">Selecione um item...</option>
                             @foreach($itensOrcamento as $it)
                                 @if(!empty($it['id']))

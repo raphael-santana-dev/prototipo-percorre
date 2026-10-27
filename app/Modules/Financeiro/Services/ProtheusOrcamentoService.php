@@ -14,7 +14,7 @@ use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 class ProtheusOrcamentoService
 {
     /**
-     * Monta o cliente HTTP padrão para o Protheus com o header 'x-api-key'
+     * Cliente HTTP padrão com o header 'x-api-key'
      */
     private static function httpClient(): PendingRequest
     {
@@ -85,7 +85,7 @@ class ProtheusOrcamentoService
                 $processados++;
             }
 
-            return ['sucesso' => true, 'mensagem' => "{$processados} Centro(s) de Custo sincronizado(s) e salvos no banco de dados!"];
+            return ['sucesso' => true, 'mensagem' => "{$processados} Centro(s) de Custo sincronizado(s)!"];
         } catch (\Throwable $e) {
             return ['sucesso' => false, 'mensagem' => 'Falha ao sincronizar Centros de Custo: ' . $e->getMessage()];
         }
@@ -138,15 +138,12 @@ class ProtheusOrcamentoService
                 $processados++;
             }
 
-            return ['sucesso' => true, 'mensagem' => "{$processados} Natureza(s) Financeira(s) sincronizada(s) e salvas no banco de dados!"];
+            return ['sucesso' => true, 'mensagem' => "{$processados} Natureza(s) Financeira(s) sincronizada(s)!"];
         } catch (\Throwable $e) {
             return ['sucesso' => false, 'mensagem' => 'Falha ao sincronizar Naturezas: ' . $e->getMessage()];
         }
     }
 
-    /**
-     * Sincroniza Cadastros Base (Centros de Custo + Naturezas) de uma só vez
-     */
     public static function sincronizarCadastrosBase(): array
     {
         $resCC = self::sincronizarCentrosCusto();
@@ -163,11 +160,12 @@ class ProtheusOrcamentoService
     }
 
     /**
-     * Sincroniza os Orçamentos disponibilizados na Tabela Intermediária do Protheus
+     * 1. CONSULTA SEM PARÂMETROS (Listagem de Orçamentos: /rest/wstabint)
+     * Retorna { "orcamentos": [ { "ano": "2026", "ccusto": "20121", "descricao": "TECNOLOGIA", "status": "2", "statusDescricao": "...", "total": 246783.79 } ] }
      */
-    public static function sincronizar()
+    public static function sincronizar(): array
     {
-        $url = env('PROTHEUS_API_URL');
+        $url = rtrim((string) env('PROTHEUS_API_URL'), '/');
         if (!$url) {
             return ['sucesso' => false, 'mensagem' => 'URL da API Protheus (PROTHEUS_API_URL) ausente no .env.'];
         }
@@ -175,134 +173,221 @@ class ProtheusOrcamentoService
         try {
             $response = self::httpClient()->get($url);
 
-            if ($response->successful()) {
-                $dados = $response->json();
-
-                if (isset($dados['centrosCusto'])) {
-                    self::sincronizarCentrosCusto($dados);
-                }
-                if (isset($dados['naturezas'])) {
-                    self::sincronizarNaturezas($dados);
-                }
-                
-                $orcamentosApi = isset($dados['orcamentos']) ? $dados['orcamentos'] : (is_array($dados) && !isset($dados['ano']) ? $dados : [$dados]);
-                
-                $processados = 0;
-
-                foreach ($orcamentosApi as $item) {
-                    $ano = trim((string) ($item['ano'] ?? ''));
-                    $ccusto = trim((string) ($item['ccusto'] ?? ''));
-                    $descricaoCC = trim((string) ($item['descricao'] ?? ''));
-                    $filial = trim((string) ($item['filial'] ?? '0101'));
-
-                    if (empty($ano) || empty($ccusto)) continue;
-
-                    CentroCusto::firstOrCreate(
-                        ['codigo' => $ccusto],
-                        ['nome' => $descricaoCC ?: "Centro de Custo {$ccusto}", 'disponivel_orcamento' => true]
-                    );
-
-                    $chaveHeader = "{$filial}_{$ano}_{$ccusto}";
-
-                    $orcamento = Orcamento::firstOrCreate(
-                        ['chave_composta' => $chaveHeader],
-                        [
-                            'filial'            => $filial, 
-                            'ano'               => $ano, 
-                            'ccusto'            => $ccusto,
-                            'descricao_despesa' => $descricaoCC,
-                            'status'            => 'Importado',
-                        ]
-                    );
-
-                    if (isset($item['despesas']) && is_array($item['despesas'])) {
-                        $seq = 1;
-                        foreach ($item['despesas'] as $despesa) {
-                            $idDespesa = str_pad(trim((string) ($despesa['id'] ?? $seq)), 3, '0', STR_PAD_LEFT);
-                            $naturezaCod = trim((string) ($despesa['natureza'] ?? ''));
-                            $naturezaDesc = trim((string) ($despesa['descricaoNatureza'] ?? 'Natureza Importada'));
-                            $cenario = trim((string) ($despesa['cenario'] ?? '1')) ?: '1';
-                            
-                            if (!empty($naturezaCod)) {
-                                Natureza::firstOrCreate(
-                                    ['codigo' => $naturezaCod],
-                                    ['descricao' => $naturezaDesc, 'tipo' => 'DESPESA', 'disponivel_orcamento' => true]
-                                );
-                            }
-
-                            $valores = $despesa['valores'] ?? array_fill(0, 12, 0);
-                            $descricaoDespesa = trim((string) ($despesa['descricao'] ?? $naturezaDesc));
-
-                            $itemOrc = OrcamentoItem::updateOrCreate(
-                                [
-                                    'orcamento_id' => $orcamento->id,
-                                    'id_despesa'   => $idDespesa,
-                                ],
-                                [
-                                    'natureza_codigo' => $naturezaCod,
-                                    'cenario'         => $cenario,
-                                    'descricao'       => $descricaoDespesa,
-                                    'status'          => 'Importado',
-                                    'previsto_jan'    => $valores[0] ?? 0, 'valor_jan' => $valores[0] ?? 0,
-                                    'previsto_fev'    => $valores[1] ?? 0, 'valor_fev' => $valores[1] ?? 0,
-                                    'previsto_mar'    => $valores[2] ?? 0, 'valor_mar' => $valores[2] ?? 0,
-                                    'previsto_abr'    => $valores[3] ?? 0, 'valor_abr' => $valores[3] ?? 0,
-                                    'previsto_mai'    => $valores[4] ?? 0, 'valor_mai' => $valores[4] ?? 0,
-                                    'previsto_jun'    => $valores[5] ?? 0, 'valor_jun' => $valores[5] ?? 0,
-                                    'previsto_jul'    => $valores[6] ?? 0, 'valor_jul' => $valores[6] ?? 0,
-                                    'previsto_ago'    => $valores[7] ?? 0, 'valor_ago' => $valores[7] ?? 0,
-                                    'previsto_set'    => $valores[8] ?? 0, 'valor_set' => $valores[8] ?? 0,
-                                    'previsto_out'    => $valores[9] ?? 0, 'valor_out' => $valores[9] ?? 0,
-                                    'previsto_nov'    => $valores[10] ?? 0, 'valor_nov' => $valores[10] ?? 0,
-                                    'previsto_dez'    => $valores[11] ?? 0, 'valor_dez' => $valores[11] ?? 0,
-                                ]
-                            );
-
-                            if (!empty(trim((string) ($despesa['comentario'] ?? '')))) {
-                                OrcamentoAvaliacao::firstOrCreate(
-                                    [
-                                        'orcamento_id'      => $orcamento->id,
-                                        'orcamento_item_id' => $itemOrc->id,
-                                        'tipo_evento'       => 'comentario_importacao',
-                                    ],
-                                    [
-                                        'user_id'         => auth()->id() ?? 1,
-                                        'user_nome'       => 'Importação Protheus',
-                                        'status_aplicado' => 'Importado',
-                                        'comentario'      => trim((string) $despesa['comentario']),
-                                    ]
-                                );
-                            }
-                            $seq++;
-                        }
-                    }
-                    $processados++;
-                }
-                return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamento(s) processado(s)."];
+            if (!$response->successful()) {
+                return ['sucesso' => false, 'mensagem' => "Erro na API do Protheus (HTTP " . $response->status() . ")."];
             }
-            return ['sucesso' => false, 'mensagem' => "Erro na API do Protheus (HTTP " . $response->status() . ")."];
-        } catch (\Exception $e) {
+
+            $dados = $response->json();
+
+            if (isset($dados['centrosCusto'])) {
+                self::sincronizarCentrosCusto($dados);
+            }
+            if (isset($dados['naturezas'])) {
+                self::sincronizarNaturezas($dados);
+            }
+            
+            $orcamentosApi = isset($dados['orcamentos'])
+                ? $dados['orcamentos']
+                : (is_array($dados) && !isset($dados['ano']) ? $dados : [$dados]);
+            
+            $processados = 0;
+
+            foreach ($orcamentosApi as $item) {
+                $ano = trim((string) ($item['ano'] ?? ''));
+                $ccusto = trim((string) ($item['ccusto'] ?? ''));
+                $descricaoCC = trim((string) ($item['descricao'] ?? ''));
+                $filial = trim((string) ($item['filial'] ?? '0101'));
+                $totalApi = isset($item['total']) ? round((float) $item['total'], 2) : 0.0;
+
+                if (empty($ano) || empty($ccusto)) continue;
+
+                CentroCusto::firstOrCreate(
+                    ['codigo' => $ccusto],
+                    ['nome' => $descricaoCC ?: "Centro de Custo {$ccusto}", 'disponivel_orcamento' => true]
+                );
+
+                $chaveHeader = "{$filial}_{$ano}_{$ccusto}";
+
+                $orcamento = Orcamento::firstOrCreate(
+                    ['chave_composta' => $chaveHeader],
+                    [
+                        'filial'            => $filial, 
+                        'ano'               => $ano, 
+                        'ccusto'            => $ccusto,
+                        'descricao_despesa' => $descricaoCC,
+                        'status'            => 'Importado',
+                        'dados_consolidados'=> [
+                            'ano'             => $ano,
+                            'ccusto'          => $ccusto,
+                            'descricao'       => $descricaoCC,
+                            'status'          => (string) ($item['status'] ?? '2'),
+                            'statusDescricao' => (string) ($item['statusDescricao'] ?? 'Em revisão/atualização'),
+                            'total'           => $totalApi,
+                        ],
+                    ]
+                );
+
+                // Se o orçamento ainda está como 'Importado' e não tem itens locais, atualiza o resumo do total da API
+                if ($orcamento->status === 'Importado' && $orcamento->itens()->count() === 0 && $totalApi > 0) {
+                    $metaAtual = is_array($orcamento->dados_consolidados) ? $orcamento->dados_consolidados : [];
+                    $metaAtual['total'] = $totalApi;
+                    $metaAtual['descricao'] = $descricaoCC ?: ($metaAtual['descricao'] ?? '');
+                    $orcamento->updateQuietly(['dados_consolidados' => $metaAtual]);
+                }
+
+                // Caso o JSON já traga despesas diretamente, importa-as
+                if (!empty($item['despesas']) && is_array($item['despesas'])) {
+                    self::processarDespesasDoOrcamento($orcamento, $item['despesas']);
+                }
+
+                $processados++;
+            }
+
+            return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamento(s) listado(s)."];
+        } catch (\Throwable $e) {
             return ['sucesso' => false, 'mensagem' => "Erro de ligação à API do Protheus: " . $e->getMessage()];
         }
     }
 
-    // Mantenha abaixo os métodos consolidarParaTabelaIntermediaria() e enviarParaProtheusSimulado() que enviamos na Etapa 1
+    /**
+     * 2. CONSULTA COM PARÂMETROS (Ao abrir um orçamento: /rest/wstabint/?ano=2026&ccusto=20121)
+     * Busca as despesas detalhadas do orçamento específico no Protheus.
+     */
+    public static function sincronizarDetalhesOrcamento(Orcamento $orcamento, bool $forcarAtualizacao = false): array
+    {
+        // Só consulta na API se o orçamento ainda não possuir itens salvos localmente ou se estiver no status inicial 'Importado'/'Criado'
+        $qtdItensLocais = $orcamento->itens()->count();
+        if (!$forcarAtualizacao && $qtdItensLocais > 0) {
+            return ['sucesso' => true, 'mensagem' => 'Itens já carregados na base local.'];
+        }
+
+        $baseUrl = rtrim((string) env('PROTHEUS_API_URL'), '/');
+        if (!$baseUrl) {
+            return ['sucesso' => false, 'mensagem' => 'PROTHEUS_API_URL não configurada.'];
+        }
+
+        try {
+            $urlComParams = $baseUrl . '/?ano=' . urlencode((string) $orcamento->ano) . '&ccusto=' . urlencode((string) $orcamento->ccusto);
+            $response = self::httpClient()->get($urlComParams);
+
+            if (!$response->successful()) {
+                return ['sucesso' => false, 'mensagem' => 'Não foi possível obter os itens detalhados na API do Protheus (HTTP ' . $response->status() . ').'];
+            }
+
+            $dados = $response->json();
+
+            // Suporta retorno direto { "ano": "2026", "ccusto": "20121", "despesas": [...] } ou dentro de "orcamentos"[0]
+            $payloadOrcamento = $dados;
+            if (!isset($payloadOrcamento['despesas']) && isset($dados['orcamentos'][0])) {
+                $payloadOrcamento = $dados['orcamentos'][0];
+            }
+
+            if (!empty($payloadOrcamento['descricao'])) {
+                CentroCusto::updateOrCreate(
+                    ['codigo' => trim((string) $orcamento->ccusto)],
+                    ['nome' => trim((string) $payloadOrcamento['descricao']), 'disponivel_orcamento' => true]
+                );
+            }
+
+            if (isset($payloadOrcamento['despesas']) && is_array($payloadOrcamento['despesas'])) {
+                self::processarDespesasDoOrcamento($orcamento, $payloadOrcamento['despesas']);
+                return ['sucesso' => true, 'mensagem' => count($payloadOrcamento['despesas']) . ' despesa(s) carregada(s) da API do Protheus.'];
+            }
+
+            return ['sucesso' => false, 'mensagem' => 'A consulta com parâmetros não retornou a chave "despesas".'];
+        } catch (\Throwable $e) {
+            Log::warning("Falha ao buscar detalhes do orçamento #{$orcamento->id} com parâmetros na API Protheus: " . $e->getMessage());
+            return ['sucesso' => false, 'mensagem' => $e->getMessage()];
+        }
+    }
 
     /**
-     * Gera a estrutura consolidada da Tabela Intermediária (Header + Despesas + Aglutinado por Natureza)
+     * Grava ou atualiza os itens (despesas) e seus comentários iniciais vindos do JSON com parâmetros
+     */
+    private static function processarDespesasDoOrcamento(Orcamento $orcamento, array $despesas): void
+    {
+        $seq = 1;
+        foreach ($despesas as $despesa) {
+            $idDespesa = str_pad(trim((string) ($despesa['id'] ?? $seq)), 3, '0', STR_PAD_LEFT);
+            $naturezaCod = trim((string) ($despesa['natureza'] ?? ''));
+            $naturezaDesc = trim((string) ($despesa['descricaoNatureza'] ?? 'Natureza Importada'));
+            $cenario = trim((string) ($despesa['cenario'] ?? '1')) ?: '1';
+            
+            if (!empty($naturezaCod)) {
+                Natureza::firstOrCreate(
+                    ['codigo' => $naturezaCod],
+                    ['descricao' => $naturezaDesc, 'tipo' => 'DESPESA', 'disponivel_orcamento' => true]
+                );
+            }
+
+            $valores = $despesa['valores'] ?? array_fill(0, 12, 0);
+            $descricaoDespesa = trim((string) ($despesa['descricao'] ?? $naturezaDesc));
+
+            $itemOrc = OrcamentoItem::updateOrCreate(
+                [
+                    'orcamento_id' => $orcamento->id,
+                    'id_despesa'   => $idDespesa,
+                ],
+                [
+                    'natureza_codigo' => $naturezaCod,
+                    'cenario'         => $cenario,
+                    'descricao'       => $descricaoDespesa,
+                    'status'          => 'Importado',
+                    'previsto_jan'    => (float) ($valores[0] ?? 0),  'valor_jan' => (float) ($valores[0] ?? 0),
+                    'previsto_fev'    => (float) ($valores[1] ?? 0),  'valor_fev' => (float) ($valores[1] ?? 0),
+                    'previsto_mar'    => (float) ($valores[2] ?? 0),  'valor_mar' => (float) ($valores[2] ?? 0),
+                    'previsto_abr'    => (float) ($valores[3] ?? 0),  'valor_abr' => (float) ($valores[3] ?? 0),
+                    'previsto_mai'    => (float) ($valores[4] ?? 0),  'valor_mai' => (float) ($valores[4] ?? 0),
+                    'previsto_jun'    => (float) ($valores[5] ?? 0),  'valor_jun' => (float) ($valores[5] ?? 0),
+                    'previsto_jul'    => (float) ($valores[6] ?? 0),  'valor_jul' => (float) ($valores[6] ?? 0),
+                    'previsto_ago'    => (float) ($valores[7] ?? 0),  'valor_ago' => (float) ($valores[7] ?? 0),
+                    'previsto_set'    => (float) ($valores[8] ?? 0),  'valor_set' => (float) ($valores[8] ?? 0),
+                    'previsto_out'    => (float) ($valores[9] ?? 0),  'valor_out' => (float) ($valores[9] ?? 0),
+                    'previsto_nov'    => (float) ($valores[10] ?? 0), 'valor_nov' => (float) ($valores[10] ?? 0),
+                    'previsto_dez'    => (float) ($valores[11] ?? 0), 'valor_dez' => (float) ($valores[11] ?? 0),
+                ]
+            );
+
+            $comentarioImportado = trim((string) ($despesa['comentario'] ?? ''));
+            if ($comentarioImportado !== '') {
+                OrcamentoAvaliacao::updateOrCreate(
+                    [
+                        'orcamento_id'      => $orcamento->id,
+                        'orcamento_item_id' => $itemOrc->id,
+                        'tipo_evento'       => 'comentario_importacao',
+                    ],
+                    [
+                        'user_id'         => auth()->id() ?? 1,
+                        'user_nome'       => 'Importação Protheus',
+                        'status_aplicado' => 'Comentário Original',
+                        'comentario'      => $comentarioImportado,
+                    ]
+                );
+            }
+            $seq++;
+        }
+    }
+
+    /**
+     * Consolida os dados do orçamento no formato exato de 'comparams.json' (sem a chave 'tabela_intermediaria')
      */
     public function consolidarParaTabelaIntermediaria(Orcamento $orcamento): array
     {
-        $orcamento->loadMissing(['centroCusto', 'itens.natureza']);
+        $orcamento->loadMissing(['centroCusto', 'itens.natureza', 'itens.avaliacoes']);
 
         $ccCodigo = trim((string) $orcamento->ccusto);
-        $ccDescricaoVirtual = $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Centro de Custo (' . $ccCodigo . ')';
+        $ccDescricao = $orcamento->centroCusto ? $orcamento->centroCusto->nome : ($orcamento->descricao_despesa ?: '');
 
-        $itensValidos = $orcamento->itens->whereNotIn('status', ['Reprovado', 'Não Aprovado', 'Não Aprovada']);
+        $itensValidos = $orcamento->itens()
+            ->with(['natureza', 'avaliacoes'])
+            ->whereNotIn('status', ['Reprovado', 'Não Aprovado', 'Não Aprovada'])
+            ->orderBy('id', 'asc')
+            ->get();
 
-        // 1. Formato de retorno para a Tabela Intermediária (Despesas detalhadas com ID 001, Cenário e Valores)
-        $despesasIntermediarias = [];
+        $despesas = [];
+        $totalOrcamento = 0.0;
         $seq = 1;
+
         foreach ($itensValidos as $item) {
             $natObj = $item->natureza;
             $valoresMes = [
@@ -320,78 +405,40 @@ class ProtheusOrcamentoService
                 round((float) $item->valor_dez, 2),
             ];
 
-            $despesasIntermediarias[] = [
+            $totalItem = round(array_sum($valoresMes), 2);
+            $totalOrcamento += $totalItem;
+
+            // Concatena os comentários do item para enviar no campo "comentario" do Protheus
+            $comentariosTexto = $item->avaliacoes
+                ->filter(fn($av) => !empty(trim((string) $av->comentario)))
+                ->sortBy('id')
+                ->map(fn($av) => ($av->tipo_evento === 'comentario_importacao')
+                    ? trim((string) $av->comentario)
+                    : "{$av->user_nome}:\r\n" . trim((string) $av->comentario)
+                )
+                ->implode("\r\n\r\n");
+
+            $despesas[] = [
                 'id'                => $item->id_despesa ?: str_pad((string) $seq, 3, '0', STR_PAD_LEFT),
                 'descricao'         => trim((string) $item->descricao),
                 'natureza'          => trim((string) $item->natureza_codigo),
                 'descricaoNatureza' => $natObj ? $natObj->descricao : '',
-                'categoria'         => $natObj ? ($natObj->categoria ?? '') : '',
                 'cenario'           => (string) ($item->cenario ?: '1'),
-                'comentario'        => '',
+                'comentario'        => $comentariosTexto,
                 'valores'           => $valoresMes,
-                'total'             => round(array_sum($valoresMes), 2),
+                'total'             => $totalItem,
             ];
             $seq++;
-        }
-
-        // 2. Aglutinação por Natureza Financeira (SE7)
-        $itensAgrupados = $itensValidos->groupBy('natureza_codigo');
-        $linhasAglutinadas = [];
-
-        foreach ($itensAgrupados as $codigoNatureza => $grupoItens) {
-            $primeiroItem = $grupoItens->first();
-            $natObj = $primeiroItem->natureza;
-
-            $naturezaDescricaoVirtual = $natObj ? $natObj->descricao : 'Natureza Importada (' . $codigoNatureza . ')';
-            $categoria = $orcamento->xcat ?: ($natObj->categoria ?? 'Despesa Orçamentária');
-
-            $descricoes = $grupoItens->pluck('descricao')
-                ->map(fn($d) => trim((string) $d))
-                ->filter()
-                ->unique()
-                ->implode(' | ');
-
-            $linhasAglutinadas[] = [
-                'ano'                      => (int) $orcamento->ano,
-                'codigo_centro_custo'      => $ccCodigo,
-                'descricao_centro_custo'   => $ccDescricaoVirtual,
-                'codigo_natureza'          => trim((string) $codigoNatureza),
-                'descricao_natureza'       => $naturezaDescricaoVirtual,
-                'categoria'                => $categoria,
-                'descricao_despesa'        => $descricoes ?: $naturezaDescricaoVirtual,
-                'status'                   => '3', // 3 = Aprovado na Tabela Intermediária Protheus (Slide 15)
-                'valor_previsto_janeiro'   => round((float) $grupoItens->sum('valor_jan'), 2),
-                'valor_previsto_fevereiro' => round((float) $grupoItens->sum('valor_fev'), 2),
-                'valor_previsto_marco'     => round((float) $grupoItens->sum('valor_mar'), 2),
-                'valor_previsto_abril'     => round((float) $grupoItens->sum('valor_abr'), 2),
-                'valor_previsto_maio'      => round((float) $grupoItens->sum('valor_mai'), 2),
-                'valor_previsto_junho'     => round((float) $grupoItens->sum('valor_jun'), 2),
-                'valor_previsto_julho'     => round((float) $grupoItens->sum('valor_jul'), 2),
-                'valor_previsto_agosto'    => round((float) $grupoItens->sum('valor_ago'), 2),
-                'valor_previsto_setembro'  => round((float) $grupoItens->sum('valor_set'), 2),
-                'valor_previsto_outubro'   => round((float) $grupoItens->sum('valor_out'), 2),
-                'valor_previsto_novembro'  => round((float) $grupoItens->sum('valor_nov'), 2),
-                'valor_previsto_dezembro'  => round((float) $grupoItens->sum('valor_dez'), 2),
-            ];
         }
 
         return [
             'ano'             => (string) $orcamento->ano,
             'ccusto'          => $ccCodigo,
-            'descricao'       => $ccDescricaoVirtual,
+            'descricao'       => $ccDescricao,
             'status'          => '3',
             'statusDescricao' => 'Aprovado',
-            'total'           => round((float) $orcamento->valor_total, 2),
-            'despesas'        => $despesasIntermediarias,
-            'tabela_intermediaria' => $linhasAglutinadas,
-            'meta' => [
-                'orcamento_web_id'     => $orcamento->id,
-                'filial'               => $orcamento->filial,
-                'status_orcamento_web' => $orcamento->status,
-                'total_naturezas'      => count($linhasAglutinadas),
-                'data_consolidacao'    => now()->toIso8601String(),
-                'integrado_por'        => auth()->user()->name ?? 'Sistema',
-            ],
+            'total'           => round($totalOrcamento, 2),
+            'despesas'        => $despesas,
         ];
     }
 
@@ -401,14 +448,14 @@ class ProtheusOrcamentoService
 
         $orcamento->updateQuietly(['dados_consolidados' => $payload]);
 
-        Log::info("[INTEGRAÇÃO PROTHEUS] Payload da Tabela Intermediária consolidado para o Orçamento #{$orcamento->id}", $payload);
+        Log::info("[INTEGRAÇÃO PROTHEUS] JSON consolidado gerado para o Orçamento #{$orcamento->id}", $payload);
 
         OrcamentoAvaliacao::create([
             'orcamento_id'    => $orcamento->id,
             'user_id'         => auth()->id() ?? 1,
             'user_nome'       => auth()->user()->name ?? 'Sistema',
             'status_aplicado' => 'Finalizado – Integrado ao Protheus',
-            'comentario'      => "Orçamento consolidado e preparado para a Tabela Intermediária do Protheus (" . count($payload['despesas']) . " despesas / " . count($payload['tabela_intermediaria']) . " naturezas).",
+            'comentario'      => "Orçamento consolidado para o Protheus (" . count($payload['despesas']) . " despesas).",
             'tipo_evento'     => 'integracao_protheus',
         ]);
 

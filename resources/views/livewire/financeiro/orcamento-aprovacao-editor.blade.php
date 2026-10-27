@@ -1,4 +1,4 @@
-<div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800"
+<div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800 w-full"
      x-data="{ modoExpandido: true, navbarOculta: true }"
      x-init="
         document.body.classList.toggle('modo-expandido', modoExpandido);
@@ -6,10 +6,12 @@
         $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
         $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
      "
-     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px] h-[calc(100vh-140px)]'">
+     :class="modoExpandido ? 'flex-1 h-full border-0 rounded-none' : 'min-h-[720px] h-[calc(100vh-140px)]'">
 
     <style>
-        body.modo-expandido main { overflow: hidden !important; }
+        body.modo-expandido main { overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+        body.modo-expandido main > div { padding-top: 0 !important; padding-bottom: 0 !important; flex: 1 !important; display: flex !important; flex-direction: column !important; height: 100% !important; min-height: 0 !important; }
+        body.modo-expandido main > div > div { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; flex: 1 !important; display: flex !important; flex-direction: column !important; height: 100% !important; min-height: 0 !important; }
         body.navbar-oculta .js-topnav, body.navbar-oculta header, body.navbar-oculta .js-sidebar { display: none !important; }
     </style>
 
@@ -49,7 +51,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
+            <button type="button" @click="modoExpandido = !modoExpandido; if (!modoExpandido) navbarOculta = false;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
                 <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                 <span x-text="modoExpandido ? 'Compactar' : 'Tela Cheia'"></span>
             </button>
@@ -82,28 +84,28 @@
     @endif
 
     {{-- 2. CABEÇALHO DO ORÇAMENTO --}}
-    <div class="px-5 py-3.5 bg-white border-b border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
+    <div class="px-5 py-3 bg-white border-b border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
         <div class="sm:col-span-2">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Ano <span class="text-red-500">*</span></label>
-            <input type="text" value="{{ $orcamento->ano }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
+            <input type="text" value="{{ $orcamento->ano }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
         </div>
         <div class="sm:col-span-2">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">C. Custo <span class="text-red-500">*</span></label>
-            <input type="text" value="{{ $orcamento->ccusto }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
+            <input type="text" value="{{ $orcamento->ccusto }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800 font-mono">
         </div>
         <div class="sm:col-span-5">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Nome / Centro de Custo</label>
-            <input type="text" value="{{ $ccNome }}" readonly class="w-full h-8 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800">
+            <input type="text" value="{{ $ccNome }}" readonly class="w-full py-1.5 px-2.5 text-xs bg-gray-100 border border-gray-300 rounded text-gray-800">
         </div>
         <div class="sm:col-span-3">
             <label class="block text-[11px] font-medium text-gray-600 mb-1">Status <span class="text-red-500">*</span></label>
-            <div class="w-full h-8 px-2.5 text-xs border rounded flex items-center font-medium truncate {{ $corStatusOrcamento }}">
+            <div class="w-full py-1.5 px-2.5 text-xs border rounded flex items-center font-medium truncate {{ $corStatusOrcamento }}">
                 {{ $orcamento->status }}
             </div>
         </div>
     </div>
 
-    {{-- BARRA DE AÇÕES EM GRUPO (LOTE) — SLIDE 46 --}}
+    {{-- BARRA DE AÇÕES EM GRUPO (LOTE) --}}
     @if(count($itensSelecionados) > 0 && !in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado – Integrado ao Protheus'], true))
         <div class="px-5 py-2 bg-gray-900 text-white flex flex-wrap items-center justify-between gap-2 shrink-0">
             <span class="text-xs font-medium">{{ count($itensSelecionados) }} despesa(s) selecionada(s)</span>
@@ -121,11 +123,11 @@
         </div>
     @endif
 
-    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS COM SCROLL HORIZONTAL) | DIREITA (MESES DA DESPESA SELECIONADA) --}}
-    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-[380px]">
+    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS) | DIREITA (MESES DA DESPESA SELECIONADA) --}}
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-0">
         
         {{-- COLUNA ESQUERDA (8 COLUNAS): DESPESAS --}}
-        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white">
+        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white min-h-0">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesas ({{ $itensOrdenados->count() }})</span>
                 <span class="text-[11px] text-gray-500">
@@ -133,7 +135,7 @@
                 </span>
             </div>
 
-            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar min-h-0">
                 <table class="w-full min-w-[1240px] text-left border-collapse text-xs whitespace-nowrap">
                     <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                         <tr>
@@ -148,7 +150,7 @@
                             <th class="py-2 px-2 border-r border-gray-200 font-medium text-center min-w-[100px]">Motivo Revisão</th>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[100px]">Natureza</th>
                             <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[190px]">Descrição Natureza</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[130px]">Cenário</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[140px]">Cenário</th>
                             <th class="py-2 px-3 border-r border-gray-200 font-medium text-right min-w-[120px]">Total Item</th>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center min-w-[150px]">Status Atual</th>
                             <th class="py-2 px-3 font-medium text-center min-w-[240px]">Análise (Aprovar / Revisar / Não Aprovar)</th>
@@ -179,7 +181,7 @@
                                 wire:click="selecionarItem({{ $index }})"
                                 class="cursor-pointer transition-colors {{ $isSelecionado ? 'bg-sky-100/80 text-gray-900' : 'hover:bg-gray-50' }}">
                                 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px]" @click.stop>
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px] align-middle" @click.stop>
                                     <div class="flex items-center gap-1.5">
                                         @if(!in_array($item->status, ['Aprovada', 'Aprovado'], true))
                                             <input type="checkbox" wire:model.live="itensSelecionados" value="{{ (string) $item->id }}" class="rounded border-gray-300 text-gray-900 focus:ring-0">
@@ -188,65 +190,65 @@
                                     </div>
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px]" title="{{ $item->descricao }}">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px] align-middle" title="{{ $item->descricao }}">
                                     {{ $item->descricao ?: '-' }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px]" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px] align-middle" @click.stop>
                                     <button type="button"
                                             wire:click="abrirComentariosDoItem({{ $index }}, {{ $item->id }})"
-                                            class="px-2 py-0.5 text-[11px] rounded border {{ $qtdComentarios > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
+                                            class="px-2 py-1 text-[11px] rounded border {{ $qtdComentarios > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
                                         Memo {{ $qtdComentarios > 0 ? "({$qtdComentarios})" : '' }}
                                     </button>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[100px]" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[100px] align-middle" @click.stop>
                                     <button type="button"
                                             wire:click="abrirHistoricoMotivoRevisao({{ $index }}, {{ $item->id }})"
-                                            class="px-2 py-0.5 text-[11px] rounded border {{ ($qtdMotivosRevisao > 0 || $minhaDecisao === 'Aguardando Revisão pelo Responsável') ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
+                                            class="px-2 py-1 text-[11px] rounded border {{ ($qtdMotivosRevisao > 0 || $minhaDecisao === 'Aguardando Revisão pelo Responsável') ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
                                         Motivo {{ $qtdMotivosRevisao > 0 ? "({$qtdMotivosRevisao})" : '' }}
                                     </button>
                                 </td>
 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono min-w-[100px]">
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono min-w-[100px] align-middle">
                                     {{ $item->natureza_codigo ?: '-' }}
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 min-w-[190px] truncate max-w-[230px]" title="{{ $item->natureza ? $item->natureza->descricao : '-' }}">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[190px] truncate max-w-[230px] align-middle" title="{{ $item->natureza ? $item->natureza->descricao : '-' }}">
                                     {{ $item->natureza ? $item->natureza->descricao : '-' }}
                                 </td>
 
-                                <td class="py-2 px-2.5 border-r border-gray-200 text-gray-600 min-w-[130px]">
+                                <td class="py-2 px-2.5 border-r border-gray-200 text-gray-700 min-w-[140px] align-middle">
                                     {{ $cenariosDisponiveis[$item->cenario ?? '1'] ?? '1 - Conservador' }}
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px]">
+                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px] align-middle">
                                     {{ number_format($item->valor_total, 2, ',', '.') }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px]">
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px] align-middle">
                                     <span class="inline-block px-2 py-0.5 text-[10px] rounded border {{ $badgeStatusBanco }}">
                                         {{ $item->status }}
                                     </span>
                                 </td>
 
-                                <td class="py-1.5 px-2 text-center min-w-[240px]" @click.stop>
+                                <td class="py-1.5 px-2 text-center min-w-[240px] align-middle" @click.stop>
                                     <div class="inline-flex items-center gap-1">
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Aprovada')"
-                                                class="px-2 py-1 text-[11px] rounded border transition {{ in_array($minhaDecisao, ['Aprovada', 'Aprovado'], true) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50' }}">
+                                                class="px-2.5 py-1 text-[11px] rounded border transition {{ in_array($minhaDecisao, ['Aprovada', 'Aprovado'], true) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50' }}">
                                             Aprovar
                                         </button>
 
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Aguardando Revisão pelo Responsável')"
-                                                class="px-2 py-1 text-[11px] rounded border transition {{ $minhaDecisao === 'Aguardando Revisão pelo Responsável' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50' }}">
+                                                class="px-2.5 py-1 text-[11px] rounded border transition {{ $minhaDecisao === 'Aguardando Revisão pelo Responsável' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50' }}">
                                             Revisar
                                         </button>
 
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Não Aprovada')"
-                                                class="px-2 py-1 text-[11px] rounded border transition {{ in_array($minhaDecisao, ['Não Aprovada', 'Não Aprovado'], true) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300 hover:bg-red-50' }}">
+                                                class="px-2.5 py-1 text-[11px] rounded border transition {{ in_array($minhaDecisao, ['Não Aprovada', 'Não Aprovado'], true) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300 hover:bg-red-50' }}">
                                             Não Aprovar
                                         </button>
                                     </div>
@@ -258,8 +260,8 @@
             </div>
         </div>
 
-        {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA (12 MESES + TOTAL) --}}
-        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white"
+        {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA --}}
+        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white min-h-0"
              wire:key="aprov-painel-direito-{{ $itemAtual->id ?? 'vazio' }}">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesa selecionada</span>
@@ -271,7 +273,7 @@
             </div>
 
             @if($itemAtual)
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div class="flex-1 overflow-auto custom-scrollbar min-h-0">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                             <tr>
@@ -330,16 +332,16 @@
             $totalGeralAno += $somaMes;
         }
     @endphp
-    <div class="bg-gray-50 border-t border-gray-300 px-5 py-3.5 shrink-0">
-        <div class="text-xs font-semibold text-gray-800 border-b border-gray-200 pb-1.5 mb-3">
+    <div class="bg-gray-50 border-t border-gray-300 px-5 py-3 shrink-0">
+        <div class="text-xs font-semibold text-gray-800 border-b border-gray-200 pb-1.5 mb-2.5">
             Totais (Soma Mensal de Todas as Despesas do Orçamento)
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2.5">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
             @foreach($mesesConfig as $sigla => $nomeMes)
                 <div>
                     <label class="block text-[10px] text-gray-500 mb-0.5">{{ $nomeMes }}</label>
-                    <div class="w-full h-8 px-2.5 bg-white border border-gray-300 rounded flex items-center justify-end font-mono text-xs text-gray-800">
+                    <div class="w-full py-1.5 px-2.5 bg-white border border-gray-300 rounded flex items-center justify-end font-mono text-xs text-gray-800">
                         {{ number_format($totaisGeraisMes[$sigla], 2, ',', '.') }}
                     </div>
                 </div>
@@ -347,14 +349,14 @@
 
             <div class="col-span-2 sm:col-span-1 lg:col-span-2">
                 <label class="block text-[10px] font-semibold text-gray-700 mb-0.5">Total Ano (R$)</label>
-                <div class="w-full h-8 px-3 bg-gray-900 text-white border border-gray-900 rounded flex items-center justify-end font-mono text-xs font-semibold">
+                <div class="w-full py-1.5 px-3 bg-gray-900 text-white border border-gray-900 rounded flex items-center justify-end font-mono text-xs font-semibold">
                     {{ number_format($totalGeralAno, 2, ',', '.') }}
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- MODAL OBRIGATÓRIO DO CAMPO "MOTIVO DA REVISÃO" (SLIDE 47) --}}
+    {{-- MODAL OBRIGATÓRIO DO CAMPO "MOTIVO DA REVISÃO" --}}
     @if($modalMotivoRevisaoAberto)
         <div class="fixed inset-0 z-[160] flex items-center justify-center bg-gray-900/50 px-4">
             <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full border border-gray-200">
@@ -449,7 +451,7 @@
                 @elseif($abaComentario === 'item')
                     <div class="p-3 bg-white border-b border-gray-200">
                         <label class="block text-[10px] text-gray-500 uppercase mb-1">Despesa Selecionada</label>
-                        <select wire:model.live="itemComentarioId" class="w-full text-xs border-gray-300 rounded">
+                        <select wire:model.live="itemComentarioId" class="w-full py-1.5 pl-2.5 pr-7 text-xs leading-normal border-gray-300 rounded">
                             @foreach($itensOrdenados as $idxSel => $it)
                                 <option value="{{ $it->id }}">#{{ $it->id_despesa ?: str_pad((string) ($idxSel + 1), 3, '0', STR_PAD_LEFT) }} - {{ $it->descricao }}</option>
                             @endforeach
@@ -483,10 +485,10 @@
                     </div>
 
                 @else
-                    {{-- ABA: MOTIVO DA REVISÃO (SLIDE 47) --}}
+                    {{-- ABA: MOTIVO DA REVISÃO --}}
                     <div class="p-3 bg-white border-b border-gray-200">
                         <label class="block text-[10px] text-gray-500 uppercase mb-1">Despesa em Análise</label>
-                        <select wire:model.live="itemComentarioId" class="w-full text-xs border-gray-300 rounded">
+                        <select wire:model.live="itemComentarioId" class="w-full py-1.5 pl-2.5 pr-7 text-xs leading-normal border-gray-300 rounded">
                             @foreach($itensOrdenados as $idxSel => $it)
                                 <option value="{{ $it->id }}">#{{ $it->id_despesa ?: str_pad((string) ($idxSel + 1), 3, '0', STR_PAD_LEFT) }} - {{ $it->descricao }}</option>
                             @endforeach

@@ -67,6 +67,11 @@ class OrcamentoEditor extends Component
             'centroCusto',
             'logsGerais'
         ])->findOrFail($id);
+
+        if ($this->orcamento->itens->isEmpty()) {
+            \App\Modules\Financeiro\Services\ProtheusOrcamentoService::sincronizarDetalhesOrcamento($this->orcamento);
+            $this->orcamento->load(['itens' => fn($q) => $q->orderBy('id', 'asc'), 'itens.natureza', 'itens.avaliacoes']);
+        }
         
         if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {

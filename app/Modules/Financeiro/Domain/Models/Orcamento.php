@@ -57,6 +57,11 @@ class Orcamento extends Model
                 return $item->valor_total;
             });
         }
+
+        // Enquanto os itens detalhados ainda não foram abertos/importados, exibe o total vindo da listagem sem parâmetros
+        if (is_array($this->dados_consolidados) && isset($this->dados_consolidados['total'])) {
+            return (float) $this->dados_consolidados['total'];
+        }
         
         return 0;
     }
