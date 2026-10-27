@@ -27,7 +27,6 @@ class ProtheusOrcamentoService
             if ($response->successful()) {
                 $dados = $response->json();
                 
-                // Permite ler tanto um objeto único quanto uma lista de objetos do JSON
                 $orcamentosApi = isset($dados['orcamentos']) ? $dados['orcamentos'] : (is_array($dados) && !isset($dados['ano']) ? $dados : [$dados]);
                 
                 $processados = 0;
@@ -36,19 +35,22 @@ class ProtheusOrcamentoService
                     $ano = trim($item['ano'] ?? '');
                     $ccusto = trim($item['ccusto'] ?? '');
                     $descricaoCC = trim($item['descricao'] ?? '');
-                    $filial = '0101'; // Fallback padrão caso a API não envie a filial no novo formato
+                    $filial = trim($item['filial'] ?? '0101');
 
-                    if(empty($ano) || empty($ccusto)) continue;
+                    if (empty($ano) || empty($ccusto)) continue;
 
                     $chaveHeader = "{$filial}_{$ano}_{$ccusto}";
 
-                    $orcamento = Orcamento::firstOrCreate(['chave_composta' => $chaveHeader], [
-                        'filial' => $filial, 
-                        'ano' => $ano, 
-                        'ccusto' => $ccusto,
-                        'descricao_despesa' => $descricaoCC,
-                        'status' => 'Criado'
-                    ]);
+                    $orcamento = Orcamento::firstOrCreate(
+                        ['chave_composta' => $chaveHeader],
+                        [
+                            'filial'            => $filial, 
+                            'ano'               => $ano, 
+                            'ccusto'            => $ccusto,
+                            'descricao_despesa' => $descricaoCC,
+                            'status'            => 'Importado',
+                        ]
+                    );
 
                     if (isset($item['despesas']) && is_array($item['despesas'])) {
                         foreach ($item['despesas'] as $despesa) {
@@ -56,35 +58,57 @@ class ProtheusOrcamentoService
                             $naturezaDesc = trim($despesa['descricaoNatureza'] ?? 'Natureza Importada');
                             
                             if (!empty($naturezaCod)) {
-                                Natureza::firstOrCreate(['codigo' => $naturezaCod], ['descricao' => $naturezaDesc, 'disponivel_orcamento' => true]);
+                                Natureza::firstOrCreate(
+                                    ['codigo' => $naturezaCod],
+                                    ['descricao' => $naturezaDesc, 'disponivel_orcamento' => true]
+                                );
                             }
 
-                            // O novo JSON traz os meses num array 'valores' de 0 a 11
                             $valores = $despesa['valores'] ?? array_fill(0, 12, 0);
+                            $descricaoDespesa = trim($despesa['descricao'] ?? $naturezaDesc);
 
-                            OrcamentoItem::updateOrCreate([
-                                'orcamento_id' => $orcamento->id,
-                                'natureza_codigo' => $naturezaCod,
-                                'descricao' => trim($despesa['descricao'] ?? '')
-                            ], [
-                                'previsto_jan' => $valores[0] ?? 0, 'valor_jan' => $valores[0] ?? 0,
-                                'previsto_fev' => $valores[1] ?? 0, 'valor_fev' => $valores[1] ?? 0,
-                                'previsto_mar' => $valores[2] ?? 0, 'valor_mar' => $valores[2] ?? 0,
-                                'previsto_abr' => $valores[3] ?? 0, 'valor_abr' => $valores[3] ?? 0,
-                                'previsto_mai' => $valores[4] ?? 0, 'valor_mai' => $valores[4] ?? 0,
-                                'previsto_jun' => $valores[5] ?? 0, 'valor_jun' => $valores[5] ?? 0,
-                                'previsto_jul' => $valores[6] ?? 0, 'valor_jul' => $valores[6] ?? 0,
-                                'previsto_ago' => $valores[7] ?? 0, 'valor_ago' => $valores[7] ?? 0,
-                                'previsto_set' => $valores[8] ?? 0, 'valor_set' => $valores[8] ?? 0,
-                                'previsto_out' => $valores[9] ?? 0, 'valor_out' => $valores[9] ?? 0,
-                                'previsto_nov' => $valores[10] ?? 0, 'valor_nov' => $valores[10] ?? 0,
-                                'previsto_dez' => $valores[11] ?? 0, 'valor_dez' => $valores[11] ?? 0,
-                            ]);
+                            $itemExistente = OrcamentoItem::where('orcamento_id', $orcamento->id)
+                                ->where('natureza_codigo', $naturezaCod)
+                                ->where('descricao', $descricaoDespesa)
+                                ->first();
+
+                            if (!$itemExistente) {
+                                $novoItem = OrcamentoItem::create([
+                                    'orcamento_id'    => $orcamento->id,
+                                    'natureza_codigo' => $naturezaCod,
+                                    'descricao'       => $descricaoDespesa,
+                                    'status'          => 'Importado',
+                                    'previsto_jan'    => $valores[0] ?? 0, 'valor_jan' => $valores[0] ?? 0,
+                                    'previsto_fev'    => $valores[1] ?? 0, 'valor_fev' => $valores[1] ?? 0,
+                                    'previsto_mar'    => $valores[2] ?? 0, 'valor_mar' => $valores[2] ?? 0,
+                                    'previsto_abr'    => $valores[3] ?? 0, 'valor_abr' => $valores[3] ?? 0,
+                                    'previsto_mai'    => $valores[4] ?? 0, 'valor_mai' => $valores[4] ?? 0,
+                                    'previsto_jun'    => $valores[5] ?? 0, 'valor_jun' => $valores[5] ?? 0,
+                                    'previsto_jul'    => $valores[6] ?? 0, 'valor_jul' => $valores[6] ?? 0,
+                                    'previsto_ago'    => $valores[7] ?? 0, 'valor_ago' => $valores[7] ?? 0,
+                                    'previsto_set'    => $valores[8] ?? 0, 'valor_set' => $valores[8] ?? 0,
+                                    'previsto_out'    => $valores[9] ?? 0, 'valor_out' => $valores[9] ?? 0,
+                                    'previsto_nov'    => $valores[10] ?? 0, 'valor_nov' => $valores[10] ?? 0,
+                                    'previsto_dez'    => $valores[11] ?? 0, 'valor_dez' => $valores[11] ?? 0,
+                                ]);
+
+                                if (!empty(trim($despesa['comentario'] ?? ''))) {
+                                    OrcamentoAvaliacao::create([
+                                        'orcamento_id'      => $orcamento->id,
+                                        'orcamento_item_id' => $novoItem->id,
+                                        'user_id'           => auth()->id() ?? 1,
+                                        'user_nome'         => 'Importação Protheus',
+                                        'status_aplicado'   => 'Importado',
+                                        'comentario'        => trim($despesa['comentario']),
+                                        'tipo_evento'       => 'comentario_item',
+                                    ]);
+                                }
+                            }
                         }
                     }
                     $processados++;
                 }
-                return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamentos processados."];
+                return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamento(s) importado(s) com status 'Importado'."];
             }
             return ['sucesso' => false, 'mensagem' => "Erro na API do Protheus."];
         } catch (\Exception $e) {
@@ -99,7 +123,7 @@ class ProtheusOrcamentoService
         $ccCodigo = trim((string) $orcamento->ccusto);
         $ccDescricaoVirtual = $orcamento->centroCusto ? $orcamento->centroCusto->nome : 'Centro de Custo (' . $ccCodigo . ')';
 
-        $itensValidos = $orcamento->itens->where('status', '!=', 'Reprovado');
+        $itensValidos = $orcamento->itens->whereNotIn('status', ['Reprovado', 'Não Aprovado']);
         $itensAgrupados = $itensValidos->groupBy('natureza_codigo');
         $linhasIntermediarias = [];
 
@@ -124,7 +148,7 @@ class ProtheusOrcamentoService
                 'descricao_natureza'         => $naturezaDescricaoVirtual,
                 'categoria'                  => $categoria,
                 'descricao_despesa'          => $descricoes ?: $naturezaDescricaoVirtual,
-                'status'                     => 'Finalizado', 
+                'status'                     => 'Finalizado – Aprovado', 
                 'valor_previsto_janeiro'     => round((float) $grupoItens->sum('valor_jan'), 2),
                 'valor_previsto_fevereiro'   => round((float) $grupoItens->sum('valor_fev'), 2),
                 'valor_previsto_marco'       => round((float) $grupoItens->sum('valor_mar'), 2),

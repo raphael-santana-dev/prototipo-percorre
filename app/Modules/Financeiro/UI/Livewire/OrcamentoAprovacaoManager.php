@@ -17,7 +17,7 @@ class OrcamentoAprovacaoManager extends Component
 
     public $filtroAno = '';
     public $filtroFilial = '';
-    public $filtroStatus = 'Finalizado'; 
+    public $filtroStatus = ''; 
     public $filtroCentroCusto = '';
 
     public array $breadcrumbs = [];
@@ -72,7 +72,15 @@ class OrcamentoAprovacaoManager extends Component
 
     protected function obterQueryFiltrada()
     {
-        $query = Orcamento::with('centroCusto')->whereIn('status', ['Finalizado', 'Aprovado', 'Reprovado', 'Aprovado com ressalvas']);
+        $query = Orcamento::with('centroCusto')->whereIn('status', [
+            'Finalizado – Aguardando Aprovação',
+            'Aprovação – Aguardando Revisão pelo Responsável',
+            'Finalizado – Aprovado',
+            'Finalizado',
+            'Aprovado',
+            'Reprovado',
+            'Aprovado com ressalvas'
+        ]);
         
         if (!empty($this->filtroAno)) $query->where('ano', $this->filtroAno);
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
@@ -91,7 +99,7 @@ class OrcamentoAprovacaoManager extends Component
 
         return view('livewire.financeiro.orcamento-aprovacao-manager', [
             'registros' => $query->paginate($this->porPagina),
-            'totalAguardando' => Orcamento::where('status', 'Finalizado')->count()
+            'totalAguardando' => Orcamento::whereIn('status', ['Finalizado – Aguardando Aprovação', 'Finalizado'])->count()
         ]);
     }
 }
