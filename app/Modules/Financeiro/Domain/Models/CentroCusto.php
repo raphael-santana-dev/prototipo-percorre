@@ -7,7 +7,7 @@ use App\Traits\RegistraAuditoria;
 
 class CentroCusto extends Model
 {
-    use RegistraAuditoria; // Mantemos o tracking de auditoria de alterações
+    use RegistraAuditoria;
 
     protected $table = 'centros_custo';
 
@@ -20,6 +20,14 @@ class CentroCusto extends Model
     protected $casts = [
         'disponivel_orcamento' => 'boolean',
     ];
+
+    /**
+     * Retorna a descrição oficial do status conforme especificação do Projeto Lógico
+     */
+    public function getStatusDescricaoAttribute(): string
+    {
+        return $this->disponivel_orcamento ? 'Disponível para Orçamento' : 'Inativo';
+    }
 
     public function users()
     {
