@@ -173,51 +173,53 @@ class OrcamentoNotificacaoService
      */
     public static function notificarMovimentacaoAprovacao(Orcamento $orcamento, ?User $aprovadorAtivo = null): void
     {
-        $orcamento->loadMissing('centroCusto');
+        $orcamento->loadMissing(['centroCusto', 'itens']);
         $ccNome = $orcamento->centroCusto ? $orcamento->centroCusto->nome : $orcamento->ccusto;
         $nomeAprovador = $aprovadorAtivo ? $aprovadorAtivo->name : (auth()->user()->name ?? 'Aprovador');
         $aprovadorId = $aprovadorAtivo ? $aprovadorAtivo->id : auth()->id();
 
-        // Notifica os demais aprovadores (excluindo quem acabou de realizar a ação)
+        $qtdAprovadas = $orcamento->itens->whereIn('status', ['Aprovada', 'Aprovado', 'Aprovada Parcialmente'])->count();
+        $qtdRevisao   = $orcamento->itens->where('status', 'Aguardando Revisão pelo Responsável')->count();
+        $qtdReprovadas = $orcamento->itens->whereIn('status', ['Não Aprovada', 'Não Aprovado', 'Reprovado', 'Reprovado parcialmente'])->count();
+
+        $resumo = "Status Global: {$orcamento->status} | Aprovadas: {$qtdAprovadas} | Para Revisão: {$qtdRevisao} | Não Aprovadas: {$qtdReprovadas}.";
+
+        // 1. Notifica os demais aprovadores (se houver mais de 1)
         $outrosAprovadores = self::obterAprovadores($orcamento)
             ->reject(fn(User $u) => (int) $u->id === (int) $aprovadorId);
 
         if ($outrosAprovadores->isNotEmpty()) {
-            $payloadAprovadores = [
-                'titulo'       => "Movimentação de Aprovação — CC {$orcamento->ccusto}",
-                'mensagem'     => "O aprovador {$nomeAprovador} registou a sua análise no orçamento {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}).",
-                'detalhes'     => "Status atual do orçamento: {$orcamento->status}",
+            self::dispararParaUsuarios($outrosAprovadores, [
+                'titulo'       => "Análise de Orçamento Finalizada por {$nomeAprovador} — CC {$orcamento->ccusto}",
+                'mensagem'     => "O aprovador {$nomeAprovador} finalizou a análise do orçamento {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}).",
+                'detalhes'     => $resumo,
                 'url'          => route('financeiro.aprovacoes.editor', $orcamento->id),
-                'texto_botao'  => 'Aceder à Tela de Aprovação',
+                'texto_botao'  => 'Acessar Orçamento',
                 'icone'        => 'ph-check-square-offset',
                 'cor'          => 'blue',
                 'orcamento_id' => $orcamento->id,
                 'ccusto'       => $orcamento->ccusto,
                 'ano'          => $orcamento->ano,
                 'status'       => $orcamento->status,
-            ];
-
-            self::dispararParaUsuarios($outrosAprovadores, $payloadAprovadores);
+            ]);
         }
 
-        // Notifica o(s) responsável(eis) pelo orçamento sobre a conclusão/atualização da análise
+        // 2. Notifica o Responsável uma única vez com o resultado consolidado da análise
         $responsaveis = self::obterResponsaveis($orcamento);
 
-        $payloadResponsavel = [
-            'titulo'       => "Atualização na Aprovação do Orçamento — CC {$orcamento->ccusto}",
-            'mensagem'     => "O aprovador {$nomeAprovador} registou uma avaliação no orçamento {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}).",
-            'detalhes'     => "Novo status global do orçamento: {$orcamento->status}",
+        self::dispararParaUsuarios($responsaveis, [
+            'titulo'       => "Resultado da Análise do Orçamento — CC {$orcamento->ccusto}",
+            'mensagem'     => "A análise do orçamento {$orcamento->ano} ({$ccNome}) foi concluída por {$nomeAprovador}.",
+            'detalhes'     => $resumo,
             'url'          => route('financeiro.orcamentos.editor', $orcamento->id),
-            'texto_botao'  => 'Visualizar Orçamento',
-            'icone'        => $orcamento->status === 'Finalizado – Aprovado' ? 'ph-check-circle' : 'ph-info',
-            'cor'          => $orcamento->status === 'Finalizado – Aprovado' ? 'emerald' : 'purpura',
+            'texto_botao'  => 'Acessar Orçamento',
+            'icone'        => $orcamento->status === 'Finalizado – Aprovado' ? 'ph-check-circle' : 'ph-warning-circle',
+            'cor'          => $orcamento->status === 'Finalizado – Aprovado' ? 'emerald' : 'amber',
             'orcamento_id' => $orcamento->id,
             'ccusto'       => $orcamento->ccusto,
             'ano'          => $orcamento->ano,
             'status'       => $orcamento->status,
-        ];
-
-        self::dispararParaUsuarios($responsaveis, $payloadResponsavel);
+        ]);
     }
 
     /**

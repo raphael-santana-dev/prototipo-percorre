@@ -1,7 +1,12 @@
 <div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800"
-     x-data="{ modoExpandido: false, navbarOculta: false }"
-     x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
-     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px]'">
+     x-data="{ modoExpandido: true, navbarOculta: true }"
+     x-init="
+        document.body.classList.toggle('modo-expandido', modoExpandido);
+        document.body.classList.toggle('navbar-oculta', navbarOculta);
+        $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
+        $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
+     "
+     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px] h-[calc(100vh-140px)]'">
 
     <style>
         body.modo-expandido main { overflow: hidden !important; }
@@ -42,9 +47,14 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition">
+            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
                 <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                 <span x-text="modoExpandido ? 'Compactar' : 'Tela Cheia'"></span>
+            </button>
+
+            <button type="button" x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
+                <i class="ph-bold" :class="navbarOculta ? 'ph-eye' : 'ph-eye-slash'"></i>
+                <span x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
             </button>
 
             <button type="button" wire:click="abrirComentariosGerais" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
@@ -127,11 +137,11 @@
         </div>
     @endif
 
-    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS) | DIREITA (DESPESA SELECIONADA - MESES) --}}
+    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS COM SCROLL HORIZONTAL) | DIREITA (DESPESA SELECIONADA - MESES) --}}
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-[380px]">
         
         {{-- COLUNA ESQUERDA (8 COLUNAS): TABELA DE DESPESAS --}}
-        <div class="lg:col-span-8 flex flex-col overflow-hidden bg-white">
+        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesas ({{ count($itensOrcamento) }})</span>
                 <span class="text-[11px] text-gray-500">
@@ -139,11 +149,11 @@
                 </span>
             </div>
 
-            <div class="flex-1 overflow-auto">
-                <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+                <table class="w-full min-w-[1180px] text-left border-collapse text-xs whitespace-nowrap">
                     <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                         <tr>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-20">
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-20 min-w-[80px]">
                                 <div class="flex items-center gap-1.5">
                                     @if(!$isLockedGlobal)
                                         <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-300 text-gray-900 focus:ring-0">
@@ -151,14 +161,14 @@
                                     <span>ID Desp</span>
                                 </div>
                             </th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[190px]">Desc Desp</th>
-                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center w-20">Comentário</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-36">Natureza</th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[150px]">Descrição Natureza</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-32">Cenário</th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium text-right w-28">Total Item</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center w-36">Status</th>
-                            <th class="py-2 px-3 font-medium text-center w-44">Ação</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[220px]">Desc Desp</th>
+                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center min-w-[90px]">Comentário</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[210px]">Natureza</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[200px]">Descrição Natureza</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[150px]">Cenário</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium text-right min-w-[120px]">Total Item</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center min-w-[150px]">Status</th>
+                            <th class="py-2 px-3 font-medium text-center min-w-[175px]">Ação</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -192,7 +202,7 @@
                                 wire:click="selecionarItem({{ $index }})"
                                 class="cursor-pointer transition-colors {{ $isSelecionado ? 'bg-sky-100/80 text-gray-900' : 'hover:bg-gray-50' }}">
                                 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700" @click.stop>
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px]" @click.stop>
                                     <div class="flex items-center gap-1.5">
                                         @if($podeEditarLinha)
                                             <input type="checkbox" wire:model.live="itensSelecionados" value="{{ $tempId }}" class="rounded border-gray-300 text-gray-900 focus:ring-0">
@@ -201,20 +211,20 @@
                                     </div>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200">
+                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[220px]">
                                     @if($podeEditarLinha)
                                         <input type="text"
                                                wire:key="desc-input-{{ $tempId }}"
                                                value="{{ $item['descricao'] }}"
                                                wire:change="atualizarCampoItem('{{ $tempId }}', 'descricao', $event.target.value)"
                                                placeholder="Descreva a despesa..."
-                                               class="w-full h-7 px-2 text-xs bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
+                                               class="w-full min-w-[200px] h-7 px-2 text-xs bg-white border border-gray-300 rounded focus:border-sky-600 focus:ring-0">
                                     @else
-                                        <span class="block truncate max-w-[210px]" title="{{ $item['descricao'] }}">{{ $item['descricao'] ?: '-' }}</span>
+                                        <span class="block truncate max-w-[230px]" title="{{ $item['descricao'] }}">{{ $item['descricao'] ?: '-' }}</span>
                                     @endif
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px]" @click.stop>
                                     <button type="button"
                                             wire:click="abrirComentariosDoItem({{ $index }})"
                                             class="px-2 py-0.5 text-[11px] rounded border {{ $qtdComentariosItem > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
@@ -222,11 +232,11 @@
                                     </button>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 font-mono">
+                                <td class="py-1.5 px-2 border-r border-gray-200 font-mono min-w-[210px]">
                                     @if($podeEditarLinha)
                                         <select wire:key="nat-select-{{ $tempId }}"
                                                 wire:change="atualizarCampoItem('{{ $tempId }}', 'natureza_codigo', $event.target.value)"
-                                                class="w-full h-7 px-1.5 text-xs bg-white border border-gray-300 rounded">
+                                                class="w-full min-w-[195px] h-7 px-2 text-xs bg-white border border-gray-300 rounded">
                                             <option value="">Selecione...</option>
                                             @foreach($todasNaturezas as $nat)
                                                 <option value="{{ $nat->codigo }}" @selected(($item['natureza_codigo'] ?? '') === $nat->codigo)>
@@ -239,15 +249,15 @@
                                     @endif
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 truncate max-w-[170px]" title="{{ $item['natureza_nome'] }}">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px]" title="{{ $item['natureza_nome'] }}">
                                     {{ $item['natureza_nome'] ?: '-' }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200">
+                                <td class="py-1.5 px-2 border-r border-gray-200 min-w-[150px]">
                                     @if($podeEditarLinha)
                                         <select wire:key="cen-select-{{ $tempId }}"
                                                 wire:change="atualizarCampoItem('{{ $tempId }}', 'cenario', $event.target.value)"
-                                                class="w-full h-7 px-1.5 text-xs bg-white border border-gray-300 rounded">
+                                                class="w-full min-w-[135px] h-7 px-2 text-xs bg-white border border-gray-300 rounded">
                                             @foreach($cenariosDisponiveis as $codCen => $labelCen)
                                                 <option value="{{ $codCen }}" @selected(($item['cenario'] ?? '1') == $codCen)>{{ $labelCen }}</option>
                                             @endforeach
@@ -257,17 +267,17 @@
                                     @endif
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900">
+                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px]">
                                     {{ number_format($somaItem, 2, ',', '.') }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center">
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px]">
                                     <span class="inline-block px-2 py-0.5 text-[10px] rounded border {{ $badgeStatusItem }}">
                                         {{ $statusItem }}
                                     </span>
                                 </td>
 
-                                <td class="py-1.5 px-2 text-center" @click.stop>
+                                <td class="py-1.5 px-2 text-center min-w-[175px]" @click.stop>
                                     <div class="flex items-center justify-center gap-1">
                                         @if(in_array($statusItem, ['Aprovada', 'Aprovado'], true))
                                             <span class="text-[11px] text-emerald-700 flex items-center gap-1">
@@ -310,7 +320,7 @@
         </div>
 
         {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA (ISOLADA POR WIRE:KEY DO ITEM ATUAL) --}}
-        <div class="lg:col-span-4 flex flex-col overflow-hidden bg-white"
+        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white"
              wire:key="painel-direito-item-{{ $itemAtual['temp_id'] ?? 'vazio' }}">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesa selecionada</span>
@@ -322,7 +332,7 @@
             </div>
 
             @if($itemAtual)
-                <div class="flex-1 overflow-auto">
+                <div class="flex-1 overflow-auto custom-scrollbar">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                             <tr>

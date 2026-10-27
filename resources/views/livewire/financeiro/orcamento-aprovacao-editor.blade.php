@@ -1,7 +1,12 @@
 <div class="font-sans flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden text-gray-800"
-     x-data="{ modoExpandido: false, navbarOculta: false }"
-     x-init="$watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val)); $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val))"
-     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px]'">
+     x-data="{ modoExpandido: true, navbarOculta: true }"
+     x-init="
+        document.body.classList.toggle('modo-expandido', modoExpandido);
+        document.body.classList.toggle('navbar-oculta', navbarOculta);
+        $watch('modoExpandido', val => document.body.classList.toggle('modo-expandido', val));
+        $watch('navbarOculta', val => document.body.classList.toggle('navbar-oculta', val));
+     "
+     :class="modoExpandido ? 'fixed inset-0 z-[100] h-screen rounded-none border-0' : 'min-h-[720px] h-[calc(100vh-140px)]'">
 
     <style>
         body.modo-expandido main { overflow: hidden !important; }
@@ -44,9 +49,14 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition">
+            <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
                 <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                 <span x-text="modoExpandido ? 'Compactar' : 'Tela Cheia'"></span>
+            </button>
+
+            <button type="button" x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
+                <i class="ph-bold" :class="navbarOculta ? 'ph-eye' : 'ph-eye-slash'"></i>
+                <span x-text="navbarOculta ? 'Mostrar Menus' : 'Ocultar Menus'"></span>
             </button>
 
             <button type="button" wire:click="abrirComentariosGerais" class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5">
@@ -111,11 +121,11 @@
         </div>
     @endif
 
-    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS) | DIREITA (MESES DA DESPESA SELECIONADA) --}}
+    {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (DESPESAS COM SCROLL HORIZONTAL) | DIREITA (MESES DA DESPESA SELECIONADA) --}}
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 overflow-hidden min-h-[380px]">
         
         {{-- COLUNA ESQUERDA (8 COLUNAS): DESPESAS --}}
-        <div class="lg:col-span-8 flex flex-col overflow-hidden bg-white">
+        <div class="lg:col-span-8 min-w-0 flex flex-col overflow-hidden bg-white">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesas ({{ $itensOrdenados->count() }})</span>
                 <span class="text-[11px] text-gray-500">
@@ -123,25 +133,25 @@
                 </span>
             </div>
 
-            <div class="flex-1 overflow-auto">
-                <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+                <table class="w-full min-w-[1240px] text-left border-collapse text-xs whitespace-nowrap">
                     <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                         <tr>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-20">
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-20 min-w-[80px]">
                                 <div class="flex items-center gap-1.5">
                                     <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-300 text-gray-900 focus:ring-0">
                                     <span>ID Desp</span>
                                 </div>
                             </th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[170px]">Desc Desp</th>
-                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center w-20">Comentários</th>
-                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center w-24">Motivo Revisão</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-24">Natureza</th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[140px]">Descrição Natureza</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-28">Cenário</th>
-                            <th class="py-2 px-3 border-r border-gray-200 font-medium text-right w-28">Total Item</th>
-                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center w-36">Status Atual</th>
-                            <th class="py-2 px-3 font-medium text-center w-60">Análise (Aprovar / Revisar / Não Aprovar)</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[200px]">Desc Desp</th>
+                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center min-w-[90px]">Comentários</th>
+                            <th class="py-2 px-2 border-r border-gray-200 font-medium text-center min-w-[100px]">Motivo Revisão</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[100px]">Natureza</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium min-w-[190px]">Descrição Natureza</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium min-w-[130px]">Cenário</th>
+                            <th class="py-2 px-3 border-r border-gray-200 font-medium text-right min-w-[120px]">Total Item</th>
+                            <th class="py-2 px-2.5 border-r border-gray-200 font-medium text-center min-w-[150px]">Status Atual</th>
+                            <th class="py-2 px-3 font-medium text-center min-w-[240px]">Análise (Aprovar / Revisar / Não Aprovar)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -169,7 +179,7 @@
                                 wire:click="selecionarItem({{ $index }})"
                                 class="cursor-pointer transition-colors {{ $isSelecionado ? 'bg-sky-100/80 text-gray-900' : 'hover:bg-gray-50' }}">
                                 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700" @click.stop>
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono text-gray-700 min-w-[80px]" @click.stop>
                                     <div class="flex items-center gap-1.5">
                                         @if(!in_array($item->status, ['Aprovada', 'Aprovado'], true))
                                             <input type="checkbox" wire:model.live="itensSelecionados" value="{{ (string) $item->id }}" class="rounded border-gray-300 text-gray-900 focus:ring-0">
@@ -178,11 +188,11 @@
                                     </div>
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 truncate max-w-[200px]" title="{{ $item->descricao }}">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[200px] truncate max-w-[240px]" title="{{ $item->descricao }}">
                                     {{ $item->descricao ?: '-' }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[90px]" @click.stop>
                                     <button type="button"
                                             wire:click="abrirComentariosDoItem({{ $index }}, {{ $item->id }})"
                                             class="px-2 py-0.5 text-[11px] rounded border {{ $qtdComentarios > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
@@ -190,7 +200,7 @@
                                     </button>
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center" @click.stop>
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[100px]" @click.stop>
                                     <button type="button"
                                             wire:click="abrirHistoricoMotivoRevisao({{ $index }}, {{ $item->id }})"
                                             class="px-2 py-0.5 text-[11px] rounded border {{ ($qtdMotivosRevisao > 0 || $minhaDecisao === 'Aguardando Revisão pelo Responsável') ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
@@ -198,29 +208,29 @@
                                     </button>
                                 </td>
 
-                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono">
+                                <td class="py-2 px-2.5 border-r border-gray-200 font-mono min-w-[100px]">
                                     {{ $item->natureza_codigo ?: '-' }}
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 truncate max-w-[160px]">
+                                <td class="py-2 px-3 border-r border-gray-200 min-w-[190px] truncate max-w-[230px]" title="{{ $item->natureza ? $item->natureza->descricao : '-' }}">
                                     {{ $item->natureza ? $item->natureza->descricao : '-' }}
                                 </td>
 
-                                <td class="py-2 px-2.5 border-r border-gray-200 text-gray-600">
+                                <td class="py-2 px-2.5 border-r border-gray-200 text-gray-600 min-w-[130px]">
                                     {{ $cenariosDisponiveis[$item->cenario ?? '1'] ?? '1 - Conservador' }}
                                 </td>
 
-                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900">
+                                <td class="py-2 px-3 border-r border-gray-200 text-right font-mono text-gray-900 min-w-[120px]">
                                     {{ number_format($item->valor_total, 2, ',', '.') }}
                                 </td>
 
-                                <td class="py-1.5 px-2 border-r border-gray-200 text-center">
+                                <td class="py-1.5 px-2 border-r border-gray-200 text-center min-w-[150px]">
                                     <span class="inline-block px-2 py-0.5 text-[10px] rounded border {{ $badgeStatusBanco }}">
                                         {{ $item->status }}
                                     </span>
                                 </td>
 
-                                <td class="py-1.5 px-2 text-center" @click.stop>
+                                <td class="py-1.5 px-2 text-center min-w-[240px]" @click.stop>
                                     <div class="inline-flex items-center gap-1">
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Aprovada')"
@@ -249,19 +259,19 @@
         </div>
 
         {{-- COLUNA DIREITA (4 COLUNAS): DESPESA SELECIONADA (12 MESES + TOTAL) --}}
-        <div class="lg:col-span-4 flex flex-col overflow-hidden bg-white"
+        <div class="lg:col-span-4 min-w-0 flex flex-col overflow-hidden bg-white"
              wire:key="aprov-painel-direito-{{ $itemAtual->id ?? 'vazio' }}">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Despesa selecionada</span>
                 @if($itemAtual)
-                    <span class="text-[11px] text-gray-500 truncate max-w-[180px]">
+                    <span class="text-[11px] text-gray-500 truncate max-w-[180px]" title="{{ $itemAtual->descricao }}">
                         #{{ $itemAtual->id_despesa ?: str_pad((string) $itemAtual->id, 3, '0', STR_PAD_LEFT) }} — {{ $itemAtual->descricao }}
                     </span>
                 @endif
             </div>
 
             @if($itemAtual)
-                <div class="flex-1 overflow-auto">
+                <div class="flex-1 overflow-auto custom-scrollbar">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="bg-gray-100 border-b border-gray-200 text-gray-600 sticky top-0 z-10">
                             <tr>
@@ -358,6 +368,21 @@
                 <div class="flex justify-end gap-2 mt-4">
                     <button type="button" wire:click="$set('modalMotivoRevisaoAberto', false)" class="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 rounded">Cancelar</button>
                     <button type="button" wire:click="confirmarMotivoRevisaoModal" class="px-4 py-1.5 text-xs text-white bg-gray-900 hover:bg-black rounded">Confirmar Motivo</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE ANÁLISE DE REABERTURA --}}
+    @if($modalAprovarReaberturaAberto)
+        <div class="fixed inset-0 z-[160] flex items-center justify-center bg-gray-900/50 px-4">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full border border-gray-200">
+                <h3 class="text-base font-semibold text-gray-900 mb-2">Avaliar Pedido de Reabertura</h3>
+                <p class="text-xs text-gray-600 mb-4">Defina opcionalmente um prazo limite para o responsável concluir a edição:</p>
+                <input type="datetime-local" wire:model="prazoReabertura" class="w-full text-xs border-gray-300 rounded p-2 mb-4">
+                <div class="flex justify-end gap-2">
+                    <button type="button" wire:click="negarReabertura" class="px-3 py-1.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded">Negar</button>
+                    <button type="button" wire:click="aprovarReabertura" class="px-4 py-1.5 text-xs text-white bg-gray-900 rounded">Aprovar Reabertura</button>
                 </div>
             </div>
         </div>
