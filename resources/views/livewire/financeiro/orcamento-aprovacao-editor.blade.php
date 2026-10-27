@@ -139,8 +139,8 @@
     {{-- 3. ÁREA CENTRAL DIVIDIDA: ESQUERDA (ITENS SEM SCROLL HORIZONTAL) | DIREITA (MESES DO ITEM SELECIONADO) --}}
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 lg:divide-x divide-gray-200 overflow-hidden min-h-0">
         
-        {{-- COLUNA ESQUERDA (8 COLUNAS NO DESKTOP): ITENS --}}
-        <div class="lg:col-span-8 min-w-0 flex-col overflow-hidden bg-white min-h-0"
+        {{-- COLUNA ESQUERDA (9 COLUNAS NO DESKTOP): ITENS --}}
+        <div class="lg:col-span-9 min-w-0 flex-col overflow-hidden bg-white min-h-0"
              :class="abaMobile === 'itens' ? 'flex' : 'hidden lg:flex'">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
                 <span class="text-xs font-semibold text-gray-800">Itens ({{ $itensOrdenados->count() }})</span>
@@ -166,7 +166,7 @@
                             <th class="py-2 px-2 border-r border-gray-200 font-medium w-[105px]">Cenário</th>
                             <th class="py-2 px-2 border-r border-gray-200 font-medium text-right w-[95px]">Total Item</th>
                             <th class="py-2 px-1.5 border-r border-gray-200 font-medium text-center w-[110px]">Status Atual</th>
-                            <th class="py-2 px-2 font-medium text-center w-[195px]">Análise</th>
+                            <th class="py-2 px-2 font-medium text-center min-w-[155px]">Análise</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 block lg:table-row-group p-2 lg:p-0 space-y-2.5 lg:space-y-0">
@@ -254,24 +254,42 @@
                                     </span>
                                 </td>
 
-                                <td class="block lg:table-cell pt-2 lg:pt-0 py-1.5 lg:px-1.5 text-center align-middle border-t lg:border-t-0 border-gray-100 mt-1 lg:mt-0" @click.stop>
-                                    <div class="flex items-center justify-end lg:justify-center gap-1">
+                                <td class="py-1.5 px-2 text-center min-w-[155px] align-middle" @click.stop>
+                                    @php
+                                        $foiClicado = in_array((int) $item->id, array_map('intval', $itensClicados), true)
+                                            || $isSelecionado
+                                            || !empty($minhaDecisao);
+
+                                        $isAprovado = in_array($minhaDecisao, ['Aprovada', 'Aprovado'], true);
+                                        $isRevisao  = ($minhaDecisao === 'Aguardando Revisão pelo Responsável');
+                                        $isReprovado = in_array($minhaDecisao, ['Não Aprovada', 'Não Aprovado', 'Reprovado'], true);
+                                    @endphp
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        {{-- Botão Aprovar --}}
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Aprovada')"
-                                                class="px-2 py-1 text-[10px] font-medium rounded border transition {{ in_array($minhaDecisao, ['Aprovada', 'Aprovado'], true) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50' }}">
-                                            Aprovar
+                                                @disabled(!$foiClicado)
+                                                title="{{ $foiClicado ? 'Aprovar este item' : 'Clique primeiro na linha do item para revisar os meses' }}"
+                                                class="w-7 h-7 flex items-center justify-center rounded-full border transition {{ !$foiClicado ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : ($isAprovado ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-200 shadow-xs cursor-pointer' : 'bg-white text-emerald-600 border-emerald-300 hover:bg-emerald-50 cursor-pointer') }}">
+                                            <i class="ph-bold ph-check text-xs"></i>
                                         </button>
 
+                                        {{-- Botão Revisar --}}
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Aguardando Revisão pelo Responsável')"
-                                                class="px-2 py-1 text-[10px] font-medium rounded border transition {{ $minhaDecisao === 'Aguardando Revisão pelo Responsável' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50' }}">
-                                            Revisar
+                                                @disabled(!$foiClicado)
+                                                title="{{ $foiClicado ? 'Solicitar revisão deste item' : 'Clique primeiro na linha do item para revisar os meses' }}"
+                                                class="w-7 h-7 flex items-center justify-center rounded-full border transition {{ !$foiClicado ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : ($isRevisao ? 'bg-amber-500 text-white border-amber-500 ring-2 ring-amber-200 shadow-xs cursor-pointer' : 'bg-white text-amber-600 border-amber-300 hover:bg-amber-50 cursor-pointer') }}">
+                                            <i class="ph-bold ph-warning text-xs"></i>
                                         </button>
 
+                                        {{-- Botão Não Aprovar --}}
                                         <button type="button"
                                                 wire:click="definirStatusItem({{ $item->id }}, 'Não Aprovada')"
-                                                class="px-2 py-1 text-[10px] font-medium rounded border transition {{ in_array($minhaDecisao, ['Não Aprovada', 'Não Aprovado'], true) ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-700 border-red-300 hover:bg-red-50' }}">
-                                            Não Aprovar
+                                                @disabled(!$foiClicado)
+                                                title="{{ $foiClicado ? 'Não aprovar este item' : 'Clique primeiro na linha do item para revisar os meses' }}"
+                                                class="w-7 h-7 flex items-center justify-center rounded-full border transition {{ !$foiClicado ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : ($isReprovado ? 'bg-red-600 text-white border-red-600 ring-2 ring-red-200 shadow-xs cursor-pointer' : 'bg-white text-red-600 border-red-300 hover:bg-red-50 cursor-pointer') }}">
+                                            <i class="ph-bold ph-x text-xs"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -282,8 +300,8 @@
             </div>
         </div>
 
-        {{-- COLUNA DIREITA (4 COLUNAS NO DESKTOP): VALORES MENSAIS DO ITEM SELECIONADO --}}
-        <div class="lg:col-span-4 min-w-0 flex-col overflow-hidden bg-white min-h-0"
+        {{-- COLUNA DIREITA (3 COLUNAS NO DESKTOP): VALORES MENSAIS DO ITEM SELECIONADO --}}
+        <div class="lg:col-span-3 min-w-0 flex-col overflow-hidden bg-white min-h-0"
              :class="abaMobile === 'meses' ? 'flex' : 'hidden lg:flex'"
              wire:key="aprov-painel-direito-{{ $itemAtual->id ?? 'vazio' }}">
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2 shrink-0">

@@ -46,6 +46,8 @@ class OrcamentoAprovacaoEditor extends Component
     public bool $modalAprovarReaberturaAberto = false;
     public $prazoReabertura = null;
 
+    public array $itensClicados = [];
+
     public array $cenariosDisponiveis = [
         '1' => '1 - Conservador',
         '2' => '2 - Moderado',
@@ -94,6 +96,10 @@ class OrcamentoAprovacaoEditor extends Component
         }
 
         $this->carregarDecisoesExistentesDoAprovador();
+
+        if ($this->orcamento->itens->isNotEmpty()) {
+            $this->selecionarItem(0);
+        }
     }
 
     public function obterTotalAprovadores(): int
@@ -163,6 +169,11 @@ class OrcamentoAprovacaoEditor extends Component
         if (isset($itens[$index])) {
             $this->itemSelecionadoIndex = $index;
             $this->itemComentarioId = $itens[$index]->id;
+            
+            // Marca o item como clicado para liberar os botões de ação na view
+            if (!in_array($this->itemComentarioId, $this->itensClicados, true)) {
+                $this->itensClicados[] = $this->itemComentarioId;
+            }
         }
     }
 
@@ -210,13 +221,11 @@ class OrcamentoAprovacaoEditor extends Component
         ];
     }
 
-    /**
-     * Ação em Grupo (Lote) — Slide 46
-     */
+    // 2. Substitua o método aplicarDecisaoLote() por:
     public function aplicarDecisaoLote(string $statusDesejado): void
     {
         if (empty($this->itensSelecionados)) {
-            $this->dispatch('erro', msg: 'Selecione pelo menos uma despesa nas caixas de seleção.');
+            $this->dispatch('erro', msg: 'Selecione pelo menos um item nas caixas de seleção.');
             return;
         }
 
@@ -236,28 +245,38 @@ class OrcamentoAprovacaoEditor extends Component
                 'status'         => $statusDesejado,
                 'motivo_revisao' => '',
             ];
+
+            // Libera os botões do item alterado em lote para exibir o destaque sólido imediatamente
+            if (!in_array($itemId, $this->itensClicados, true)) {
+                $this->itensClicados[] = $itemId;
+            }
         }
 
         $qtd = count($this->itensSelecionados);
         $this->itensSelecionados = [];
         $this->selecionarTudo = false;
-        $this->dispatch('sucesso', msg: "Decisão '{$statusDesejado}' marcada para {$qtd} despesa(s). Clique em 'Salvar Análise' para confirmar.");
+        $this->dispatch('sucesso', msg: "Decisão '{$statusDesejado}' marcada para {$qtd} item(ns). Clique em 'Salvar Análise' para confirmar.");
     }
 
+    // 3. Substitua o método confirmarMotivoRevisaoModal() por:
     public function confirmarMotivoRevisaoModal(): void
     {
         $this->validate([
             'textoMotivoRevisao' => 'required|string|min:3',
         ], [
-            'textoMotivoRevisao.required' => 'O preenchimento do Motivo da Revisão é obrigatório ao solicitar revisão da despesa.',
+            'textoMotivoRevisao.required' => 'O preenchimento do Motivo da Revisão é obrigatório ao solicitar revisão do item.',
             'textoMotivoRevisao.min'      => 'Detalhe o motivo da revisão com pelo menos 3 caracteres.',
         ]);
 
         if ($this->modoRevisao === 'unico' && $this->linhaParaRevisar) {
-            $this->decisoesAprovador[$this->linhaParaRevisar] = [
+            $itemId = (int) $this->linhaParaRevisar;
+            $this->decisoesAprovador[$itemId] = [
                 'status'         => 'Aguardando Revisão pelo Responsável',
                 'motivo_revisao' => trim($this->textoMotivoRevisao),
             ];
+            if (!in_array($itemId, $this->itensClicados, true)) {
+                $this->itensClicados[] = $itemId;
+            }
         } elseif ($this->modoRevisao === 'lote') {
             foreach ($this->itensSelecionados as $idStr) {
                 $itemId = (int) $idStr;
@@ -265,6 +284,9 @@ class OrcamentoAprovacaoEditor extends Component
                     'status'         => 'Aguardando Revisão pelo Responsável',
                     'motivo_revisao' => trim($this->textoMotivoRevisao),
                 ];
+                if (!in_array($itemId, $this->itensClicados, true)) {
+                    $this->itensClicados[] = $itemId;
+                }
             }
             $this->itensSelecionados = [];
             $this->selecionarTudo = false;

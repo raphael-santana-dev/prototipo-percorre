@@ -232,7 +232,7 @@
     <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 lg:divide-x divide-gray-200 overflow-hidden min-h-0">
         
         {{-- COLUNA ESQUERDA (8 COLUNAS NO DESKTOP): LISTA DE ITENS --}}
-        <div class="lg:col-span-8 min-w-0 flex-col overflow-hidden bg-white min-h-0"
+        <div class="lg:col-span-9 min-w-0 flex-col overflow-hidden bg-white min-h-0"
              :class="abaMobile === 'itens' ? 'flex' : 'hidden lg:flex'">
             
             <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2 shrink-0">
@@ -465,7 +465,7 @@
         </div>
 
         {{-- COLUNA DIREITA (4 COLUNAS NO DESKTOP): VALORES MENSAIS DO ITEM SELECIONADO --}}
-        <div class="lg:col-span-4 min-w-0 flex-col overflow-hidden bg-white min-h-0"
+        <div class="lg:col-span-3 min-w-0 flex-col overflow-hidden bg-white min-h-0"
              :class="abaMobile === 'meses' ? 'flex' : 'hidden lg:flex'"
              wire:key="painel-direito-item-{{ $itemAtual['temp_id'] ?? 'vazio' }}">
             
