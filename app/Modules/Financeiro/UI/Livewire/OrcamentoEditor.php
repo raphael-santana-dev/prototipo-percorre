@@ -13,6 +13,7 @@ use App\Modules\Financeiro\Domain\Models\Orcamento;
 use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
 use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
+use App\Modules\Financeiro\Services\ProtheusOrcamentoService;
 
 #[Layout('components.layouts.app')]
 #[Title('Edição de Orçamento')]
@@ -23,24 +24,24 @@ class OrcamentoEditor extends Component
     public array $itensOrcamento = [];
     public array $itensRemovidos = [];
 
-    // Índice do item atualmente selecionado na tabela "Despesas" (Mestre-Detalhe)
+    // Seleção em lote (checkboxes)
+    public array $itensSelecionados = [];
+    public bool $selecionarTudo = false;
+
+    // Índice do item atualmente focado no painel "Despesa selecionada"
     public int $itemSelecionadoIndex = 0;
 
-    // Lista de temp_ids nos quais o usuário já clicou nesta sessão (habilita o botão "Liberar para Aprovação")
+    // Controle dos itens nos quais o usuário clicou nesta sessão
     public array $itensClicados = [];
 
-    // Modal disparado automaticamente ao liberar o último item
     public bool $modalConfirmarEnvioAberto = false;
 
-    // Comentários divididos em 'geral' e 'item'
+    // Histórico e Comentários divididos em Geral e por Item
     public bool $drawerComentariosAberto = false;
-    public string $abaComentario = 'geral'; // 'geral' ou 'item'
+    public string $abaComentario = 'geral';
     public ?int $itemComentarioId = null;
     public string $novoComentarioGeral = '';
     public string $novoComentarioItem = '';
-
-    public bool $modalNovaNaturezaAberto = false;
-    public string $novaNaturezaDescricao = '';
 
     public bool $modalReaberturaAberto = false;
     public string $motivoReabertura = '';
@@ -48,8 +49,17 @@ class OrcamentoEditor extends Component
     public int $anoSimulacao = 2026;
     public bool $isLockedGlobal = false;
 
+    public array $cenariosDisponiveis = [
+        '1' => '1 - Conservador',
+        '2' => '2 - Moderado',
+        '3' => '3 - Aspiracional',
+    ];
+
     public function mount($id)
     {
+        abort_if(!feature('financeiro.orcamentos.listar') && !auth()->user()->hasRole('dev'), 403, 'O módulo de orçamentos está temporariamente desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listar') && !auth()->user()->can('financeiro.orcamentos.editar'), 403, 'Sem permissão.');
+
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
             'itens.natureza',
@@ -58,12 +68,19 @@ class OrcamentoEditor extends Component
             'logsGerais'
         ])->findOrFail($id);
         
-        if (!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('financeiro.orcamentos.global')) {
+        if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {
-                $ccPermitidos = auth()->user()->centros_de_custo->pluck('codigo')->toArray();
-                abort_unless(in_array($this->orcamento->ccusto, $ccPermitidos), 403, 'Sem permissão para este Centro de Custo.');
+                $ccPermitidos = auth()->user()->centros_de_custo()
+                    ->where(function ($q) {
+                        $q->whereNull('centro_custo_user.expires_at')
+                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+                    })
+                    ->pluck('centros_custo.codigo')
+                    ->toArray();
+
+                abort_unless(in_array($this->orcamento->ccusto, $ccPermitidos), 403, 'Sem permissão para acessar este Centro de Custo.');
             } else {
-                abort(403);
+                abort(403, 'Sem vínculo com Centros de Custo.');
             }
         }
 
@@ -73,7 +90,6 @@ class OrcamentoEditor extends Component
         $this->justificativaGeral = $this->orcamento->descricao_despesa ?? '';
         $this->carregarItens();
 
-        // Seleciona e marca como clicado o primeiro item por padrão
         if (!empty($this->itensOrcamento)) {
             $this->selecionarItem(0);
         }
@@ -81,10 +97,10 @@ class OrcamentoEditor extends Component
 
     private function atualizarBloqueioGlobal(): void
     {
-        // O orçamento fica bloqueado globalmente quando está aguardando aprovação ou já aprovado
         $statusBloqueados = [
             'Finalizado – Aguardando Aprovação',
             'Finalizado – Aprovado',
+            'Finalizado – Integrado ao Protheus',
             'Finalizado',
             'Aprovado',
             'Aprovado com ressalvas',
@@ -106,19 +122,27 @@ class OrcamentoEditor extends Component
             ->orderBy('id', 'asc')
             ->get();
 
+        $seq = 1;
         foreach ($itensOrdenados as $item) {
             $natObj = $item->natureza;
-            $natNome = $natObj ? $natObj->descricao : 'Natureza Importada';
+            $natNome = $natObj ? $natObj->descricao : ($item->natureza_codigo ? 'Natureza Importada' : '');
             $statusNormalizado = $item->status ?: 'Importado';
             if ($statusNormalizado === 'Criado') {
                 $statusNormalizado = 'Importado';
             }
 
+            $idDespesaFormatado = !empty($item->id_despesa)
+                ? str_pad((string) $item->id_despesa, 3, '0', STR_PAD_LEFT)
+                : str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
+
             $this->itensOrcamento[] = [
                 'temp_id'         => 'db_' . $item->id,
-                'id'              => $item->id, 
-                'natureza_codigo' => $item->natureza_codigo, 
+                'id'              => $item->id,
+                'id_despesa'      => $idDespesaFormatado,
+                'natureza_codigo' => (string) ($item->natureza_codigo ?? ''), 
                 'natureza_nome'   => $natNome,
+                'categoria'       => $natObj ? ($natObj->categoria ?? '') : '',
+                'cenario'         => (string) ($item->cenario ?: '1'),
                 'descricao'       => trim((string) $item->descricao),
                 'status'          => $statusNormalizado, 
                 'avaliacoes'      => $item->avaliacoes ? $item->avaliacoes->toArray() : [],
@@ -135,6 +159,7 @@ class OrcamentoEditor extends Component
                 'previsto_nov'    => (float) $item->previsto_nov, 'valor_nov' => (float) $item->valor_nov,
                 'previsto_dez'    => (float) $item->previsto_dez, 'valor_dez' => (float) $item->valor_dez,
             ];
+            $seq++;
         }
 
         if (empty($this->itensOrcamento) && !$this->isLockedGlobal) {
@@ -146,9 +171,16 @@ class OrcamentoEditor extends Component
         }
     }
 
-    /**
-     * Verifica se uma linha específica pode ser editada pelo usuário no momento
-     */
+    private function encontrarIndicePorTempId(string $tempId): ?int
+    {
+        foreach ($this->itensOrcamento as $idx => $item) {
+            if ((string) ($item['temp_id'] ?? '') === $tempId) {
+                return $idx;
+            }
+        }
+        return null;
+    }
+
     public function itemPodeSerEditado(array $item): bool
     {
         if ($this->isLockedGlobal) {
@@ -157,23 +189,25 @@ class OrcamentoEditor extends Component
 
         $statusItem = $item['status'] ?? 'Importado';
 
-        // Se o orçamento estiver em ciclo de revisão após avaliação, apenas os itens reprovados/em revisão podem ser editados
+        // Quando o orçamento retorna para revisão pelo responsável, apenas os itens marcados para revisão/reprovados são editáveis
         if ($this->orcamento->status === 'Aprovação – Aguardando Revisão pelo Responsável') {
-            return in_array($statusItem, ['Não Aprovado', 'Reprovado', 'Reprovado parcialmente', 'Em revisão/atualização'], true);
+            return in_array($statusItem, [
+                'Aguardando Revisão pelo Responsável',
+                'Não Aprovada',
+                'Não Aprovado',
+                'Reprovado',
+                'Reprovado parcialmente',
+                'Em revisão/atualização'
+            ], true);
         }
 
-        // Itens já aprovados definitivamente não podem ser alterados
-        if ($statusItem === 'Aprovado') {
+        if (in_array($statusItem, ['Aprovada', 'Aprovado', 'Aprovada Parcialmente'], true)) {
             return false;
         }
 
         return true;
     }
 
-    /**
-     * Seleciona um item na tabela da esquerda para exibir seus 12 meses na direita
-     * e registra que o usuário clicou no item (habilitando "Liberar para Aprovação")
-     */
     public function selecionarItem(int $index): void
     {
         if (!isset($this->itensOrcamento[$index])) {
@@ -193,35 +227,64 @@ class OrcamentoEditor extends Component
     }
 
     /**
-     * Quando o usuário altera qualquer valor mensal, descrição ou natureza de um item,
-     * o status do item e do orçamento passam imediatamente para "Em revisão/atualização"
+     * Atualiza o valor de um mês específico garantindo pelo $tempId que NUNCA altere outro item
      */
-    public function updatedItensOrcamento($value, $name): void
+    public function atualizarValorMes(string $tempId, string $siglaMes, $novoValor): void
     {
-        $parts = explode('.', (string) $name);
-        $index = (int) ($parts[0] ?? 0);
-        $campo = $parts[1] ?? '';
-
-        if (!isset($this->itensOrcamento[$index])) {
+        $mesesValidos = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+        if (!in_array($siglaMes, $mesesValidos, true)) {
             return;
         }
 
+        $idx = $this->encontrarIndicePorTempId($tempId);
+        if ($idx === null || !$this->itemPodeSerEditado($this->itensOrcamento[$idx])) {
+            return;
+        }
+
+        $valorNormalizado = is_numeric($novoValor) ? max(0, round((float) $novoValor, 2)) : 0.0;
+        $campoMes = "valor_{$siglaMes}";
+
+        if ((float) ($this->itensOrcamento[$idx][$campoMes] ?? 0) === $valorNormalizado) {
+            return;
+        }
+
+        $this->itensOrcamento[$idx][$campoMes] = $valorNormalizado;
+        $this->marcarItemEHeaderEmRevisao($idx);
+    }
+
+    /**
+     * Atualiza campos cadastrais da linha (descricao, natureza_codigo, cenario) isolados por $tempId
+     */
+    public function atualizarCampoItem(string $tempId, string $campo, $valor): void
+    {
+        if (!in_array($campo, ['descricao', 'natureza_codigo', 'cenario'], true)) {
+            return;
+        }
+
+        $idx = $this->encontrarIndicePorTempId($tempId);
+        if ($idx === null || !$this->itemPodeSerEditado($this->itensOrcamento[$idx])) {
+            return;
+        }
+
+        $valorLimpo = trim((string) $valor);
+        $this->itensOrcamento[$idx][$campo] = $valorLimpo;
+
         if ($campo === 'natureza_codigo') {
-            $nat = Natureza::where('codigo', $value)->first();
-            $this->itensOrcamento[$index]['natureza_nome'] = $nat ? $nat->descricao : 'Natureza não encontrada';
-            if (empty(trim($this->itensOrcamento[$index]['descricao'] ?? '')) && $nat) {
-                $this->itensOrcamento[$index]['descricao'] = $nat->descricao;
+            $nat = Natureza::where('codigo', $valorLimpo)->first();
+            $this->itensOrcamento[$idx]['natureza_nome'] = $nat ? $nat->descricao : '';
+            $this->itensOrcamento[$idx]['categoria'] = $nat ? ($nat->categoria ?? '') : '';
+            if (empty($this->itensOrcamento[$idx]['descricao']) && $nat) {
+                $this->itensOrcamento[$idx]['descricao'] = $nat->descricao;
             }
         }
 
-        if (!$this->itemPodeSerEditado($this->itensOrcamento[$index])) {
-            return;
-        }
+        $this->marcarItemEHeaderEmRevisao($idx);
+    }
 
-        // Altera o status do item alterado para "Em revisão/atualização"
-        $this->itensOrcamento[$index]['status'] = 'Em revisão/atualização';
+    private function marcarItemEHeaderEmRevisao(int $idx): void
+    {
+        $this->itensOrcamento[$idx]['status'] = 'Em revisão/atualização';
 
-        // Altera o status do orçamento para "Em revisão/atualização" se estava Importado/Criado
         if (in_array($this->orcamento->status, ['Importado', 'Criado'], true)) {
             $this->orcamento->update(['status' => 'Em revisão/atualização']);
             $this->orcamento->status = 'Em revisão/atualização';
@@ -229,7 +292,7 @@ class OrcamentoEditor extends Component
     }
 
     /**
-     * Botão "Liberar para Aprovação" em cada linha de item
+     * Botão individual na linha: "Liberar para Aprovação"
      */
     public function liberarItemParaAprovacao(int $index): void
     {
@@ -240,20 +303,23 @@ class OrcamentoEditor extends Component
         $item = $this->itensOrcamento[$index];
         $tempId = (string) $item['temp_id'];
 
-        // Só permite se o usuário tiver clicado no item
         if (!in_array($tempId, $this->itensClicados, true)) {
-            $this->dispatch('erro', msg: 'Clique sobre o item para conferir seus valores mensais antes de liberá-lo para aprovação.');
+            $this->dispatch('erro', msg: 'Clique primeiro sobre o item para revisar os meses antes de liberá-lo para aprovação.');
             return;
         }
 
         if (empty(trim($item['natureza_codigo'] ?? ''))) {
-            $this->dispatch('erro', msg: 'Selecione uma Natureza Financeira válida para este item antes de liberar.');
+            $this->dispatch('erro', msg: 'Selecione a Natureza Financeira desta despesa antes de liberar para aprovação.');
+            return;
+        }
+
+        if (empty(trim($item['descricao'] ?? ''))) {
+            $this->dispatch('erro', msg: 'Preencha a Descrição da Despesa antes de liberar para aprovação.');
             return;
         }
 
         $this->itensOrcamento[$index]['status'] = 'Aprovação Pendente';
 
-        // Persiste o item imediatamente mantendo a ordem por ID
         $itemSalvo = $this->persistirItemIndividual($index);
         $this->itensOrcamento[$index]['id'] = $itemSalvo->id;
         $this->itensOrcamento[$index]['temp_id'] = 'db_' . $itemSalvo->id;
@@ -264,24 +330,82 @@ class OrcamentoEditor extends Component
             $this->orcamento->status = 'Em revisão/atualização';
         }
 
-        // Verifica se TODOS os itens já estão prontos ("Aprovação Pendente" ou já "Aprovado")
         if ($this->todosItensLiberados()) {
             $this->modalConfirmarEnvioAberto = true;
         } else {
-            $this->dispatch('sucesso', msg: 'Item liberado para aprovação!');
+            $this->dispatch('sucesso', msg: "Despesa #{$item['id_despesa']} liberada para aprovação!");
         }
     }
 
     /**
-     * Permite voltar um item de "Aprovação Pendente" para "Em revisão/atualização" antes do envio global
+     * Ação em lote (Slide 46): Libera um grupo de despesas selecionadas para "Aprovação Pendente"
      */
+    public function liberarSelecionadosParaAprovacao(): void
+    {
+        if ($this->isLockedGlobal || empty($this->itensSelecionados)) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma despesa para liberar em lote.');
+            return;
+        }
+
+        $liberados = 0;
+        foreach ($this->itensOrcamento as $idx => $item) {
+            $tempId = (string) $item['temp_id'];
+            if (!in_array($tempId, $this->itensSelecionados, true)) {
+                continue;
+            }
+
+            if (in_array($item['status'], ['Aprovada Parcialmente', 'Aprovada', 'Aprovado'], true)) {
+                continue;
+            }
+
+            if ($item['status'] === 'Aguardando Revisão pelo Responsável') {
+                $this->dispatch('erro', msg: "A despesa #{$item['id_despesa']} está marcada como 'Aguardando Revisão pelo Responsável'. Revise seus valores antes de liberá-la.");
+                return;
+            }
+
+            if (empty(trim($item['natureza_codigo'] ?? ''))) {
+                $this->dispatch('erro', msg: "A despesa #{$item['id_despesa']} não possui Natureza Financeira informada.");
+                return;
+            }
+
+            $this->itensOrcamento[$idx]['status'] = 'Aprovação Pendente';
+            $salvo = $this->persistirItemIndividual($idx);
+            $this->itensOrcamento[$idx]['id'] = $salvo->id;
+            $this->itensOrcamento[$idx]['temp_id'] = 'db_' . $salvo->id;
+            $liberados++;
+        }
+
+        $this->itensSelecionados = [];
+        $this->selecionarTudo = false;
+
+        if ($this->todosItensLiberados()) {
+            $this->modalConfirmarEnvioAberto = true;
+        } else {
+            $this->dispatch('sucesso', msg: "{$liberados} despesa(s) liberada(s) para aprovação!");
+        }
+    }
+
+    public function updatedSelecionarTudo($value): void
+    {
+        if ($value) {
+            $this->itensSelecionados = collect($this->itensOrcamento)
+                ->filter(fn($i) => $this->itemPodeSerEditado($i))
+                ->pluck('temp_id')
+                ->map(fn($id) => (string) $id)
+                ->values()
+                ->toArray();
+        } else {
+            $this->itensSelecionados = [];
+        }
+    }
+
     public function reabrirItemParaEdicao(int $index): void
     {
         if ($this->isLockedGlobal || !isset($this->itensOrcamento[$index])) {
             return;
         }
 
-        if (($this->itensOrcamento[$index]['status'] ?? '') === 'Aprovado') {
+        if (in_array($this->itensOrcamento[$index]['status'] ?? '', ['Aprovada', 'Aprovado', 'Aprovada Parcialmente'], true)) {
             return;
         }
 
@@ -298,12 +422,24 @@ class OrcamentoEditor extends Component
 
         foreach ($this->itensOrcamento as $item) {
             $st = $item['status'] ?? 'Importado';
-            if (!in_array($st, ['Aprovação Pendente', 'Aprovado'], true)) {
+            if (!in_array($st, ['Aprovação Pendente', 'Aprovada', 'Aprovado', 'Aprovada Parcialmente'], true)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private function gerarProximoIdDespesa(): string
+    {
+        $maior = 0;
+        foreach ($this->itensOrcamento as $item) {
+            $num = (int) preg_replace('/\D/', '', (string) ($item['id_despesa'] ?? '0'));
+            if ($num > $maior) {
+                $maior = $num;
+            }
+        }
+        return str_pad((string) ($maior + 1), 3, '0', STR_PAD_LEFT);
     }
 
     private function persistirItemIndividual(int $index): OrcamentoItem
@@ -312,13 +448,16 @@ class OrcamentoEditor extends Component
         $observacao = trim($dataItem['descricao'] ?? '');
         $naturezaNome = $dataItem['natureza_nome'] ?? '';
         $descricaoParaSalvar = $observacao !== '' ? $observacao : ($naturezaNome ?: 'Despesa Orçamentária');
+        $idDespesa = !empty($dataItem['id_despesa']) ? $dataItem['id_despesa'] : str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT);
 
         $idReal = (!empty($dataItem['id']) && is_numeric($dataItem['id'])) ? (int) $dataItem['id'] : null;
 
         return OrcamentoItem::updateOrCreate(
             ['id' => $idReal, 'orcamento_id' => $this->orcamento->id],
             [
-                'natureza_codigo' => trim($dataItem['natureza_codigo']), 
+                'id_despesa'      => $idDespesa,
+                'natureza_codigo' => trim($dataItem['natureza_codigo']),
+                'cenario'         => (string) ($dataItem['cenario'] ?? '1'),
                 'descricao'       => $descricaoParaSalvar, 
                 'status'          => $dataItem['status'] ?? 'Em revisão/atualização',
                 'previsto_jan'    => (float) ($dataItem['previsto_jan'] ?? 0), 'valor_jan' => (float) ($dataItem['valor_jan'] ?? 0),
@@ -342,11 +481,16 @@ class OrcamentoEditor extends Component
         if ($this->isLockedGlobal) return;
 
         $tempId = uniqid('novo_');
+        $proximoIdDespesa = $this->gerarProximoIdDespesa();
+
         $this->itensOrcamento[] = [
             'temp_id'         => $tempId,
             'id'              => null,
+            'id_despesa'      => $proximoIdDespesa,
             'natureza_codigo' => '',
             'natureza_nome'   => '',
+            'categoria'       => '',
+            'cenario'         => '1',
             'descricao'       => '',
             'status'          => 'Em revisão/atualização',
             'avaliacoes'      => [],
@@ -358,6 +502,11 @@ class OrcamentoEditor extends Component
             'previsto_nov' => 0, 'valor_nov' => 0, 'previsto_dez' => 0, 'valor_dez' => 0,
         ];
 
+        if (in_array($this->orcamento->status, ['Importado', 'Criado'], true)) {
+            $this->orcamento->update(['status' => 'Em revisão/atualização']);
+            $this->orcamento->status = 'Em revisão/atualização';
+        }
+
         $novoIdx = count($this->itensOrcamento) - 1;
         $this->selecionarItem($novoIdx);
         $this->dispatch('item-adicionado');
@@ -367,8 +516,8 @@ class OrcamentoEditor extends Component
     {
         if ($this->isLockedGlobal || !isset($this->itensOrcamento[$index])) return;
 
-        if (($this->itensOrcamento[$index]['status'] ?? '') === 'Aprovado') {
-            $this->dispatch('erro', msg: 'Não é permitido remover um item já aprovado.');
+        if (in_array($this->itensOrcamento[$index]['status'] ?? '', ['Aprovada', 'Aprovado', 'Aprovada Parcialmente'], true)) {
+            $this->dispatch('erro', msg: 'Não é permitido remover uma despesa já aprovada.');
             return;
         }
 
@@ -386,6 +535,36 @@ class OrcamentoEditor extends Component
         }
     }
 
+    public function removerItensSelecionados(): void
+    {
+        if ($this->isLockedGlobal || empty($this->itensSelecionados)) {
+            return;
+        }
+
+        $restantes = [];
+        foreach ($this->itensOrcamento as $item) {
+            if (in_array((string) $item['temp_id'], $this->itensSelecionados, true) && $this->itemPodeSerEditado($item)) {
+                if (!empty($item['id'])) {
+                    $this->itensRemovidos[] = $item['id'];
+                }
+            } else {
+                $restantes[] = $item;
+            }
+        }
+
+        $this->itensOrcamento = array_values($restantes);
+        $this->itensSelecionados = [];
+        $this->selecionarTudo = false;
+
+        if (empty($this->itensOrcamento)) {
+            $this->adicionarItem();
+        } else {
+            $this->selecionarItem(0);
+        }
+
+        $this->dispatch('sucesso', msg: 'Despesas selecionadas removidas. Clique em Salvar para confirmar.');
+    }
+
     public function salvarOrcamento(): void
     {
         if ($this->isLockedGlobal) {
@@ -393,9 +572,9 @@ class OrcamentoEditor extends Component
             return;
         }
 
-        foreach ($this->itensOrcamento as $idx => $item) {
+        foreach ($this->itensOrcamento as $item) {
             if (empty(trim($item['natureza_codigo'] ?? ''))) {
-                $this->dispatch('erro', msg: 'Todas as despesas precisam ter uma Natureza selecionada antes de salvar.');
+                $this->dispatch('erro', msg: "A despesa #{$item['id_despesa']} precisa ter uma Natureza Financeira selecionada antes de salvar.");
                 return;
             }
         }
@@ -421,9 +600,12 @@ class OrcamentoEditor extends Component
 
         $this->orcamento->refresh();
         $this->carregarItens();
-        $this->dispatch('sucesso', msg: 'Alterações salvas com sucesso (mantendo a ordenação por ID)!');
+        $this->dispatch('sucesso', msg: 'Alterações salvas com sucesso!');
     }
 
+    /**
+     * Submete o orçamento para aprovação respeitando as validações do Slide 46 e a liberação dos itens
+     */
     public function finalizarOrcamento()
     {
         if ($this->isLockedGlobal) {
@@ -431,17 +613,22 @@ class OrcamentoEditor extends Component
             return;
         }
 
-        // Regra obrigatória: só pode enviar se tiver clicado em "Liberar para Aprovação" em todos os itens
+        // Slide 46: Não permite submeter caso exista alguma despesa com status "Aguardando Revisão pelo Responsável"
+        foreach ($this->itensOrcamento as $item) {
+            if (($item['status'] ?? '') === 'Aguardando Revisão pelo Responsável') {
+                $this->dispatch('erro', msg: "Não é possível submeter: a despesa #{$item['id_despesa']} ainda está com status 'Aguardando Revisão pelo Responsável'.");
+                return;
+            }
+            if (empty(trim($item['natureza_codigo'] ?? ''))) {
+                $this->dispatch('erro', msg: "Informe a Natureza Financeira na despesa #{$item['id_despesa']} antes de submeter.");
+                return;
+            }
+        }
+
+        // Valida se todos os itens editáveis foram liberados para aprovação
         if (!$this->todosItensLiberados()) {
             $this->dispatch('erro', msg: 'É necessário clicar em "Liberar para Aprovação" em todos os itens antes de enviar o orçamento.');
             return;
-        }
-
-        foreach ($this->itensOrcamento as $idx => $item) {
-            if (empty(trim($item['natureza_codigo'] ?? ''))) {
-                $this->dispatch('erro', msg: 'Todas as despesas devem ter uma Natureza válida selecionada.');
-                return;
-            }
         }
 
         if (!empty($this->itensRemovidos)) {
@@ -450,6 +637,11 @@ class OrcamentoEditor extends Component
         }
 
         foreach ($this->itensOrcamento as $idx => $item) {
+            // Slide 46: As despesas com status "Aprovada Parcialmente", "Aprovada" e "Não Aprovada" não sofrem alteração indevida
+            if (!in_array($item['status'], ['Aprovada Parcialmente', 'Aprovada', 'Aprovado', 'Não Aprovada'], true)) {
+                $this->itensOrcamento[$idx]['status'] = 'Aprovação Pendente';
+            }
+
             $salvo = $this->persistirItemIndividual($idx);
             if ($salvo->status === 'Aprovação Pendente') {
                 OrcamentoAvaliacao::create([
@@ -458,7 +650,7 @@ class OrcamentoEditor extends Component
                     'user_id'           => auth()->id(),
                     'user_nome'         => auth()->user()->name ?? 'Responsável',
                     'status_aplicado'   => 'Aprovação Pendente',
-                    'comentario'        => 'Item liberado e enviado para aprovação.',
+                    'comentario'        => 'Despesa submetida para aprovação.',
                     'tipo_evento'       => 'liberacao_item',
                 ]);
             }
@@ -473,9 +665,30 @@ class OrcamentoEditor extends Component
 
         $this->modalConfirmarEnvioAberto = false;
         $this->notificarAvaliadoresPorEmail();
-        $this->dispatch('sucesso', msg: 'Orçamento enviado para aprovação com sucesso!');
+        $this->dispatch('sucesso', msg: 'Orçamento submetido para aprovação com sucesso!');
 
         return redirect()->route('financeiro.orcamentos');
+    }
+
+    /**
+     * Slide 49: Botão para o responsável finalizar definitivamente o orçamento aprovado e preparar o JSON do Protheus
+     */
+    public function integrarComProtheus(): void
+    {
+        if (!in_array($this->orcamento->status, ['Finalizado – Aprovado', 'Aprovado'], true)) {
+            $this->dispatch('erro', msg: 'A integração com o Protheus só é permitida quando o status do orçamento for "Finalizado – Aprovado".');
+            return;
+        }
+
+        app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($this->orcamento);
+
+        $this->orcamento->update([
+            'status' => 'Finalizado – Integrado ao Protheus',
+        ]);
+
+        $this->orcamento->refresh();
+        $this->atualizarBloqueioGlobal();
+        $this->dispatch('sucesso', msg: 'Orçamento finalizado e dados consolidados para a Tabela Intermediária do Protheus!');
     }
 
     private function notificarAvaliadoresPorEmail(): void
@@ -497,10 +710,6 @@ class OrcamentoEditor extends Component
             Log::error("Erro ao enviar e-mail de finalização do orçamento #{$this->orcamento->id}: " . $e->getMessage());
         }
     }
-
-    // =========================================================================
-    // HISTÓRICO E COMENTÁRIOS (GERAIS vs POR ITEM)
-    // =========================================================================
 
     public function abrirComentariosGerais(): void
     {
@@ -551,9 +760,6 @@ class OrcamentoEditor extends Component
         $this->validate([
             'itemComentarioId'   => 'required|integer',
             'novoComentarioItem' => 'required|string|min:2',
-        ], [
-            'itemComentarioId.required'   => 'Selecione uma despesa.',
-            'novoComentarioItem.required' => 'Digite um comentário para o item.',
         ]);
 
         OrcamentoAvaliacao::create([
@@ -561,7 +767,7 @@ class OrcamentoEditor extends Component
             'orcamento_item_id' => $this->itemComentarioId,
             'user_id'           => auth()->id(),
             'user_nome'         => auth()->user()->name,
-            'status_aplicado'   => 'Comentário no Item',
+            'status_aplicado'   => 'Comentário do Responsável',
             'comentario'        => trim($this->novoComentarioItem),
             'tipo_evento'       => 'comentario_item'
         ]);
@@ -574,7 +780,7 @@ class OrcamentoEditor extends Component
 
     public function solicitarReabertura(): void
     {
-        $this->validate(['motivoReabertura' => 'required|string|min:5'], ['motivoReabertura.required' => 'O motivo é obrigatório.']);
+        $this->validate(['motivoReabertura' => 'required|string|min:5']);
 
         $this->orcamento->update([
             'reabertura_solicitada' => true,
@@ -591,7 +797,7 @@ class OrcamentoEditor extends Component
         ]);
 
         $this->modalReaberturaAberto = false;
-        $this->dispatch('sucesso', msg: 'Pedido enviado aos Aprovadores. Aguarde a análise.');
+        $this->dispatch('sucesso', msg: 'Pedido enviado aos Aprovadores.');
         $this->orcamento->refresh();
     }
 

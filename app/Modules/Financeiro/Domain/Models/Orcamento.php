@@ -36,17 +36,14 @@ class Orcamento extends Model
     {
         static::saved(function (Orcamento $orcamento) {
             if ($orcamento->wasChanged('status')) {
-                if (in_array($orcamento->status, ['Finalizado – Aprovado', 'Aprovado', 'Aprovado com ressalvas'])) {
-                    app(\App\Modules\Financeiro\Services\ProtheusOrcamentoService::class)
-                        ->enviarParaProtheusSimulado($orcamento);
-                } elseif (in_array($orcamento->status, [
+                if (in_array($orcamento->status, [
                     'Importado',
                     'Em revisão/atualização',
                     'Aprovação – Aguardando Revisão pelo Responsável',
                     'Criado',
                     'Em elaboração',
                     'Reprovado'
-                ])) {
+                ], true)) {
                     $orcamento->updateQuietly(['dados_consolidados' => null]);
                 }
             }
@@ -69,9 +66,6 @@ class Orcamento extends Model
         return $this->hasMany(OrcamentoAvaliacao::class)->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Mantém os itens sempre ordenados pelo ID para nunca alterar a ordem ao salvar
-     */
     public function itens()
     {
         return $this->hasMany(OrcamentoItem::class)->orderBy('id', 'asc');

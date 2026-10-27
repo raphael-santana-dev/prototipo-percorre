@@ -45,14 +45,14 @@
             <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Ano" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-32 focus:ring-gray-400 focus:border-gray-400">
             <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Filial" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-32 focus:ring-gray-400 focus:border-gray-400">
             <input type="text" wire:model.live.debounce.500ms="filtroCentroCusto" placeholder="Centro de Custo..." class="rounded-md border-gray-300 text-sm shadow-sm flex-1 focus:ring-gray-400 focus:border-gray-400">
-            <select wire:model.live="filtroStatus" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-48 focus:ring-gray-400 focus:border-gray-400">
+            <select wire:model.live="filtroStatus" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-56 focus:ring-gray-400 focus:border-gray-400">
                 <option value="">Todos os Status</option>
-                <option value="Criado">Criado (Importado)</option>
-                <option value="Em elaboração">Em Elaboração</option>
-                <option value="Finalizado">Finalizado (Aguardando)</option>
-                <option value="Aprovado">Aprovado</option>
-                <option value="Aprovado com ressalvas">Aprovado com Ressalvas</option>
-                <option value="Reprovado">Reprovado</option>
+                <option value="Importado">Importado</option>
+                <option value="Em revisão/atualização">Em revisão/atualização</option>
+                <option value="Finalizado - Aguardando Aprovação">Finalizado - Aguardando Aprovação</option>
+                <option value="Aprovação - Aguardando Revisão pelo Responsável">Aprovação - Aguardando Revisão pelo Responsável</option>
+                <option value="Finalizado - Aprovado">Finalizado - Aprovado</option>
+                <option value="Finalizado - Integrado ao Protheus">Finalizado - Integrado ao Protheus</option>
             </select>
             <button wire:click="limparFiltros" class="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition shadow-sm"><i class="ph-bold ph-funnel-x"></i> Limpar</button>
         </div>
@@ -95,12 +95,23 @@
                             <td class="px-4 py-3 font-semibold text-right text-gray-900">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    @if(in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas']))
-                                        <button wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Aprovado']))
+                                        <button type="button"
+                                                wire:click="integrarAoProtheus({{ $orcamento->id }})"
+                                                onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus?') || event.stopImmediatePropagation()"
+                                                class="px-2.5 py-1 text-xs font-medium bg-emerald-700 text-white hover:bg-emerald-800 rounded transition flex items-center gap-1"
+                                                title="Finalizar e Integrar ao Protheus">
+                                            <i class="ph-bold ph-cloud-arrow-up"></i> Integrar
+                                        </button>
+                                    @endif
+
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado – Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
+                                        <button type="button" wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
                                             <i class="text-lg ph-bold ph-brackets-curly"></i>
                                         </button>
                                     @endif
-                                    <button wire:click="editarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition" title="Abrir Planilha de Edição">
+
+                                    <button type="button" wire:click="editarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition" title="Abrir Orçamento">
                                         <i class="text-lg ph ph-pencil-simple"></i>
                                     </button>
                                 </div>

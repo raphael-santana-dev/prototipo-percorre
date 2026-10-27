@@ -55,6 +55,23 @@ class OrcamentoManager extends Component
         $this->resetPage(); 
     }
 
+    public function integrarAoProtheus(int $id): void
+    {
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar') && !auth()->user()->can('financeiro.orcamentos.integrar'), 403, 'Sem permissão.');
+
+        $orcamento = Orcamento::with(['centroCusto', 'itens.natureza'])->findOrFail($id);
+
+        if (!in_array($orcamento->status, ['Finalizado – Aprovado', 'Aprovado'], true)) {
+            $this->dispatch('erro', msg: 'O orçamento precisa estar com status "Finalizado – Aprovado" para ser integrado ao Protheus.');
+            return;
+        }
+
+        app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($orcamento);
+        $orcamento->update(['status' => 'Finalizado – Integrado ao Protheus']);
+
+        $this->dispatch('sucesso', msg: "Orçamento #{$orcamento->id} finalizado e preparado para integração com a Tabela Intermediária do Protheus!");
+    }
+
     public function sincronizarProtheus()
     {
         $resultado = ProtheusOrcamentoService::sincronizar();
@@ -71,12 +88,11 @@ class OrcamentoManager extends Component
     {
         $orcamento = Orcamento::with(['centroCusto', 'itens.natureza'])->findOrFail($id);
 
-        if (!in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas'])) {
-            $this->dispatch('erro', msg: 'Os dados consolidados só são gerados após a aprovação do orçamento.');
+        if (!in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado – Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas'])) {
+            $this->dispatch('erro', msg: 'Os dados consolidados só ficam disponíveis após a aprovação do orçamento.');
             return;
         }
 
-        // Caso o orçamento tenha sido aprovado antes da criação da coluna, gera e salva agora
         $dados = $orcamento->dados_consolidados;
         if (empty($dados)) {
             $dados = app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($orcamento);
@@ -154,8 +170,18 @@ class OrcamentoManager extends Component
     {
         $query = Orcamento::with('centroCusto');
         if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
-            if (method_exists(auth()->user(), 'centros_de_custo')) $query->whereIn('ccusto', auth()->user()->centros_de_custo->pluck('codigo')->toArray());
-            else $query->where('ccusto', '00000000'); 
+            if (method_exists(auth()->user(), 'centros_de_custo')) {
+                $ccPermitidos = auth()->user()->centros_de_custo()
+                    ->where(function ($q) {
+                        $q->whereNull('centro_custo_user.expires_at')
+                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+                    })
+                    ->pluck('centros_custo.codigo')
+                    ->toArray();
+                $query->whereIn('ccusto', $ccPermitidos);
+            } else {
+                $query->where('ccusto', '00000000');
+            }
         }
         if (!empty($this->filtroAno)) $query->where('ano', $this->filtroAno);
         if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . $this->filtroFilial . '%');
