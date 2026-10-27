@@ -522,7 +522,7 @@ class OrcamentoEditor extends Component
         if ($this->isLockedGlobal || !isset($this->itensOrcamento[$index])) return;
 
         if (in_array($this->itensOrcamento[$index]['status'] ?? '', ['Aprovada', 'Aprovado', 'Aprovada Parcialmente'], true)) {
-            $this->dispatch('erro', msg: 'Não é permitido remover uma despesa já aprovada.');
+            $this->dispatch('erro', msg: 'Não é permitido remover um item já aprovado.');
             return;
         }
 
@@ -538,6 +538,8 @@ class OrcamentoEditor extends Component
         } else {
             $this->selecionarItem(max(0, min($index, count($this->itensOrcamento) - 1)));
         }
+
+        $this->dispatch('sucesso', msg: 'Item removido da lista. Clique em Salvar para confirmar a exclusão.');
     }
 
     public function removerItensSelecionados(): void
