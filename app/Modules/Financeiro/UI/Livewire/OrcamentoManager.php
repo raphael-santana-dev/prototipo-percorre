@@ -152,24 +152,18 @@ class OrcamentoManager extends Component
     {
         $query = Orcamento::with('centroCusto');
 
-        // Filtra estritamente pelos Centros de Custo vinculados ao usuário (exceto dev)
-        if (!auth()->user()->hasRole('dev')) {
-            if (method_exists(auth()->user(), 'centros_de_custo')) {
-                $ccPermitidos = auth()->user()->centros_de_custo()
-                    ->where(function ($q) {
-                        $q->whereNull('centro_custo_user.expires_at')
-                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-                    })
-                    ->pluck('centros_custo.codigo')
-                    ->toArray();
-                $query->whereIn('ccusto', $ccPermitidos);
-            } else {
-                $query->where('ccusto', '00000000');
-            }
+        // Obtém os Centros de Custo que o usuário pode EDITAR (retorna null se for dev ou tiver Permissão Global de Edição)
+        $ccPermitidosEdicao = auth()->user()->obterCodigosCcEdicao();
+        if ($ccPermitidosEdicao !== null) {
+            $query->whereIn('ccusto', !empty($ccPermitidosEdicao) ? $ccPermitidosEdicao : ['00000000']);
         }
 
-        if (!empty($this->filtroAno)) $query->where('ano', trim($this->filtroAno));
-        if (!empty($this->filtroFilial)) $query->where('filial', 'ilike', '%' . trim($this->filtroFilial) . '%');
+        if (!empty($this->filtroAno)) {
+            $query->where('ano', trim($this->filtroAno));
+        }
+        if (!empty($this->filtroFilial)) {
+            $query->where('filial', 'ilike', '%' . trim($this->filtroFilial) . '%');
+        }
         if (!empty($this->filtroCentroCusto)) {
             $termoCC = trim($this->filtroCentroCusto);
             $query->where(function ($q) use ($termoCC) {
@@ -177,7 +171,9 @@ class OrcamentoManager extends Component
                   ->orWhereHas('centroCusto', fn($sub) => $sub->where('nome', 'ilike', '%' . $termoCC . '%'));
             });
         }
-        if (!empty($this->filtroStatus)) $query->where('status', $this->filtroStatus);
+        if (!empty($this->filtroStatus)) {
+            $query->where('status', $this->filtroStatus);
+        }
 
         return $query;
     }

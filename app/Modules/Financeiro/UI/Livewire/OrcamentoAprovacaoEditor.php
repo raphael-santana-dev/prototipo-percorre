@@ -83,20 +83,14 @@ class OrcamentoAprovacaoEditor extends Component
             $this->orcamento->load(['itens' => fn($q) => $q->orderBy('id', 'asc'), 'itens.natureza', 'itens.avaliacoes']);
         }
 
-        if (!auth()->user()->hasRole('dev')) {
-            if (method_exists(auth()->user(), 'centros_de_custo')) {
-                $ccPermitidos = auth()->user()->centros_de_custo()
-                    ->where(function ($q) {
-                        $q->whereNull('centro_custo_user.expires_at')
-                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-                    })
-                    ->pluck('centros_custo.codigo')
-                    ->toArray();
-
-                abort_unless(in_array($this->orcamento->ccusto, $ccPermitidos), 403, 'Você não está vinculado como aprovador deste Centro de Custo.');
-            } else {
-                abort(403, 'Sem vínculo com Centros de Custo.');
-            }
+        // Verifica se o usuário tem acesso global para Aprovação (retorna null) ou lista de CCs permitidos para Aprovação
+        $ccPermitidosAprovacao = auth()->user()->obterCodigosCcAprovacao();
+        if ($ccPermitidosAprovacao !== null) {
+            abort_unless(
+                in_array($this->orcamento->ccusto, $ccPermitidosAprovacao, true),
+                403,
+                'Você não está vinculado como aprovador deste Centro de Custo.'
+            );
         }
 
         $primeiroItem = $this->orcamento->itens->first();
@@ -116,21 +110,7 @@ class OrcamentoAprovacaoEditor extends Component
      */
     public function obterTotalAprovadores(): int
     {
-        if ($this->orcamento->centroCusto) {
-            $aprovadoresCentroCusto = $this->orcamento->centroCusto->users()
-                ->where(function ($q) {
-                    $q->whereNull('centro_custo_user.expires_at')
-                      ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-                })
-                ->get()
-                ->reject(fn($u) => $u->hasRole('dev'))
-                ->filter(fn($u) => $u->can('financeiro.orcamentos.aprovar') || $u->can('financeiro.orcamentos.avaliacao'))
-                ->count();
-
-            return max(1, $aprovadoresCentroCusto);
-        }
-
-        return 1;
+        return max(1, \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::obterAprovadores($this->orcamento)->count());
     }
 
     /**

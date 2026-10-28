@@ -45,7 +45,6 @@ class OrcamentoAprovacaoManager extends Component
             ['label' => 'Aprovações', 'url' => '#'],
         ];
 
-        $this->filtroAno = date('Y');
         $this->ordenacaoCampo = 'updated_at';
         $this->ordenacaoDirecao = 'desc';
     }
@@ -85,21 +84,11 @@ class OrcamentoAprovacaoManager extends Component
 
     protected function aplicarEscopoCentrosCustoUsuario($query)
     {
-        // Sem permissão global: filtra sempre pelos Centros de Custo vinculados ao aprovador (exceto dev)
-        if (!auth()->user()->hasRole('dev')) {
-            if (method_exists(auth()->user(), 'centros_de_custo')) {
-                $ccPermitidos = auth()->user()->centros_de_custo()
-                    ->where(function ($q) {
-                        $q->whereNull('centro_custo_user.expires_at')
-                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-                    })
-                    ->pluck('centros_custo.codigo')
-                    ->toArray();
+        $codigosPermitidos = auth()->user()->obterCodigosCcAprovacao();
 
-                $query->whereIn('ccusto', $ccPermitidos);
-            } else {
-                $query->where('ccusto', '00000000');
-            }
+        // Se retornar null, o usuário é 'dev' ou tem Permissão Global de Centros de Custo (vê todos)
+        if ($codigosPermitidos !== null) {
+            $query->whereIn('ccusto', !empty($codigosPermitidos) ? $codigosPermitidos : ['00000000']);
         }
 
         return $query;
@@ -110,9 +99,13 @@ class OrcamentoAprovacaoManager extends Component
         $query = Orcamento::with(['centroCusto', 'itens'])
             ->whereIn('status', [
                 'Finalizado – Aguardando Aprovação',
+                'Finalizado - Aguardando Aprovação',
                 'Aprovação – Aguardando Revisão pelo Responsável',
+                'Aprovação - Aguardando Revisão pelo Responsável',
                 'Finalizado – Aprovado',
+                'Finalizado - Aprovado',
                 'Finalizado – Integrado ao Protheus',
+                'Finalizado - Integrado ao Protheus',
                 'Finalizado',
                 'Aprovado',
                 'Reprovado',
@@ -128,8 +121,8 @@ class OrcamentoAprovacaoManager extends Component
             $query->where('filial', 'ilike', '%' . trim($this->filtroFilial) . '%');
         }
         if (!empty($this->filtroStatus)) {
-            if ($this->filtroStatus === 'Finalizado – Aguardando Aprovação') {
-                $query->whereIn('status', ['Finalizado – Aguardando Aprovação', 'Finalizado']);
+            if (in_array($this->filtroStatus, ['Finalizado – Aguardando Aprovação', 'Finalizado - Aguardando Aprovação'])) {
+                $query->whereIn('status', ['Finalizado – Aguardando Aprovação', 'Finalizado - Aguardando Aprovação', 'Finalizado']);
             } else {
                 $query->where('status', $this->filtroStatus);
             }
@@ -155,7 +148,7 @@ class OrcamentoAprovacaoManager extends Component
             $query->orderBy('updated_at', 'desc');
         }
 
-        $queryAguardando = Orcamento::whereIn('status', ['Finalizado – Aguardando Aprovação', 'Finalizado']);
+        $queryAguardando = Orcamento::whereIn('status', ['Finalizado - Aguardando Aprovação', 'Finalizado - Aguardando Aprovação', 'Finalizado']);
         $this->aplicarEscopoCentrosCustoUsuario($queryAguardando);
 
         return view('livewire.financeiro.orcamento-aprovacao-manager', [

@@ -13,50 +13,58 @@ use Illuminate\Support\Facades\Notification;
 class OrcamentoNotificacaoService
 {
     /**
-     * Obtém apenas os utilizadores ativos vinculados a este Centro de Custo (respeitando expires_at)
-     */
-    public static function obterUsuariosVinculadosCentroCusto(Orcamento $orcamento): Collection
-    {
-        $orcamento->loadMissing('centroCusto');
-
-        if (!$orcamento->centroCusto) {
-            return collect();
-        }
-
-        return $orcamento->centroCusto->users()
-            ->where(function ($q) {
-                $q->whereNull('centro_custo_user.expires_at')
-                  ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-            })
-            ->get();
-    }
-
-    /**
-     * Obtém os Aprovadores vinculados ao Centro de Custo (exclui 'dev' da contagem/fluxo oficial)
+     * Obtém TODOS os Aprovadores elegíveis para este Orçamento:
+     * 1) Usuários vinculados a este Centro de Custo para aprovação ('tipo_acesso' = 'aprovacao')
+     * 2) Usuários com Permissão Global de Centros de Custo ('centros_custo.visao_global')
+     * Ambos precisam ter a permissão 'financeiro.orcamentos.aprovar' (e não serem 'dev').
      */
     public static function obterAprovadores(Orcamento $orcamento): Collection
     {
-        return self::obterUsuariosVinculadosCentroCusto($orcamento)
+        $orcamento->loadMissing('centroCusto');
+
+        // 1. Aprovadores vinculados diretamente ao Centro de Custo
+        $vinculadosAoCC = collect();
+        if ($orcamento->centroCusto) {
+            $vinculadosAoCC = $orcamento->centroCusto->aprovadores()
+                ->where(function ($q) {
+                    $q->whereNull('centro_custo_user.expires_at')
+                      ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+                })
+                ->get();
+        }
+
+        // 2. Usuários com Permissão Global de Centros de Custo
+        $usuariosGlobais = User::all()->filter(function (User $u) {
+            return $u->possuiVisaoGlobalCentrosCusto('aprovacao');
+        });
+
+        return $vinculadosAoCC
+            ->concat($usuariosGlobais)
+            ->unique('id')
             ->reject(fn (User $user) => $user->hasRole('dev'))
             ->filter(function (User $user) {
                 return $user->can('financeiro.orcamentos.aprovar')
                     || $user->can('financeiro.orcamentos.avaliacao');
             })
-            ->unique('id')
             ->values();
     }
 
     /**
-     * Obtém os Responsáveis (Editores) vinculados ao Centro de Custo
+     * Obtém os Responsáveis (Editores) vinculados ao Centro de Custo deste Orçamento
      */
     public static function obterResponsaveis(Orcamento $orcamento): Collection
     {
-        $vinculados = self::obterUsuariosVinculadosCentroCusto($orcamento)
-            ->reject(fn (User $user) => $user->hasRole('dev'))
-            ->filter(function (User $user) {
-                return $user->can('financeiro.orcamentos.editar')
-                    || $user->can('financeiro.orcamentos.listar');
-            });
+        $orcamento->loadMissing('centroCusto');
+
+        $vinculadosEdicao = collect();
+        if ($orcamento->centroCusto) {
+            $vinculadosEdicao = $orcamento->centroCusto->editores()
+                ->where(function ($q) {
+                    $q->whereNull('centro_custo_user.expires_at')
+                      ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+                })
+                ->get();
+        }
 
         $idsHistorico = OrcamentoAvaliacao::where('orcamento_id', $orcamento->id)
             ->where('tipo_evento', 'liberacao_item')
@@ -66,12 +74,18 @@ class OrcamentoNotificacaoService
             ->toArray();
 
         if (!empty($idsHistorico)) {
-            $usuariosHistorico = User::whereIn('id', $idsHistorico)->get()
-                ->reject(fn (User $user) => $user->hasRole('dev'));
-            $vinculados = $vinculados->concat($usuariosHistorico);
+            $usuariosHistorico = User::whereIn('id', $idsHistorico)->get();
+            $vinculadosEdicao = $vinculadosEdicao->concat($usuariosHistorico);
         }
 
-        return $vinculados->unique('id')->values();
+        return $vinculadosEdicao
+            ->unique('id')
+            ->reject(fn (User $user) => $user->hasRole('dev'))
+            ->filter(function (User $user) {
+                return $user->can('financeiro.orcamentos.editar')
+                    || $user->can('financeiro.orcamentos.listar');
+            })
+            ->values();
     }
 
     private static function dispararParaUsuarios(Collection $usuarios, array $payload): void
@@ -96,9 +110,6 @@ class OrcamentoNotificacaoService
         }
     }
 
-    /**
-     * 1. Quando o Responsável finaliza e submete o orçamento para aprovação
-     */
     public static function notificarSubmissaoParaAprovacao(Orcamento $orcamento, ?User $responsavel = null): void
     {
         $orcamento->loadMissing('centroCusto');
@@ -109,7 +120,7 @@ class OrcamentoNotificacaoService
 
         self::dispararParaUsuarios($aprovadores, [
             'titulo'       => "Orçamento Aguardando Aprovação — CC {$orcamento->ccusto}",
-            'mensagem'     => "O responsável {$nomeAutor} finalizou a revisão do orçamento de {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}) e submeteu-o para aprovação.",
+            'mensagem'     => "O responsável {$nomeAutor} finalizou a edição do orçamento de {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}) e submeteu-o para aprovação.",
             'detalhes'     => 'Valor Total Submetido: R$ ' . number_format((float) $orcamento->valor_total, 2, ',', '.'),
             'url'          => route('financeiro.aprovacoes.editor', $orcamento->id),
             'texto_botao'  => 'Analisar e Aprovar Orçamento',
@@ -122,9 +133,6 @@ class OrcamentoNotificacaoService
         ]);
     }
 
-    /**
-     * 2. Quando um Aprovador salva a análise completa do orçamento
-     */
     public static function notificarMovimentacaoAprovacao(Orcamento $orcamento, ?User $aprovadorAtivo = null): void
     {
         $orcamento->loadMissing(['centroCusto', 'itens']);
@@ -174,9 +182,6 @@ class OrcamentoNotificacaoService
         ]);
     }
 
-    /**
-     * 3. Quando o Responsável integra definitivamente o orçamento aprovado ao Protheus
-     */
     public static function notificarIntegracaoProtheus(Orcamento $orcamento, ?User $autor = null): void
     {
         $orcamento->loadMissing('centroCusto');

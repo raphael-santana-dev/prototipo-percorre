@@ -56,8 +56,19 @@ class OrcamentoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('financeiro.orcamentos.editar') && !feature('financeiro.orcamentos.listar') && !auth()->user()->hasRole('dev'), 403, 'O módulo de orçamentos está temporariamente desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar'), 403, 'Sem permissão para editar orçamentos.');
+        abort_if(
+            !feature('financeiro.orcamentos.editar')
+            && !feature('financeiro.orcamentos.listar')
+            && !auth()->user()->hasRole('dev'),
+            403,
+            'O módulo de orçamentos está temporariamente desativado.'
+        );
+        abort_if(
+            !auth()->user()->hasRole('dev')
+            && !auth()->user()->can('financeiro.orcamentos.editar'),
+            403,
+            'Sem permissão para editar orçamentos.'
+        );
 
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
@@ -72,21 +83,14 @@ class OrcamentoEditor extends Component
             $this->orcamento->load(['itens' => fn($q) => $q->orderBy('id', 'asc'), 'itens.natureza', 'itens.avaliacoes']);
         }
         
-        // Verifica vínculo estrito com o Centro de Custo (sem usar permissão global)
-        if (!auth()->user()->hasRole('dev')) {
-            if (method_exists(auth()->user(), 'centros_de_custo')) {
-                $ccPermitidos = auth()->user()->centros_de_custo()
-                    ->where(function ($q) {
-                        $q->whereNull('centro_custo_user.expires_at')
-                          ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
-                    })
-                    ->pluck('centros_custo.codigo')
-                    ->toArray();
-
-                abort_unless(in_array($this->orcamento->ccusto, $ccPermitidos), 403, 'Sem permissão para acessar este Centro de Custo.');
-            } else {
-                abort(403, 'Sem vínculo com Centros de Custo.');
-            }
+        // Verifica se o usuário tem acesso global para Edição (retorna null) ou lista de CCs permitidos para Edição
+        $ccPermitidosEdicao = auth()->user()->obterCodigosCcEdicao();
+        if ($ccPermitidosEdicao !== null) {
+            abort_unless(
+                in_array($this->orcamento->ccusto, $ccPermitidosEdicao, true),
+                403,
+                'Sem permissão para editar este Centro de Custo.'
+            );
         }
 
         $this->atualizarBloqueioGlobal();
