@@ -15,7 +15,6 @@ use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
 class OrcamentoAprovacaoEditor extends Component
 {
     public Orcamento $orcamento;
-    public int $anoSimulacao = 2026;
 
     // Índice do item selecionado na tabela da esquerda
     public int $itemSelecionadoIndex = 0;
@@ -56,8 +55,20 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('financeiro.orcamentos.avaliacao') && !auth()->user()->hasRole('dev'), 403, 'Módulo de avaliação orçamentária desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.avaliacao'), 403, 'Sem permissão para avaliar orçamentos.');
+        abort_if(
+            !feature('financeiro.orcamentos.aprovar')
+            && !feature('financeiro.orcamentos.avaliacao')
+            && !auth()->user()->hasRole('dev'),
+            403,
+            'Módulo de avaliação orçamentária desativado.'
+        );
+        abort_if(
+            !auth()->user()->hasRole('dev')
+            && !auth()->user()->can('financeiro.orcamentos.aprovar')
+            && !auth()->user()->can('financeiro.orcamentos.avaliacao'),
+            403,
+            'Sem permissão para aprovar orçamentos.'
+        );
 
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
@@ -72,7 +83,7 @@ class OrcamentoAprovacaoEditor extends Component
             $this->orcamento->load(['itens' => fn($q) => $q->orderBy('id', 'asc'), 'itens.natureza', 'itens.avaliacoes']);
         }
 
-        if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
+        if (!auth()->user()->hasRole('dev')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {
                 $ccPermitidos = auth()->user()->centros_de_custo()
                     ->where(function ($q) {
@@ -88,8 +99,6 @@ class OrcamentoAprovacaoEditor extends Component
             }
         }
 
-        $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
-
         $primeiroItem = $this->orcamento->itens->first();
         if ($primeiroItem) {
             $this->itemComentarioId = $primeiroItem->id;
@@ -102,6 +111,9 @@ class OrcamentoAprovacaoEditor extends Component
         }
     }
 
+    /**
+     * Conta apenas os aprovadores reais vinculados ao Centro de Custo (usuários 'dev' NÃO contam)
+     */
     public function obterTotalAprovadores(): int
     {
         if ($this->orcamento->centroCusto) {
@@ -111,20 +123,144 @@ class OrcamentoAprovacaoEditor extends Component
                       ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
                 })
                 ->get()
-                ->filter(fn($u) => $u->can('financeiro.orcamentos.avaliacao') || $u->hasRole('dev|admin'))
+                ->reject(fn($u) => $u->hasRole('dev'))
+                ->filter(fn($u) => $u->can('financeiro.orcamentos.aprovar') || $u->can('financeiro.orcamentos.avaliacao'))
                 ->count();
 
-            if ($aprovadoresCentroCusto > 0) {
-                return $aprovadoresCentroCusto;
+            return max(1, $aprovadoresCentroCusto);
+        }
+
+        return 1;
+    }
+
+    /**
+     * Verifica se o orçamento aceita comentários (bloqueado quando finalizado/aprovado)
+     */
+    public function podeInserirComentarios(): bool
+    {
+        $statusFinalizados = [
+            'Finalizado – Aprovado',
+            'Finalizado - Aprovado',
+            'Finalizado – Integrado ao Protheus',
+            'Finalizado - Integrado ao Protheus',
+            'Aprovado',
+            'Aprovado com ressalvas',
+        ];
+
+        return !in_array($this->orcamento->status, $statusFinalizados, true);
+    }
+
+    public function salvarAnaliseAprovador()
+    {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Este orçamento já está finalizado e não permite novas análises.');
+            return;
+        }
+
+        // Regra: Aprovação do 'dev' NÃO conta para o andamento do processo de aprovação
+        if (auth()->user()->hasRole('dev')) {
+            $this->dispatch('erro', msg: 'Aprovação de usuário DEV não conta para o andamento oficial do processo de aprovação. Realize a aprovação com o usuário Aprovador vinculado ao Centro de Custo.');
+            return;
+        }
+
+        $itens = $this->orcamento->itens()->orderBy('id', 'asc')->get();
+
+        foreach ($itens as $seqIdx => $item) {
+            if (in_array($item->status, ['Aprovada', 'Aprovado'], true)) {
+                continue;
+            }
+            $codVisual = $item->id_despesa ?: str_pad((string) ($seqIdx + 1), 3, '0', STR_PAD_LEFT);
+            if (empty($this->decisoesAprovador[$item->id]['status'])) {
+                $this->dispatch('erro', msg: "Analise todos os itens antes de salvar. Item pendente: #{$codVisual}.");
+                return;
             }
         }
 
-        try {
-            $totalPermissao = User::permission('financeiro.orcamentos.avaliacao')->count();
-            return max(1, $totalPermissao);
-        } catch (\Throwable $e) {
-            return 1;
+        $totalAprovadores = $this->obterTotalAprovadores();
+        $userId = auth()->id();
+
+        foreach ($itens as $item) {
+            if (in_array($item->status, ['Aprovada', 'Aprovado'], true)) {
+                continue;
+            }
+
+            $decisao = $this->decisoesAprovador[$item->id];
+            $votoStatus = $decisao['status'];
+            $motivoRevisao = trim($decisao['motivo_revisao'] ?? '');
+
+            $tipoEvento = ($votoStatus === 'Aguardando Revisão pelo Responsável') ? 'motivo_revisao' : 'avaliacao_item';
+
+            OrcamentoAvaliacao::create([
+                'orcamento_id'      => $this->orcamento->id,
+                'orcamento_item_id' => $item->id,
+                'user_id'           => $userId,
+                'user_nome'         => auth()->user()->name,
+                'status_aplicado'   => $votoStatus,
+                'comentario'        => $motivoRevisao ?: null,
+                'tipo_evento'       => $tipoEvento,
+            ]);
+
+            $ultimaLiberacao = OrcamentoAvaliacao::where('orcamento_item_id', $item->id)
+                ->where('tipo_evento', 'liberacao_item')
+                ->latest('id')
+                ->first();
+
+            $votosCicloQuery = OrcamentoAvaliacao::with('usuario')
+                ->where('orcamento_item_id', $item->id)
+                ->whereIn('tipo_evento', ['avaliacao_item', 'motivo_revisao']);
+
+            if ($ultimaLiberacao) {
+                $votosCicloQuery->where('id', '>', $ultimaLiberacao->id);
+            }
+
+            // Ignora qualquer voto que tenha sido feito por usuário 'dev'
+            $votosPorAprovador = $votosCicloQuery->get()
+                ->reject(fn($aval) => $aval->usuario && $aval->usuario->hasRole('dev'))
+                ->groupBy('user_id')
+                ->map(fn($grupo) => $grupo->last());
+
+            $qtdAprovadoresQueVotaram = $votosPorAprovador->count();
+            $algumPediuRevisao = $votosPorAprovador->contains(fn($v) => $v->status_aplicado === 'Aguardando Revisão pelo Responsável');
+            $algumNaoAprovou   = $votosPorAprovador->contains(fn($v) => in_array($v->status_aplicado, ['Não Aprovada', 'Não Aprovado', 'Reprovado'], true));
+
+            if ($algumPediuRevisao) {
+                $novoStatusItem = 'Aguardando Revisão pelo Responsável';
+            } elseif ($algumNaoAprovou) {
+                $novoStatusItem = ($totalAprovadores > 1 && $qtdAprovadoresQueVotaram < $totalAprovadores)
+                    ? 'Reprovado parcialmente'
+                    : 'Não Aprovada';
+            } else {
+                $novoStatusItem = ($totalAprovadores > 1 && $qtdAprovadoresQueVotaram < $totalAprovadores)
+                    ? 'Aprovada Parcialmente'
+                    : 'Aprovada';
+            }
+
+            $item->update(['status' => $novoStatusItem]);
         }
+
+        $itensAtualizados = $this->orcamento->itens()->orderBy('id', 'asc')->get();
+
+        $aindaAguardandoOutrosAprovadores = $itensAtualizados->contains(fn($i) => in_array($i->status, ['Aprovação Pendente', 'Aprovada Parcialmente', 'Reprovado parcialmente'], true));
+        $temPendenciaDeRevisaoOuReprovacao = $itensAtualizados->contains(fn($i) => in_array($i->status, ['Aguardando Revisão pelo Responsável', 'Não Aprovada', 'Não Aprovado', 'Reprovado'], true));
+        $todosAprovados = $itensAtualizados->every(fn($i) => in_array($i->status, ['Aprovada', 'Aprovado'], true));
+
+        if ($todosAprovados) {
+            $this->orcamento->update(['status' => 'Finalizado – Aprovado']);
+            $this->dispatch('sucesso', msg: 'Todos os itens foram aprovados! O orçamento está agora com status "Finalizado – Aprovado".');
+        } elseif (!$aindaAguardandoOutrosAprovadores && $temPendenciaDeRevisaoOuReprovacao) {
+            $this->orcamento->update(['status' => 'Aprovação – Aguardando Revisão pelo Responsável']);
+            $this->dispatch('sucesso', msg: 'Análise salva! O orçamento passou para "Aprovação – Aguardando Revisão pelo Responsável".');
+        } else {
+            $this->orcamento->update(['status' => 'Finalizado – Aguardando Aprovação']);
+            $this->dispatch('sucesso', msg: 'Análise parcial registrada com sucesso! Aguardando os demais aprovadores.');
+        }
+
+        $this->orcamento->refresh();
+
+        \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarMovimentacaoAprovacao(
+            $this->orcamento,
+            auth()->user()
+        );
     }
 
     private function carregarDecisoesExistentesDoAprovador(): void
@@ -297,126 +433,18 @@ class OrcamentoAprovacaoEditor extends Component
         $this->textoMotivoRevisao = '';
     }
 
-    /**
-     * Salva a análise do aprovador em todas as despesas e calcula o status parcial/final (Slides 44 a 47)
-     */
-    public function salvarAnaliseAprovador()
-    {
-        $itens = $this->orcamento->itens()->orderBy('id', 'asc')->get();
-
-        foreach ($itens as $seqIdx => $item) {
-            if (in_array($item->status, ['Aprovada', 'Aprovado'], true)) {
-                continue;
-            }
-            $codVisual = $item->id_despesa ?: str_pad((string) ($seqIdx + 1), 3, '0', STR_PAD_LEFT);
-            if (empty($this->decisoesAprovador[$item->id]['status'])) {
-                $this->dispatch('erro', msg: "Analise todas as despesas antes de salvar. Despesa pendente: #{$codVisual}.");
-                return;
-            }
-        }
-
-        $totalAprovadores = $this->obterTotalAprovadores();
-        $userId = auth()->id();
-
-        foreach ($itens as $item) {
-            if (in_array($item->status, ['Aprovada', 'Aprovado'], true)) {
-                continue;
-            }
-
-            $decisao = $this->decisoesAprovador[$item->id];
-            $votoStatus = $decisao['status']; // 'Aprovada', 'Aguardando Revisão pelo Responsável' ou 'Não Aprovada'
-            $motivoRevisao = trim($decisao['motivo_revisao'] ?? '');
-
-            // Se foi marcado para revisão, grava como evento 'motivo_revisao' para alimentar o histórico de Motivo da Revisão
-            $tipoEvento = ($votoStatus === 'Aguardando Revisão pelo Responsável') ? 'motivo_revisao' : 'avaliacao_item';
-
-            OrcamentoAvaliacao::create([
-                'orcamento_id'      => $this->orcamento->id,
-                'orcamento_item_id' => $item->id,
-                'user_id'           => $userId,
-                'user_nome'         => auth()->user()->name,
-                'status_aplicado'   => $votoStatus,
-                'comentario'        => $motivoRevisao ?: null,
-                'tipo_evento'       => $tipoEvento,
-            ]);
-
-            // ---> ATUALIZAÇÃO 1: Dispara e-mail e notificação interna se o item recebeu Motivo de Revisão
-            // if ($tipoEvento === 'motivo_revisao' && !empty($motivoRevisao)) {
-            //     \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarMotivoRevisaoItem(
-            //         $this->orcamento,
-            //         $item,
-            //         $motivoRevisao,
-            //         auth()->user()
-            //     );
-            // }
-
-            $ultimaLiberacao = OrcamentoAvaliacao::where('orcamento_item_id', $item->id)
-                ->where('tipo_evento', 'liberacao_item')
-                ->latest('id')
-                ->first();
-
-            $votosCicloQuery = OrcamentoAvaliacao::where('orcamento_item_id', $item->id)
-                ->whereIn('tipo_evento', ['avaliacao_item', 'motivo_revisao']);
-
-            if ($ultimaLiberacao) {
-                $votosCicloQuery->where('id', '>', $ultimaLiberacao->id);
-            }
-
-            $votosPorAprovador = $votosCicloQuery->get()
-                ->groupBy('user_id')
-                ->map(fn($grupo) => $grupo->last());
-
-            $qtdAprovadoresQueVotaram = $votosPorAprovador->count();
-            $algumPediuRevisao = $votosPorAprovador->contains(fn($v) => $v->status_aplicado === 'Aguardando Revisão pelo Responsável');
-            $algumNaoAprovou   = $votosPorAprovador->contains(fn($v) => in_array($v->status_aplicado, ['Não Aprovada', 'Não Aprovado', 'Reprovado'], true));
-
-            if ($algumPediuRevisao) {
-                $novoStatusItem = 'Aguardando Revisão pelo Responsável';
-            } elseif ($algumNaoAprovou) {
-                $novoStatusItem = ($totalAprovadores > 1 && $qtdAprovadoresQueVotaram < $totalAprovadores)
-                    ? 'Reprovado parcialmente'
-                    : 'Não Aprovada';
-            } else {
-                // Todos que votaram até agora aprovaram
-                $novoStatusItem = ($totalAprovadores > 1 && $qtdAprovadoresQueVotaram < $totalAprovadores)
-                    ? 'Aprovada Parcialmente'
-                    : 'Aprovada';
-            }
-
-            $item->update(['status' => $novoStatusItem]);
-        }
-
-        $itensAtualizados = $this->orcamento->itens()->orderBy('id', 'asc')->get();
-
-        $aindaAguardandoOutrosAprovadores = $itensAtualizados->contains(fn($i) => in_array($i->status, ['Aprovação Pendente', 'Aprovada Parcialmente', 'Reprovado parcialmente'], true));
-        $temPendenciaDeRevisaoOuReprovacao = $itensAtualizados->contains(fn($i) => in_array($i->status, ['Aguardando Revisão pelo Responsável', 'Não Aprovada', 'Não Aprovado', 'Reprovado'], true));
-        $todosAprovados = $itensAtualizados->every(fn($i) => in_array($i->status, ['Aprovada', 'Aprovado'], true));
-
-        if ($todosAprovados) {
-            $this->orcamento->update(['status' => 'Finalizado – Aprovado']);
-            $this->dispatch('sucesso', msg: 'Todas as despesas foram aprovadas! O orçamento está agora com status "Finalizado – Aprovado".');
-        } elseif (!$aindaAguardandoOutrosAprovadores && $temPendenciaDeRevisaoOuReprovacao) {
-            $this->orcamento->update(['status' => 'Aprovação – Aguardando Revisão pelo Responsável']);
-            $this->dispatch('sucesso', msg: 'Análise salva! O orçamento passou para "Aprovação – Aguardando Revisão pelo Responsável".');
-        } else {
-            $this->orcamento->update(['status' => 'Finalizado – Aguardando Aprovação']);
-            $this->dispatch('sucesso', msg: 'Análise parcial registada com sucesso! Aguardando os demais aprovadores.');
-        }
-
-        $this->orcamento->refresh();
-
-        // ---> ATUALIZAÇÃO 2: Dispara e-mail e notificação interna para os demais aprovadores e para o responsável
-        \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarMovimentacaoAprovacao(
-            $this->orcamento,
-            auth()->user()
-        );
-    }
+   
 
     /**
      * Slide 47: Permite registrar um novo Motivo da Revisão quando a despesa está marcada como "Aguardando Revisão pelo Responsável"
      */
     public function adicionarMotivoRevisaoNoDrawer(): void
     {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Orçamentos finalizados não permitem novos comentários.');
+            return;
+        }
+        
         $this->validate([
             'itemComentarioId'        => 'required|integer',
             'novoMotivoRevisaoDrawer' => 'required|string|min:3',
@@ -483,6 +511,11 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function adicionarComentarioGlobal(): void
     {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Orçamentos finalizados não permitem novos comentários.');
+            return;
+        }
+
         $this->validate(['novoComentarioGeral' => 'required|string|min:2']);
 
         OrcamentoAvaliacao::create([
@@ -501,6 +534,11 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function adicionarComentarioPorItem(): void
     {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Orçamentos finalizados não permitem novos comentários.');
+            return;
+        }
+
         $this->validate([
             'itemComentarioId'   => 'required|integer',
             'novoComentarioItem' => 'required|string|min:2',

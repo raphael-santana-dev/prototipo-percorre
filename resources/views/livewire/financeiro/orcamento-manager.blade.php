@@ -22,27 +22,6 @@
     </div>
 
     @if(isset($metricas))
-        <!-- Painel de Simulação Flat -->
-        <div class="mb-6 bg-white border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 border border-gray-200">
-                    <i class="ph ph-calendar text-xl text-gray-600"></i>
-                </div>
-                <div>
-                    <h3 class="text-sm font-bold text-gray-900">Simulador de Base Orçamentária</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Avance a base de todos os orçamentos para o próximo ano.</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="bg-gray-50 text-gray-700 border border-gray-200 text-sm font-semibold rounded-md py-1.5 px-3">
-                    Ano Base: {{ $anoSimulacao }}
-                </div>
-                <button wire:click="avancarAnoSimulacao" class="px-4 py-1.5 bg-gray-900 hover:bg-black text-white rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2" onclick="confirm('Esta ação clonará a Base Prevista de TODOS os orçamentos para o próximo ano. Continuar?') || event.stopImmediatePropagation()">
-                    Avançar Ano <i class="ph ph-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-
         <div class="mb-6"><x-summary-cards :metricas="$metricas" /></div>
     @endif
 

@@ -12,11 +12,6 @@
         </x-slot>
     </x-page-header>
 
-    <div class="bg-blue-50 border border-blue-100 dark:bg-blue-900/30 dark:border-blue-800 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-300 font-medium mb-6 flex items-start gap-3 shadow-sm">
-        <i class="ph-fill ph-info text-xl text-blue-500 mt-0.5"></i>
-        <p class="leading-snug">As alterações feitas nos interruptores (Toggles) abaixo são <strong>guardadas automaticamente em tempo real</strong>.</p>
-    </div>
-
     <x-table
         :headers="$this->headers"
         :registros="$registros"

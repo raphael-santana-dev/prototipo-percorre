@@ -108,11 +108,9 @@
 
                 <td class="px-4 py-2.5 whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                        <!-- TOGGLE FUNCIONAL AUTOMÁTICO -->
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer" @if($feature->is_active) checked @endif wire:click="toggleStatus({{ $feature->id }})">
-                            <div class="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
-                        </label>
+                        <!-- TOGGLE VIA COMPONENT x-toggle -->
+                        <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
+                        
                         <span class="text-[10px] font-bold {{ $feature->is_active ? 'text-emerald-600' : 'text-gray-400' }}">
                             {{ $feature->is_active ? 'ATIVO' : 'INATIVO' }}
                         </span>
@@ -150,10 +148,8 @@
 
                     <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700 w-full">
                         <div class="flex items-center gap-2">
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" @if($feature->is_active) checked @endif wire:click="toggleStatus({{ $feature->id }})">
-                                <div class="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
-                            </label>
+                            <!-- TOGGLE VIA COMPONENT x-toggle -->
+                            <x-toggle :status="$feature->is_active" action="toggleStatus({{ $feature->id }})" />
                         </div>
                         
                         <div class="flex items-center gap-1">

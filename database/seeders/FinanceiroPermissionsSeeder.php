@@ -15,17 +15,24 @@ class FinanceiroPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // Remove a permissão e feature 'financeiro.orcamentos.global' que causava confusão
+        Permission::where('name', 'financeiro.orcamentos.global')->delete();
+        if (Schema::hasTable('features')) {
+            $colKey = Schema::hasColumn('features', 'key') ? 'key' : (Schema::hasColumn('features', 'nome') ? 'nome' : 'name');
+            DB::table('features')->where($colKey, 'financeiro.orcamentos.global')->delete();
+        }
+
         $permissoes = [
-            'financeiro.orcamentos.listar'       => 'Listar orçamentos financeiros',
-            'financeiro.orcamentos.editar'       => 'Elaborar e revisar orçamentos financeiros',
-            'financeiro.orcamentos.avaliacao'    => 'Avaliar e aprovar orçamentos financeiros',
-            'financeiro.orcamentos.integrar'     => 'Integrar orçamento aprovado ao Protheus',
-            'financeiro.orcamentos.sincronizar'  => 'Importar/sincronizar orçamentos do Protheus',
-            'financeiro.orcamentos.global'       => 'Visualizar orçamentos de todos os Centros de Custo',
-            'financeiro.centro_custo.listar'     => 'Listar centros de custo',
-            'financeiro.centro_custo.sincronizar'=> 'Sincronizar centros de custo com o Protheus',
-            'financeiro.natureza.listar'         => 'Listar naturezas financeiras',
-            'financeiro.natureza.sincronizar'    => 'Sincronizar naturezas financeiras com o Protheus',
+            'financeiro.orcamentos.listar'        => 'Listar orçamentos financeiros',
+            'financeiro.orcamentos.editar'        => 'Elaborar e revisar orçamentos dos Centros de Custo vinculados',
+            'financeiro.orcamentos.aprovar'       => 'Aprovar orçamentos dos Centros de Custo vinculados',
+            'financeiro.orcamentos.avaliacao'     => 'Avaliar e aprovar orçamentos dos Centros de Custo vinculados',
+            'financeiro.orcamentos.integrar'      => 'Integrar orçamento aprovado ao Protheus',
+            'financeiro.orcamentos.sincronizar'   => 'Importar/sincronizar orçamentos do Protheus',
+            'financeiro.centro_custo.listar'      => 'Listar centros de custo',
+            'financeiro.centro_custo.sincronizar' => 'Sincronizar centros de custo com o Protheus',
+            'financeiro.natureza.listar'          => 'Listar naturezas financeiras',
+            'financeiro.natureza.sincronizar'     => 'Sincronizar naturezas financeiras com o Protheus',
         ];
 
         foreach ($permissoes as $nome => $descricao) {
@@ -38,7 +45,6 @@ class FinanceiroPermissionsSeeder extends Seeder
 
             Permission::firstOrCreate(['name' => $nome, 'guard_name' => 'web'], $dados);
 
-            // Ativa também na tabela de features (Feature Toggle), se existir no projeto
             if (Schema::hasTable('features')) {
                 $colKey = Schema::hasColumn('features', 'key') ? 'key' : (Schema::hasColumn('features', 'nome') ? 'nome' : 'name');
                 $colAtivo = Schema::hasColumn('features', 'is_active') ? 'is_active' : (Schema::hasColumn('features', 'ativo') ? 'ativo' : 'status');
@@ -50,7 +56,6 @@ class FinanceiroPermissionsSeeder extends Seeder
             }
         }
 
-        // Vincula todas as permissões aos perfis 'dev' e 'admin' caso existam
         foreach (['dev', 'admin'] as $roleName) {
             $role = Role::where('name', $roleName)->where('guard_name', 'web')->first();
             if ($role) {

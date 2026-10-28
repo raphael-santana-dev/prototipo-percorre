@@ -46,7 +46,6 @@ class OrcamentoEditor extends Component
     public bool $modalReaberturaAberto = false;
     public string $motivoReabertura = '';
 
-    public int $anoSimulacao = 2026;
     public bool $isLockedGlobal = false;
 
     public array $cenariosDisponiveis = [
@@ -57,8 +56,8 @@ class OrcamentoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('financeiro.orcamentos.listar') && !auth()->user()->hasRole('dev'), 403, 'O módulo de orçamentos está temporariamente desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.listar') && !auth()->user()->can('financeiro.orcamentos.editar'), 403, 'Sem permissão.');
+        abort_if(!feature('financeiro.orcamentos.editar') && !feature('financeiro.orcamentos.listar') && !auth()->user()->hasRole('dev'), 403, 'O módulo de orçamentos está temporariamente desativado.');
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar'), 403, 'Sem permissão para editar orçamentos.');
 
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
@@ -73,7 +72,8 @@ class OrcamentoEditor extends Component
             $this->orcamento->load(['itens' => fn($q) => $q->orderBy('id', 'asc'), 'itens.natureza', 'itens.avaliacoes']);
         }
         
-        if (!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.global')) {
+        // Verifica vínculo estrito com o Centro de Custo (sem usar permissão global)
+        if (!auth()->user()->hasRole('dev')) {
             if (method_exists(auth()->user(), 'centros_de_custo')) {
                 $ccPermitidos = auth()->user()->centros_de_custo()
                     ->where(function ($q) {
@@ -89,7 +89,6 @@ class OrcamentoEditor extends Component
             }
         }
 
-        $this->anoSimulacao = session('ano_simulacao_orcamento', date('Y'));
         $this->atualizarBloqueioGlobal();
 
         $this->justificativaGeral = $this->orcamento->descricao_despesa ?? '';
@@ -743,8 +742,38 @@ class OrcamentoEditor extends Component
         $this->drawerComentariosAberto = true;
     }
 
+    /**
+     * A partir do momento em que o orçamento inicia o processo de avaliação ou está em qualquer status de finalização,
+     * o editor não pode inserir comentários gerais nem nos itens (apenas leitura).
+     */
+    public function podeInserirComentarios(): bool
+    {
+        if ($this->isLockedGlobal) {
+            return false;
+        }
+
+        $statusSomenteLeitura = [
+            'Finalizado – Aguardando Aprovação',
+            'Finalizado - Aguardando Aprovação',
+            'Finalizado – Aprovado',
+            'Finalizado - Aprovado',
+            'Finalizado – Integrado ao Protheus',
+            'Finalizado - Integrado ao Protheus',
+            'Finalizado',
+            'Aprovado',
+            'Aprovado com ressalvas',
+        ];
+
+        return !in_array($this->orcamento->status, $statusSomenteLeitura, true);
+    }
+
     public function adicionarComentarioGlobal(): void
     {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Não é permitido inserir comentários enquanto o orçamento está em avaliação ou finalizado.');
+            return;
+        }
+
         $this->validate(
             ['novoComentarioGeral' => 'required|string|min:2'],
             ['novoComentarioGeral.required' => 'Digite uma mensagem geral antes de enviar.']
@@ -767,6 +796,11 @@ class OrcamentoEditor extends Component
 
     public function adicionarComentarioPorItem(): void
     {
+        if (!$this->podeInserirComentarios()) {
+            $this->dispatch('erro', msg: 'Não é permitido inserir comentários nos itens enquanto o orçamento está em avaliação ou finalizado.');
+            return;
+        }
+
         $this->validate([
             'itemComentarioId'   => 'required|integer',
             'novoComentarioItem' => 'required|string|min:2',

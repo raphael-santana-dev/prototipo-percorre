@@ -667,12 +667,18 @@
                     </div>
 
                     <div class="p-4 border-t border-gray-200 bg-white">
-                        <form wire:submit.prevent="adicionarComentarioGlobal" class="space-y-2">
-                            <textarea wire:model="novoComentarioGeral" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário geral sobre o orçamento..."></textarea>
-                            <div class="flex justify-end">
-                                <button type="submit" class="px-4 py-1.5 bg-gray-900 text-white text-xs rounded hover:bg-black">Enviar Comentário Geral</button>
-                            </div>
-                        </form>
+                        @if($this->podeInserirComentarios())
+                            <form wire:submit.prevent="adicionarComentarioGlobal" class="space-y-2">
+                                <textarea wire:model="novoComentarioGeral" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário geral sobre o orçamento..."></textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="px-4 py-1.5 bg-gray-900 text-white text-xs rounded hover:bg-black">Enviar Comentário Geral</button>
+                                </div>
+                            </form>
+                        @else
+                            <p class="text-[11px] text-gray-500 text-center">
+                                Comentários em modo somente leitura (orçamento em avaliação ou finalizado).
+                            </p>
+                        @endif
                     </div>
                 @else
                     <div class="p-3 bg-white border-b border-gray-200">
@@ -707,12 +713,18 @@
                     </div>
 
                     <div class="p-4 border-t border-gray-200 bg-white">
-                        <form wire:submit.prevent="adicionarComentarioPorItem" class="space-y-2">
-                            <textarea wire:model="novoComentarioItem" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário ou resposta de revisão para este item..."></textarea>
-                            <div class="flex justify-end">
-                                <button type="submit" class="px-4 py-1.5 bg-gray-900 text-white text-xs rounded hover:bg-black">Adicionar ao Item</button>
-                            </div>
-                        </form>
+                        @if($this->podeInserirComentarios())
+                            <form wire:submit.prevent="adicionarComentarioPorItem" class="space-y-2">
+                                <textarea wire:model="novoComentarioItem" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário ou resposta de revisão para este item..."></textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="px-4 py-1.5 bg-gray-900 text-white text-xs rounded hover:bg-black">Adicionar ao Item</button>
+                                </div>
+                            </form>
+                        @else
+                            <p class="text-[11px] text-gray-500 text-center">
+                                Comentários deste item em modo somente leitura.
+                            </p>
+                        @endif
                     </div>
                 @endif
 

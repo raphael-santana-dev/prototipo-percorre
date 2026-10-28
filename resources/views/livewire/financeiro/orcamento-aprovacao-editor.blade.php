@@ -485,7 +485,7 @@
                             <p class="text-center text-xs text-gray-400 py-8">Nenhum histórico geral registado.</p>
                         @endforelse
                     </div>
-
+                    @if($this->podeInserirComentarios())
                     <div class="p-4 border-t border-gray-200 bg-white">
                         <form wire:submit.prevent="adicionarComentarioGlobal" class="space-y-2">
                             <textarea wire:model="novoComentarioGeral" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário geral..."></textarea>
@@ -494,6 +494,7 @@
                             </div>
                         </form>
                     </div>
+                    @else <p class="text-[11px] text-gray-500 text-center">Comentários em modo somente leitura (orçamento finalizado).</p> @endif
 
                 @elseif($abaComentario === 'item')
                     <div class="p-3 bg-white border-b border-gray-200">
@@ -522,6 +523,7 @@
                         @endforelse
                     </div>
 
+                    @if($this->podeInserirComentarios())
                     <div class="p-4 border-t border-gray-200 bg-white">
                         <form wire:submit.prevent="adicionarComentarioPorItem" class="space-y-2">
                             <textarea wire:model="novoComentarioItem" rows="2" class="w-full text-xs border-gray-300 rounded p-2" placeholder="Escreva um comentário para este item..."></textarea>
@@ -530,6 +532,7 @@
                             </div>
                         </form>
                     </div>
+                    @else <p class="text-[11px] text-gray-500 text-center">Comentários em modo somente leitura (orçamento finalizado).</p> @endif
 
                 @else
                     {{-- ABA: MOTIVO DA REVISÃO --}}
