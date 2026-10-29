@@ -487,43 +487,49 @@
                             </div>
                         </div>
 
-                                @foreach($etapasDisponiveis as $etapaObj)
-                                    @php
-                                        $numEtapa = (int) $etapaObj->numero;
-                                        $camposDaEtapa = $camposPorEtapa->get($numEtapa, collect());
-                                        $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
+                        @foreach($etapasDisponiveis as $etapaObj)
+                            @php
+                                $numEtapa = (int) $etapaObj->numero;
+                                $camposDaEtapa = $camposPorEtapa->get($numEtapa, collect());
+                                $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
 
-                                        $gruposRender = [];
-                                        if ($numEtapa === 1 && $contextoTipo === 'ciclo') {
-                                            $camposTopo = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return !empty($cfg['exibir_no_topo']);
-                                            });
-                                            $camposRodape = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return empty($cfg['exibir_no_topo']);
-                                            });
-                                            
-                                            if ($camposTopo->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
-                                            }
-                                            $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                                            if ($camposRodape->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
-                                            }
-                                        } else {
-                                            $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
-                                        }
-                                    @endphp
+                                $gruposRender = [];
+                                if ($numEtapa === 1 && $contextoTipo === 'ciclo') {
+                                    $camposTopo = $camposDaEtapa->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return !empty($cfg['exibir_no_topo']);
+                                    });
+                                    $camposRodape = $camposDaEtapa->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return empty($cfg['exibir_no_topo']);
+                                    });
+                                    
+                                    if ($camposTopo->count() > 0) {
+                                        $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
+                                    }
+                                    $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                                    if ($camposRodape->count() > 0) {
+                                        $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                                    }
+                                } else {
+                                    $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
+                                }
+                            @endphp
+
+                            <div class="mb-10" wire:key="grupo-etapa-{{ $numEtapa }}">
+                                <div class="flex items-center gap-3 mb-5">
+                                    <span class="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
                                     <h3 class="text-lg font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
-                                    <button type="button" wire:click="selecionarTodosDaEtapa({{ $numEtapa }})" class="text-[10px] font-bold text-purpura-600 hover:underline px-2 py-0.5 rounded bg-purpura-50 border border-purpura-200">
-                                        Selecionar página
-                                    </button>
+                                    @if($camposDaEtapa->count() > 0)
+                                        <button type="button" wire:click="selecionarTodosDaEtapa({{ $numEtapa }})" class="text-[10px] font-bold text-purpura-600 hover:underline px-2 py-0.5 rounded bg-purpura-50 border border-purpura-200">
+                                            Selecionar página
+                                        </button>
+                                    @endif
                                     <div class="flex-1 h-px ml-2 bg-gray-200"></div>
                                 </div>
 
-                                    @foreach($gruposRender as $grupo)
-                                        @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                                @foreach($gruposRender as $grupo)
+                                    @if($grupo['titulo'] === 'placeholder_dados_pessoais')
                                         @php
                                             $showPersonal = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                             $showAddress  = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_address'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -575,7 +581,6 @@
                                                     $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
                                                     $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
 
-                                                    // Resolve dicas (Tooltip e Legenda) do campo para o preview
                                                     $dicaModoPv = $cfg['dica_modo'] ?? 'nenhum';
                                                     $tooltipTextoPv = null;
                                                     $tooltipTriggerPv = 'hover';
@@ -609,7 +614,6 @@
                                                     <div class="relative z-10">
                                                         <div class="flex justify-between items-start mb-1.5 gap-2">
                                                             <div class="flex items-center gap-2 flex-wrap">
-                                                                {{-- Checkbox para selecionar múltiplos inputs --}}
                                                                 <input type="checkbox"
                                                                        wire:model.live="camposSelecionados"
                                                                        value="{{ (string) $c->id }}"
@@ -627,7 +631,6 @@
                                                                         @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
                                                                     </label>
 
-                                                                    {{-- Ícone de Tooltip no Preview --}}
                                                                     @if(!empty($tooltipTextoPv))
                                                                         <div x-data="{ showTip: false }" class="relative inline-flex items-center" @click.stop>
                                                                             <button type="button"
@@ -637,7 +640,7 @@
                                                                                         @click="showTip = !showTip" @click.away="showTip = false"
                                                                                     @endif
                                                                                     class="text-purpura-600 hover:text-purpura-800 focus:outline-none inline-flex items-center justify-center w-4 h-4 rounded-full bg-purpura-50 border border-purpura-200"
-                                                                                    title="Dica ({{ $tooltipTriggerPv === 'hover' ? 'Ao passar o rato' : 'Ao clicar' }})">
+                                                                                    title="Dica">
                                                                                 <i class="ph-bold ph-question text-[10px]"></i>
                                                                             </button>
                                                                             <div x-show="showTip" x-cloak class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[11px] rounded-lg shadow-xl z-50 leading-relaxed">
@@ -682,66 +685,29 @@
                                                                 <p class="text-[11px] font-bold text-gray-600">
                                                                     {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
                                                                 </p>
-                                                                <span class="text-[9px] text-gray-400">Área de desenho com rato / ecrã tátil</span>
                                                             </div>
 
                                                         @elseif($c->tipo === 'link')
                                                             @php
                                                                 $destinoPv = $cfg['tipo_destino'] ?? 'externo';
                                                                 $extPv = strtolower($cfg['arquivo_extensao'] ?? '');
-                                                                $permDownloadPv = !empty($cfg['permitir_download']);
-                                                                $abrirPreviewPv = !empty($cfg['abrir_preview']);
                                                             @endphp
                                                             <div class="w-full p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg flex items-center justify-between gap-3 pointer-events-none">
                                                                 <div class="flex items-center gap-3 min-w-0">
                                                                     <div class="w-9 h-9 rounded-lg bg-white border border-blue-200 flex items-center justify-center shrink-0 text-blue-600">
-                                                                        @if($destinoPv === 'arquivo')
-                                                                            @if($extPv === 'pdf') <i class="ph-fill ph-file-pdf text-xl text-red-500"></i>
-                                                                            @elseif(in_array($extPv, ['xls', 'xlsx'])) <i class="ph-fill ph-file-xls text-xl text-emerald-600"></i>
-                                                                            @else <i class="ph-fill ph-file-doc text-xl text-blue-600"></i> @endif
-                                                                        @elseif($destinoPv === 'interno')
-                                                                            <i class="ph-bold ph-compass text-xl text-indigo-600"></i>
-                                                                        @else
-                                                                            <i class="ph-bold ph-arrow-square-out text-xl text-blue-600"></i>
-                                                                        @endif
+                                                                        <i class="ph-bold ph-link-simple text-xl"></i>
                                                                     </div>
                                                                     <div class="min-w-0">
-                                                                        <p class="text-xs font-bold text-gray-900 truncate">{!! formatRichFormText($c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento')) !!}</p>
-                                                                        <p class="text-[10px] text-gray-500 truncate">
-                                                                            @if($destinoPv === 'arquivo')
-                                                                                Arquivo: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
-                                                                            @else
-                                                                                {{ $cfg['url'] ?? 'URL não definida' }}
-                                                                            @endif
-                                                                        </p>
+                                                                        <p class="text-xs font-bold text-gray-900 truncate">{!! formatRichFormText($c->label ?: ($cfg['arquivo_nome'] ?? 'Link')) !!}</p>
+                                                                        <p class="text-[10px] text-gray-500 truncate">{{ $cfg['url'] ?? 'URL não definida' }}</p>
                                                                     </div>
-                                                                </div>
-                                                                <div class="flex items-center gap-1 shrink-0">
-                                                                    @if($destinoPv === 'arquivo')
-                                                                        @if($abrirPreviewPv)
-                                                                            <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Ver</span>
-                                                                        @endif
-                                                                        @if($permDownloadPv)
-                                                                            <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">Baixar</span>
-                                                                        @else
-                                                                            <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[9px] font-bold rounded">S/ Download</span>
-                                                                        @endif
-                                                                    @else
-                                                                        <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Acessar</span>
-                                                                    @endif
                                                                 </div>
                                                             </div>
 
                                                         @elseif($c->tipo === 'file')
-                                                            @php
-                                                                $tipoArquivoPv = $cfg['tipo_arquivo'] ?? 'todos';
-                                                                $multiPv = !empty($cfg['aceita_multiplos']);
-                                                                $maxMbPv = $cfg['max_size_mb'] ?? 10;
-                                                            @endphp
                                                             <div class="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50/60 text-center pointer-events-none">
                                                                 <i class="ph ph-cloud-arrow-up text-xl text-purpura-500"></i>
-                                                                <p class="text-xs font-bold text-gray-700">Carregar Anexo ({{ ucfirst($tipoArquivoPv) }})</p>
-                                                                <span class="text-[10px] text-gray-400">{{ $multiPv ? 'Múltiplos' : 'Único' }} &middot; Máx: {{ $maxMbPv }}MB</span>
+                                                                <p class="text-xs font-bold text-gray-700">Carregar Anexo</p>
                                                             </div>
 
                                                         @elseif($c->tipo === 'select')
@@ -764,9 +730,6 @@
                                                                 <div class="flex items-center gap-1.5 text-gray-600 text-xs">
                                                                     <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
                                                                 </div>
-                                                                <div class="flex items-center gap-1.5 text-gray-600 text-xs">
-                                                                    <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
-                                                                </div>
                                                             </div>
 
                                                         @elseif($c->tipo === 'system')
@@ -775,32 +738,7 @@
                                                             </div>
 
                                                         @elseif($c->tipo === 'matriz')
-                                                            @php
-                                                                $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
-                                                                $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
-                                                            @endphp
-                                                            <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-1">
-                                                                <table class="min-w-full text-[11px] text-left">
-                                                                    <thead class="bg-gray-50 border-b border-gray-200">
-                                                                        <tr>
-                                                                            <th class="p-1.5"></th>
-                                                                            @foreach($colunasPv as $col)
-                                                                                <th class="p-1.5 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
-                                                                            @endforeach
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody class="divide-y divide-gray-100">
-                                                                        @foreach($linhasPv as $linha)
-                                                                            <tr>
-                                                                                <td class="p-1.5 font-medium text-gray-800">{{ $linha }}</td>
-                                                                                @foreach($colunasPv as $col)
-                                                                                    <td class="p-1.5 text-center border-l border-gray-100"><div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div></td>
-                                                                                @endforeach
-                                                                            </tr>
-                                                                        @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
+                                                            <div class="w-full p-2 bg-white border border-gray-200 rounded text-xs text-gray-500 font-bold">Matriz de Avaliação</div>
 
                                                         @elseif($c->tipo === 'html')
                                                             <div class="text-gray-800">
@@ -812,9 +750,6 @@
                                                                 @elseif($c->subtipo === 'info_card') 
                                                                     <div class="p-2.5 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
                                                                         <p class="font-bold text-xs">{!! formatRichFormText($c->label) !!}</p>
-                                                                        @if(!empty($cfg['descricao']))
-                                                                            <div class="text-[11px] mt-1">{!! formatRichFormText($cfg['descricao']) !!}</div>
-                                                                        @endif
                                                                     </div>
                                                                 @endif
                                                             </div>
@@ -879,15 +814,8 @@
                                     @endif
                                 @endforeach
                             </div>
-                        @empty
-                            <div class="flex flex-col items-center justify-center py-16 text-center">
-                                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-200">
-                                    <i class="ph ph-list-plus text-3xl text-gray-400"></i>
-                                </div>
-                                <h3 class="text-base font-bold text-gray-900 mb-1">Formulário Vazio</h3>
-                                <p class="text-gray-500 text-xs max-w-xs">Selecione um tipo de input na coluna da esquerda para iniciar a configuração.</p>
-                            </div>
-                        @endforelse
+                        @endforeach
+
                     </div>
                 </div>
             </div>
@@ -1685,9 +1613,7 @@
         </div>
     </fieldset>
 
-    <!-- ========================================================================= -->
-    <!-- NAVIGATION DRAWER: CONFIGURAÇÕES GLOBAIS DO FORMULÁRIO                    -->
-    <!-- ========================================================================= -->
+    {{-- NAVIGATION DRAWER: CONFIGURAÇÕES GLOBAIS DO FORMULÁRIO --}}
     <div class="relative z-[150]" role="dialog" aria-modal="true" x-show="$wire.drawerFormSettingsAberto" x-cloak>
         <div x-show="$wire.drawerFormSettingsAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
 
