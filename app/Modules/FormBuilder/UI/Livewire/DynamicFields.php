@@ -80,6 +80,13 @@ class DynamicFields extends Component
     public array $paginasDisponiveis = [];
     public array $templatesDeEmail = [];
 
+    public bool $modalConfigComboAberto = false;
+    public array $comboUnidadesSelecionadas = [];
+    public array $comboCursosSelecionados = [];
+    public array $comboTurnosSelecionados = [];
+    public $comboActiveUnidadeId = null;
+    public $comboActiveCursoId = null;
+
     public function mount($tipo, $id)
     {
         $this->contextoTipo = $tipo;
@@ -629,6 +636,9 @@ class DynamicFields extends Component
             $this->configuracoes['vincular_curso_unidade'] = $this->configuracoes['vincular_curso_unidade'] ?? true;
             $this->configuracoes['vincular_turno_curso'] = $this->configuracoes['vincular_turno_curso'] ?? true;
             $this->configuracoes['aplicar_regras'] = $this->configuracoes['aplicar_regras'] ?? true;
+            $this->configuracoes['unidades_permitidas'] = $this->configuracoes['unidades_permitidas'] ?? [];
+            $this->configuracoes['cursos_permitidos']   = $this->configuracoes['cursos_permitidos'] ?? [];
+            $this->configuracoes['turnos_permitidos']   = $this->configuracoes['turnos_permitidos'] ?? [];
 
             if (!$this->campoId) {
                 if ($subtipo === 'unidade') {
@@ -1090,6 +1100,9 @@ class DynamicFields extends Component
             $configToSave['vincular_curso_unidade'] = filter_var($this->configuracoes['vincular_curso_unidade'] ?? true, FILTER_VALIDATE_BOOLEAN);
             $configToSave['vincular_turno_curso'] = filter_var($this->configuracoes['vincular_turno_curso'] ?? true, FILTER_VALIDATE_BOOLEAN);
             $configToSave['aplicar_regras'] = ($configToSave['vincular_curso_unidade'] || $configToSave['vincular_turno_curso']);
+            $configToSave['unidades_permitidas'] = array_values(array_filter((array) ($this->configuracoes['unidades_permitidas'] ?? [])));
+            $configToSave['cursos_permitidos']   = array_values(array_filter((array) ($this->configuracoes['cursos_permitidos'] ?? [])));
+            $configToSave['turnos_permitidos']   = array_values(array_filter((array) ($this->configuracoes['turnos_permitidos'] ?? [])));
         }
 
         $deveCriarComboAcademico = ($this->tipo === 'system' && $this->subtipo === 'combo_academico' && !$isEditing);
@@ -1309,6 +1322,9 @@ class DynamicFields extends Component
                     'vincular_curso_unidade' => $cfgBase['vincular_curso_unidade'] ?? true,
                     'vincular_turno_curso'   => $cfgBase['vincular_turno_curso'] ?? true,
                     'aplicar_regras'         => ($cfgBase['vincular_curso_unidade'] ?? true) || ($cfgBase['vincular_turno_curso'] ?? true),
+                    'unidades_permitidas'    => $cfgBase['unidades_permitidas'] ?? [],
+                    'cursos_permitidos'      => $cfgBase['cursos_permitidos'] ?? [],
+                    'turnos_permitidos'      => $cfgBase['turnos_permitidos'] ?? [],
                     'exibir_no_topo'         => $exibirNoTopo,
                 ],
             ]);
@@ -1441,6 +1457,65 @@ class DynamicFields extends Component
         $this->dispatch('sucesso', msg: 'Página removida e numeração das páginas seguintes atualizada!');
     }
 
+    public function abrirModalConfigCombo(): void
+    {
+        // Inicializa a partir de $this->configuracoes ou, se for contexto 'ciclo' e ainda vazio, herda do próprio Ciclo
+        $unidadesSalvas = $this->configuracoes['unidades_permitidas'] ?? null;
+        $cursosSalvos   = $this->configuracoes['cursos_permitidos'] ?? null;
+        $turnosSalvos   = $this->configuracoes['turnos_permitidos'] ?? null;
+
+        if ($unidadesSalvas === null && $this->contextoTipo === 'ciclo') {
+            $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos'])->find($this->contextoId);
+            if ($ciclo) {
+                $unidadesSalvas = $ciclo->unidades->pluck('id')->map(fn($v) => (string) $v)->toArray();
+                $cursosSalvos   = $ciclo->cursos->pluck('id')->map(fn($v) => (string) $v)->toArray();
+                $turnosSalvos   = $ciclo->turnos->pluck('id')->map(fn($v) => (string) $v)->toArray();
+            }
+        }
+
+        $this->comboUnidadesSelecionadas = is_array($unidadesSalvas) ? array_values(array_map('strval', $unidadesSalvas)) : [];
+        $this->comboCursosSelecionados   = is_array($cursosSalvos) ? array_values(array_map('strval', $cursosSalvos)) : [];
+        $this->comboTurnosSelecionados   = is_array($turnosSalvos) ? array_values(array_map('strval', $turnosSalvos)) : [];
+
+        if (!empty($this->comboUnidadesSelecionadas) && !$this->comboActiveUnidadeId) {
+            $this->comboActiveUnidadeId = $this->comboUnidadesSelecionadas[0];
+        }
+
+        $this->modalConfigComboAberto = true;
+    }
+
+    public function setComboActiveUnidade($id): void
+    {
+        $this->comboActiveUnidadeId = $id;
+        $this->comboActiveCursoId = null;
+    }
+
+    public function setComboActiveCurso($id): void
+    {
+        $this->comboActiveCursoId = $id;
+    }
+
+    public function confirmarConfigComboAcademico(): void
+    {
+        // Salva exclusivamente nas configurações do input dinâmico/personalizado
+        $this->configuracoes['unidades_permitidas'] = array_values(array_unique(array_map('strval', $this->comboUnidadesSelecionadas)));
+        $this->configuracoes['cursos_permitidos']   = array_values(array_unique(array_map('strval', $this->comboCursosSelecionados)));
+        $this->configuracoes['turnos_permitidos']   = array_values(array_unique(array_map('strval', $this->comboTurnosSelecionados)));
+
+        $this->modalConfigComboAberto = false;
+        $this->dispatch('sucesso', msg: 'Opções de Unidades, Cursos e Turnos aplicadas ao campo dinâmico!');
+    }
+
+    public function limparRestricaoComboAcademico(): void
+    {
+        $this->comboUnidadesSelecionadas = [];
+        $this->comboCursosSelecionados   = [];
+        $this->comboTurnosSelecionados   = [];
+        $this->configuracoes['unidades_permitidas'] = [];
+        $this->configuracoes['cursos_permitidos']   = [];
+        $this->configuracoes['turnos_permitidos']   = [];
+    }
+
     public function render()
     {
         $camposCadastrados = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
@@ -1454,7 +1529,9 @@ class DynamicFields extends Component
 
         return view('livewire.form-builder.dynamic-fields', [
             'camposCadastrados' => $camposCadastrados,
-            'camposPorEtapa' => $camposPorEtapa
+            'camposPorEtapa'    => $camposPorEtapa,
+            'unidadesDb'        => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'cursosDb'          => \App\Models\Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
         ])->layout('components.layouts.app', ['title' => 'Construtor de Formulário']);
     }
 }

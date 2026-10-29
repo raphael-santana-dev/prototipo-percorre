@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Schema;
 #[Title('Detalhes da Inscrição')]
 class RegistrationDetails extends Component
 {
+    use \App\Traits\WithFichaPdfDownload;
+    
     public Inscricao $inscricao;
     public $status_selecionado; 
     public bool $modalAntiSpamAberto = false;

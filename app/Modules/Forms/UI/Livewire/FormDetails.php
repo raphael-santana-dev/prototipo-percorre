@@ -10,16 +10,20 @@ use App\Models\Formulario;
 use App\Models\RespostaFormulario;
 use App\Models\CampoFormulario;
 use App\Traits\ComPadraoListagem;
+use App\Traits\WithFichaPdfDownload;
 use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
-#[Title('Detalhes do Formulário')]
+#[Title('Respostas do Formulário')]
 class FormDetails extends Component
 {
-    use WithPagination, ComPadraoListagem;
+    use WithPagination, ComPadraoListagem, WithFichaPdfDownload;
 
     public Formulario $formulario;
-    
+
+    // Alterna entre 'padrao' (listagem limpa resumida) e 'planilha' (todas as colunas dinâmicas)
+    public string $modoVisualizacao = 'padrao';
+
     public $search = '';
     public $data_inicio = '';
     public $data_fim = '';
@@ -30,12 +34,18 @@ class FormDetails extends Component
 
     public function mount($id)
     {
-        // abort_if(!feature('formulario.detalhes'), 403);
-        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
-
         $this->formulario = Formulario::findOrFail($id);
         $this->ordenacaoCampo = 'created_at';
         $this->ordenacaoDirecao = 'desc';
+    }
+
+    public function alternarVisualizacao(string $modo): void
+    {
+        if (in_array($modo, ['padrao', 'planilha'], true)) {
+            $this->modoVisualizacao = $modo;
+            $this->porPagina = $modo === 'planilha' ? 50 : 15;
+            $this->resetPage();
+        }
     }
 
     public function updating($property)
@@ -73,6 +83,13 @@ class FormDetails extends Component
         $this->selecionarTudo = false;
     }
 
+    public function excluirResposta(int $id): void
+    {
+        RespostaFormulario::where('formulario_id', $this->formulario->id)->where('id', $id)->delete();
+        $this->selecionadas = array_values(array_diff($this->selecionadas, [(string) $id, (int) $id]));
+        $this->dispatch('sucesso', msg: 'Resposta excluída com sucesso.');
+    }
+
     public function solicitarExportacao($formato = 'csv')
     {
         $query = $this->obterQueryFiltrada();
@@ -89,24 +106,24 @@ class FormDetails extends Component
         }
 
         $tracking = \App\Models\SystemTask::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'respostas_formulario',
-            'operacao' => 'exportacao',
-            'formato' => strtolower($formato),
-            'arquivo_nome' => 'Respostas - ' . Str::limit($this->formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
-            'status' => 'na_fila',
-            'total_linhas' => $queryCount,
+            'user_id'            => auth()->id(),
+            'tipo'               => 'respostas_formulario',
+            'operacao'           => 'exportacao',
+            'formato'            => strtolower($formato),
+            'arquivo_nome'       => 'Respostas - ' . Str::limit($this->formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
+            'status'             => 'na_fila',
+            'total_linhas'       => $queryCount,
             'linhas_processadas' => 0,
         ]);
 
         $filtrosAtuais = [
-            'search' => $this->search,
-            'data_inicio' => $this->data_inicio,
-            'data_fim' => $this->data_fim,
+            'search'           => $this->search,
+            'data_inicio'      => $this->data_inicio,
+            'data_fim'         => $this->data_fim,
             'filtrosDinamicos' => $this->filtrosDinamicos,
-            'ids' => $this->selecionadas,
-            'sortField' => str_starts_with($this->ordenacaoCampo, 'respostas->') || in_array($this->ordenacaoCampo, ['id', 'created_at']) ? $this->ordenacaoCampo : 'created_at',
-            'sortDirection' => $this->ordenacaoDirecao ?? 'desc',
+            'ids'              => $this->selecionadas,
+            'sortField'        => str_starts_with($this->ordenacaoCampo, 'respostas->') || in_array($this->ordenacaoCampo, ['id', 'created_at']) ? $this->ordenacaoCampo : 'created_at',
+            'sortDirection'    => $this->ordenacaoDirecao ?? 'desc',
         ];
 
         dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $this->formulario->id, $filtrosAtuais))->afterResponse();
@@ -116,20 +133,32 @@ class FormDetails extends Component
 
     public function getHeadersProperty()
     {
+        if ($this->modoVisualizacao === 'padrao') {
+            return [
+                ['key' => 'selecao', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
+                ['key' => 'id', 'label' => 'Protocolo', 'sortable' => true, 'class' => 'w-28'],
+                ['key' => 'participante', 'label' => 'Participante / Identificação', 'sortable' => false],
+                ['key' => 'resumo', 'label' => 'Resumo do Preenchimento', 'sortable' => false],
+                ['key' => 'created_at', 'label' => 'Data do Envio', 'sortable' => true, 'class' => 'w-44'],
+                ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'w-32 text-right'],
+            ];
+        }
+
         $headers = [
-            ['key' => 'selecao', 'label' => '#', 'sortable' => false, 'class' => 'w-10 text-center'],
-            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'w-16 text-center'],
-            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
-            ['key' => 'created_at', 'label' => 'Data do Envio', 'sortable' => true],
+            ['key' => 'selecao', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
+            ['key' => 'id', 'label' => 'Protocolo', 'sortable' => true, 'class' => 'w-24'],
+            ['key' => 'created_at', 'label' => 'Data do Envio', 'sortable' => true, 'class' => 'w-40'],
         ];
 
         foreach ($this->getCamposDinamicos() as $campo) {
             $headers[] = [
-                'key' => 'respostas->' . $campo->name,
-                'label' => Str::limit($campo->label, 30),
-                'sortable' => true
+                'key'      => 'respostas->' . $campo->name,
+                'label'    => Str::limit(strip_tags($campo->label), 28),
+                'sortable' => true,
             ];
         }
+
+        $headers[] = ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'w-28 text-right'];
 
         return $headers;
     }
@@ -167,9 +196,7 @@ class FormDetails extends Component
 
         if (!empty($this->filtrosDinamicos)) {
             foreach ($this->filtrosDinamicos as $nomeCampo => $valorFiltro) {
-                if ($valorFiltro === null || $valorFiltro === '') {
-                    continue;
-                }
+                if ($valorFiltro === null || $valorFiltro === '') continue;
 
                 $campoObj = CampoFormulario::where('formulario_id', $this->formulario->id)->where('name', $nomeCampo)->first();
                 if (!$campoObj) continue;
@@ -202,13 +229,14 @@ class FormDetails extends Component
 
     public function render()
     {
+        $campos = $this->getCamposDinamicos();
         $respostas = $this->obterQueryFiltrada()->paginate($this->porPagina ?? 15);
         $totalRespostas = RespostaFormulario::where('formulario_id', $this->formulario->id)->count();
 
         return view('livewire.forms.form-details', [
-            'respostas' => $respostas,
+            'respostas'      => $respostas,
             'totalRespostas' => $totalRespostas,
-            'campos' => $this->getCamposDinamicos()
+            'campos'         => $campos,
         ]);
     }
 }

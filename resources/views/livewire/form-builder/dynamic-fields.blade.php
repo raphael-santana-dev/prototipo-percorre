@@ -487,23 +487,21 @@
                             </div>
                         </div>
 
-                        @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
-                            <div class="mb-10" wire:key="grupo-etapa-{{ $numEtapa }}">
-                                <div class="flex items-center gap-3 mb-5">
-                                    <span class="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                    @php 
-                                        $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
-                                        $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
+                                @foreach($etapasDisponiveis as $etapaObj)
+                                    @php
+                                        $numEtapa = (int) $etapaObj->numero;
+                                        $camposDaEtapa = $camposPorEtapa->get($numEtapa, collect());
+                                        $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
 
                                         $gruposRender = [];
-                                        if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
+                                        if ($numEtapa === 1 && $contextoTipo === 'ciclo') {
                                             $camposTopo = $camposDaEtapa->filter(function($c) {
                                                 $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
+                                                return !empty($cfg['exibir_no_topo']);
                                             });
                                             $camposRodape = $camposDaEtapa->filter(function($c) {
                                                 $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
+                                                return empty($cfg['exibir_no_topo']);
                                             });
                                             
                                             if ($camposTopo->count() > 0) {
@@ -1447,6 +1445,43 @@
                                         </div>
                                     @endif
 
+                                    {{-- CONFIGURADOR DE OPÇÕES (UNIDADES / CURSOS / TURNOS) IGUAL AO CADASTRO DE CICLO --}}
+                                    @php
+                                        $qtdUniCfg = count($configuracoes['unidades_permitidas'] ?? []);
+                                        $qtdCurCfg = count($configuracoes['cursos_permitidos'] ?? []);
+                                        $qtdTurCfg = count($configuracoes['turnos_permitidos'] ?? []);
+                                    @endphp
+                                    <div class="p-3 bg-white border border-purpura-200 rounded-lg space-y-2.5 shadow-2xs">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                                                <i class="ph-fill ph-Sliders text-purpura-600"></i> Opções Disponíveis
+                                            </span>
+                                            @if($qtdUniCfg > 0 || $qtdCurCfg > 0 || $qtdTurCfg > 0)
+                                                <button type="button" wire:click="limparRestricaoComboAcademico" class="text-[10px] font-bold text-red-500 hover:underline">
+                                                    Usar Todas
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        @if($qtdUniCfg > 0 || $qtdCurCfg > 0 || $qtdTurCfg > 0)
+                                            <div class="flex flex-wrap gap-1.5 text-[10px] font-bold">
+                                                <span class="px-2 py-0.5 rounded bg-purpura-50 text-purpura-700 border border-purpura-200">{{ $qtdUniCfg }} Unidade(s)</span>
+                                                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">{{ $qtdCurCfg }} Curso(s)</span>
+                                                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $qtdTurCfg }} Turno(s)</span>
+                                            </div>
+                                        @else
+                                            <p class="text-[10px] text-gray-500 leading-tight">
+                                                Exibindo todas as Unidades, Cursos e Turnos ativos. Clique abaixo para selecionar opções específicas.
+                                            </p>
+                                        @endif
+
+                                        <button type="button"
+                                                wire:click="abrirModalConfigCombo"
+                                                class="w-full py-2 px-3 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs">
+                                            <i class="ph-bold ph-tree-structure text-sm"></i> Configurar Unidades / Cursos / Turnos
+                                        </button>
+                                    </div>
+
                                     @if(in_array($subtipo, ['unidade', 'combo_academico']))
                                         <label class="flex items-start gap-2.5 cursor-pointer pt-1">
                                             <input type="checkbox" wire:model.live="configuracoes.filtrar_por_uf" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
@@ -1942,6 +1977,120 @@
                 <button type="button" wire:click="acceptTransfer" class="px-3 py-1.5 rounded-md bg-purpura-600 hover:bg-purpura-700 text-white border-none text-xs font-bold transition">
                     Aceitar e Sair
                 </button>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE CONFIGURAÇÃO DE UNIDADES / CURSOS / TURNOS DO CONJUNTO ACADÊMICO --}}
+    @if($modalConfigComboAberto)
+        <div class="fixed inset-0 z-[260] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+                    <div>
+                        <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="ph-fill ph-tree-structure text-purpura-600 text-lg"></i> Configurar Opções: Unidades, Cursos e Turnos
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Selecione as Unidades, Cursos e Turnos que estarão disponíveis neste conjunto de campos (mesmo padrão da configuração de Ciclo).
+                        </p>
+                    </div>
+                    <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="text-gray-400 hover:text-red-500 p-1">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700">
+                    {{-- COLUNA 1: UNIDADES --}}
+                    <div class="flex-1 flex flex-col overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">1. Unidades Ofertadas</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboUnidadesSelecionadas) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @foreach($unidadesDb as $u)
+                                <div wire:key="combo-uni-{{ $u->id }}"
+                                     wire:click="setComboActiveUnidade({{ $u->id }})"
+                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                    <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                        <input type="checkbox" wire:model.live="comboUnidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                        <span class="text-xs font-bold {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
+                                    </label>
+                                    <i class="ph ph-caret-right text-base {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 2: CURSOS DA UNIDADE --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/40 dark:bg-gray-800/80 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">2. Cursos da Unidade</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboCursosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveUnidadeId)
+                                @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $comboActiveUnidadeId)) as $c)
+                                    <div wire:key="combo-cur-{{ $comboActiveUnidadeId }}-{{ $c->id }}"
+                                         wire:click="setComboActiveCurso({{ $c->id }})"
+                                         class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                            <input type="checkbox" wire:model.live="comboCursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <span class="text-xs font-bold {{ $comboActiveCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                        </label>
+                                        <i class="ph ph-caret-right text-base {{ $comboActiveCursoId == $c->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-buildings text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione uma Unidade à esquerda</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 3: TURNOS VINCULADOS --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/80 dark:bg-gray-900/30 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">3. Turnos Vinculados</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboTurnosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveCursoId)
+                                @php $cursoComboObj = $cursosDb->firstWhere('id', $comboActiveCursoId); @endphp
+                                @if($cursoComboObj)
+                                    @foreach($cursoComboObj->turnosVinculados as $t)
+                                        <div wire:key="combo-tur-{{ $comboActiveCursoId }}-{{ $t->id }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                <input type="checkbox" wire:model.live="comboTurnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-graduation-cap text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso ao centro</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/60 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <span class="text-[11px] text-gray-500">
+                        Se deixar tudo desmarcado, o conjunto listará todas as Unidades, Cursos e Turnos ativos do sistema.
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="button" wire:click="confirmarConfigComboAcademico" class="px-5 py-2 text-xs font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm flex items-center gap-1.5">
+                            <i class="ph-bold ph-check"></i> Aplicar Opções ao Conjunto
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     @endif

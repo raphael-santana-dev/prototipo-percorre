@@ -38,6 +38,11 @@ class ExportarInscricoesFiltradasJob implements ShouldQueue
             ]);
 
             $query = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
+
+            // Filtra apenas as inscrições selecionadas nos checkboxes, caso enviadas
+            if (!empty($this->filtros['ids']) && is_array($this->filtros['ids'])) {
+                $query->whereIn('id', $this->filtros['ids']);
+            }
             
             if (!empty($this->filtros['nome'])) {
                 $query->where(function($q) {
