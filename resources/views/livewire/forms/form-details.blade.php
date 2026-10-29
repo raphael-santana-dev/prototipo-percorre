@@ -241,14 +241,21 @@
                                class="rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 cursor-pointer">
                     </td>
 
-                    {{-- 2ª COLUNA: AÇÕES (APENAS O ÍCONE DE OLHO) --}}
+                    {{-- 2ª COLUNA: AÇÕES --}}
                     <td class="px-4 py-2.5 whitespace-nowrap text-center w-16">
                         @if(feature('formulario.respostas') && (auth()->user()->hasRole('dev') || auth()->user()->can('formulario.respostas')))
-                            <a href="{{ route('formularios.respostas.show', $resp->id) }}"
-                               title="Ler Resposta Completa"
-                               class="inline-flex items-center justify-center w-8 h-8 text-purpura-600 bg-purpura-50 rounded-lg hover:bg-purpura-100 hover:text-purpura-700 transition dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50">
-                                <i class="ph-bold ph-eye text-base"></i>
-                            </a>
+                            <div class="flex items-center gap-1">
+                                <a href="{{ route('formularios.respostas.show', $resp->id) }}"
+                                   title="Ficha do Aluno"
+                                   class="inline-flex items-center justify-center w-8 h-8 text-purpura-600 bg-purpura-50 rounded-lg hover:bg-purpura-100 hover:text-purpura-700 transition dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50">
+                                    <i class="ph-bold ph-identification-card text-base"></i>
+                                </a>
+                                <a href="{{ route('formularios.respostas.show', $resp->id) }}"
+                                   title="Ler Resposta Completa"
+                                   class="inline-flex items-center justify-center w-8 h-8 text-purpura-600 bg-purpura-50 rounded-lg hover:bg-purpura-100 hover:text-purpura-700 transition dark:bg-purpura-900/30 dark:text-purpura-400 dark:hover:bg-purpura-900/50">
+                                    <i class="ph-bold ph-eye text-base"></i>
+                                </a>
+                            </div>
                         @endif
                     </td>
 
