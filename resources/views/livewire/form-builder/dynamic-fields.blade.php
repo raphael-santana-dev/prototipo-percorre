@@ -2048,11 +2048,12 @@
                         <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                             @if($comboActiveUnidadeId)
                                 @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $comboActiveUnidadeId)) as $c)
-                                    <div wire:key="combo-cur-{{ $comboActiveUnidadeId }}-{{ $c->id }}"
+                                    @php $chaveCursoUnidade = $comboActiveUnidadeId . '-' . $c->id; @endphp
+                                    <div wire:key="combo-cur-{{ $chaveCursoUnidade }}"
                                          wire:click="setComboActiveCurso({{ $c->id }})"
                                          class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
                                         <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                            <input type="checkbox" wire:model.live="comboCursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <input type="checkbox" wire:model.live="comboCursosSelecionados" value="{{ $chaveCursoUnidade }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                                             <span class="text-xs font-bold {{ $comboActiveCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
                                         </label>
                                         <i class="ph ph-caret-right text-base {{ $comboActiveCursoId == $c->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
@@ -2074,13 +2075,14 @@
                             <span class="text-[10px] font-bold text-purpura-600">{{ count($comboTurnosSelecionados) }} sel.</span>
                         </div>
                         <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
-                            @if($comboActiveCursoId)
+                            @if($comboActiveUnidadeId && $comboActiveCursoId)
                                 @php $cursoComboObj = $cursosDb->firstWhere('id', $comboActiveCursoId); @endphp
                                 @if($cursoComboObj)
                                     @foreach($cursoComboObj->turnosVinculados as $t)
-                                        <div wire:key="combo-tur-{{ $comboActiveCursoId }}-{{ $t->id }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                        @php $chaveTurnoCompleta = $comboActiveUnidadeId . '-' . $comboActiveCursoId . '-' . $t->id; @endphp
+                                        <div wire:key="combo-tur-{{ $chaveTurnoCompleta }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
                                             <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                                <input type="checkbox" wire:model.live="comboTurnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                                <input type="checkbox" wire:model.live="comboTurnosSelecionados" value="{{ $chaveTurnoCompleta }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                                                 <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
                                             </label>
                                         </div>

@@ -1220,6 +1220,27 @@ class DynamicFields extends Component
             CampoFormulario::create($dadosGerais);
         }
 
+        // Sincroniza as opções permitidas com os outros campos irmãos do mesmo Conjunto Acadêmico
+        if ($this->campoId && $this->tipo === 'system' && !empty($configToSave['combo_group'])) {
+            $irmas = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('id', '!=', $this->campoId)
+                ->where('tipo', 'system')
+                ->get();
+
+            foreach ($irmas as $irma) {
+                $cfgIrma = is_string($irma->configuracoes) ? json_decode($irma->configuracoes, true) : ($irma->configuracoes ?? []);
+                if (($cfgIrma['combo_group'] ?? '') === $configToSave['combo_group']) {
+                    $cfgIrma['unidades_permitidas']    = $configToSave['unidades_permitidas'] ?? [];
+                    $cfgIrma['cursos_permitidos']      = $configToSave['cursos_permitidos'] ?? [];
+                    $cfgIrma['turnos_permitidos']      = $configToSave['turnos_permitidos'] ?? [];
+                    $cfgIrma['filtrar_por_uf']         = $configToSave['filtrar_por_uf'] ?? false;
+                    $cfgIrma['vincular_curso_unidade'] = $configToSave['vincular_curso_unidade'] ?? true;
+                    $cfgIrma['vincular_turno_curso']   = $configToSave['vincular_turno_curso'] ?? true;
+                    $irma->update(['configuracoes' => $cfgIrma]);
+                }
+            }
+        }
+
         if ($deveCriarEnderecoViaCep) {
             $this->gerarCamposEnderecoViaCep($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo);
         }
@@ -1494,6 +1515,66 @@ class DynamicFields extends Component
         $this->modalConfigComboAberto = true;
     }
 
+    public function updatedComboUnidadesSelecionadas(): void
+    {
+        $unidadesAtivas = array_map('strval', $this->comboUnidadesSelecionadas);
+
+        // Remove cursos e turnos cujas unidades foram desmarcadas
+        $this->comboCursosSelecionados = array_values(array_filter($this->comboCursosSelecionados, function ($item) use ($unidadesAtivas) {
+            $uId = explode('-', (string) $item)[0] ?? '';
+            return in_array($uId, $unidadesAtivas, true);
+        }));
+
+        $this->comboTurnosSelecionados = array_values(array_filter($this->comboTurnosSelecionados, function ($item) use ($unidadesAtivas) {
+            $uId = explode('-', (string) $item)[0] ?? '';
+            return in_array($uId, $unidadesAtivas, true);
+        }));
+    }
+
+    public function updatedComboCursosSelecionados(): void
+    {
+        $cursosAtivos = array_map('strval', $this->comboCursosSelecionados);
+
+        // Se marcou um curso (ex: "2-5"), garante que a unidade "2" esteja marcada
+        foreach ($cursosAtivos as $cKey) {
+            if (str_contains($cKey, '-')) {
+                [$uId] = explode('-', $cKey, 2);
+                if (!in_array($uId, $this->comboUnidadesSelecionadas, true)) {
+                    $this->comboUnidadesSelecionadas[] = $uId;
+                }
+            }
+        }
+
+        // Remove turnos cujo par "unidade-curso" foi desmarcado
+        $this->comboTurnosSelecionados = array_values(array_filter($this->comboTurnosSelecionados, function ($item) use ($cursosAtivos) {
+            $partes = explode('-', (string) $item);
+            if (count($partes) === 3) {
+                $chaveCurso = $partes[0] . '-' . $partes[1];
+                return in_array($chaveCurso, $cursosAtivos, true);
+            }
+            return true;
+        }));
+    }
+
+    public function updatedComboTurnosSelecionados(): void
+    {
+        // Se marcou um turno (ex: "2-5-1"), garante que a unidade "2" e o curso "2-5" estejam marcados
+        foreach ($this->comboTurnosSelecionados as $tKey) {
+            $partes = explode('-', (string) $tKey);
+            if (count($partes) === 3) {
+                [$uId, $cId] = $partes;
+                $chaveCurso = "{$uId}-{$cId}";
+
+                if (!in_array($uId, $this->comboUnidadesSelecionadas, true)) {
+                    $this->comboUnidadesSelecionadas[] = $uId;
+                }
+                if (!in_array($chaveCurso, $this->comboCursosSelecionados, true)) {
+                    $this->comboCursosSelecionados[] = $chaveCurso;
+                }
+            }
+        }
+    }
+
     public function setComboActiveUnidade($id): void
     {
         $this->comboActiveUnidadeId = $id;
@@ -1512,7 +1593,7 @@ class DynamicFields extends Component
         $this->configuracoes['turnos_permitidos']   = array_values(array_unique(array_map('strval', $this->comboTurnosSelecionados)));
 
         $this->modalConfigComboAberto = false;
-        $this->dispatch('sucesso', msg: 'Opções aplicadas ao bloco dinâmico!');
+        $this->dispatch('sucesso', msg: 'Opções de Unidades, Cursos e Turnos aplicadas ao campo dinâmico!');
     }
 
     public function limparRestricaoComboAcademico(): void
