@@ -536,17 +536,100 @@
                                             $showCourse   = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_course'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                         @endphp
                                         @if($showPersonal || $showAddress || $showCourse)
-                                            <div class="w-full my-6 pointer-events-none">
-                                                <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50 opacity-70">
-                                                    <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                                        <i class="ph-fill ph-lock-key"></i> Campos Fixos Ativos:
-                                                        @if($showPersonal) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Dados Pessoais</span> @endif
-                                                        @if($showAddress) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Endereço</span> @endif
-                                                        @if($showCourse) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Unidade/Curso/Turno</span> @endif
-                                                    </h4>
-                                                    <div class="grid grid-cols-2 gap-3">
-                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
-                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
+                                            <div class="w-full my-5">
+                                                <div class="rounded-xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/50 via-white to-purpura-50/30 p-5 shadow-2xs">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-4 border-b border-indigo-100">
+                                                        <div class="flex items-center gap-2.5">
+                                                            <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+                                                                <i class="ph-fill ph-shield-check text-base"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                                    Campos Padrões e Fixos da 1ª Página
+                                                                </h4>
+                                                                <p class="text-[11px] text-gray-500">
+                                                                    Estes blocos nativos são carregados automaticamente para o candidato nesta etapa inicial.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        @if($isCicloCustomizado)
+                                                            <button type="button"
+                                                                    @click="$wire.set('drawerFormSettingsAberto', true)"
+                                                                    class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition flex items-center gap-1">
+                                                                <i class="ph-bold ph-sliders-horizontal"></i> Personalizar Fixos
+                                                            </button>
+                                                        @else
+                                                            <span class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-indigo-100/80 border border-indigo-200 rounded-md uppercase tracking-wider flex items-center gap-1">
+                                                                <i class="ph-fill ph-lock-key"></i> Bloco Nativo Obrigatório
+                                                            </span>
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pointer-events-none">
+                                                        @if($showPersonal)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-identification-card text-purpura-600 text-base"></i> 1. Dados Pessoais
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">Ativo</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Nome Completo, Nome Social, CPF, Data de Nascimento, E-mail, Celular e Declaração de PcD.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cpf</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">nome</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">email</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">pcd</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($showAddress)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-map-pin-line text-rose-500 text-base"></i> 2. Endereço Residencial
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">ViaCEP</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Busca automática por CEP, Logradouro, Número, Complemento, Bairro, Cidade, UF e Região.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cep</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">logradouro</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cidade/uf</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($showCourse)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-graduation-cap text-indigo-600 text-base"></i> 3. Unidade / Curso / Turno
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">Ativo</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Seleção em cascata de Unidade, Curso e Turno sincronizada com a oferta de vagas e faixa etária.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">unidade_id</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">curso_id</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">turno_id</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -730,6 +813,9 @@
                                                                 <div class="flex items-center gap-1.5 text-gray-600 text-xs">
                                                                     <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 1
                                                                 </div>
+                                                                <div class="flex items-center gap-1.5 text-gray-600 text-xs">
+                                                                    <div class="w-3.5 h-3.5 border border-gray-300 {{ $c->tipo === 'radio' ? 'rounded-full' : 'rounded' }} bg-white"></div> Opção 2
+                                                                </div>
                                                             </div>
 
                                                         @elseif($c->tipo === 'system')
@@ -758,8 +844,8 @@
                                                             <hr class="border-t-2 border-dashed border-gray-300 my-2">
 
                                                         @elseif($c->tipo === 'spacer')
-                                                            <div class="w-full h-10 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50/60 text-gray-400 text-[11px] font-semibold select-none">
-                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5"></i> Espaço ({{ $c->largura == 0 ? "Restante: {$larguraEfetiva}/12" : "{$c->largura}/12" }})
+                                                            <div class="w-full h-10 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 text-gray-400 text-[11px] font-semibold select-none">
+                                                                Espaço ({{ $c->largura == 0 ? "Restante" : "{$c->largura}/12" }})
                                                             </div>
 
                                                         @elseif($c->tipo === 'media')
@@ -813,6 +899,12 @@
                                         </div>
                                     @endif
                                 @endforeach
+
+                                @if($grupo['campos']->isEmpty() && !($numEtapa === 1 && $contextoTipo === 'ciclo'))
+                                    <div class="py-8 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 text-xs">
+                                        Nenhum campo personalizado adicionado nesta página. Clique num tipo de input à esquerda para inserir.
+                                    </div>
+                                @endif
                             </div>
                         @endforeach
 
@@ -1936,7 +2028,7 @@
                             @foreach($unidadesDb as $u)
                                 <div wire:key="combo-uni-{{ $u->id }}"
                                      wire:click="setComboActiveUnidade({{ $u->id }})"
-                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                                     <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
                                         <input type="checkbox" wire:model.live="comboUnidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
                                         <span class="text-xs font-bold {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>

@@ -1105,6 +1105,26 @@ class DynamicFields extends Component
             $configToSave['turnos_permitidos']   = array_values(array_filter((array) ($this->configuracoes['turnos_permitidos'] ?? [])));
         }
 
+        if ($this->campoId && $this->tipo === 'system' && !empty($configToSave['combo_group'])) {
+            $irmas = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('id', '!=', $this->campoId)
+                ->where('tipo', 'system')
+                ->get();
+
+            foreach ($irmas as $irma) {
+                $cfgIrma = is_string($irma->configuracoes) ? json_decode($irma->configuracoes, true) : ($irma->configuracoes ?? []);
+                if (($cfgIrma['combo_group'] ?? '') === $configToSave['combo_group']) {
+                    $cfgIrma['unidades_permitidas']    = $configToSave['unidades_permitidas'] ?? [];
+                    $cfgIrma['cursos_permitidos']      = $configToSave['cursos_permitidos'] ?? [];
+                    $cfgIrma['turnos_permitidos']      = $configToSave['turnos_permitidos'] ?? [];
+                    $cfgIrma['filtrar_por_uf']         = $configToSave['filtrar_por_uf'] ?? false;
+                    $cfgIrma['vincular_curso_unidade'] = $configToSave['vincular_curso_unidade'] ?? true;
+                    $cfgIrma['vincular_turno_curso']   = $configToSave['vincular_turno_curso'] ?? true;
+                    $irma->update(['configuracoes' => $cfgIrma]);
+                }
+            }
+        }
+
         $deveCriarComboAcademico = ($this->tipo === 'system' && $this->subtipo === 'combo_academico' && !$isEditing);
         if ($deveCriarComboAcademico) {
             $this->subtipo = 'unidade';
@@ -1459,19 +1479,9 @@ class DynamicFields extends Component
 
     public function abrirModalConfigCombo(): void
     {
-        // Inicializa a partir de $this->configuracoes ou, se for contexto 'ciclo' e ainda vazio, herda do próprio Ciclo
-        $unidadesSalvas = $this->configuracoes['unidades_permitidas'] ?? null;
-        $cursosSalvos   = $this->configuracoes['cursos_permitidos'] ?? null;
-        $turnosSalvos   = $this->configuracoes['turnos_permitidos'] ?? null;
-
-        if ($unidadesSalvas === null && $this->contextoTipo === 'ciclo') {
-            $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos'])->find($this->contextoId);
-            if ($ciclo) {
-                $unidadesSalvas = $ciclo->unidades->pluck('id')->map(fn($v) => (string) $v)->toArray();
-                $cursosSalvos   = $ciclo->cursos->pluck('id')->map(fn($v) => (string) $v)->toArray();
-                $turnosSalvos   = $ciclo->turnos->pluck('id')->map(fn($v) => (string) $v)->toArray();
-            }
-        }
+        $unidadesSalvas = $this->configuracoes['unidades_permitidas'] ?? [];
+        $cursosSalvos   = $this->configuracoes['cursos_permitidos'] ?? [];
+        $turnosSalvos   = $this->configuracoes['turnos_permitidos'] ?? [];
 
         $this->comboUnidadesSelecionadas = is_array($unidadesSalvas) ? array_values(array_map('strval', $unidadesSalvas)) : [];
         $this->comboCursosSelecionados   = is_array($cursosSalvos) ? array_values(array_map('strval', $cursosSalvos)) : [];
@@ -1497,13 +1507,12 @@ class DynamicFields extends Component
 
     public function confirmarConfigComboAcademico(): void
     {
-        // Salva exclusivamente nas configurações do input dinâmico/personalizado
         $this->configuracoes['unidades_permitidas'] = array_values(array_unique(array_map('strval', $this->comboUnidadesSelecionadas)));
         $this->configuracoes['cursos_permitidos']   = array_values(array_unique(array_map('strval', $this->comboCursosSelecionados)));
         $this->configuracoes['turnos_permitidos']   = array_values(array_unique(array_map('strval', $this->comboTurnosSelecionados)));
 
         $this->modalConfigComboAberto = false;
-        $this->dispatch('sucesso', msg: 'Opções de Unidades, Cursos e Turnos aplicadas ao campo dinâmico!');
+        $this->dispatch('sucesso', msg: 'Opções aplicadas ao bloco dinâmico!');
     }
 
     public function limparRestricaoComboAcademico(): void
