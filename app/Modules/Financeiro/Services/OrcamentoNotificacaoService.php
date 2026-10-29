@@ -22,10 +22,14 @@ class OrcamentoNotificacaoService
     {
         $orcamento->loadMissing('centroCusto');
 
-        // 1. Aprovadores vinculados diretamente ao Centro de Custo
+        // 1. Usuários vinculados especificamente a este Centro de Custo para aprovação (ou legado sem tipo_acesso)
         $vinculadosAoCC = collect();
         if ($orcamento->centroCusto) {
-            $vinculadosAoCC = $orcamento->centroCusto->aprovadores()
+            $vinculadosAoCC = $orcamento->centroCusto->users()
+                ->where(function ($q) {
+                    $q->whereIn('centro_custo_user.tipo_acesso', ['aprovacao'])
+                      ->orWhereNull('centro_custo_user.tipo_acesso');
+                })
                 ->where(function ($q) {
                     $q->whereNull('centro_custo_user.expires_at')
                       ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
@@ -33,8 +37,8 @@ class OrcamentoNotificacaoService
                 ->get();
         }
 
-        // 2. Usuários com Permissão Global de Centros de Custo
-        $usuariosGlobais = User::all()->filter(function (User $u) {
+        // 2. Usuários com Permissão Global para Aprovação (Todos os Centros de Custo)
+        $usuariosGlobais = User::with(['roles', 'permissions'])->get()->filter(function (User $u) {
             return $u->possuiVisaoGlobalCentrosCusto('aprovacao');
         });
 

@@ -59,21 +59,33 @@ class OrcamentoManager extends Component
 
     public function integrarAoProtheus(int $id): void
     {
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar') && !auth()->user()->can('financeiro.orcamentos.integrar'), 403, 'Sem permissão.');
+        abort_if(
+            !auth()->user()->hasRole('dev')
+            && !auth()->user()->can('financeiro.orcamentos.editar')
+            && !auth()->user()->can('financeiro.orcamentos.integrar'),
+            403,
+            'Sem permissão.'
+        );
 
-        $orcamento = Orcamento::with(['centroCusto', 'itens.natureza'])->findOrFail($id);
+        $orcamento = Orcamento::with(['centroCusto', 'itens.natureza', 'itens.avaliacoes'])->findOrFail($id);
 
         if (!in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado'], true)) {
             $this->dispatch('erro', msg: 'O orçamento precisa estar com status "Finalizado – Aprovado" para ser integrado ao Protheus.');
             return;
         }
 
-        app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($orcamento);
+        $resultado = app(ProtheusOrcamentoService::class)->integrarOrcamentoComProtheus($orcamento);
+
+        if (!$resultado['sucesso']) {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+            return;
+        }
+
         $orcamento->update(['status' => 'Finalizado – Integrado ao Protheus']);
 
         \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarIntegracaoProtheus($orcamento, auth()->user());
 
-        $this->dispatch('sucesso', msg: "Orçamento #{$orcamento->id} finalizado e preparado para integração com a Tabela Intermediária do Protheus!");
+        $this->dispatch('sucesso', msg: $resultado['mensagem']);
     }
 
     public function sincronizarCadastrosProtheus()

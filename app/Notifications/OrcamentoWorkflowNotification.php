@@ -34,9 +34,13 @@ class OrcamentoWorkflowNotification extends Notification
 
     public function via(object $notifiable): array
     {
+        if ($notifiable instanceof \Illuminate\Notifications\AnonymousNotifiable) {
+            return ['mail'];
+        }
+
         return ['database'];
     }
-
+    
     public function toMail(object $notifiable): MailMessage
     {
         $mail = (new MailMessage)

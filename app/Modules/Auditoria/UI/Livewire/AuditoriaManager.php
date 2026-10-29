@@ -66,6 +66,8 @@ class AuditoriaManager extends Component
             'atualizacao' => '<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-blue-200"><i class="ph-bold ph-pencil-simple"></i> Atualização</span>',
             'exclusao' => '<span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-red-200"><i class="ph-bold ph-trash"></i> Exclusão</span>',
             'automacao_email' => '<span class="bg-purpura-100 text-purpura-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-purpura-200"><i class="ph-bold ph-paper-plane-tilt"></i> E-mail Automático</span>',
+            'integracao_erro_put' => '<span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-red-200"><i class="ph-bold ph-cloud-warning"></i> Erro na API</span>',
+            'integracao_sucesso_put' => '<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-emerald-200"><i class="ph-bold ph-cloud-check"></i> Sucesso API</span>',
             default => '<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-gray-200">'.$log->acao.'</span>',
         };
 

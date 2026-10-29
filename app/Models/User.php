@@ -136,16 +136,26 @@ class User extends Authenticatable
             return true;
         }
 
-        if ($tipo === 'edicao' && $this->can('centros_custo.visao_global.edicao')) {
-            return true;
+        $nomesPermissoes = $this->getAllPermissions()->pluck('name')->toArray();
+
+        if ($tipo === 'edicao') {
+            return in_array('financeiro.visao_global.edicao', $nomesPermissoes, true)
+                || in_array('financeiro.visao_global', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global.edicao', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global', $nomesPermissoes, true);
         }
 
-        if ($tipo === 'aprovacao' && $this->can('centros_custo.visao_global.aprovacao')) {
-            return true;
+        if ($tipo === 'aprovacao') {
+            return in_array('financeiro.visao_global.aprovacao', $nomesPermissoes, true)
+                || in_array('financeiro.visao_global', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global.aprovacao', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global', $nomesPermissoes, true);
         }
 
-        return $this->temVisaoGlobal('centros_custo')
-            || $this->can('centros_custo.visao_global');
+        return in_array('financeiro.visao_global', $nomesPermissoes, true)
+            || in_array('financeiro.visao_global.edicao', $nomesPermissoes, true)
+            || in_array('financeiro.visao_global.aprovacao', $nomesPermissoes, true)
+            || in_array('centros_custo.visao_global', $nomesPermissoes, true);
     }
 
     /**

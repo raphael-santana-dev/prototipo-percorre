@@ -67,30 +67,32 @@
                             <td class="px-4 py-3 text-center">
                                 @php
                                     $statusColor = match($orcamento->status) {
-                                        'Em elaboração' => 'bg-blue-50 text-blue-700 border-blue-200',
-                                        'Finalizado' => 'bg-purple-50 text-purple-700 border-purple-200',
-                                        'Aprovado' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                        'Aprovado com ressalvas' => 'bg-yellow-50 text-yellow-700 border-yellow-200',
-                                        'Reprovado' => 'bg-red-50 text-red-700 border-red-200',
+                                        'Importado', 'Criado' => 'bg-gray-100 text-gray-700 border-gray-300',
+                                        'Em revisão/atualização', 'Em elaboração' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                        'Finalizado – Aguardando Aprovação', 'Finalizado - Aguardando Aprovação', 'Finalizado' => 'bg-amber-50 text-amber-800 border-amber-200',
+                                        'Aprovação – Aguardando Revisão pelo Responsável', 'Aprovação - Aguardando Revisão pelo Responsável', 'Reprovado' => 'bg-red-50 text-red-700 border-red-200',
+                                        'Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                        'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
                                         default => 'bg-gray-100 text-gray-600 border-gray-200'
                                     };
                                 @endphp
-                                <span class="px-2.5 py-1 text-[10px] font-semibold rounded-md border {{ $statusColor }} uppercase tracking-wide">{{ $orcamento->status ?? 'Criado' }}</span>
+                                <span class="px-2.5 py-1 text-[10px] font-semibold rounded-md border {{ $statusColor }} uppercase tracking-wide">{{ $orcamento->status ?? 'Importado' }}</span>
                             </td>
                             <td class="px-4 py-3 font-semibold text-right text-gray-900">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Aprovado']))
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado']))
                                         <button type="button"
                                                 wire:click="integrarAoProtheus({{ $orcamento->id }})"
-                                                onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus?') || event.stopImmediatePropagation()"
+                                                wire:loading.attr="disabled"
+                                                onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus via PUT?') || event.stopImmediatePropagation()"
                                                 class="px-2.5 py-1 text-xs font-medium bg-emerald-700 text-white hover:bg-emerald-800 rounded transition flex items-center gap-1"
                                                 title="Finalizar e Integrar ao Protheus">
                                             <i class="ph-bold ph-cloud-arrow-up"></i> Integrar
                                         </button>
                                     @endif
 
-                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado – Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
                                         <button type="button" wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
                                             <i class="text-lg ph-bold ph-brackets-curly"></i>
                                         </button>

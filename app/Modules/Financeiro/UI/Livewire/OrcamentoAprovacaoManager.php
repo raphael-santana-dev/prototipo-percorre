@@ -133,7 +133,11 @@ class OrcamentoAprovacaoManager extends Component
             $query->orderBy('updated_at', 'desc');
         }
 
-        $queryAguardando = Orcamento::whereIn('status', ['Finalizado - Aguardando Aprovação', 'Finalizado - Aguardando Aprovação', 'Finalizado']);
+        $queryAguardando = Orcamento::whereIn('status', [
+            'Finalizado – Aguardando Aprovação',
+            'Finalizado - Aguardando Aprovação',
+            'Finalizado'
+        ]);
         $this->aplicarEscopoCentrosCustoUsuario($queryAguardando);
 
         return view('livewire.financeiro.orcamento-aprovacao-manager', [

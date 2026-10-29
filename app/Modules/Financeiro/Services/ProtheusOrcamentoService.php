@@ -10,12 +10,36 @@ use App\Modules\Financeiro\Domain\Models\OrcamentoItem;
 use App\Modules\Financeiro\Domain\Models\Natureza;
 use App\Modules\Financeiro\Domain\Models\CentroCusto;
 use App\Modules\Financeiro\Domain\Models\OrcamentoAvaliacao;
+use App\Models\AuditoriaLog;
 
 class ProtheusOrcamentoService
 {
     /**
-     * Cliente HTTP padrão com o header 'x-api-key'
+     * Função auxiliar para forçar o registo na tabela auditoria_logs para ações de API
      */
+    private static function registrarLogIntegracao(string $acao, string $tabelaAfetada, ?int $registroId, array $payloadEnviado, $respostaApi): void
+    {
+        try {
+            $usuario = auth()->user();
+            
+            AuditoriaLog::create([
+                'tabela_alterada'     => $tabelaAfetada,
+                'registro_id'         => $registroId,
+                'acao'                => $acao,
+                'informacao_anterior' => $payloadEnviado,
+                'nova_informacao'     => is_string($respostaApi) ? ['resposta_bruta' => $respostaApi] : (array) $respostaApi,
+                'usuario_id'          => $usuario?->id,
+                'usuario_nome'        => $usuario?->name ?? 'Ação de Sistema (API Protheus)',
+                'usuario_role'        => ($usuario && method_exists($usuario, 'getRoleNames')) ? $usuario->getRoleNames()->first() : 'N/A',
+                'usuario_login'       => $usuario?->email,
+                'ip'                  => request()->ip(),
+                'navegador'           => request()->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Erro ao gravar AuditoriaLog da integração Protheus: ' . $e->getMessage());
+        }
+    }
+
     private static function httpClient(): PendingRequest
     {
         $apiKey = env('PROTHEUS_API_KEY', '');
@@ -42,9 +66,6 @@ class ProtheusOrcamentoService
         return $client;
     }
 
-    /**
-     * Sincroniza Centros de Custo e salva na tabela 'centros_custo'
-     */
     public static function sincronizarCentrosCusto(?array $dadosJson = null): array
     {
         try {
@@ -56,7 +77,9 @@ class ProtheusOrcamentoService
 
                 $response = self::httpClient()->get($url);
                 if (!$response->successful()) {
-                    return ['sucesso' => false, 'mensagem' => 'Erro na API de Centros de Custo do Protheus (HTTP ' . $response->status() . ').'];
+                    $erroMsg = 'Erro na API de Centros de Custo do Protheus (HTTP ' . $response->status() . ').';
+                    self::registrarLogIntegracao('integracao_erro_ccusto', 'centros_custo', null, ['url' => $url], $response->body());
+                    return ['sucesso' => false, 'mensagem' => $erroMsg];
                 }
                 $dadosJson = $response->json();
             }
@@ -87,13 +110,11 @@ class ProtheusOrcamentoService
 
             return ['sucesso' => true, 'mensagem' => "{$processados} Centro(s) de Custo sincronizado(s)!"];
         } catch (\Throwable $e) {
+            self::registrarLogIntegracao('integracao_excecao_ccusto', 'centros_custo', null, [], $e->getMessage());
             return ['sucesso' => false, 'mensagem' => 'Falha ao sincronizar Centros de Custo: ' . $e->getMessage()];
         }
     }
 
-    /**
-     * Sincroniza Naturezas Financeiras e salva na tabela 'naturezas'
-     */
     public static function sincronizarNaturezas(?array $dadosJson = null): array
     {
         try {
@@ -105,7 +126,9 @@ class ProtheusOrcamentoService
 
                 $response = self::httpClient()->get($url);
                 if (!$response->successful()) {
-                    return ['sucesso' => false, 'mensagem' => 'Erro na API de Naturezas do Protheus (HTTP ' . $response->status() . ').'];
+                    $erroMsg = 'Erro na API de Naturezas do Protheus (HTTP ' . $response->status() . ').';
+                    self::registrarLogIntegracao('integracao_erro_natureza', 'naturezas', null, ['url' => $url], $response->body());
+                    return ['sucesso' => false, 'mensagem' => $erroMsg];
                 }
                 $dadosJson = $response->json();
             }
@@ -140,6 +163,7 @@ class ProtheusOrcamentoService
 
             return ['sucesso' => true, 'mensagem' => "{$processados} Natureza(s) Financeira(s) sincronizada(s)!"];
         } catch (\Throwable $e) {
+            self::registrarLogIntegracao('integracao_excecao_natureza', 'naturezas', null, [], $e->getMessage());
             return ['sucesso' => false, 'mensagem' => 'Falha ao sincronizar Naturezas: ' . $e->getMessage()];
         }
     }
@@ -159,10 +183,6 @@ class ProtheusOrcamentoService
         return ['sucesso' => false, 'mensagem' => $resCC['mensagem'] . ' / ' . $resNat['mensagem']];
     }
 
-    /**
-     * 1. CONSULTA SEM PARÂMETROS (Listagem de Orçamentos: /rest/wstabint)
-     * Retorna { "orcamentos": [ { "ano": "2026", "ccusto": "20121", "descricao": "TECNOLOGIA", "status": "2", "statusDescricao": "...", "total": 246783.79 } ] }
-     */
     public static function sincronizar(): array
     {
         $url = rtrim((string) env('PROTHEUS_API_URL'), '/');
@@ -174,7 +194,9 @@ class ProtheusOrcamentoService
             $response = self::httpClient()->get($url);
 
             if (!$response->successful()) {
-                return ['sucesso' => false, 'mensagem' => "Erro na API do Protheus (HTTP " . $response->status() . ")."];
+                $erroMsg = "Erro na API do Protheus (HTTP " . $response->status() . ").";
+                self::registrarLogIntegracao('integracao_erro_orcamentos', 'orcamentos', null, ['url' => $url], $response->body());
+                return ['sucesso' => false, 'mensagem' => $erroMsg];
             }
 
             $dados = $response->json();
@@ -227,7 +249,6 @@ class ProtheusOrcamentoService
                     ]
                 );
 
-                // Se o orçamento ainda está como 'Importado' e não tem itens locais, atualiza o resumo do total da API
                 if ($orcamento->status === 'Importado' && $orcamento->itens()->count() === 0 && $totalApi > 0) {
                     $metaAtual = is_array($orcamento->dados_consolidados) ? $orcamento->dados_consolidados : [];
                     $metaAtual['total'] = $totalApi;
@@ -235,7 +256,6 @@ class ProtheusOrcamentoService
                     $orcamento->updateQuietly(['dados_consolidados' => $metaAtual]);
                 }
 
-                // Caso o JSON já traga despesas diretamente, importa-as
                 if (!empty($item['despesas']) && is_array($item['despesas'])) {
                     self::processarDespesasDoOrcamento($orcamento, $item['despesas']);
                 }
@@ -243,19 +263,16 @@ class ProtheusOrcamentoService
                 $processados++;
             }
 
+            self::registrarLogIntegracao('integracao_sucesso_orcamentos', 'orcamentos', null, ['url' => $url], "{$processados} processados.");
             return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamento(s) listado(s)."];
         } catch (\Throwable $e) {
+            self::registrarLogIntegracao('integracao_excecao_orcamentos', 'orcamentos', null, ['url' => $url], $e->getMessage());
             return ['sucesso' => false, 'mensagem' => "Erro de ligação à API do Protheus: " . $e->getMessage()];
         }
     }
 
-    /**
-     * 2. CONSULTA COM PARÂMETROS (Ao abrir um orçamento: /rest/wstabint/?ano=2026&ccusto=20121)
-     * Busca as despesas detalhadas do orçamento específico no Protheus.
-     */
     public static function sincronizarDetalhesOrcamento(Orcamento $orcamento, bool $forcarAtualizacao = false): array
     {
-        // Só consulta na API se o orçamento ainda não possuir itens salvos localmente ou se estiver no status inicial 'Importado'/'Criado'
         $qtdItensLocais = $orcamento->itens()->count();
         if (!$forcarAtualizacao && $qtdItensLocais > 0) {
             return ['sucesso' => true, 'mensagem' => 'Itens já carregados na base local.'];
@@ -266,17 +283,19 @@ class ProtheusOrcamentoService
             return ['sucesso' => false, 'mensagem' => 'PROTHEUS_API_URL não configurada.'];
         }
 
+        $urlComParams = $baseUrl . '/?ano=' . urlencode((string) $orcamento->ano) . '&ccusto=' . urlencode((string) $orcamento->ccusto);
+
         try {
-            $urlComParams = $baseUrl . '/?ano=' . urlencode((string) $orcamento->ano) . '&ccusto=' . urlencode((string) $orcamento->ccusto);
             $response = self::httpClient()->get($urlComParams);
 
             if (!$response->successful()) {
-                return ['sucesso' => false, 'mensagem' => 'Não foi possível obter os itens detalhados na API do Protheus (HTTP ' . $response->status() . ').'];
+                $erroMsg = 'Não foi possível obter os itens detalhados na API do Protheus (HTTP ' . $response->status() . ').';
+                self::registrarLogIntegracao('integracao_erro_detalhes_orcamento', 'orcamento_itens', $orcamento->id, ['url' => $urlComParams], $response->body());
+                return ['sucesso' => false, 'mensagem' => $erroMsg];
             }
 
             $dados = $response->json();
 
-            // Suporta retorno direto { "ano": "2026", "ccusto": "20121", "despesas": [...] } ou dentro de "orcamentos"[0]
             $payloadOrcamento = $dados;
             if (!isset($payloadOrcamento['despesas']) && isset($dados['orcamentos'][0])) {
                 $payloadOrcamento = $dados['orcamentos'][0];
@@ -294,16 +313,15 @@ class ProtheusOrcamentoService
                 return ['sucesso' => true, 'mensagem' => count($payloadOrcamento['despesas']) . ' despesa(s) carregada(s) da API do Protheus.'];
             }
 
+            self::registrarLogIntegracao('integracao_erro_detalhes_orcamento', 'orcamento_itens', $orcamento->id, ['url' => $urlComParams], 'Retorno da API sem chave "despesas".');
             return ['sucesso' => false, 'mensagem' => 'A consulta com parâmetros não retornou a chave "despesas".'];
         } catch (\Throwable $e) {
             Log::warning("Falha ao buscar detalhes do orçamento #{$orcamento->id} com parâmetros na API Protheus: " . $e->getMessage());
+            self::registrarLogIntegracao('integracao_excecao_detalhes_orcamento', 'orcamento_itens', $orcamento->id, ['url' => $urlComParams], $e->getMessage());
             return ['sucesso' => false, 'mensagem' => $e->getMessage()];
         }
     }
 
-    /**
-     * Grava ou atualiza os itens (despesas) e seus comentários iniciais vindos do JSON com parâmetros
-     */
     private static function processarDespesasDoOrcamento(Orcamento $orcamento, array $despesas): void
     {
         $seq = 1;
@@ -368,9 +386,6 @@ class ProtheusOrcamentoService
         }
     }
 
-    /**
-     * Consolida os dados do orçamento no formato exato de 'comparams.json' (sem a chave 'tabela_intermediaria')
-     */
     public function consolidarParaTabelaIntermediaria(Orcamento $orcamento): array
     {
         $orcamento->loadMissing(['centroCusto', 'itens.natureza', 'itens.avaliacoes']);
@@ -408,7 +423,6 @@ class ProtheusOrcamentoService
             $totalItem = round(array_sum($valoresMes), 2);
             $totalOrcamento += $totalItem;
 
-            // Concatena os comentários do item para enviar no campo "comentario" do Protheus
             $comentariosTexto = $item->avaliacoes
                 ->filter(fn($av) => !empty(trim((string) $av->comentario)))
                 ->sortBy('id')
@@ -442,23 +456,88 @@ class ProtheusOrcamentoService
         ];
     }
 
+    public function integrarOrcamentoComProtheus(Orcamento $orcamento): array
+    {
+        $payload = $this->consolidarParaTabelaIntermediaria($orcamento);
+        $orcamento->updateQuietly(['dados_consolidados' => $payload]);
+
+        $baseUrl = rtrim((string) env('PROTHEUS_API_URL'), '/');
+        if (!$baseUrl) {
+            $msg = 'URL da API Protheus (PROTHEUS_API_URL) não configurada no .env.';
+            self::registrarLogIntegracao('integracao_erro_env', 'orcamentos', $orcamento->id, $payload, $msg);
+            return [
+                'sucesso'  => false,
+                'mensagem' => $msg,
+                'payload'  => $payload,
+            ];
+        }
+
+        $urlComParams = $baseUrl . '/?ano=' . urlencode((string) $orcamento->ano) . '&ccusto=' . urlencode(trim((string) $orcamento->ccusto));
+
+        try {
+            $response = self::httpClient()->put($urlComParams, $payload);
+
+            if (!$response->successful()) {
+                $erroDetalhe = $response->body();
+                Log::error("[INTEGRAÇÃO PROTHEUS - ERRO PUT] Orçamento #{$orcamento->id} | HTTP {$response->status()}", [
+                    'url'      => $urlComParams,
+                    'payload'  => $payload,
+                    'resposta' => $erroDetalhe,
+                ]);
+
+                // Dispara o log no banco para aparecer na tela AuditoriaManager
+                self::registrarLogIntegracao('integracao_erro_put', 'orcamentos', $orcamento->id, ['url' => $urlComParams, 'payload' => $payload], $erroDetalhe);
+
+                // Como a API do Protheus retornou JSON (ex: {"errorCode":409,"errorMessage":"..."}), podemos tentar extrair a mensagem limpa
+                $erroDecoded = json_decode($erroDetalhe, true);
+                $mensagemProtheus = $erroDecoded['errorMessage'] ?? (\Illuminate\Support\Str::limit($erroDetalhe, 160));
+
+                return [
+                    'sucesso'  => false,
+                    'mensagem' => "Falha ao enviar para o Protheus (HTTP {$response->status()}): " . $mensagemProtheus,
+                    'payload'  => $payload,
+                ];
+            }
+
+            Log::info("[INTEGRAÇÃO PROTHEUS - PUT SUCESSO] Orçamento #{$orcamento->id} integrado ao Protheus", [
+                'url'      => $urlComParams,
+                'resposta' => $response->json() ?? $response->body(),
+            ]);
+
+            self::registrarLogIntegracao('integracao_sucesso_put', 'orcamentos', $orcamento->id, ['url' => $urlComParams, 'payload' => $payload], $response->json() ?? $response->body());
+
+            OrcamentoAvaliacao::create([
+                'orcamento_id'    => $orcamento->id,
+                'user_id'         => auth()->id() ?? 1,
+                'user_nome'       => auth()->user()->name ?? 'Sistema',
+                'status_aplicado' => 'Finalizado – Integrado ao Protheus',
+                'comentario'      => "Orçamento enviado via PUT e integrado com sucesso à Tabela Intermediária do Protheus (" . count($payload['despesas']) . " itens).",
+                'tipo_evento'     => 'integracao_protheus',
+            ]);
+
+            return [
+                'sucesso'  => true,
+                'mensagem' => "Orçamento #{$orcamento->id} integrado com sucesso ao Protheus!",
+                'payload'  => $payload,
+                'resposta' => $response->json(),
+            ];
+        } catch (\Throwable $e) {
+            Log::error("[INTEGRAÇÃO PROTHEUS - EXCEÇÃO PUT] Orçamento #{$orcamento->id}: " . $e->getMessage());
+            
+            self::registrarLogIntegracao('integracao_excecao_put', 'orcamentos', $orcamento->id, ['url' => $urlComParams, 'payload' => $payload], $e->getMessage());
+
+            return [
+                'sucesso'  => false,
+                'mensagem' => 'Erro de comunicação ao enviar PUT para o Protheus: ' . $e->getMessage(),
+                'payload'  => $payload,
+            ];
+        }
+    }
+
     public function enviarParaProtheusSimulado(Orcamento $orcamento): array
     {
         $payload = $this->consolidarParaTabelaIntermediaria($orcamento);
-
         $orcamento->updateQuietly(['dados_consolidados' => $payload]);
-
-        Log::info("[INTEGRAÇÃO PROTHEUS] JSON consolidado gerado para o Orçamento #{$orcamento->id}", $payload);
-
-        OrcamentoAvaliacao::create([
-            'orcamento_id'    => $orcamento->id,
-            'user_id'         => auth()->id() ?? 1,
-            'user_nome'       => auth()->user()->name ?? 'Sistema',
-            'status_aplicado' => 'Finalizado – Integrado ao Protheus',
-            'comentario'      => "Orçamento consolidado para o Protheus (" . count($payload['despesas']) . " despesas).",
-            'tipo_evento'     => 'integracao_protheus',
-        ]);
-
         return $payload;
     }
 }

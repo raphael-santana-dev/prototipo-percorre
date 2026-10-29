@@ -666,17 +666,19 @@ class OrcamentoEditor extends Component
         return redirect()->route('financeiro.orcamentos');
     }
 
-    /**
-     * Slide 49: Botão para o responsável finalizar definitivamente o orçamento aprovado e preparar o JSON do Protheus
-     */
     public function integrarComProtheus(): void
     {
-        if (!in_array($this->orcamento->status, ['Finalizado – Aprovado', 'Aprovado'], true)) {
+        if (!in_array($this->orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado'], true)) {
             $this->dispatch('erro', msg: 'A integração com o Protheus só é permitida quando o status do orçamento for "Finalizado – Aprovado".');
             return;
         }
 
-        app(ProtheusOrcamentoService::class)->enviarParaProtheusSimulado($this->orcamento);
+        $resultado = app(ProtheusOrcamentoService::class)->integrarOrcamentoComProtheus($this->orcamento);
+
+        if (!$resultado['sucesso']) {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+            return;
+        }
 
         $this->orcamento->update([
             'status' => 'Finalizado – Integrado ao Protheus',
@@ -687,7 +689,7 @@ class OrcamentoEditor extends Component
 
         \App\Modules\Financeiro\Services\OrcamentoNotificacaoService::notificarIntegracaoProtheus($this->orcamento, auth()->user());
 
-        $this->dispatch('sucesso', msg: 'Orçamento finalizado e dados consolidados para a Tabela Intermediária do Protheus!');
+        $this->dispatch('sucesso', msg: $resultado['mensagem']);
     }
 
     private function notificarAvaliadoresPorEmail(): void
