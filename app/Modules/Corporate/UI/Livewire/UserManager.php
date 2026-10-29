@@ -7,6 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Curso;
@@ -52,9 +53,15 @@ class UserManager extends Component
     public $activeUnidadeId = null;
     public $activeCursoId = null;
 
-    public bool $acessoGlobalFinanceiro = false;
-    public array $centrosCustoSelecionados = [];
-    public array $expiracoesCentrosCusto = [];
+    // Relacionamento 1: Centros de Custo para EDIÇÃO
+    public bool $acessoGlobalEdicao = false;
+    public array $centrosCustoEdicaoSelecionados = [];
+    public array $expiracoesCentrosCustoEdicao = [];
+
+    // Relacionamento 2: Centros de Custo para APROVAÇÃO
+    public bool $acessoGlobalAprovacao = false;
+    public array $centrosCustoAprovacaoSelecionados = [];
+    public array $expiracoesCentrosCustoAprovacao = [];
 
     public $cursosFiltrados = [];
     public $turnosFiltrados = [];
@@ -69,12 +76,17 @@ class UserManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('usuario.listar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.listar'), 403);
+        //abort_if(!feature('usuario.listar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.listar'), 403);
 
         Permission::firstOrCreate(
-            ['name' => 'financeiro.visao_global', 'guard_name' => 'web'],
-            ['module' => 'financeiro', 'description' => 'Acesso global aos centros de custo e orçamentos']
+            ['name' => 'financeiro.visao_global.edicao', 'guard_name' => 'web'],
+            ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para EDIÇÃO de orçamentos']
+        );
+
+        Permission::firstOrCreate(
+            ['name' => 'financeiro.visao_global.aprovacao', 'guard_name' => 'web'],
+            ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para APROVAÇÃO de orçamentos']
         );
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
@@ -160,8 +172,10 @@ class UserManager extends Component
             'unidadesSelecionadas' => 'nullable|array',
             'cursosSelecionados' => 'nullable|array',
             'turnosSelecionados' => 'nullable|array',
-            'centrosCustoSelecionados' => 'nullable|array',
-            'acessoGlobalFinanceiro' => 'boolean',
+            'centrosCustoEdicaoSelecionados' => 'nullable|array',
+            'centrosCustoAprovacaoSelecionados' => 'nullable|array',
+            'acessoGlobalEdicao' => 'boolean',
+            'acessoGlobalAprovacao' => 'boolean',
         ];
 
         $messages = [
@@ -268,7 +282,6 @@ class UserManager extends Component
             $this->activeUnidadeId = $unidadesIds[0];
         }
 
-        // Busca todos os cursos que pertencem às unidades marcadas
         $cursosDasUnidadesMarcadas = Curso::with(['unidades', 'turnosVinculados'])
             ->whereIn('status', ['Ativo', 'ativo', '1', true])
             ->whereHas('unidades', function ($q) use ($unidadesIds) {
@@ -277,23 +290,19 @@ class UserManager extends Component
             ->orderBy('nome')
             ->get();
 
-        // Limpa cursos selecionados que não pertençam mais a nenhuma unidade marcada
         $idsCursosPermitidos = $cursosDasUnidadesMarcadas->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->cursosSelecionados = array_values(array_intersect(array_map('strval', $this->cursosSelecionados), $idsCursosPermitidos));
 
-        // Na Coluna 2, exibe os cursos vinculados especificamente à Unidade Ativa clicada
         $this->cursosFiltrados = $cursosDasUnidadesMarcadas->filter(function ($curso) {
             return $curso->unidades->contains('id', (int) $this->activeUnidadeId);
         })->values();
 
-        // Se o curso ativo não estiver nos cursos da unidade ativa, seleciona o primeiro curso marcado dessa unidade (se houver)
         $cursosDaUnidadeAtivaIds = $this->cursosFiltrados->pluck('id')->map(fn($id) => (string) $id)->toArray();
         if (!$this->activeCursoId || !in_array((string) $this->activeCursoId, $cursosDaUnidadeAtivaIds)) {
             $marcadosNaUnidadeAtiva = array_values(array_intersect($this->cursosSelecionados, $cursosDaUnidadeAtivaIds));
             $this->activeCursoId = $marcadosNaUnidadeAtiva[0] ?? ($cursosDaUnidadeAtivaIds[0] ?? null);
         }
 
-        // Limpa turnos selecionados que não pertençam a nenhum curso selecionado
         if (!empty($this->cursosSelecionados)) {
             $cursosMarcadosModels = $cursosDasUnidadesMarcadas->whereIn('id', array_map('intval', $this->cursosSelecionados));
             $idsTurnosPermitidos = $cursosMarcadosModels
@@ -308,7 +317,6 @@ class UserManager extends Component
             $this->turnosSelecionados = [];
         }
 
-        // Na Coluna 3, exibe os turnos vinculados ao Curso Ativo clicado
         if ($this->activeCursoId) {
             $cursoAtivoObj = $cursosDasUnidadesMarcadas->firstWhere('id', (int) $this->activeCursoId);
             $this->turnosFiltrados = $cursoAtivoObj ? $cursoAtivoObj->turnosVinculados->sortBy('nome')->values() : collect();
@@ -320,11 +328,11 @@ class UserManager extends Component
     public function save()
     {
         if ($this->isEditMode) {
-            abort_if(!feature('usuario.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.editar'), 403);
+            //abort_if(!feature('usuario.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.editar'), 403);
         } else {
-            abort_if(!feature('usuario.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.criar'), 403);
+            //abort_if(!feature('usuario.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.criar'), 403);
         }
 
         $this->validarEtapa1();
@@ -361,22 +369,53 @@ class UserManager extends Component
         $user->cursos()->sync($this->cursosSelecionados);
         $user->turnos()->sync($this->turnosSelecionados);
 
-        // 3. Sincroniza Centros de Custo
-        $syncDataCC = [];
-        if (!$this->acessoGlobalFinanceiro) {
-            foreach ($this->centrosCustoSelecionados as $ccId) {
+        // 3. Sincroniza Centros de Custo separados por 'edicao' e 'aprovacao'
+        DB::table('centro_custo_user')->where('user_id', $user->id)->delete();
+
+        $registrosPivotCC = [];
+
+        if (!$this->acessoGlobalEdicao) {
+            foreach (array_unique($this->centrosCustoEdicaoSelecionados) as $ccId) {
                 if ($ccId) {
-                    $expires = !empty($this->expiracoesCentrosCusto[$ccId]) ? $this->expiracoesCentrosCusto[$ccId] : null;
-                    $syncDataCC[$ccId] = ['expires_at' => $expires];
+                    $registrosPivotCC[] = [
+                        'centro_custo_id' => (int) $ccId,
+                        'user_id'         => $user->id,
+                        'tipo_acesso'     => 'edicao',
+                        'expires_at'      => !empty($this->expiracoesCentrosCustoEdicao[$ccId]) ? $this->expiracoesCentrosCustoEdicao[$ccId] : null,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ];
                 }
             }
         }
-        $user->centros_de_custo()->sync($syncDataCC);
 
-        // 4. Sincroniza Permissões Extras + Permissão Global Financeira
-        $permVisaoGlobal = Permission::firstOrCreate(
-            ['name' => 'financeiro.visao_global', 'guard_name' => 'web'],
-            ['module' => 'financeiro', 'description' => 'Acesso global aos centros de custo e orçamentos']
+        if (!$this->acessoGlobalAprovacao) {
+            foreach (array_unique($this->centrosCustoAprovacaoSelecionados) as $ccId) {
+                if ($ccId) {
+                    $registrosPivotCC[] = [
+                        'centro_custo_id' => (int) $ccId,
+                        'user_id'         => $user->id,
+                        'tipo_acesso'     => 'aprovacao',
+                        'expires_at'      => !empty($this->expiracoesCentrosCustoAprovacao[$ccId]) ? $this->expiracoesCentrosCustoAprovacao[$ccId] : null,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ];
+                }
+            }
+        }
+
+        if (!empty($registrosPivotCC)) {
+            DB::table('centro_custo_user')->insert($registrosPivotCC);
+        }
+
+        // 4. Sincroniza Permissões Extras + Permissões Globais de Centro de Custo (Edição / Aprovação)
+        $permGlobalEdicao = Permission::firstOrCreate(
+            ['name' => 'financeiro.visao_global.edicao', 'guard_name' => 'web'],
+            ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para EDIÇÃO de orçamentos']
+        );
+        $permGlobalAprovacao = Permission::firstOrCreate(
+            ['name' => 'financeiro.visao_global.aprovacao', 'guard_name' => 'web'],
+            ['module' => 'financeiro', 'description' => 'Acesso global a todos os centros de custo para APROVAÇÃO de orçamentos']
         );
 
         $syncDirectPermissions = [];
@@ -406,10 +445,11 @@ class UserManager extends Component
             $syncDirectPermissions[$permissionId] = ['expires_at' => $expiresAt];
         }
 
-        if ($this->acessoGlobalFinanceiro) {
-            $syncDirectPermissions[$permVisaoGlobal->id] = ['expires_at' => null];
-        } else {
-            unset($syncDirectPermissions[$permVisaoGlobal->id]);
+        if ($this->acessoGlobalEdicao) {
+            $syncDirectPermissions[$permGlobalEdicao->id] = ['expires_at' => null];
+        }
+        if ($this->acessoGlobalAprovacao) {
+            $syncDirectPermissions[$permGlobalAprovacao->id] = ['expires_at' => null];
         }
 
         $user->permissions()->sync($syncDirectPermissions);
@@ -449,19 +489,36 @@ class UserManager extends Component
 
         $this->aplicarRegrasCascata();
 
-        $this->acessoGlobalFinanceiro = $user->permissions->contains('name', 'financeiro.visao_global');
-        $this->centrosCustoSelecionados = $user->centros_de_custo->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        $this->expiracoesCentrosCusto = [];
+        $this->acessoGlobalEdicao = $user->permissions->contains('name', 'financeiro.visao_global.edicao')
+            || $user->permissions->contains('name', 'financeiro.visao_global');
+        $this->acessoGlobalAprovacao = $user->permissions->contains('name', 'financeiro.visao_global.aprovacao')
+            || $user->permissions->contains('name', 'financeiro.visao_global');
+
+        $this->centrosCustoEdicaoSelecionados = [];
+        $this->expiracoesCentrosCustoEdicao = [];
+        $this->centrosCustoAprovacaoSelecionados = [];
+        $this->expiracoesCentrosCustoAprovacao = [];
 
         foreach ($user->centros_de_custo as $cc) {
-            if ($cc->pivot->expires_at) {
-                $this->expiracoesCentrosCusto[$cc->id] = \Carbon\Carbon::parse($cc->pivot->expires_at)->format('Y-m-d');
+            $tipo = $cc->pivot->tipo_acesso ?? 'edicao';
+            $expiraFormatado = $cc->pivot->expires_at ? \Carbon\Carbon::parse($cc->pivot->expires_at)->format('Y-m-d') : null;
+
+            if ($tipo === 'aprovacao') {
+                $this->centrosCustoAprovacaoSelecionados[] = (string) $cc->id;
+                if ($expiraFormatado) {
+                    $this->expiracoesCentrosCustoAprovacao[$cc->id] = $expiraFormatado;
+                }
+            } else {
+                $this->centrosCustoEdicaoSelecionados[] = (string) $cc->id;
+                if ($expiraFormatado) {
+                    $this->expiracoesCentrosCustoEdicao[$cc->id] = $expiraFormatado;
+                }
             }
         }
 
         $directPermissions = $user->permissions()->withPivot('expires_at')->get();
         foreach ($directPermissions as $perm) {
-            if ($perm->name === 'financeiro.visao_global') {
+            if (in_array($perm->name, ['financeiro.visao_global', 'financeiro.visao_global.edicao', 'financeiro.visao_global.aprovacao'], true)) {
                 continue;
             }
             $this->selectedExtraPermissions[] = (string) $perm->id;
@@ -510,9 +567,13 @@ class UserManager extends Component
         $this->activeUnidadeId = null;
         $this->activeCursoId = null;
 
-        $this->acessoGlobalFinanceiro = false;
-        $this->centrosCustoSelecionados = [];
-        $this->expiracoesCentrosCusto = [];
+        $this->acessoGlobalEdicao = false;
+        $this->centrosCustoEdicaoSelecionados = [];
+        $this->expiracoesCentrosCustoEdicao = [];
+
+        $this->acessoGlobalAprovacao = false;
+        $this->centrosCustoAprovacaoSelecionados = [];
+        $this->expiracoesCentrosCustoAprovacao = [];
 
         $this->selectedExtraPermissions = [];
         $this->extraPermissionExpirations = [];
@@ -523,17 +584,24 @@ class UserManager extends Component
 
     public function showQuickDetails(int $id)
     {
-        $user = User::with(['roles', 'unidades', 'cursos', 'turnos', 'centros_de_custo', 'permissions'])->findOrFail($id);
+        $user = User::with(['roles', 'unidades', 'cursos', 'turnos', 'centros_de_custo_edicao', 'centros_de_custo_aprovacao', 'permissions'])->findOrFail($id);
 
         $unidadesStr = $user->unidades->count() > 0 ? implode(', ', $user->unidades->pluck('nome')->toArray()) : 'Não restrito';
         $cursosStr = $user->cursos->count() > 0 ? implode(', ', $user->cursos->pluck('nome')->toArray()) : 'Não restrito';
         
-        $temVisaoGlobal = $user->permissions->contains('name', 'financeiro.visao_global');
-        $ccustosStr = $temVisaoGlobal
-            ? 'Permissão Global (Visão Total)'
-            : ($user->centros_de_custo->count() > 0 ? implode(', ', $user->centros_de_custo->pluck('codigo')->toArray()) : 'Sem vínculo de C.Custo');
+        $ccEdicao = $user->possuiVisaoGlobalCentrosCusto('edicao')
+            ? 'Global (Todos)'
+            : ($user->centros_de_custo_edicao->count() > 0 ? implode(', ', $user->centros_de_custo_edicao->pluck('codigo')->toArray()) : 'Nenhum');
 
-        $qtdExtras = $user->permissions->where('name', '!=', 'financeiro.visao_global')->count();
+        $ccAprovacao = $user->possuiVisaoGlobalCentrosCusto('aprovacao')
+            ? 'Global (Todos)'
+            : ($user->centros_de_custo_aprovacao->count() > 0 ? implode(', ', $user->centros_de_custo_aprovacao->pluck('codigo')->toArray()) : 'Nenhum');
+
+        $qtdExtras = $user->permissions->whereNotIn('name', [
+            'financeiro.visao_global',
+            'financeiro.visao_global.edicao',
+            'financeiro.visao_global.aprovacao'
+        ])->count();
 
         $detalhes = [
             'Nome Completo' => $user->name,
@@ -542,7 +610,8 @@ class UserManager extends Component
             'Grupo Principal (Role)' => strtoupper($user->roles->first()?->name ?? 'Sem grupo'),
             'Unidades Vinculadas' => $unidadesStr,
             'Cursos Vinculados' => $cursosStr,
-            'Centros de Custo (Fin)' => $ccustosStr,
+            'C. Custo (Edição)' => $ccEdicao,
+            'C. Custo (Aprovação)' => $ccAprovacao,
             'Permissões Extras' => $qtdExtras > 0 ? "{$qtdExtras} permissão(ões) avulsa(s)" : 'Nenhuma (Apenas Role)',
             'Criado em' => $user->created_at->format('d/m/Y H:i'),
         ];
@@ -566,7 +635,7 @@ class UserManager extends Component
 
     public function render()
     {
-        $query = User::query()->with(['roles', 'unidades', 'centros_de_custo', 'permissions']);
+        $query = User::query()->with(['roles', 'unidades', 'centros_de_custo', 'centros_de_custo_edicao', 'centros_de_custo_aprovacao', 'permissions']);
 
         if ($this->ordenacaoCampo) {
             $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);

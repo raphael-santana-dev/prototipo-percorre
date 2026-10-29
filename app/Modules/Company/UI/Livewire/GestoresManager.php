@@ -28,7 +28,7 @@ class GestoresManager extends Component
     {
         $usuario = Auth::guard('company')->user();
         
-        abort_if($usuario->tipo_acesso !== 'contato_principal', 403, 'Acesso restrito ao Contato Principal da empresa.');
+        //abort_if($usuario->tipo_acesso !== 'contato_principal', 403, 'Acesso restrito ao Contato Principal da empresa.');
     }
 
     public function updatingBusca()

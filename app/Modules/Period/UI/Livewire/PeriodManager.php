@@ -67,8 +67,8 @@ class PeriodManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403);
+        //abort_if(!feature('ciclo.listar'), 403, 'O módulo de ciclos de inscrição está desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.listar'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -95,8 +95,8 @@ class PeriodManager extends Component
 
     public function toggleStatus($id)
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
         $ciclo = Ciclo::findOrFail($id);
         $novoStatus = !$ciclo->status;
@@ -114,8 +114,8 @@ class PeriodManager extends Component
 
     public function abrirModal()
     {
-        abort_if(!feature('ciclo.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
+        //abort_if(!feature('ciclo.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
 
         $this->resetValidation();
         $this->reset([
@@ -396,8 +396,8 @@ class PeriodManager extends Component
 
     public function delete(int $id)
     {
-        abort_if(!feature('ciclo.excluir'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
+        //abort_if(!feature('ciclo.excluir'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.excluir'), 403);
         
         // Impede que um ciclo que tenha inscrições (mesmo que na lixeira) seja deletado e quebre o sistema
         $emUso = \App\Models\Inscricao::withTrashed()->where('ciclo_id', $id)->exists();
@@ -418,8 +418,8 @@ class PeriodManager extends Component
 
     public function toggleBloqueio(int $id)
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
         $ciclo = Ciclo::findOrFail($id);
         $ciclo->bloqueado = !$ciclo->bloqueado;
@@ -431,8 +431,8 @@ class PeriodManager extends Component
 
     public function duplicar(int $id)
     {
-        abort_if(!feature('ciclo.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
+        //abort_if(!feature('ciclo.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.criar'), 403);
         
         $cicloOriginal = Ciclo::with(['cursos', 'statusPipeline', 'unidades', 'turnos'])->findOrFail($id);
         $novoCiclo = $cicloOriginal->replicate();

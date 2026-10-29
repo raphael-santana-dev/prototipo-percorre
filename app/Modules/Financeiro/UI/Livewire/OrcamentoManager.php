@@ -30,13 +30,7 @@ class OrcamentoManager extends Component
 
     public function mount()
     {
-        abort_if(
-            !auth()->user()->hasRole('dev')
-            && !auth()->user()->can('financeiro.orcamentos.editar')
-            && !auth()->user()->can('financeiro.orcamentos.listar'),
-            403,
-            'Sem permissão para acessar orçamentos.'
-        );
+       
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')], 
@@ -65,7 +59,7 @@ class OrcamentoManager extends Component
 
     public function integrarAoProtheus(int $id): void
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar') && !auth()->user()->can('financeiro.orcamentos.integrar'), 403, 'Sem permissão.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.orcamentos.editar') && !auth()->user()->can('financeiro.orcamentos.integrar'), 403, 'Sem permissão.');
 
         $orcamento = Orcamento::with(['centroCusto', 'itens.natureza'])->findOrFail($id);
 

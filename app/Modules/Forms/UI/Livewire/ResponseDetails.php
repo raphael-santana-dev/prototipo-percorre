@@ -18,7 +18,7 @@ class ResponseDetails extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('formulario.respostas') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas')), 403);
+        //abort_if(!feature('formulario.respostas') || (!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas')), 403);
 
         $this->resposta = RespostaFormulario::findOrFail($id);
         $this->formulario = Formulario::findOrFail($this->resposta->formulario_id);

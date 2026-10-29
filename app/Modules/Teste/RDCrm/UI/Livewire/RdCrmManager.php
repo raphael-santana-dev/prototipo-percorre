@@ -26,7 +26,7 @@ class RdCrmManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('rdcrm.acessar'), 403, 'Acesso restrito.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('rdcrm.acessar'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],

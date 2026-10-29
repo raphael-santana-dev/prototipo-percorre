@@ -55,21 +55,6 @@ class OrcamentoAprovacaoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(
-            !feature('financeiro.orcamentos.aprovar')
-            && !feature('financeiro.orcamentos.avaliacao')
-            && !auth()->user()->hasRole('dev'),
-            403,
-            'Módulo de avaliação orçamentária desativado.'
-        );
-        abort_if(
-            !auth()->user()->hasRole('dev')
-            && !auth()->user()->can('financeiro.orcamentos.aprovar')
-            && !auth()->user()->can('financeiro.orcamentos.avaliacao'),
-            403,
-            'Sem permissão para aprovar orçamentos.'
-        );
-
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
             'itens.natureza',

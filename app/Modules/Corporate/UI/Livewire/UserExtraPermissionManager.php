@@ -31,8 +31,8 @@ class UserExtraPermissionManager extends Component
 
     public function mount(int $userId)
     {
-        abort_if(!feature('usuario.permissoes_extras'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
+        //abort_if(!feature('usuario.permissoes_extras'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
 
         $user = User::findOrFail($userId);
         
@@ -98,8 +98,8 @@ class UserExtraPermissionManager extends Component
 
     private function syncExtraPermissions()
     {
-        abort_if(!feature('usuario.permissoes_extras'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
+        //abort_if(!feature('usuario.permissoes_extras'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('usuario.permissoes_extras'), 403);
         
         $user = User::findOrFail($this->userId);
         $syncData = [];

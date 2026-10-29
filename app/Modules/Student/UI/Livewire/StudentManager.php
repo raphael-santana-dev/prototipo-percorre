@@ -47,8 +47,8 @@ class StudentManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('estudante.listar'), 403, 'Módulo de estudantes desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.listar'), 403, 'Você não tem permissão para listar alunos.');
+        //abort_if(!feature('estudante.listar'), 403, 'Módulo de estudantes desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.listar'), 403, 'Você não tem permissão para listar alunos.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
@@ -56,8 +56,8 @@ class StudentManager extends Component
 
     public function openModal()
     {
-        abort_if(!feature('estudante.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.criar'), 403);
+        //abort_if(!feature('estudante.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.criar'), 403);
 
         $this->resetInputFields();
         $this->showModal = true;
@@ -78,8 +78,8 @@ class StudentManager extends Component
 
     public function edit(int $id)
     {
-        abort_if(!feature('estudante.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
+        //abort_if(!feature('estudante.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
 
         $this->resetInputFields();
         
@@ -100,11 +100,11 @@ class StudentManager extends Component
     public function save()
     {
         if ($this->isEditMode) {
-            abort_if(!feature('estudante.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
+            //abort_if(!feature('estudante.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
         } else {
-            abort_if(!feature('estudante.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.criar'), 403);
+            //abort_if(!feature('estudante.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.criar'), 403);
         }
 
         $rules = [
@@ -151,8 +151,8 @@ class StudentManager extends Component
 
     public function delete(int $id)
     {
-        abort_if(!feature('estudante.excluir'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.excluir'), 403);
+        //abort_if(!feature('estudante.excluir'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.excluir'), 403);
 
         Student::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Estudante excluído com sucesso!');
@@ -180,15 +180,15 @@ class StudentManager extends Component
 
     public function toggleStatus($id)
     {
-        abort_if(!feature('estudante.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
+        //abort_if(!feature('estudante.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.editar'), 403);
         $this->traitToggleStatus($id);
     }
 
     public function showQuickDetails(int $id)
     {
-        abort_if(!feature('estudante.visualizar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.visualizar'), 403);
+        //abort_if(!feature('estudante.visualizar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('estudante.visualizar'), 403);
 
         $student = Student::with(['unidade', 'empresa'])->findOrFail($id);
         

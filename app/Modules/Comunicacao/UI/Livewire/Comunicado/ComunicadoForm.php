@@ -36,8 +36,8 @@ class ComunicadoForm extends Component
 
     public function mount()
     {
-        abort_if(!feature('comunicado.criar'), 403, 'Módulo desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
+        //abort_if(!feature('comunicado.criar'), 403, 'Módulo desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
@@ -84,8 +84,8 @@ class ComunicadoForm extends Component
 
     public function salvar()
     {
-        abort_if(!feature('comunicado.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
+        //abort_if(!feature('comunicado.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('comunicado.criar'), 403);
         
         $this->destinatarios = array_values(array_filter(array_map('trim', $this->destinatarios)));
         $this->cc = array_values(array_filter(array_map('trim', $this->cc)));

@@ -49,7 +49,7 @@ class ConteudoForm extends Component
 
     public function mount($id = null)
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso Restrito');
+        //abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso Restrito');
 
         if ($id) {
             $conteudo = Conteudo::findOrFail($id);

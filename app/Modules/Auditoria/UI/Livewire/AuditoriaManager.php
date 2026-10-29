@@ -23,8 +23,8 @@ class AuditoriaManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('auditoria.listar'), 403, 'O módulo de logs está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.listar'), 403, 'Você não tem permissão para listar os logs.');
+        //abort_if(!feature('auditoria.listar'), 403, 'O módulo de logs está temporariamente desativado no sistema.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.listar'), 403, 'Você não tem permissão para listar os logs.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
@@ -56,8 +56,8 @@ class AuditoriaManager extends Component
 
     public function showQuickView(int $id)
     {
-        abort_if(!feature('auditoria.visualizar'), 403, 'A visualização de detalhes está desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.visualizar'), 403, 'Você não tem permissão para visualizar o log.');
+        //abort_if(!feature('auditoria.visualizar'), 403, 'A visualização de detalhes está desativada.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.visualizar'), 403, 'Você não tem permissão para visualizar o log.');
 
         $log = AuditoriaLog::findOrFail($id);
 

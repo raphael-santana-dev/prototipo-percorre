@@ -40,8 +40,8 @@ class PeriodEdit extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('ciclo.editar'), 403, 'Edição de ciclos desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403, 'Edição de ciclos desativada.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
         $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos', 'statusPipeline'])->findOrFail($id);
         
@@ -173,8 +173,8 @@ class PeriodEdit extends Component
 
     public function salvar()
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
         
         if ($this->tipo_ciclo === 'customizado') {
             $this->slug_projeto = Str::slug($this->slug_projeto ?: $this->nome);

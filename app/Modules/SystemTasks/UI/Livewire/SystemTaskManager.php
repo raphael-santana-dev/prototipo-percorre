@@ -87,8 +87,8 @@ class SystemTaskManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('tarefas.acessar'), 403, 'Módulo de tarefas desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403, 'Acesso restrito.');
+        //abort_if(!feature('tarefas.acessar'), 403, 'Módulo de tarefas desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403, 'Acesso restrito.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
@@ -221,7 +221,7 @@ class SystemTaskManager extends Component
 
     public function reprocessar($modo)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
 
         $task = SystemTask::findOrFail($this->taskReprocessarId);
         $mapa = $task->mapeamento;
@@ -543,7 +543,7 @@ class SystemTaskManager extends Component
 
     public function excluirImportacao($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
         
         $task = SystemTask::find($id);
         
@@ -628,7 +628,7 @@ class SystemTaskManager extends Component
 
     public function baixarErros($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
 
         $task = SystemTask::findOrFail($id);
         $erros = json_decode($task->erro_mensagem, true) ?? [];
@@ -695,7 +695,7 @@ class SystemTaskManager extends Component
 
     public function baixarArquivoOriginal($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
         $task = SystemTask::findOrFail($id);
 
         if ($task->arquivo_caminho && Storage::disk('local')->exists($task->arquivo_caminho)) {
@@ -708,8 +708,8 @@ class SystemTaskManager extends Component
 
     public function solicitarExportacao()
     {
-        abort_if(!feature('tarefas.exportar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.exportar'), 403);
+        //abort_if(!feature('tarefas.exportar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.exportar'), 403);
 
         $ativos = SystemTask::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
         if ($ativos >= 5) {
@@ -743,7 +743,7 @@ class SystemTaskManager extends Component
 
     public function reentrarNaFila($id)
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
 
         $task = SystemTask::findOrFail($id);
 

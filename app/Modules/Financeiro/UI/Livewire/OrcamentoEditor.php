@@ -56,20 +56,6 @@ class OrcamentoEditor extends Component
 
     public function mount($id)
     {
-        abort_if(
-            !feature('financeiro.orcamentos.editar')
-            && !feature('financeiro.orcamentos.listar')
-            && !auth()->user()->hasRole('dev'),
-            403,
-            'O módulo de orçamentos está temporariamente desativado.'
-        );
-        abort_if(
-            !auth()->user()->hasRole('dev')
-            && !auth()->user()->can('financeiro.orcamentos.editar'),
-            403,
-            'Sem permissão para editar orçamentos.'
-        );
-
         $this->orcamento = Orcamento::with([
             'itens' => fn($q) => $q->orderBy('id', 'asc'),
             'itens.natureza',

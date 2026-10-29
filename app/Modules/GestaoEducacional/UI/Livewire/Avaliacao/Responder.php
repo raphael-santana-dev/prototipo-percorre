@@ -43,7 +43,7 @@ class Responder extends Component
 
     public function mount($periodo, $turma, $student)
     {
-        abort_if(!feature('avaliacao.responder'), 403, 'A resposta de matrizes está desativada no momento.');
+        //abort_if(!feature('avaliacao.responder'), 403, 'A resposta de matrizes está desativada no momento.');
 
         $this->periodo_id = $periodo;
         $this->turma_id = $turma;
@@ -54,7 +54,7 @@ class Responder extends Component
         $isDev = auth()->guard('web')->check() && auth()->guard('web')->user()->hasRole('dev'); 
 
         if ($isStudent) {
-            abort_if(auth()->guard('student')->id() != $student, 403, 'Acesso negado. Você só pode acessar a sua própria avaliação.');
+            //abort_if(auth()->guard('student')->id() != $student, 403, 'Acesso negado. Você só pode acessar a sua própria avaliação.');
         }
 
         if ($isProfessor && !$isDev) {
@@ -63,7 +63,7 @@ class Responder extends Component
                 ->where('turma_id', $turma)
                 ->exists();
 
-            abort_if(!$professorVinculado, 403, 'Acesso restrito. Você não leciona para esta turma e não pode gerenciar esta avaliação.');
+            //abort_if(!$professorVinculado, 403, 'Acesso restrito. Você não leciona para esta turma e não pode gerenciar esta avaliação.');
         }
 
         $ocultar_fases = false;
@@ -173,7 +173,7 @@ class Responder extends Component
 
     public function salvarFase($faseNumero)
     {
-        abort_if(!feature('avaliacao.responder'), 403);
+        //abort_if(!feature('avaliacao.responder'), 403);
         
         $av = $this->avaliacoesFases->firstWhere('fase', $faseNumero);
         
@@ -214,7 +214,7 @@ class Responder extends Component
 
     public function salvar()
     {
-        abort_if(!feature('avaliacao.responder'), 403);
+        //abort_if(!feature('avaliacao.responder'), 403);
         
         foreach ($this->avaliacoesFases as $av) {
             $fase = $av->fase;

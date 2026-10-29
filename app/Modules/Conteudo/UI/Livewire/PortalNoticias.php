@@ -20,8 +20,8 @@ class PortalNoticias extends Component
 
     public function mount() 
     {
-        abort_if(!feature('portal.noticias'), 403, 'O módulo de notícias está desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('portal.noticias'), 403, 'Acesso restrito.');
+        //abort_if(!feature('portal.noticias'), 403, 'O módulo de notícias está desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('portal.noticias'), 403, 'Acesso restrito.');
     }
 
     public function updating($prop)

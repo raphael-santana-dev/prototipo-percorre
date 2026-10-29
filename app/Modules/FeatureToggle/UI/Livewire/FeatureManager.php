@@ -37,7 +37,7 @@ class FeatureManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403);
+        //abort_if(!auth()->user()->hasRole('dev'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }

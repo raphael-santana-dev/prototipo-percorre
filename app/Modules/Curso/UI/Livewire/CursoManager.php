@@ -34,17 +34,13 @@ class CursoManager extends Component
 
     public function mount() 
     {
-        abort_if(!feature('curso.listar'), 403, 'O módulo de cursos está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.listar'), 403, 'Você não tem permissão para listar cursos.');
-
+        
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
 
     public function openModal() 
     {
-        abort_if(!feature('curso.criar'), 403, 'A criação de novos cursos está desativada no momento.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.criar'), 403, 'Você não tem permissão para criar cursos.');
         
         $this->resetInputFields();
         $this->showModal = true;
@@ -53,11 +49,11 @@ class CursoManager extends Component
     public function save(CursoService $service) 
     {
         if ($this->isEditMode) {
-            abort_if(!feature('curso.editar'), 403, 'A edição de cursos está desativada no momento.');
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.editar'), 403, 'Você não tem permissão para editar cursos.');
+            //abort_if(!feature('curso.editar'), 403, 'A edição de cursos está desativada no momento.');
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.editar'), 403, 'Você não tem permissão para editar cursos.');
         } else {
-            abort_if(!feature('curso.criar'), 403, 'A criação de novos cursos está desativada no momento.');
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.criar'), 403, 'Você não tem permissão para criar cursos.');
+            //abort_if(!feature('curso.criar'), 403, 'A criação de novos cursos está desativada no momento.');
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.criar'), 403, 'Você não tem permissão para criar cursos.');
         }
 
         $this->validate([
@@ -90,9 +86,6 @@ class CursoManager extends Component
 
     public function edit(CursoService $service, int $id) 
     {
-        abort_if(!feature('curso.editar'), 403, 'A edição de cursos está desativada no momento.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.editar'), 403, 'Você não tem permissão para editar cursos.');
-
         $this->resetInputFields();
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
@@ -110,8 +103,6 @@ class CursoManager extends Component
 
     public function delete(CursoService $service, int $id)
     {
-        abort_if(!feature('curso.excluir'), 403, 'A exclusão de cursos está desativada no momento.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.excluir'), 403, 'Você não tem permissão para excluir cursos.');
         
         $service->deletarCurso($id);
         $this->dispatch('sucesso', msg: 'Curso movido para a lixeira.');
@@ -127,9 +118,7 @@ class CursoManager extends Component
 
     public function showQuickView(CursoService $service, int $id)
     {
-        abort_if(!feature('curso.visualizacao-rapida'), 403, 'A visualização de detalhes está desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('curso.visualizar'), 403, 'Você não tem permissão para visualizar o cursos.');
-
+        
         $curso = $service->buscarPorId($id);
         $curso->load(['unidades', 'turnosVinculados']);
 

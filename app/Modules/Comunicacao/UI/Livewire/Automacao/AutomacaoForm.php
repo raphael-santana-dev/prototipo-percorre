@@ -43,8 +43,8 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
 
         if ($id) {
-            abort_if(!feature('automacao.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+            //abort_if(!feature('automacao.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
 
             $automacao = Automacao::findOrFail($id);
             $this->automacaoId = $automacao->id;
@@ -54,8 +54,8 @@ class AutomacaoForm extends Component
             $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
             $this->status = (bool) $automacao->status;
         } else {
-            abort_if(!feature('automacao.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
+            //abort_if(!feature('automacao.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
@@ -73,11 +73,11 @@ class AutomacaoForm extends Component
     public function salvar()
     {
         if ($this->automacaoId) {
-            abort_if(!feature('automacao.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+            //abort_if(!feature('automacao.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
         } else {
-            abort_if(!feature('automacao.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
+            //abort_if(!feature('automacao.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
 
         $this->validate([

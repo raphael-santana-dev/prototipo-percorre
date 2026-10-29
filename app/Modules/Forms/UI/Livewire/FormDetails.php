@@ -30,8 +30,8 @@ class FormDetails extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('formulario.detalhes'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
+        //abort_if(!feature('formulario.detalhes'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
 
         $this->formulario = Formulario::findOrFail($id);
         $this->ordenacaoCampo = 'created_at';

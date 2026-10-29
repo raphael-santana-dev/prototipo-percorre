@@ -29,8 +29,8 @@ class RolePermissionManager extends Component
 
     public function mount(int $roleId)
     {
-        abort_if(!feature('acl.role.permissoes'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
+        //abort_if(!feature('acl.role.permissoes'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
 
         $role = Role::findOrFail($roleId);
         $this->roleId = $role->id;
@@ -72,8 +72,8 @@ class RolePermissionManager extends Component
 
     public function updatedSelectedPermissions()
     {
-        abort_if(!feature('acl.role.permissoes'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
+        //abort_if(!feature('acl.role.permissoes'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.role.permissoes'), 403);
 
         $role = Role::findOrFail($this->roleId);
         $role->syncPermissions($this->selectedPermissions);

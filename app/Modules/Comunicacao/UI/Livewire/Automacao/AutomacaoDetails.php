@@ -21,8 +21,8 @@ class AutomacaoDetails extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('automacao.visualizar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.visualizar'), 403);
+        //abort_if(!feature('automacao.visualizar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.visualizar'), 403);
         
         $this->automacao = Automacao::with('template')->findOrFail($id);
         $this->breadcrumbs = BreadcrumbHelper::generate('Histórico: ' . $this->automacao->nome);
@@ -43,8 +43,8 @@ class AutomacaoDetails extends Component
 
     public function alternarStatusRegra()
     {
-        abort_if(!feature('automacao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
+        //abort_if(!feature('automacao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
 
         $this->automacao->status = !$this->automacao->status;
         $this->automacao->save();

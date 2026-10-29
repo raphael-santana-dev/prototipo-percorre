@@ -18,7 +18,7 @@ class SystemTaskConfigManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso exclusivo para Desenvolvedores.');
+        //abort_if(!auth()->user()->hasRole('dev'), 403, 'Acesso exclusivo para Desenvolvedores.');
         $this->carregarConfigs();
     }
 

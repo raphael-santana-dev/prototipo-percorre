@@ -24,8 +24,8 @@ class RegistrationDetails extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('inscricao.visualizar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.visualizar'), 403);
+        //abort_if(!feature('inscricao.visualizar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.visualizar'), 403);
 
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
@@ -147,8 +147,8 @@ class RegistrationDetails extends Component
 
     public function atualizarStatus()
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');

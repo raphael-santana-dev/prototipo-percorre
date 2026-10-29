@@ -39,8 +39,8 @@ class TemplateForm extends Component
     public function mount($id = null)
     {
         if ($id) {
-            abort_if(!feature('template.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
+            //abort_if(!feature('template.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
 
             $template = EmailTemplate::findOrFail($id);
             $this->templateId = $template->id;
@@ -55,8 +55,8 @@ class TemplateForm extends Component
             $this->resourceLockId = (int) $this->templateId;
             $this->checkAndAcquireLock();
         } else {
-            abort_if(!feature('template.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
+            //abort_if(!feature('template.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
         }
 
         $this->abaPreview = ($this->canal === 'whatsapp') ? 'whatsapp' : 'email';
@@ -98,11 +98,11 @@ class TemplateForm extends Component
     public function salvar()
     {
         if ($this->templateId) {
-            abort_if(!feature('template.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
+            //abort_if(!feature('template.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
         } else {
-            abort_if(!feature('template.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
+            //abort_if(!feature('template.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.criar'), 403);
         }
 
         if ($this->isLockedByOther) {

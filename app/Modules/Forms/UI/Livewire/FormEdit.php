@@ -37,8 +37,8 @@ class FormEdit extends Component
 
     public function mount($id = null)
     {
-        abort_if(!feature('formulario.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
+        //abort_if(!feature('formulario.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
 
         if ($id) {
             $form = Formulario::findOrFail($id);

@@ -30,8 +30,8 @@ class NaturezaManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('financeiro.natureza.listar'), 403, 'O módulo de naturezas financeiras está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.listar'), 403, 'Sem permissão.');
+        //abort_if(!feature('financeiro.natureza.listar'), 403, 'O módulo de naturezas financeiras está temporariamente desativado no sistema.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.listar'), 403, 'Sem permissão.');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
@@ -58,7 +58,7 @@ class NaturezaManager extends Component
 
     public function sincronizarProtheus()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.sincronizar') && !auth()->user()->can('financeiro.natureza.listar'), 403, 'Sem permissão.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.natureza.sincronizar') && !auth()->user()->can('financeiro.natureza.listar'), 403, 'Sem permissão.');
 
         $resultado = ProtheusOrcamentoService::sincronizarNaturezas();
         if ($resultado['sucesso']) {

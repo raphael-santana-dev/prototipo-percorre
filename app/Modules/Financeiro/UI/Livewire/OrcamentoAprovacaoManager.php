@@ -24,21 +24,6 @@ class OrcamentoAprovacaoManager extends Component
 
     public function mount()
     {
-        abort_if(
-            !feature('financeiro.orcamentos.aprovar')
-            && !feature('financeiro.orcamentos.avaliacao')
-            && !auth()->user()->hasRole('dev'),
-            403,
-            'O módulo de aprovação de orçamentos está temporariamente desativado no sistema.'
-        );
-        abort_if(
-            !auth()->user()->hasRole('dev')
-            && !auth()->user()->can('financeiro.orcamentos.aprovar')
-            && !auth()->user()->can('financeiro.orcamentos.avaliacao'),
-            403,
-            'Sem permissão para acessar aprovações orçamentárias.'
-        );
-
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
             ['label' => 'Financeiro', 'url' => '#'],

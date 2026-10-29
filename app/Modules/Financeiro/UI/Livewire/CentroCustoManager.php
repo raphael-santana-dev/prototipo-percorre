@@ -24,8 +24,8 @@ class CentroCustoManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('financeiro.centro_custo.listar'), 403, 'O módulo de centros de custo está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.centro_custo.listar'), 403, 'Sem permissão.');
+        //abort_if(!feature('financeiro.centro_custo.listar'), 403, 'O módulo de centros de custo está temporariamente desativado no sistema.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.centro_custo.listar'), 403, 'Sem permissão.');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],
@@ -52,7 +52,7 @@ class CentroCustoManager extends Component
 
     public function sincronizarProtheus()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.centro_custo.sincronizar') && !auth()->user()->can('financeiro.centro_custo.listar'), 403, 'Sem permissão.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('financeiro.centro_custo.sincronizar') && !auth()->user()->can('financeiro.centro_custo.listar'), 403, 'Sem permissão.');
 
         $resultado = ProtheusOrcamentoService::sincronizarCentrosCusto();
         if ($resultado['sucesso']) {
