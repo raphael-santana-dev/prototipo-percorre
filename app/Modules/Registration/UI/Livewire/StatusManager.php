@@ -41,16 +41,16 @@ class StatusManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('status.listar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.listar'), 403);
+        //abort_if(!feature('status.listar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.listar'), 403);
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
 
     public function openModal()
     {
-        abort_if(!feature('status.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+        //abort_if(!feature('status.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
 
         $this->resetInputFields();
         $this->showModal = true;
@@ -58,8 +58,8 @@ class StatusManager extends Component
 
     public function toggleVisibilidade($id)
     {
-        abort_if(!feature('status.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+        //abort_if(!feature('status.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
 
         $status = StatusInscricao::findOrFail($id);
         $status->visivel_estudante = !$status->visivel_estudante;
@@ -70,8 +70,8 @@ class StatusManager extends Component
 
     public function edit(int $id)
     {
-        abort_if(!feature('status.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+        //abort_if(!feature('status.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
 
         $this->resetInputFields();
         $status = StatusInscricao::findOrFail($id);
@@ -92,16 +92,16 @@ class StatusManager extends Component
     public function save()
     {
         if ($this->isEditMode) {
-            abort_if(!feature('status.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
+            //abort_if(!feature('status.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.editar'), 403);
             
             if ($this->isInUse) {
                 $statusAntigo = StatusInscricao::findOrFail($this->statusId);
                 $this->nome = $statusAntigo->nome; 
             }
         } else {
-            abort_if(!feature('status.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
+            //abort_if(!feature('status.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.criar'), 403);
         }
 
         $this->validate([
@@ -132,8 +132,8 @@ class StatusManager extends Component
 
     public function delete(int $id)
     {
-        abort_if(!feature('status.excluir'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
+        //abort_if(!feature('status.excluir'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('status.excluir'), 403);
 
         // Verifica na base de dados (incluindo a lixeira com withTrashed)
         $emUso = Inscricao::withTrashed()->where('status_inscricao_id', $id)->exists();

@@ -45,8 +45,8 @@ class Hub extends Component
 
     public function mount()
     {
-        abort_if(!feature('formulario.listar'), 403, 'Módulo desativado.');
-        abort_if(!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('formulario.listar'), 403, 'Acesso restrito.');
+        //abort_if(!feature('formulario.listar'), 403, 'Módulo desativado.');
+        //abort_if(!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('formulario.listar'), 403, 'Acesso restrito.');
         
         $this->ciclos = Ciclo::orderBy('id', 'desc')->get();
         $this->unidades = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get();

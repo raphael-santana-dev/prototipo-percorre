@@ -16,8 +16,8 @@ class UnidadeDetalhes extends Component
 
     public function mount(int $id, UnidadeService $service)
     {
-        abort_if(!feature('unidade.visualizar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
+        //abort_if(!feature('unidade.visualizar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('unidade.visualizar'), 403);
         
         $this->unidade = $service->buscarPorId($id);
 

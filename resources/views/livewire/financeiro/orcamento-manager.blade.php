@@ -6,37 +6,22 @@
             </h1>
             <p class="text-sm text-gray-500 mt-1">Gestão, simulação e envio de orçamentos por centro de custo.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" wire:click="sincronizarCadastrosProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+                <i class="ph-bold ph-database" wire:loading.class="animate-spin" wire:target="sincronizarCadastrosProtheus"></i>
+                <span wire:loading.remove wire:target="sincronizarCadastrosProtheus">Sincronizar C. Custo e Naturezas</span>
+                <span wire:loading wire:target="sincronizarCadastrosProtheus">Sincronizando...</span>
+            </button>
+
+            <button type="button" wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-gray-900 border border-gray-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-black transition flex items-center gap-2">
                 <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
-                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Protheus</span>
+                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Orçamentos</span>
                 <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
             </button>
         </div>
     </div>
 
     @if(isset($metricas))
-        <!-- Painel de Simulação Flat -->
-        <div class="mb-6 bg-white border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 border border-gray-200">
-                    <i class="ph ph-calendar text-xl text-gray-600"></i>
-                </div>
-                <div>
-                    <h3 class="text-sm font-bold text-gray-900">Simulador de Base Orçamentária</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Avance a base de todos os orçamentos para o próximo ano.</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="bg-gray-50 text-gray-700 border border-gray-200 text-sm font-semibold rounded-md py-1.5 px-3">
-                    Ano Base: {{ $anoSimulacao }}
-                </div>
-                <button wire:click="avancarAnoSimulacao" class="px-4 py-1.5 bg-gray-900 hover:bg-black text-white rounded-md text-sm font-medium transition shadow-sm flex items-center gap-2" onclick="confirm('Esta ação clonará a Base Prevista de TODOS os orçamentos para o próximo ano. Continuar?') || event.stopImmediatePropagation()">
-                    Avançar Ano <i class="ph ph-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-
         <div class="mb-6"><x-summary-cards :metricas="$metricas" /></div>
     @endif
 
@@ -45,14 +30,14 @@
             <input type="text" wire:model.live.debounce.500ms="filtroAno" placeholder="Ano" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-32 focus:ring-gray-400 focus:border-gray-400">
             <input type="text" wire:model.live.debounce.500ms="filtroFilial" placeholder="Filial" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-32 focus:ring-gray-400 focus:border-gray-400">
             <input type="text" wire:model.live.debounce.500ms="filtroCentroCusto" placeholder="Centro de Custo..." class="rounded-md border-gray-300 text-sm shadow-sm flex-1 focus:ring-gray-400 focus:border-gray-400">
-            <select wire:model.live="filtroStatus" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-48 focus:ring-gray-400 focus:border-gray-400">
+            <select wire:model.live="filtroStatus" class="rounded-md border-gray-300 text-sm shadow-sm w-full md:w-56 focus:ring-gray-400 focus:border-gray-400">
                 <option value="">Todos os Status</option>
-                <option value="Criado">Criado (Importado)</option>
-                <option value="Em elaboração">Em Elaboração</option>
-                <option value="Finalizado">Finalizado (Aguardando)</option>
-                <option value="Aprovado">Aprovado</option>
-                <option value="Aprovado com ressalvas">Aprovado com Ressalvas</option>
-                <option value="Reprovado">Reprovado</option>
+                <option value="Importado">Importado</option>
+                <option value="Em revisão/atualização">Em revisão/atualização</option>
+                <option value="Finalizado - Aguardando Aprovação">Finalizado - Aguardando Aprovação</option>
+                <option value="Aprovação - Aguardando Revisão pelo Responsável">Aprovação - Aguardando Revisão pelo Responsável</option>
+                <option value="Finalizado - Aprovado">Finalizado - Aprovado</option>
+                <option value="Finalizado - Integrado ao Protheus">Finalizado - Integrado ao Protheus</option>
             </select>
             <button wire:click="limparFiltros" class="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition shadow-sm"><i class="ph-bold ph-funnel-x"></i> Limpar</button>
         </div>
@@ -82,25 +67,38 @@
                             <td class="px-4 py-3 text-center">
                                 @php
                                     $statusColor = match($orcamento->status) {
-                                        'Em elaboração' => 'bg-blue-50 text-blue-700 border-blue-200',
-                                        'Finalizado' => 'bg-purple-50 text-purple-700 border-purple-200',
-                                        'Aprovado' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                        'Aprovado com ressalvas' => 'bg-yellow-50 text-yellow-700 border-yellow-200',
-                                        'Reprovado' => 'bg-red-50 text-red-700 border-red-200',
+                                        'Importado', 'Criado' => 'bg-gray-100 text-gray-700 border-gray-300',
+                                        'Em revisão/atualização', 'Em elaboração' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                        'Finalizado – Aguardando Aprovação', 'Finalizado - Aguardando Aprovação', 'Finalizado' => 'bg-amber-50 text-amber-800 border-amber-200',
+                                        'Aprovação – Aguardando Revisão pelo Responsável', 'Aprovação - Aguardando Revisão pelo Responsável', 'Reprovado' => 'bg-red-50 text-red-700 border-red-200',
+                                        'Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                        'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
                                         default => 'bg-gray-100 text-gray-600 border-gray-200'
                                     };
                                 @endphp
-                                <span class="px-2.5 py-1 text-[10px] font-semibold rounded-md border {{ $statusColor }} uppercase tracking-wide">{{ $orcamento->status ?? 'Criado' }}</span>
+                                <span class="px-2.5 py-1 text-[10px] font-semibold rounded-md border {{ $statusColor }} uppercase tracking-wide">{{ $orcamento->status ?? 'Importado' }}</span>
                             </td>
                             <td class="px-4 py-3 font-semibold text-right text-gray-900">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    @if(in_array($orcamento->status, ['Aprovado', 'Aprovado com ressalvas']))
-                                        <button wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado']))
+                                        <button type="button"
+                                                wire:click="integrarAoProtheus({{ $orcamento->id }})"
+                                                wire:loading.attr="disabled"
+                                                onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus via PUT?') || event.stopImmediatePropagation()"
+                                                class="px-2.5 py-1 text-xs font-medium bg-emerald-700 text-white hover:bg-emerald-800 rounded transition flex items-center gap-1"
+                                                title="Finalizar e Integrar ao Protheus">
+                                            <i class="ph-bold ph-cloud-arrow-up"></i> Integrar
+                                        </button>
+                                    @endif
+
+                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
+                                        <button type="button" wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
                                             <i class="text-lg ph-bold ph-brackets-curly"></i>
                                         </button>
                                     @endif
-                                    <button wire:click="editarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition" title="Abrir Planilha de Edição">
+
+                                    <button type="button" wire:click="editarOrcamento({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition" title="Abrir Orçamento">
                                         <i class="text-lg ph ph-pencil-simple"></i>
                                     </button>
                                 </div>

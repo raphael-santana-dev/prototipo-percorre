@@ -28,7 +28,7 @@ class SolicitacoesManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403, 'Acesso restrito.');
+        //abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403, 'Acesso restrito.');
     }
 
     public function abrirResposta($id, $acao = 'visualizar')

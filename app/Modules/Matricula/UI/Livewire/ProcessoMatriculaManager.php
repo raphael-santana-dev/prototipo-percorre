@@ -40,7 +40,7 @@ class ProcessoMatriculaManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.listar'), 403, 'Acesso restrito.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.listar'), 403, 'Acesso restrito.');
     }
 
     public function updating($nomePropriedade)

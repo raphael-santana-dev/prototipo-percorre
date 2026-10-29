@@ -24,11 +24,11 @@ class Detalhes extends Component
     public function mount($id = null)
     {
         if ($id) {
-            abort_if(!feature('matricula.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
+            //abort_if(!feature('matricula.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
         } else {
-            abort_if(!feature('matricula.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
+            //abort_if(!feature('matricula.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
         }
 
         $this->estudantes = Student::select('id', 'name', 'cpf')->orderBy('name')->get();
@@ -56,11 +56,11 @@ class Detalhes extends Component
     public function salvar()
     {
         if ($this->matriculaId) {
-            abort_if(!feature('matricula.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
+            //abort_if(!feature('matricula.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.editar'), 403);
         } else {
-            abort_if(!feature('matricula.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
+            //abort_if(!feature('matricula.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.criar'), 403);
         }
         
         $this->validate([

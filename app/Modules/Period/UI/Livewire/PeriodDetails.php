@@ -50,8 +50,8 @@ class PeriodDetails extends Component
 
     public function mount($id, ?string $slug = null)
     {
-        abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
+        //abort_if(!feature('ciclo.visualizar'), 403, 'A visualização de ciclos está desativada.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.visualizar'), 403, 'Acesso restrito.');
 
         $this->ciclo = Ciclo::with(['cursos', 'unidades', 'turnos', 'fases'])->findOrFail($id);
         
@@ -65,8 +65,8 @@ class PeriodDetails extends Component
 
     public function toggleStatus($id)
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
         $ciclo = Ciclo::findOrFail($id);
         $novoStatus = !$ciclo->status;
@@ -149,8 +149,8 @@ class PeriodDetails extends Component
     #[On('quick-change-status')]
     public function alterarStatusQuickView($id, $status)
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         $inscricao = Inscricao::find($id);
         if ($inscricao) {
@@ -222,8 +222,8 @@ class PeriodDetails extends Component
 
     public function salvarStatusEmLote()
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         $this->validate(['novoStatusId' => 'required', 'selecionadas' => 'required|array|min:1']);
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -235,8 +235,8 @@ class PeriodDetails extends Component
 
     public function alterarStatusLoteRapido($statusId)
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
         if (count($this->selecionadas) === 0) return;
         $inscricoes = Inscricao::whereIn('id', $this->selecionadas)->get();
@@ -247,8 +247,8 @@ class PeriodDetails extends Component
 
     public function recalcularPontuacoes()
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
         $trackingScore = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'recalculo', 'formato' => 'system',
@@ -270,8 +270,8 @@ class PeriodDetails extends Component
 
     public function gerarRanking()
     {
-        abort_if(!feature('inscricao.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         $tracking = \App\Models\SystemTask::create([
             'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'ranking', 'formato' => 'system',

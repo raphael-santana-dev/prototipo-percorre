@@ -70,15 +70,7 @@ class User extends Authenticatable
     public function turnos()
     {
         return $this->belongsToMany(\App\Modules\Turno\Domain\Models\Turno::class, 'turno_user');
-    }
-
-    public function centros_de_custo()
-    {
-        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
-                    ->withPivot('expires_at')
-                    ->withTimestamps();
-    }
-    
+    }   
     
     public function temVisaoGlobal(?string $modulo = null): bool
     {
@@ -104,5 +96,103 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new CustomResetPasswordNotification($token));
+    }
+
+    public function centros_de_custo()
+    {
+        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
+                    ->withPivot(['tipo_acesso', 'expires_at'])
+                    ->withTimestamps();
+    }
+
+    /**
+     * Relacionamento 1: Centros de Custo vinculados para EDIÇÃO de orçamento
+     */
+    public function centros_de_custo_edicao()
+    {
+        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
+                    ->wherePivot('tipo_acesso', 'edicao')
+                    ->withPivot(['tipo_acesso', 'expires_at'])
+                    ->withTimestamps();
+    }
+
+    /**
+     * Relacionamento 2: Centros de Custo vinculados para APROVAÇÃO de orçamento
+     */
+    public function centros_de_custo_aprovacao()
+    {
+        return $this->belongsToMany(\App\Modules\Financeiro\Domain\Models\CentroCusto::class, 'centro_custo_user')
+                    ->wherePivot('tipo_acesso', 'aprovacao')
+                    ->withPivot(['tipo_acesso', 'expires_at'])
+                    ->withTimestamps();
+    }
+
+    /**
+     * Verifica se o usuário possui a opção "Permissão Global de Centros de Custo" ativa
+     */
+    public function possuiVisaoGlobalCentrosCusto(?string $tipo = null): bool
+    {
+        if ($this->hasRole('dev')) {
+            return true;
+        }
+
+        $nomesPermissoes = $this->getAllPermissions()->pluck('name')->toArray();
+
+        if ($tipo === 'edicao') {
+            return in_array('financeiro.visao_global.edicao', $nomesPermissoes, true)
+                || in_array('financeiro.visao_global', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global.edicao', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global', $nomesPermissoes, true);
+        }
+
+        if ($tipo === 'aprovacao') {
+            return in_array('financeiro.visao_global.aprovacao', $nomesPermissoes, true)
+                || in_array('financeiro.visao_global', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global.aprovacao', $nomesPermissoes, true)
+                || in_array('centros_custo.visao_global', $nomesPermissoes, true);
+        }
+
+        return in_array('financeiro.visao_global', $nomesPermissoes, true)
+            || in_array('financeiro.visao_global.edicao', $nomesPermissoes, true)
+            || in_array('financeiro.visao_global.aprovacao', $nomesPermissoes, true)
+            || in_array('centros_custo.visao_global', $nomesPermissoes, true);
+    }
+
+    /**
+     * Retorna os códigos de Centros de Custo que este usuário pode EDITAR
+     * (Retorna null se tiver acesso global a todos os CCs)
+     */
+    public function obterCodigosCcEdicao(): ?array
+    {
+        if ($this->possuiVisaoGlobalCentrosCusto('edicao')) {
+            return null; // null = Todos os Centros de Custo
+        }
+
+        return $this->centros_de_custo_edicao()
+            ->where(function ($q) {
+                $q->whereNull('centro_custo_user.expires_at')
+                  ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+            })
+            ->pluck('centros_custo.codigo')
+            ->toArray();
+    }
+
+    /**
+     * Retorna os códigos de Centros de Custo que este usuário pode APROVAR
+     * (Retorna null se tiver acesso global a todos os CCs)
+     */
+    public function obterCodigosCcAprovacao(): ?array
+    {
+        if ($this->possuiVisaoGlobalCentrosCusto('aprovacao')) {
+            return null; // null = Todos os Centros de Custo
+        }
+
+        return $this->centros_de_custo_aprovacao()
+            ->where(function ($q) {
+                $q->whereNull('centro_custo_user.expires_at')
+                  ->orWhereDate('centro_custo_user.expires_at', '>=', now()->toDateString());
+            })
+            ->pluck('centros_custo.codigo')
+            ->toArray();
     }
 }

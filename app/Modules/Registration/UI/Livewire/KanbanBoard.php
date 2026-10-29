@@ -46,8 +46,8 @@ class KanbanBoard extends Component
 
     public function mount($id = null)
     {
-        abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('crm.acessar'), 403, 'Acesso restrito.');
+        //abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('crm.acessar'), 403, 'Acesso restrito.');
         
         $paramId = $id ?: request()->query('ciclo_id') ?: request()->query('id');
         $cicloPadrao = $this->obterCicloPadrao($paramId ? (int)$paramId : null);
@@ -283,7 +283,7 @@ class KanbanBoard extends Component
     #[On('atualizar-status-crm')]
     public function atualizarStatus($id, $statusId)
     {
-        abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
 
         $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
         
@@ -406,7 +406,7 @@ class KanbanBoard extends Component
 
     public function moverLote()
     {
-        abort_if(!feature('inscricao.editar'), 403);
+        //abort_if(!feature('inscricao.editar'), 403);
         $this->validate([
             'selecionados' => 'required|array|min:1', 
             'statusDestinoLote' => 'required|exists:status_inscricoes,id'

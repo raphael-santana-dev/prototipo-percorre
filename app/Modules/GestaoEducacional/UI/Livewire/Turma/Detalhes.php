@@ -19,11 +19,11 @@ class Detalhes extends Component
     public function mount($id = null)
     {
         if ($id) {
-            abort_if(!feature('turma.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
+            //abort_if(!feature('turma.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
         } else {
-            abort_if(!feature('turma.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
+            //abort_if(!feature('turma.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
         }
 
         $this->ciclos = DB::table('ciclos')->select('id', 'nome', 'ano', 'semestre')->orderBy('ano', 'desc')->get();
@@ -53,11 +53,11 @@ class Detalhes extends Component
     public function salvar()
     {
         if ($this->turmaId) {
-            abort_if(!feature('turma.editar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
+            //abort_if(!feature('turma.editar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.editar'), 403);
         } else {
-            abort_if(!feature('turma.criar'), 403);
-            abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
+            //abort_if(!feature('turma.criar'), 403);
+            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('turma.criar'), 403);
         }
         
         $this->validate([

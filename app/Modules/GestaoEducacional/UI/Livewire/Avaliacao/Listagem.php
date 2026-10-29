@@ -16,7 +16,7 @@ class Listagem extends Component
 
     public function mount()
     {
-        abort_if(!feature('avaliacao.listar'), 403, 'Sistema de avaliações desativado temporariamente.');
+        //abort_if(!feature('avaliacao.listar'), 403, 'Sistema de avaliações desativado temporariamente.');
     }
     
     public function getHeadersProperty()

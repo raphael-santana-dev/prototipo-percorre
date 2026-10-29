@@ -21,8 +21,8 @@ class RegrasManager extends Component
 
     public function mount($id, ?string $slug = null)
     {
-        abort_if(!feature('ciclo.regras'), 403, 'Construtor de regras desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403, 'Acesso restrito.');
+        //abort_if(!feature('ciclo.regras'), 403, 'Construtor de regras desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403, 'Acesso restrito.');
 
         $this->ciclo = Ciclo::findOrFail($id);
 
@@ -93,8 +93,8 @@ class RegrasManager extends Component
 
     public function salvar()
     {
-        abort_if(!feature('ciclo.regras'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403);
+        //abort_if(!feature('ciclo.regras'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.regras'), 403);
 
         if ($this->isLockedByOther) {
             $this->dispatch('erro', msg: 'Edição bloqueada por outro utilizador.');
