@@ -193,7 +193,6 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('teste-rd.crm',  \App\Modules\Teste\RDCrm\UI\Livewire\RdCrmManager::class);
         Livewire::component('teste-design',  \App\Modules\Teste\RDCrm\UI\Livewire\DesignSystemViewer::class);
 
-        Livewire::component('aprendizagem.preinscricao',  \App\Modules\Website\UI\Livewire\PreInscricao::class);
         Livewire::component('aprendizagem.listagem',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Listagem::class);
         Livewire::component('aprendizagem.acompanhamento',  \App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento::class);
         Livewire::component('aprendizagem.formulario',  \App\Modules\GestaoEducacional\UI\Livewire\FormularioAprendizagem::class);

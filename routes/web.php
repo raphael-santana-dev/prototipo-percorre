@@ -15,7 +15,6 @@ use App\Modules\Turno\UI\Livewire\TurnoManager;
 use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
 use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
-use App\Modules\Website\UI\Livewire\PreInscricao;
 use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
@@ -32,10 +31,6 @@ Route::get('/inscricao/{slug_projeto?}', \App\Modules\Website\UI\Livewire\Inscri
 // Formulários Públicos Gerais e Pré-Inscrição (Acesso Público)
 Route::get('/f/{slug}', \App\Modules\Website\UI\Livewire\FormularioPublico::class)
     ->name('formularios.publico')
-    ->middleware('throttle:30,1');
-
-Route::get('/pre-inscricao/{slug}', PreInscricao::class)
-    ->name('pre-inscricao.publico')
     ->middleware('throttle:30,1');
 
 Route::get('/portal', \App\Modules\Conteudo\UI\Livewire\PortalNoticias::class)->name('portal.index');
