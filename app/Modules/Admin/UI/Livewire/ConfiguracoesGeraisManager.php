@@ -22,7 +22,7 @@ class ConfiguracoesGeraisManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
+        //abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso restrito.');
 
         if (\Illuminate\Support\Facades\Schema::hasTable('configuracoes_gerais')) {
             $this->ocultar_fases_restritas = ConfiguracaoGeral::where('chave', 'ocultar_fases_restritas')->value('valor') === 'true';

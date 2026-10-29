@@ -28,7 +28,7 @@
                         </div>
                         
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 text-left whitespace-normal">
-                            O link oficial redireciona o candidato para o <b>Ciclo Ativo</b> de forma automática. Copie o iframe para embutir no seu site, ou use o Link Público para enviar via WhatsApp/E-mail.
+                            O link oficial redireciona o candidato para o <b>Ciclo Regular Ativo</b> de forma automática. Para projetos customizados, copie o link diretamente no ícone da linha do ciclo na tabela.
                         </p>
                         
                         <div class="space-y-4 text-left">
@@ -49,9 +49,13 @@
                         </div>
                         
                         <div class="mt-6 flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-5">
-                            <a href="{{ url('/inscricao') }}" target="_blank" class="text-sm font-bold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center gap-1 transition-colors">
-                                Testar Formulário <i class="ph-bold ph-arrow-up-right"></i>
-                            </a>
+                            @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
+                                <a href="{{ url('/inscricao?modo=teste') }}" target="_blank" class="text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+                                    <i class="ph-fill ph-flask"></i> Testar em Sandbox <i class="ph-bold ph-arrow-up-right"></i>
+                                </a>
+                            @else
+                                <span></span>
+                            @endif
                             <button @click="navigator.clipboard.writeText(document.getElementById('linkPublicoInscricao').value); $dispatch('sucesso', {msg: 'Link Público copiado!'}); showEmbedInscricao = false;" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
                                 <i class="ph-bold ph-copy"></i> Copiar Link
                             </button>
@@ -189,6 +193,11 @@
         </x-slot>
 
         @forelse ($registros as $ciclo)
+            @php
+                $urlPublicaCiclo = (($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && !empty($ciclo->slug_projeto))
+                    ? url('/inscricao/' . $ciclo->slug_projeto)
+                    : url('/inscricao');
+            @endphp
             <tr class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50" wire:key="linha-ciclo-{{ $ciclo->id }}">
                 
                 <td class="px-4 py-1.5 text-center whitespace-nowrap w-10">
@@ -197,9 +206,19 @@
                 
                 <td class="px-4 py-1.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">#{{ str_pad($ciclo->id, 3, '0', STR_PAD_LEFT) }}</td>
                 
-                <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
-                    <div class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white">{{ $ciclo->nome }}</div>
-                    <div class="text-xs text-gray-500 leading-tight">Ano {{ $ciclo->ano }} • {{ $ciclo->semestre }}º Sem.</div>
+                <td class="px-4 py-1.5 whitespace-nowrap min-w-[220px]">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-gray-900 text-[13px] leading-tight dark:text-white">{{ $ciclo->nome }}</span>
+                        @if(($ciclo->tipo_ciclo ?? 'regular') === 'customizado')
+                            <span class="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800 rounded" title="URL: /inscricao/{{ $ciclo->slug_projeto }}">
+                                Projeto
+                            </span>
+                        @endif
+                    </div>
+                    <div class="text-xs text-gray-500 leading-tight flex items-center gap-1.5 mt-0.5">
+                        <span>Ano {{ $ciclo->ano }} • {{ $ciclo->semestre }}º Sem.</span>
+                        <span class="text-purpura-600 dark:text-purpura-400 font-bold">• {{ $ciclo->fase_atual_nome }}</span>
+                    </div>
                 </td>
                 
                 <td class="px-4 py-1.5 whitespace-nowrap text-[13px] text-gray-600 dark:text-gray-300">
@@ -261,19 +280,22 @@
                     <div class="flex items-center justify-end gap-1">
                         <button x-data="{ copiado: false }" 
                                 @click="
-                                    let code = `<iframe src='{{ route('publico.inscricao') }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
+                                    let code = `<iframe src='{{ $urlPublicaCiclo }}?embed=true' width='100%' height='800' frameborder='0' style='border:none; border-radius: 8px;'></iframe>`;
                                     navigator.clipboard.writeText(code); 
                                     copiado = true; 
                                     setTimeout(() => copiado = false, 2000);
                                 " 
                                 class="p-1.5 transition-colors rounded-lg relative" 
                                 :class="copiado ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-600'"
-                                title="Copiar Código de Incorporação (Iframe)">
+                                title="Copiar Código de Incorporação (Iframe) - {{ $urlPublicaCiclo }}">
                             <i class="text-lg ph" :class="copiado ? 'ph-check-circle' : 'ph-code'"></i>
                         </button>
                         <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-600" title="Ver CRM"><i class="text-lg ph-fill ph-kanban"></i></a>
                         <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
-                        <a href="{{ route('publico.inscricao', ['preview' => 'true', 'ciclo_id' => $ciclo->id]) }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Pré-visualizar Formulário de Inscrição">
+                        <a href="{{ $urlPublicaCiclo . '?modo=teste&ciclo_id=' . $ciclo->id }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-gray-600" title="Testar Formulário em Sandbox">
+                            <i class="text-lg ph-bold ph-flask"></i>
+                        </a>
+                        <a href="{{ $urlPublicaCiclo . '?preview=true&ciclo_id=' . $ciclo->id }}" target="_blank" class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-gray-600" title="Pré-visualizar Formulário de Inscrição">
                             <i class="text-lg ph-bold ph-arrow-square-out"></i>
                         </a>
                         <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Ver Detalhes"><i class="text-lg ph ph-eye"></i></a>
@@ -281,13 +303,13 @@
                         <a href="{{ route('ciclos.edit', $ciclo->id) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-600" title="Editar Completo"><i class="text-lg ph ph-pencil-simple"></i></a>
                         <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $ciclo->id]) }}" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Construtor Formulário Público"><i class="text-lg ph ph-list-dashes"></i></a>
                         <a href="{{ route('ciclos.regras', $ciclo->id) }}" class="p-1.5 text-yellow-600 transition-colors rounded hover:bg-yellow-50 dark:hover:bg-gray-600" title="Regras de Pontuação"><i class="text-lg ph ph-star"></i></a>
-                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir permanentemente?')"><i class="text-lg ph ph-trash"></i></button>
+                        <button wire:click="delete({{ $ciclo->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-600" title="Excluir" onclick="confirm('Excluir permanentemente?') || event.stopImmediatePropagation()"><i class="text-lg ph ph-trash"></i></button>
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="9" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="10" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                     <div class="flex flex-col items-center justify-center">
                         <i class="ph ph-magnifying-glass text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
                         <p class="font-medium text-gray-600 dark:text-gray-300">Nenhum ciclo encontrado.</p>
@@ -302,10 +324,15 @@
                 <div wire:key="card-ciclo-{{ $ciclo->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                     
                     <div class="flex items-center justify-between mb-4 w-full">
-                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $ciclo->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
-                            {{ $ciclo->status ? 'Ativo' : 'Inativo' }}
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $ciclo->status ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                                {{ $ciclo->status ? 'Ativo' : 'Inativo' }}
+                            </span>
+                            @if(($ciclo->tipo_ciclo ?? 'regular') === 'customizado')
+                                <span class="px-2 py-1 text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded">Projeto</span>
+                            @endif
+                        </div>
                         
                         <div class="flex items-center gap-2">
                             <input type="checkbox" wire:model.live="selecionadas" value="{{ $ciclo->id }}" wire:key="checkbox-card-{{ $ciclo->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer">
@@ -319,17 +346,18 @@
                         <div class="overflow-hidden w-full">
                             <h4 class="text-sm font-bold text-gray-900 truncate dark:text-white" title="{{ $ciclo->nome }}">{{ $ciclo->nome }}</h4>
                             <p class="text-[11px] font-medium text-gray-500 uppercase tracking-widest mt-0.5">Semestre {{ $ciclo->ano }}.{{ $ciclo->semestre }}</p>
+                            <p class="text-[10px] font-bold text-purpura-600 truncate mt-0.5">{{ $ciclo->fase_atual_nome }}</p>
                         </div>
                     </div>
 
                     <div class="bg-gray-50 dark:bg-gray-900/50 rounded p-2 space-y-2 border border-gray-100 dark:border-gray-700 mb-3">
                         <div class="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                             <span>Abertura</span>
-                            <span class="text-gray-900">{{ $ciclo->data_inicio->format('d/m/Y') }}</span>
+                            <span class="text-gray-900 dark:text-gray-200">{{ $ciclo->data_inicio->format('d/m/Y') }}</span>
                         </div>
                         <div class="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                             <span>Encerramento</span>
-                            <span class="text-gray-900">{{ $ciclo->data_fim->format('d/m/Y') }}</span>
+                            <span class="text-gray-900 dark:text-gray-200">{{ $ciclo->data_fim->format('d/m/Y') }}</span>
                         </div>
                     </div>
 
@@ -342,9 +370,9 @@
                     <div class="flex flex-col items-center justify-center w-full mb-3 px-1">
                         <div class="flex justify-between w-full text-[10px] font-bold mb-1">
                             <span class="text-gray-500 uppercase tracking-wider">Ocupação</span>
-                            <span class="text-gray-700">{{ $preenchidas }} / {{ $totalVagas }} vagas</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ $preenchidas }} / {{ $totalVagas }} vagas</span>
                         </div>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
                             <div class="{{ $corBarra }} h-1.5 rounded-full transition-all" style="width: {{ min($percentual, 100) }}%"></div>
                         </div>
                     </div>
@@ -353,7 +381,6 @@
                         <span class="text-xs font-bold text-purpura-600">{{ $ciclo->inscricoes_count ?? 0 }} inscritos</span>
                         
                         <div class="flex items-center gap-1">
-                            
                             <a href="{{ route('ciclos.crm', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="CRM Kanban"><i class="text-lg ph-bold ph-kanban"></i></a>
                             <button wire:click="showQuickView({{ $ciclo->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 rounded-md transition" title="Info"><i class="text-lg ph-bold ph-info"></i></button>
                             <a href="{{ route('ciclos.show', $ciclo->id) }}" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-md transition"><i class="text-lg ph-bold ph-arrow-right"></i></a>
@@ -389,7 +416,7 @@
                 <div class="w-80 bg-white dark:bg-gray-800/60 border-r border-gray-200 dark:border-gray-700 p-6 flex flex-col gap-2 shrink-0 overflow-y-auto">
                     @php
                         $passosLista = [
-                            1 => ['titulo' => 'Informações Gerais', 'desc' => 'Nome, datas e período'],
+                            1 => ['titulo' => 'Informações Gerais', 'desc' => 'Nome, modalidade e datas'],
                             2 => ['titulo' => 'Estrutura Académica', 'desc' => 'Unidades, cursos e turnos'],
                             3 => ['titulo' => 'Distribuição de Vagas', 'desc' => 'Capacidade e faixa etária'],
                             4 => ['titulo' => 'Etapas do Ciclo', 'desc' => 'Funil de status (CRM)'],
@@ -422,39 +449,58 @@
                         
                         <!-- PASSO 1: DADOS BÁSICOS -->
                         @if($passoAtual === 1)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Passo 1: Informações Básicas</h3>
-                                    <p class="text-xs text-gray-500 mt-1">Defina o nome de exibição, ano, semestre e as datas de abertura e encerramento das inscrições.</p>
+                                    <p class="text-xs text-gray-500 mt-1">Defina o nome de exibição, a modalidade do processo seletivo e as datas de abertura e encerramento.</p>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div class="md:col-span-3">
-                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nome do Ciclo</label>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Nome do Ciclo</label>
                                         <input type="text" wire:model="nome" placeholder="Ex: Processo Seletivo 2026.2" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm font-bold shadow-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ano *</label>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Ano *</label>
                                         <input type="number" wire:model="ano" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm font-bold shadow-sm">
                                         @error('ano') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Semestre *</label>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Semestre *</label>
                                         <select wire:model="semestre" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm font-bold shadow-sm">
                                             <option value="1">1º Semestre</option>
                                             <option value="2">2º Semestre</option>
                                         </select>
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Modalidade *</label>
+                                        <select wire:model.live="tipo_ciclo" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm font-bold shadow-sm">
+                                            <option value="regular">Regular (/inscricao)</option>
+                                            <option value="customizado">Projeto Customizado</option>
+                                        </select>
+                                    </div>
                                 </div>
+
+                                @if($tipo_ciclo === 'customizado')
+                                    <div class="p-4 bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                                        <label class="block text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase mb-1">Slug do Projeto (URL Exclusiva) *</label>
+                                        <div class="flex items-center">
+                                            <span class="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-xs font-mono text-gray-500">/inscricao/</span>
+                                            <input type="text" wire:model="slug_projeto" placeholder="projeto-verao-2026" class="w-full rounded-r-lg border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-mono">
+                                        </div>
+                                        <p class="text-[11px] text-indigo-700 dark:text-indigo-400 mt-1">Este ciclo poderá ficar ativo simultaneamente com o ciclo regular em seu próprio endereço.</p>
+                                        @error('slug_projeto') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                                    </div>
+                                @endif
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Data e Hora de Abertura *</label>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Data e Hora de Abertura *</label>
                                         <input type="datetime-local" wire:model="data_inicio" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm shadow-sm">
                                         @error('data_inicio') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Data e Hora de Encerramento *</label>
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">Data e Hora de Encerramento *</label>
                                         <input type="datetime-local" wire:model="data_fim" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm shadow-sm">
                                         @error('data_fim') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                     </div>
@@ -475,14 +521,16 @@
 
                                 <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
-                                    <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">Ativar este ciclo imediatamente</label>
+                                    <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
+                                        Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outro ciclo regular ativo)' : '(projetos customizados não desativam o ciclo regular)' }}
+                                    </label>
                                 </div>
                             </div>
                         @endif
 
                         <!-- PASSO 2: UNIDADE / CURSO / TURNO (ESTILO MAC OS EXPLORER) -->
                         @if($passoAtual === 2)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl space-y-6">
                                 <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-tree-structure text-purpura-600"></i> Passo 2: Estrutura Académica</h3>
                                     <p class="text-xs text-gray-500 mt-1">Selecione as Unidades, Cursos e Turnos disponíveis neste processo seletivo.</p>
@@ -549,7 +597,7 @@
 
                         <!-- PASSO 3: DISTRIBUIÇÃO DE VAGAS -->
                         @if($passoAtual === 3)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl space-y-6">
                                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <div>
                                         <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-users-three text-purpura-600"></i> Passo 3: Distribuição de Vagas</h3>
@@ -611,7 +659,6 @@
 
                                 <div class="w-full" x-data="{
                                      initSortable() {
-                                         // Aguarda o objeto global estar disponível para evitar erros
                                          if (typeof Sortable === 'undefined') {
                                              setTimeout(() => this.initSortable(), 200);
                                              return;
@@ -665,7 +712,7 @@
 
                         <!-- PASSO 5: DOCUMENTOS EXIGIDOS -->
                         @if($passoAtual === 5)
-                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl  space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl space-y-6">
                                 <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
                                     <div>
                                         <h3 class="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-files text-purpura-600"></i> Passo 5: Documentos Exigidos</h3>
@@ -704,7 +751,7 @@
 
                         <!-- PASSO 6: SUCESSO E FORM BUILDER -->
                         @if($passoAtual === 6)
-                            <div class="bg-white dark:bg-gray-800 p-10 rounded-2xl  text-center space-y-6">
+                            <div class="bg-white dark:bg-gray-800 p-10 rounded-2xl text-center space-y-6">
                                 <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 text-green-600 rounded-full dark:bg-green-900/30 dark:text-green-400 mx-auto text-4xl shadow-inner">
                                     <i class="ph-bold ph-check"></i>
                                 </div>

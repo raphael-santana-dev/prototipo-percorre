@@ -39,7 +39,11 @@
                         @endforeach
 
                         @php
-                            $extrasCount = $user->permissions->where('name', '!=', 'financeiro.visao_global')->count();
+                            $extrasCount = $user->permissions->whereNotIn('name', [
+                                'financeiro.visao_global',
+                                'financeiro.visao_global.edicao',
+                                'financeiro.visao_global.aprovacao'
+                            ])->count();
                         @endphp
                         @if($extrasCount > 0)
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded">
@@ -61,13 +65,25 @@
                             </span>
                         @endif
 
-                        @if($user->permissions->contains('name', 'financeiro.visao_global'))
-                            <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400">
-                                <i class="ph ph-wallet"></i> Fin: Global
+                        {{-- Badge de Centros de Custo para Edição --}}
+                        @if($user->possuiVisaoGlobalCentrosCusto('edicao'))
+                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                <i class="ph-bold ph-pencil-simple"></i> Edição CC: Global
                             </span>
-                        @elseif($user->centros_de_custo->count() > 0)
-                            <span class="inline-flex items-center gap-1 bg-purpura-50 border border-purpura-200 text-purpura-700 px-1.5 py-0.5 rounded text-[10px] font-bold dark:bg-purpura-900/30 dark:border-purpura-800 dark:text-purpura-300">
-                                <i class="ph ph-wallet"></i> {{ $user->centros_de_custo->count() }} C.Custo
+                        @elseif($user->centros_de_custo_edicao->count() > 0)
+                            <span class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                <i class="ph-bold ph-pencil-simple"></i> Edição: {{ $user->centros_de_custo_edicao->count() }} CC
+                            </span>
+                        @endif
+
+                        {{-- Badge de Centros de Custo para Aprovação --}}
+                        @if($user->possuiVisaoGlobalCentrosCusto('aprovacao'))
+                            <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                <i class="ph-bold ph-check-square-offset"></i> Aprovação CC: Global
+                            </span>
+                        @elseif($user->centros_de_custo_aprovacao->count() > 0)
+                            <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                <i class="ph-bold ph-check-square-offset"></i> Aprovação: {{ $user->centros_de_custo_aprovacao->count() }} CC
                             </span>
                         @endif
                     </div>
@@ -309,7 +325,7 @@
                                     @endif
                                 </div>
 
-                                {{-- 2.2. ATRIBUIÇÃO DE UNIDADE / CURSO / TURNO (ESTILO CASCATA DO CICLO) --}}
+                                {{-- 2.2. ATRIBUIÇÃO DE UNIDADE / CURSO / TURNO --}}
                                 <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
                                     <div class="mb-3">
                                         <h4 class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
@@ -405,53 +421,104 @@
                                     @error('turnosSelecionados') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
                                 </div>
 
-                                {{-- 2.3. ATRIBUIÇÃO DE CENTROS DE CUSTO (QUALQUER ROLE) --}}
+                                {{-- 2.3. ATRIBUIÇÃO DE CENTROS DE CUSTO SEPARADA: EDIÇÃO vs APROVAÇÃO --}}
                                 <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <div class="mb-3">
                                         <h4 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                             <i class="ph-fill ph-wallet text-purpura-500 text-lg"></i> Vínculos de Centros de Custo (Orçamento / Financeiro)
                                         </h4>
-                                        <p class="text-xs text-gray-500">Disponível para qualquer Role. Vincule o usuário a um ou mais Centros de Custo ou conceda visão global.</p>
+                                        <p class="text-xs text-gray-500">Defina separadamente quais Centros de Custo este usuário pode <strong>Editar/Elaborar</strong> e quais ele pode <strong>Aprovar/Avaliar</strong>.</p>
                                     </div>
 
-                                    <label class="flex items-center gap-3 cursor-pointer mb-4 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 hover:border-purpura-300 transition-colors">
-                                        <input type="checkbox" wire:model.live="acessoGlobalFinanceiro" class="w-5 h-5 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-800 dark:border-gray-700">
-                                        <div>
-                                            <span class="text-xs font-bold text-gray-900 dark:text-white block">Permissão Global de Centros de Custo (Todos os Centros de Custo)</span>
-                                            <span class="text-[11px] text-gray-500">Permite visualizar e gerenciar orçamentos de todas as áreas sem restrição por centro de custo.</span>
-                                        </div>
-                                    </label>
-
-                                    @if(!$acessoGlobalFinanceiro)
-                                        <div class="bg-gray-50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto custom-scrollbar space-y-2">
-                                            <div class="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
-                                                <span>Centros de Custo Disponíveis</span>
-                                                <span class="text-purpura-600">{{ count($centrosCustoSelecionados) }} selecionado(s)</span>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        
+                                        {{-- BLOCO 1: CENTROS DE CUSTO PARA EDIÇÃO --}}
+                                        <div class="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 flex flex-col">
+                                            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                                                <span class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                                    <i class="ph-bold ph-pencil-simple text-blue-600"></i> 1. Centros de Custo para EDIÇÃO
+                                                </span>
+                                                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                                    {{ $acessoGlobalEdicao ? 'TODOS (GLOBAL)' : count($centrosCustoEdicaoSelecionados) . ' sel.' }}
+                                                </span>
                                             </div>
-                                            
-                                            @forelse($todosCentrosCusto as $cc)
-                                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xs transition-colors hover:border-purpura-300">
-                                                    <label class="flex items-center gap-2.5 cursor-pointer flex-1">
-                                                        <input type="checkbox" wire:model.live="centrosCustoSelecionados" value="{{ $cc->id }}" class="w-4 h-4 text-purpura-600 border-gray-300 rounded focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                                        <span class="text-xs font-bold text-gray-800 dark:text-gray-200 font-mono">
-                                                            {{ $cc->codigo }} <span class="font-sans text-gray-600 dark:text-gray-400 font-medium ml-1">- {{ $cc->nome }}</span>
-                                                        </span>
-                                                    </label>
 
-                                                    @if(in_array((string) $cc->id, $centrosCustoSelecionados))
-                                                        <div class="flex items-center gap-2 sm:w-auto w-full bg-gray-50 dark:bg-gray-900/50 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
-                                                            <span class="text-[10px] text-gray-500 font-bold uppercase whitespace-nowrap"><i class="ph-bold ph-hourglass-high"></i> Expira em:</span>
-                                                            <input type="date" wire:model="expiracoesCentrosCusto.{{ $cc->id }}" class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-0.5 px-1.5 focus:ring-purpura-500" title="Deixe em branco para vínculo permanente">
+                                            <label class="flex items-center gap-2.5 cursor-pointer mb-3 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-300 transition-colors">
+                                                <input type="checkbox" wire:model.live="acessoGlobalEdicao" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                <div>
+                                                    <span class="text-xs font-bold text-gray-900 dark:text-white block">Permissão Global para Edição (Todos os C.C.)</span>
+                                                    <span class="text-[10px] text-gray-500">Permite elaborar/editar orçamentos de todos os Centros de Custo.</span>
+                                                </div>
+                                            </label>
+
+                                            @if(!$acessoGlobalEdicao)
+                                                <div class="bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto custom-scrollbar space-y-1.5">
+                                                    @forelse($todosCentrosCusto as $cc)
+                                                        <div wire:key="cc-edicao-{{ $cc->id }}" class="flex flex-col gap-1.5 p-2 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 hover:border-blue-300 transition-colors">
+                                                            <label class="flex items-center gap-2 cursor-pointer">
+                                                                <input type="checkbox" wire:model.live="centrosCustoEdicaoSelecionados" value="{{ $cc->id }}" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                                <span class="text-xs font-bold text-gray-800 dark:text-gray-200 font-mono truncate">
+                                                                    {{ $cc->codigo }} <span class="font-sans font-medium text-gray-600 dark:text-gray-400">- {{ $cc->nome }}</span>
+                                                                </span>
+                                                            </label>
+                                                            @if(in_array((string) $cc->id, $centrosCustoEdicaoSelecionados))
+                                                                <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
+                                                                    <span class="text-[10px] text-gray-500 font-bold uppercase">Expira em:</span>
+                                                                    <input type="date" wire:model="expiracoesCentrosCustoEdicao.{{ $cc->id }}" class="text-[11px] rounded border-gray-300 py-0.5 px-1.5">
+                                                                </div>
+                                                            @endif
                                                         </div>
-                                                    @endif
+                                                    @empty
+                                                        <div class="text-center py-4 text-xs text-gray-400">Nenhum Centro de Custo disponível.</div>
+                                                    @endforelse
                                                 </div>
-                                            @empty
-                                                <div class="text-center py-4 text-xs font-bold text-gray-400">
-                                                    Nenhum Centro de Custo disponível para orçamento.
-                                                </div>
-                                            @endforelse
+                                            @endif
                                         </div>
-                                    @endif
+
+                                        {{-- BLOCO 2: CENTROS DE CUSTO PARA APROVAÇÃO --}}
+                                        <div class="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 flex flex-col">
+                                            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                                                <span class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                                    <i class="ph-bold ph-check-square-offset text-emerald-600"></i> 2. Centros de Custo para APROVAÇÃO
+                                                </span>
+                                                <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                    {{ $acessoGlobalAprovacao ? 'TODOS (GLOBAL)' : count($centrosCustoAprovacaoSelecionados) . ' sel.' }}
+                                                </span>
+                                            </div>
+
+                                            <label class="flex items-center gap-2.5 cursor-pointer mb-3 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-emerald-300 transition-colors">
+                                                <input type="checkbox" wire:model.live="acessoGlobalAprovacao" class="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+                                                <div>
+                                                    <span class="text-xs font-bold text-gray-900 dark:text-white block">Permissão Global para Aprovação (Todos os C.C.)</span>
+                                                    <span class="text-[10px] text-gray-500">Permite avaliar e aprovar orçamentos de todos os Centros de Custo.</span>
+                                                </div>
+                                            </label>
+
+                                            @if(!$acessoGlobalAprovacao)
+                                                <div class="bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto custom-scrollbar space-y-1.5">
+                                                    @forelse($todosCentrosCusto as $cc)
+                                                        <div wire:key="cc-aprov-{{ $cc->id }}" class="flex flex-col gap-1.5 p-2 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 hover:border-emerald-300 transition-colors">
+                                                            <label class="flex items-center gap-2 cursor-pointer">
+                                                                <input type="checkbox" wire:model.live="centrosCustoAprovacaoSelecionados" value="{{ $cc->id }}" class="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+                                                                <span class="text-xs font-bold text-gray-800 dark:text-gray-200 font-mono truncate">
+                                                                    {{ $cc->codigo }} <span class="font-sans font-medium text-gray-600 dark:text-gray-400">- {{ $cc->nome }}</span>
+                                                                </span>
+                                                            </label>
+                                                            @if(in_array((string) $cc->id, $centrosCustoAprovacaoSelecionados))
+                                                                <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
+                                                                    <span class="text-[10px] text-gray-500 font-bold uppercase">Expira em:</span>
+                                                                    <input type="date" wire:model="expiracoesCentrosCustoAprovacao.{{ $cc->id }}" class="text-[11px] rounded border-gray-300 py-0.5 px-1.5">
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @empty
+                                                        <div class="text-center py-4 text-xs text-gray-400">Nenhum Centro de Custo disponível.</div>
+                                                    @endforelse
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                    </div>
                                 </div>
                             </div>
                         @endif
@@ -484,7 +551,7 @@
                                             </h5>
                                             <div class="space-y-2.5">
                                                 @foreach($permissions as $permission)
-                                                    @if($permission->name === 'financeiro.visao_global')
+                                                    @if(in_array($permission->name, ['financeiro.visao_global', 'financeiro.visao_global.edicao', 'financeiro.visao_global.aprovacao']))
                                                         @continue
                                                     @endif
                                                     @php

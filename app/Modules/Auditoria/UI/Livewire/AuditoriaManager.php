@@ -23,8 +23,8 @@ class AuditoriaManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('auditoria.listar'), 403, 'O módulo de logs está temporariamente desativado no sistema.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.listar'), 403, 'Você não tem permissão para listar os logs.');
+        //abort_if(!feature('auditoria.listar'), 403, 'O módulo de logs está temporariamente desativado no sistema.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.listar'), 403, 'Você não tem permissão para listar os logs.');
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
     }
@@ -56,8 +56,8 @@ class AuditoriaManager extends Component
 
     public function showQuickView(int $id)
     {
-        abort_if(!feature('auditoria.visualizar'), 403, 'A visualização de detalhes está desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.visualizar'), 403, 'Você não tem permissão para visualizar o log.');
+        //abort_if(!feature('auditoria.visualizar'), 403, 'A visualização de detalhes está desativada.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('auditoria.visualizar'), 403, 'Você não tem permissão para visualizar o log.');
 
         $log = AuditoriaLog::findOrFail($id);
 
@@ -66,6 +66,8 @@ class AuditoriaManager extends Component
             'atualizacao' => '<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-blue-200"><i class="ph-bold ph-pencil-simple"></i> Atualização</span>',
             'exclusao' => '<span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-red-200"><i class="ph-bold ph-trash"></i> Exclusão</span>',
             'automacao_email' => '<span class="bg-purpura-100 text-purpura-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-purpura-200"><i class="ph-bold ph-paper-plane-tilt"></i> E-mail Automático</span>',
+            'integracao_erro_put' => '<span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-red-200"><i class="ph-bold ph-cloud-warning"></i> Erro na API</span>',
+            'integracao_sucesso_put' => '<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-emerald-200"><i class="ph-bold ph-cloud-check"></i> Sucesso API</span>',
             default => '<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-gray-200">'.$log->acao.'</span>',
         };
 

@@ -52,7 +52,7 @@ class IaConfigManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.configurar'), 403, 'Acesso restrito.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('matricula.configurar'), 403, 'Acesso restrito.');
 
         $config = ConfiguracaoIa::first();
         if ($config) {

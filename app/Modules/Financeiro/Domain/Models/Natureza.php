@@ -14,6 +14,7 @@ class Natureza extends Model
     protected $fillable = [
         'codigo',
         'descricao',
+        'categoria',
         'tipo',
         'disponivel_orcamento',
     ];
@@ -21,4 +22,12 @@ class Natureza extends Model
     protected $casts = [
         'disponivel_orcamento' => 'boolean',
     ];
+
+    /**
+     * Retorna a descrição oficial do status conforme especificação do Projeto Lógico
+     */
+    public function getStatusDescricaoAttribute(): string
+    {
+        return $this->disponivel_orcamento ? 'Disponível para Orçamento' : 'Inativo';
+    }
 }

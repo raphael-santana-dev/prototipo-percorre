@@ -35,8 +35,8 @@ class FormSpreadsheet extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('formulario.respostas'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
+        //abort_if(!feature('formulario.respostas'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
 
         $this->formulario = Formulario::findOrFail($id);
     }

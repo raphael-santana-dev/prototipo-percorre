@@ -9,7 +9,9 @@ class Ciclo extends Model
 {
     use RegistraAuditoria;
     protected $fillable = [
-        'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'regras_pontuacao', 'slug', 'bloqueado'
+        'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 
+        'data_inicio_matricula', 'data_fim_matricula',
+        'status', 'regras_pontuacao', 'slug', 'bloqueado', 'tipo_ciclo', 'slug_projeto'
     ];
 
     protected $casts = [
@@ -70,5 +72,31 @@ class Ciclo extends Model
 
         // Se nem o fallback existir, devolve o ID 1 por extrema segurança
         return $statusFallback ? $statusFallback->id : 1;
+    }
+
+    public function fases()
+    {
+        return $this->hasMany(FormularioFase::class, 'ciclo_id')->orderBy('data_liberacao', 'asc');
+    }
+
+    public function getFaseAtualNomeAttribute(): string
+    {
+        $fases = $this->relationLoaded('fases') ? $this->fases : $this->fases()->get();
+        if ($fases->isEmpty()) {
+            return 'Fase 1 (Fluxo Contínuo)';
+        }
+
+        $agora = now();
+        $ultimaLiberada = null;
+
+        foreach ($fases as $fase) {
+            if ($fase->data_liberacao && $fase->data_liberacao <= $agora) {
+                if (!$fase->data_encerramento || $fase->data_encerramento >= $agora) {
+                    $ultimaLiberada = $fase;
+                }
+            }
+        }
+
+        return $ultimaLiberada ? $ultimaLiberada->nome : 'Fase 1 (Inicial)';
     }
 }

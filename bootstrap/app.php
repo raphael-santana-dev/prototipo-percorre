@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Modules\FeatureToggle\UI\Http\Middleware\CheckFeatureToggle;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -70,17 +71,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 
                 // Retorno seguro para requisições assíncronas (Livewire e API)
                 if ($request->wantsJson() || $request->header('X-Livewire')) {
+                    $statusCode = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
                     return response()->json([
-                        'message' => 'Ocorreu um erro interno no servidor. Nossa equipa técnica já foi notificada.'
-                    ], 500);
+                        'message' => 'Ocorreu um erro no processamento da requisição. A nossa equipa técnica já foi notificada.'
+                    ], $statusCode);
                 }
 
-                // Retorno seguro para navegação Web normal (mantém páginas 404 nativas se existirem)
-                if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
-                    return null; // Deixa o Laravel lidar com o 404 normalmente na view padrão
+                // Permite que o Laravel lide nativamente com QUALQUER erro HTTP (403, 404, 419, etc.)
+                // Isso resolve o problema de mascarar o erro 403 (Acesso Restrito) do formulário como se fosse um 500.
+                if ($e instanceof HttpExceptionInterface) {
+                    return null; 
                 }
 
-                return response()->view('errors.500', [], 500);
+                // Se chegou aqui, é um erro de servidor (500). Renderizamos a view segura e PASSAMOS a variável.
+                return response()->view('errors.500', ['exception' => $e], 500);
             }
         });
         

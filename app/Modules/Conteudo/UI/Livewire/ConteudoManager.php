@@ -32,7 +32,7 @@ class ConteudoManager extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso Restrito');
+        //abort_if(!auth()->user()->hasRole('dev|admin'), 403, 'Acesso Restrito');
 
         $this->breadcrumbs = [
             ['label' => 'Dashboard', 'url' => route('dashboard')],

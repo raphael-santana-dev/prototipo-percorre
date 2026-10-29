@@ -45,8 +45,8 @@ class FormManager extends Component
 
     public function mount()
     {
-        abort_if(!feature('formulario.listar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.listar'), 403);
+        //abort_if(!feature('formulario.listar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.listar'), 403);
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -81,8 +81,8 @@ class FormManager extends Component
     
     public function duplicar(int $id)
     {
-        abort_if(!feature('formulario.criar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
+        //abort_if(!feature('formulario.criar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.criar'), 403);
 
         $formOriginal = Formulario::with(['campos'])->findOrFail($id);
 

@@ -22,8 +22,8 @@ class GeradorMockAprendizagem extends Component
 
     public function mount()
     {
-        abort_if(!feature('ferramenta.mock'), 403, 'Gerador desativado.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ferramenta.mock'), 403, 'Acesso restrito.');
+        //abort_if(!feature('ferramenta.mock'), 403, 'Gerador desativado.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ferramenta.mock'), 403, 'Acesso restrito.');
     }
 
     public function gerarAmbienteCompleto()

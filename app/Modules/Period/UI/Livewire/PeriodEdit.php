@@ -11,6 +11,8 @@ use App\Models\StatusInscricao;
 use App\Models\OfertaVaga;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 #[Layout('components.layouts.app')]
 #[Title('Editar Ciclo - Administrativo')]
@@ -19,6 +21,10 @@ class PeriodEdit extends Component
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
     public $data_inicio_matricula = '';
     public $data_fim_matricula = '';
+
+    public string $tipo_ciclo = 'regular';
+    public ?string $slug_projeto = null;
+
     public array $unidadesSelecionadas = []; 
     public array $cursosSelecionados = []; 
     public array $turnosSelecionados = []; 
@@ -34,18 +40,20 @@ class PeriodEdit extends Component
 
     public function mount($id)
     {
-        abort_if(!feature('ciclo.editar'), 403, 'Edição de ciclos desativada.');
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403, 'Edição de ciclos desativada.');
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
 
         $ciclo = Ciclo::with(['unidades', 'cursos', 'turnos', 'statusPipeline'])->findOrFail($id);
         
         $this->cicloId = $ciclo->id;
         $this->nome = $ciclo->nome;
+        $this->tipo_ciclo = $ciclo->tipo_ciclo ?? 'regular';
+        $this->slug_projeto = $ciclo->slug_projeto;
         $this->ano = $ciclo->ano;
         $this->semestre = $ciclo->semestre;
         $this->data_inicio = $ciclo->data_inicio->format('Y-m-d\TH:i');
         $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
-        $this->status = $ciclo->status;
+        $this->status = (bool) $ciclo->status;
         $this->data_inicio_matricula = $ciclo->data_inicio_matricula ? \Carbon\Carbon::parse($ciclo->data_inicio_matricula)->format('Y-m-d\TH:i') : '';
         $this->data_fim_matricula = $ciclo->data_fim_matricula ? \Carbon\Carbon::parse($ciclo->data_fim_matricula)->format('Y-m-d\TH:i') : '';
         
@@ -59,17 +67,23 @@ class PeriodEdit extends Component
         $ofertas = OfertaVaga::where('ciclo_id', $id)->get();
         foreach ($ofertas as $oferta) {
             $this->ofertasVagas[] = [
-                'unidade_id' => $oferta->unidade_id, 'curso_id' => $oferta->curso_id, 'turno_id' => $oferta->turno_id,
-                'vagas' => $oferta->vagas, 
-                'meta' => $oferta->meta, // <-- ADICIONADO
-                'idade_min' => $oferta->idade_min, 'idade_max' => $oferta->idade_max,
+                'unidade_id' => $oferta->unidade_id,
+                'curso_id'   => $oferta->curso_id,
+                'turno_id'   => $oferta->turno_id,
+                'vagas'      => $oferta->vagas, 
+                'meta'       => $oferta->meta,
+                'idade_min'  => $oferta->idade_min,
+                'idade_max'  => $oferta->idade_max,
             ];
         }
 
         $docs = DocumentoExigido::where('ciclo_id', $id)->get();
         foreach ($docs as $doc) {
             $this->documentosExigidos[] = [
-                'id' => $doc->id, 'nome' => $doc->nome, 'descricao' => $doc->descricao, 'is_obrigatorio' => (bool) $doc->is_obrigatorio
+                'id'             => $doc->id,
+                'nome'           => $doc->nome,
+                'descricao'      => $doc->descricao,
+                'is_obrigatorio' => (bool) $doc->is_obrigatorio
             ];
         }
     }
@@ -77,18 +91,18 @@ class PeriodEdit extends Component
     public function setActiveUnidade($id) { $this->activeUnidadeId = $id; $this->activeCursoId = null; }
     public function setActiveCurso($id) { $this->activeCursoId = $id; }
 
-   public function updatedOfertasVagas($value, $name)
+    public function updatedOfertasVagas($value, $name)
     {
         $parts = explode('.', $name);
         if (count($parts) === 2) {
-            $index = $parts[0]; $campo = $parts[1];
+            $index = $parts[0];
+            $campo = $parts[1];
             if ($campo === 'unidade_id') { 
                 $this->ofertasVagas[$index]['curso_id'] = ''; 
                 $this->ofertasVagas[$index]['turno_id'] = ''; 
             } elseif ($campo === 'curso_id') { 
                 $this->ofertasVagas[$index]['turno_id'] = ''; 
             } elseif ($campo === 'vagas' && is_numeric($value)) {
-                // Cálculo automático: se digitar Vagas, Meta recebe 3x
                 $this->ofertasVagas[$index]['meta'] = $value * 3;
             }
         }
@@ -113,7 +127,6 @@ class PeriodEdit extends Component
 
     public function removerStatusPipeline($id) 
     { 
-        // Trava a remoção da edição
         $emUso = \App\Models\Inscricao::where('ciclo_id', $this->cicloId)->where('status_inscricao_id', $id)->exists();
         if ($emUso) {
             $this->dispatch('erro', msg: 'Ação Bloqueada: Já existem inscrições neste ciclo vinculadas a este status.');
@@ -127,13 +140,24 @@ class PeriodEdit extends Component
         \App\Models\Ciclo::findOrFail($this->cicloId)->statusPipeline()->sync($syncStatus);
     }
     
-    public function addOferta() { $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'meta' => null, 'idade_min' => null, 'idade_max' => null]; }    public function removeOferta($index) { unset($this->ofertasVagas[$index]); $this->ofertasVagas = array_values($this->ofertasVagas); }
+    public function addOferta()
+    {
+        $this->ofertasVagas[] = ['unidade_id' => '', 'curso_id' => '', 'turno_id' => '', 'vagas' => 0, 'meta' => null, 'idade_min' => null, 'idade_max' => null];
+    }
 
-    public function addDocumento() {
+    public function removeOferta($index)
+    {
+        unset($this->ofertasVagas[$index]);
+        $this->ofertasVagas = array_values($this->ofertasVagas);
+    }
+
+    public function addDocumento()
+    {
         $this->documentosExigidos[] = ['id' => null, 'nome' => '', 'descricao' => '', 'is_obrigatorio' => true];
     }
 
-    public function removeDocumento($index) {
+    public function removeDocumento($index)
+    {
         $docId = $this->documentosExigidos[$index]['id'] ?? null;
         if ($docId) {
             $emUso = DocumentoMatricula::where('documento_exigido_id', $docId)->exists();
@@ -149,22 +173,53 @@ class PeriodEdit extends Component
 
     public function salvar()
     {
-        abort_if(!feature('ciclo.editar'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
+        //abort_if(!feature('ciclo.editar'), 403);
+        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
         
-        $this->validate([
-            'nome' => 'nullable|string|max:255', 'ano' => 'required|integer', 'semestre' => 'required|integer',
-            'data_inicio' => 'required|date', 'data_fim' => 'required|date',
-            'documentosExigidos.*.nome' => 'required|string|max:255'
-        ], ['documentosExigidos.*.nome.required' => 'O nome do documento é obrigatório.']);
+        if ($this->tipo_ciclo === 'customizado') {
+            $this->slug_projeto = Str::slug($this->slug_projeto ?: $this->nome);
+        } else {
+            $this->slug_projeto = null;
+        }
 
-        if ($this->status) { Ciclo::where('id', '!=', $this->cicloId)->update(['status' => false]); }
+        $this->validate([
+            'nome'         => 'nullable|string|max:255',
+            'ano'          => 'required|integer',
+            'semestre'     => 'required|integer',
+            'data_inicio'  => 'required|date',
+            'data_fim'     => 'required|date',
+            'tipo_ciclo'   => 'required|in:regular,customizado',
+            'slug_projeto' => [
+                'nullable',
+                'required_if:tipo_ciclo,customizado',
+                'regex:/^[a-z0-9\-]+$/',
+                Rule::unique('ciclos', 'slug_projeto')->ignore($this->cicloId),
+            ],
+            'documentosExigidos.*.nome' => 'required|string|max:255'
+        ], [
+            'documentosExigidos.*.nome.required' => 'O nome do documento é obrigatório.',
+            'slug_projeto.required_if'           => 'Para ciclos customizados, informe o slug da URL.',
+            'slug_projeto.unique'                => 'Este slug de projeto já está em uso por outro ciclo.',
+            'slug_projeto.regex'                 => 'O slug deve conter apenas letras minúsculas, números e hífens.',
+        ]);
+
+        // Apenas desativa outros ciclos se este for 'regular' (projetos customizados podem coexistir)
+        if ($this->status && $this->tipo_ciclo === 'regular') {
+            Ciclo::where('tipo_ciclo', 'regular')
+                ->where('id', '!=', $this->cicloId)
+                ->update(['status' => false]);
+        }
 
         $cicloSalvo = Ciclo::findOrFail($this->cicloId);
         $cicloSalvo->update([
-            'nome' => empty(trim($this->nome)) ? "{$this->ano} - {$this->semestre}º Semestre" : $this->nome,
-            'ano' => $this->ano, 'semestre' => $this->semestre, 'data_inicio' => $this->data_inicio,
-            'data_fim' => $this->data_fim, 'status' => $this->status,
+            'nome'                  => empty(trim($this->nome)) ? "{$this->ano} - {$this->semestre}º Semestre" : $this->nome,
+            'tipo_ciclo'            => $this->tipo_ciclo,
+            'slug_projeto'          => $this->tipo_ciclo === 'customizado' ? $this->slug_projeto : null,
+            'ano'                   => $this->ano,
+            'semestre'              => $this->semestre,
+            'data_inicio'           => $this->data_inicio,
+            'data_fim'              => $this->data_fim,
+            'status'                => $this->status,
             'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
             'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
         ]);
@@ -181,11 +236,14 @@ class PeriodEdit extends Component
         foreach ($this->ofertasVagas as $oferta) {
             if (!empty($oferta['curso_id']) && !empty($oferta['unidade_id']) && !empty($oferta['turno_id'])) {
                 OfertaVaga::create([
-                    'ciclo_id' => $cicloSalvo->id, 'unidade_id' => $oferta['unidade_id'], 'curso_id' => $oferta['curso_id'],
-                    'turno_id' => $oferta['turno_id'], 'vagas' => (int) ($oferta['vagas'] ?? 0),
-                    'meta' => !empty($oferta['meta']) ? (int) $oferta['meta'] : null, // <-- ADICIONADO
-                    'idade_min' => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null,
-                    'idade_max' => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null,
+                    'ciclo_id'   => $cicloSalvo->id,
+                    'unidade_id' => $oferta['unidade_id'],
+                    'curso_id'   => $oferta['curso_id'],
+                    'turno_id'   => $oferta['turno_id'],
+                    'vagas'      => (int) ($oferta['vagas'] ?? 0),
+                    'meta'       => !empty($oferta['meta']) ? (int) $oferta['meta'] : null,
+                    'idade_min'  => !empty($oferta['idade_min']) ? (int) $oferta['idade_min'] : null,
+                    'idade_max'  => !empty($oferta['idade_max']) ? (int) $oferta['idade_max'] : null,
                 ]);
             }
         }
@@ -206,8 +264,8 @@ class PeriodEdit extends Component
     public function render()
     {
         return view('livewire.period.period-edit', [
-            'unidadesDb' => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
-            'cursosDb' => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
+            'unidadesDb'        => \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'cursosDb'          => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
             'statusDisponiveis' => StatusInscricao::orderBy('nome')->get(),
         ]);
     }

@@ -10,10 +10,13 @@ use App\Models\Etapa;
 use App\Models\Formulario;
 use App\Models\CampoFormulario;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Traits\WithEditingLock;
 
 class DynamicFields extends Component
 {
     use WithFileUploads;
+    use WithEditingLock;
     
     public $campoId = null;
     public $etapa = 1;
@@ -38,11 +41,20 @@ class DynamicFields extends Component
     public $matriz_linhas = '';
     public $matriz_colunas = '';
 
+    // Controle de exibição do painel direito de configuração do input
+    public bool $painelCampoAtivo = false;
+
+    // Seleção múltipla de inputs para movimentação em lote
+    public array $camposSelecionados = [];
+    public $etapaDestinoLote = '';
+
     public bool $drawerFormSettingsAberto = false;
 
     public $slug = '';
     public $bg_image_upload;
     public $link_file_upload;
+    public bool $isCicloCustomizado = false;
+
     public array $formSettings = [
         'bg_image' => null,
         'bg_color' => '#ffffff',
@@ -51,6 +63,9 @@ class DynamicFields extends Component
         'form_width' => 'max-w-4xl',
         'translucent_card' => false,
         'use_vacancy_limit' => false,
+        'enable_fixed_personal' => true,
+        'enable_fixed_address' => true,
+        'enable_fixed_course' => true,
     ];
 
     public string $contextoTipo; 
@@ -60,15 +75,26 @@ class DynamicFields extends Component
 
     public $etapasDisponiveis = [];
 
+    public bool $modalFasesAberto = false;
+    public array $fasesConfig = []; 
+    public array $paginasDisponiveis = [];
+    public array $templatesDeEmail = [];
+
     public function mount($tipo, $id)
     {
         $this->contextoTipo = $tipo;
-        $this->contextoId = $id;
+        $this->contextoId = (int) $id;
+
+        // REGISTO DE LOCK (BLOQUEIO DE EDIÇÃO SIMULTÂNEA)
+        $this->resourceLockType = $tipo; // 'formulario' ou 'ciclo'
+        $this->resourceLockId = $this->contextoId;
+        $this->checkAndAcquireLock();
 
         if ($tipo === 'ciclo') {
             $model = \App\Models\Ciclo::findOrFail($id);
             $this->contextoNome = $model->nome;
-            $this->badgeContexto = 'Inscrição Oficial';
+            $this->isCicloCustomizado = ($model->tipo_ciclo ?? 'regular') === 'customizado';
+            $this->badgeContexto = $this->isCicloCustomizado ? 'Projeto Customizado' : 'Inscrição Oficial';
         } else {
             $model = \App\Models\Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])->findOrFail($id);
             
@@ -104,17 +130,313 @@ class DynamicFields extends Component
         $this->loadFormSettings();
         $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
+        $this->painelCampoAtivo = false;
+    }
+
+    public function updatedCamposSelecionados(): void
+    {
+        $this->camposSelecionados = array_values(array_unique(array_map('strval', $this->camposSelecionados)));
+
+        // Se o utilizador tinha 1 campo aberto em edição ($campoId) e marcou outro checkbox diferente,
+        // adiciona automaticamente o campo que estava em edição ao lote para formar os 2 selecionados:
+        if ($this->campoId && count($this->camposSelecionados) === 1 && !in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->camposSelecionados[] = (string) $this->campoId;
+        }
+
+        // Quando houver mais de 1 input selecionado, oculta imediatamente a configuração individual
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
+        } elseif (count($this->camposSelecionados) === 1) {
+            // Se restar apenas 1 selecionado, carrega-o para edição
+            $unicoId = (int) $this->camposSelecionados[0];
+            if ($this->campoId !== $unicoId) {
+                $this->editar($unicoId);
+            }
+        }
+    }
+
+    public function toggleSelecionarCampo(int $id): void
+    {
+        $idStr = (string) $id;
+
+        // Se já havia um campo diferente aberto em edição ($campoId), inclui-o na seleção múltipla
+        if ($this->campoId && (string) $this->campoId !== $idStr && !in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->camposSelecionados[] = (string) $this->campoId;
+        }
+
+        if (in_array($idStr, $this->camposSelecionados, true)) {
+            $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, [$idStr]));
+        } else {
+            $this->camposSelecionados[] = $idStr;
+        }
+
+        $this->camposSelecionados = array_values(array_unique(array_map('strval', $this->camposSelecionados)));
+
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
+        }
+    }
+
+    public function selecionarTodosDaEtapa(?int $numEtapa = null): void
+    {
+        $alvoEtapa = $numEtapa ?: (int) $this->etapa;
+
+        $idsEtapa = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $alvoEtapa)
+            ->where('tipo', '!=', 'config')
+            ->pluck('id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+
+        $todosJaSelecionados = !empty($idsEtapa) && empty(array_diff($idsEtapa, $this->camposSelecionados));
+
+        if ($todosJaSelecionados) {
+            $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, $idsEtapa));
+        } else {
+            $this->camposSelecionados = array_values(array_unique(array_merge($this->camposSelecionados, $idsEtapa)));
+        }
+
+        if (count($this->camposSelecionados) > 1) {
+            $this->painelCampoAtivo = false;
+            $this->campoId = null;
+        }
+    }
+
+    public function limparSelecaoCampos(): void
+    {
+        $this->camposSelecionados = [];
+        $this->etapaDestinoLote = '';
+    }
+
+    public function moverCamposSelecionadosParaEtapa(): void
+    {
+        if ($this->isLockedByOther) return;
+
+        $destino = (int) $this->etapaDestinoLote;
+        if ($destino < 1 || empty($this->camposSelecionados)) {
+            $this->dispatch('erro', msg: 'Selecione uma página de destino e pelo menos um campo.');
+            return;
+        }
+
+        $colunaFk = $this->getContextColumn();
+
+        $camposMover = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
+        if ($camposMover->isEmpty()) {
+            return;
+        }
+
+        $etapasAfetadas = $camposMover->pluck('etapa')->push($destino)->unique()->values()->toArray();
+
+        DB::transaction(function () use ($colunaFk, $destino, $camposMover, $etapasAfetadas) {
+            $maxOrdemDestino = CampoFormulario::where($colunaFk, $this->contextoId)
+                ->where('etapa', $destino)
+                ->where('tipo', '!=', 'config')
+                ->whereNotIn('id', $camposMover->pluck('id'))
+                ->max('ordem') ?? 0;
+
+            foreach ($camposMover as $campo) {
+                $maxOrdemDestino++;
+                $campo->update([
+                    'etapa' => $destino,
+                    'ordem' => $maxOrdemDestino,
+                ]);
+            }
+
+            foreach ($etapasAfetadas as $numEtapa) {
+                $this->reindexarOrdensDaEtapa((int) $numEtapa);
+            }
+        });
+
+        $qtd = $camposMover->count();
+        $this->etapa = $destino;
+        $this->limparSelecaoCampos();
+        $this->atualizarProximaOrdem();
+
+        $this->dispatch('sucesso', msg: "{$qtd} campo(s) movido(s) para a Página #{$destino}!");
+    }
+
+    public function moverSelecionadosNaMesmaEtapa(string $posicao = 'topo'): void
+    {
+        if ($this->isLockedByOther || empty($this->camposSelecionados)) return;
+
+        $colunaFk = $this->getContextColumn();
+
+        $etapasDosSelecionados = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->distinct()
+            ->pluck('etapa')
+            ->toArray();
+
+        DB::transaction(function () use ($colunaFk, $etapasDosSelecionados, $posicao) {
+            foreach ($etapasDosSelecionados as $numEtapa) {
+                $todosDaEtapa = CampoFormulario::where($colunaFk, $this->contextoId)
+                    ->where('etapa', $numEtapa)
+                    ->where('tipo', '!=', 'config')
+                    ->orderBy('ordem')
+                    ->orderBy('id')
+                    ->get();
+
+                $selecionados = $todosDaEtapa->filter(fn($c) => in_array((string) $c->id, $this->camposSelecionados, true));
+                $naoSelecionados = $todosDaEtapa->reject(fn($c) => in_array((string) $c->id, $this->camposSelecionados, true));
+
+                $novaLista = ($posicao === 'topo')
+                    ? $selecionados->concat($naoSelecionados)
+                    : $naoSelecionados->concat($selecionados);
+
+                $ordem = 1;
+                foreach ($novaLista as $item) {
+                    if ((int) $item->ordem !== $ordem) {
+                        $item->update(['ordem' => $ordem]);
+                    }
+                    $ordem++;
+                }
+            }
+        });
+
+        $this->atualizarProximaOrdem();
+        $this->dispatch('sucesso', msg: 'Posição dos campos selecionados atualizada!');
+    }
+
+    private function reindexarOrdensDaEtapa(int $numeroEtapa): void
+    {
+        $campos = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('etapa', $numeroEtapa)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get();
+
+        $ordem = 1;
+        foreach ($campos as $c) {
+            if ((int) $c->ordem !== $ordem) {
+                $c->update(['ordem' => $ordem]);
+            }
+            $ordem++;
+        }
+    }
+
+    // =========================================================================
+    // FASES TEMPORAIS
+    // =========================================================================
+
+    public function abrirModalFases()
+    {
+        $this->carregarEtapas();
+
+        $paginasEtapas = collect($this->etapasDisponiveis)->pluck('numero')->toArray();
+        $paginasCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('tipo', '!=', 'config')
+            ->distinct()
+            ->pluck('etapa')
+            ->toArray();
+
+        $todasPaginas = array_unique(array_merge($paginasEtapas, $paginasCampos));
+        sort($todasPaginas);
+
+        $this->paginasDisponiveis = array_values(array_filter(array_map('intval', $todasPaginas), fn($p) => $p > 0));
+
+        $fasesDb = \App\Models\FormularioFase::where($this->getContextColumn(), $this->contextoId)
+            ->orderBy('data_liberacao', 'asc')
+            ->get();
+
+        $this->fasesConfig = [];
+        foreach ($fasesDb as $f) {
+            $pags = is_string($f->paginas) ? json_decode($f->paginas, true) : ($f->paginas ?? []);
+            $this->fasesConfig[] = [
+                'id' => $f->id,
+                'nome' => $f->nome,
+                'paginas' => is_array($pags) ? array_values(array_map('strval', $pags)) : [],
+                'data_liberacao' => $f->data_liberacao ? $f->data_liberacao->format('Y-m-d\TH:i') : '',
+                'data_encerramento' => $f->data_encerramento ? $f->data_encerramento->format('Y-m-d\TH:i') : '',
+                'email_template_id' => $f->email_template_id ? (string) $f->email_template_id : '',
+            ];
+        }
+
+        $this->templatesDeEmail = class_exists(\App\Modules\Comunicacao\Domain\Models\EmailTemplate::class)
+            ? \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')->pluck('nome', 'id')->toArray()
+            : [];
+
+        $this->resetErrorBag();
+        $this->modalFasesAberto = true;
+    }
+
+    public function adicionarFase()
+    {
+        $this->fasesConfig[] = [
+            'id' => null,
+            'nome' => '',
+            'paginas' => [],
+            'data_liberacao' => '',
+            'data_encerramento' => '',
+            'email_template_id' => ''
+        ];
+    }
+
+    public function removerFase($index)
+    {
+        $faseId = $this->fasesConfig[$index]['id'] ?? null;
+        if ($faseId) {
+            \App\Models\FormularioFase::where('id', $faseId)->delete();
+        }
+        unset($this->fasesConfig[$index]);
+        $this->fasesConfig = array_values($this->fasesConfig);
+    }
+
+    public function salvarFases()
+    {
+        if (!empty($this->fasesConfig)) {
+            $this->validate([
+                'fasesConfig.*.nome' => 'required|string|max:255',
+                'fasesConfig.*.data_liberacao' => 'required|date',
+                'fasesConfig.*.paginas' => 'required|array|min:1',
+            ], [
+                'fasesConfig.*.nome.required' => 'O nome da fase é obrigatório.',
+                'fasesConfig.*.data_liberacao.required' => 'Defina a data de liberação da fase.',
+                'fasesConfig.*.paginas.required' => 'Selecione pelo menos uma página para esta fase.',
+                'fasesConfig.*.paginas.min' => 'Selecione pelo menos uma página para esta fase.',
+            ]);
+
+            foreach ($this->fasesConfig as $cfg) {
+                $dadosFase = [
+                    'ciclo_id' => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+                    'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+                    'nome' => $cfg['nome'],
+                    'paginas' => array_values(array_map('intval', $cfg['paginas'] ?? [])),
+                    'data_liberacao' => $cfg['data_liberacao'],
+                    'data_encerramento' => !empty($cfg['data_encerramento']) ? $cfg['data_encerramento'] : null,
+                    'email_template_id' => !empty($cfg['email_template_id']) ? (int) $cfg['email_template_id'] : null,
+                ];
+
+                if (!empty($cfg['id'])) {
+                    \App\Models\FormularioFase::where('id', $cfg['id'])->update($dadosFase);
+                } else {
+                    \App\Models\FormularioFase::create($dadosFase);
+                }
+            }
+        }
+
+        $this->modalFasesAberto = false;
+        $this->dispatch('sucesso', msg: 'Fases, bloqueios de data e automações guardadas com sucesso!');
     }
 
     private function inicializarDefaultsDicas(): void
     {
-        $this->configuracoes['dica_modo'] = $this->configuracoes['dica_modo'] ?? 'nenhum'; // nenhum, legenda, tooltip, ambos
+        $this->configuracoes['dica_modo'] = $this->configuracoes['dica_modo'] ?? 'nenhum';
         $this->configuracoes['dica_1_texto'] = $this->configuracoes['dica_1_texto'] ?? '';
-        $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda'; // legenda ou tooltip
-        $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover'; // hover ou click
+        $this->configuracoes['dica_1_tipo'] = $this->configuracoes['dica_1_tipo'] ?? 'legenda';
+        $this->configuracoes['dica_1_trigger'] = $this->configuracoes['dica_1_trigger'] ?? 'hover';
         $this->configuracoes['dica_2_texto'] = $this->configuracoes['dica_2_texto'] ?? '';
-        $this->configuracoes['dica_2_tipo'] = $this->configuracoes['dica_2_tipo'] ?? 'tooltip'; // legenda ou tooltip
-        $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover'; // hover ou click
+        $this->configuracoes['dica_2_tipo'] = $this->configuracoes['dica_2_tipo'] ?? 'tooltip';
+        $this->configuracoes['dica_2_trigger'] = $this->configuracoes['dica_2_trigger'] ?? 'hover';
     }
 
     public function updatedConfiguracoesDicaModo($valor)
@@ -192,8 +514,16 @@ class DynamicFields extends Component
         }
     }
 
+    public function iniciarNovoCampo(): void
+    {
+        $this->cancelarEdicao();
+        $this->painelCampoAtivo = true;
+    }
+
     public function setTipo($tipo, $subtipo = 'text')
     {
+        $this->camposSelecionados = [];
+        $this->painelCampoAtivo = true;
         $this->tipo = $tipo;
         $this->subtipo = ($tipo === 'file' && $subtipo === 'text') ? 'file' : $subtipo;
         
@@ -257,6 +587,13 @@ class DynamicFields extends Component
                     $this->name = 'valor_' . rand(10, 99);
                     $this->largura = 4;
                 }
+            } elseif ($subtipo === 'date') {
+                $this->configuracoes['calcular_idade'] = $this->configuracoes['calcular_idade'] ?? false;
+                if (!$this->campoId && empty($this->label)) {
+                    $this->label = 'Data de Nascimento';
+                    $this->name = 'data_nascimento_' . rand(10, 99);
+                    $this->largura = 4;
+                }
             }
         }
 
@@ -287,7 +624,35 @@ class DynamicFields extends Component
             $this->configuracoes['abrir_preview'] = $this->configuracoes['abrir_preview'] ?? true;
         }
 
-        $this->dispatch(' sincronizar-quill-builder');
+        if ($tipo === 'system') {
+            $this->configuracoes['filtrar_por_uf'] = $this->configuracoes['filtrar_por_uf'] ?? false;
+            $this->configuracoes['vincular_curso_unidade'] = $this->configuracoes['vincular_curso_unidade'] ?? true;
+            $this->configuracoes['vincular_turno_curso'] = $this->configuracoes['vincular_turno_curso'] ?? true;
+            $this->configuracoes['aplicar_regras'] = $this->configuracoes['aplicar_regras'] ?? true;
+
+            if (!$this->campoId) {
+                if ($subtipo === 'unidade') {
+                    $this->label = 'Unidade';
+                    $this->name = 'unidade_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'curso') {
+                    $this->label = 'Curso';
+                    $this->name = 'curso_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'turno') {
+                    $this->label = 'Turno';
+                    $this->name = 'turno_' . rand(10, 99);
+                    $this->largura = 4;
+                } elseif ($subtipo === 'combo_academico') {
+                    $this->label = 'Unidade';
+                    $this->name = 'combo_acad_' . rand(10, 99);
+                    $this->largura = 4;
+                    $this->configuracoes['gerar_campos_combo'] = true;
+                }
+            }
+        }
+
+        $this->dispatch('sincronizar-quill-builder');
     }
 
     public function updatedConfiguracoesTipoAssinante($valor)
@@ -368,6 +733,8 @@ class DynamicFields extends Component
     public function editar($id)
     {
         $campo = CampoFormulario::findOrFail($id);
+        $this->camposSelecionados = [(string) $campo->id];
+        $this->painelCampoAtivo = true;
         $this->campoId = $campo->id;
         $this->etapa = $campo->etapa;
         $this->ordem = $campo->ordem;
@@ -404,6 +771,10 @@ class DynamicFields extends Component
             $this->configuracoes['criar_campos_endereco'] = false;
         }
 
+        if ($campo->tipo === 'text' && $campo->subtipo === 'date') {
+            $this->configuracoes['calcular_idade'] = filter_var($config['calcular_idade'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        }
+
         if ($campo->tipo === 'file') {
             $this->configuracoes['tipo_arquivo'] = $config['tipo_arquivo'] ?? 'todos';
             $this->configuracoes['aceita_multiplos'] = filter_var($config['aceita_multiplos'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -436,8 +807,51 @@ class DynamicFields extends Component
         $this->dispatch('sincronizar-quill-builder');
     }
 
+    /**
+     * Exclui em lote todos os campos marcados na seleção múltipla
+     */
+    public function excluirCamposSelecionados(): void
+    {
+        if ($this->isLockedByOther || empty($this->camposSelecionados)) return;
+
+        $colunaFk = $this->getContextColumn();
+
+        // Identifica quais etapas contêm os campos que serão excluídos para reindexá-las depois
+        $etapasAfetadas = CampoFormulario::where($colunaFk, $this->contextoId)
+            ->whereIn('id', $this->camposSelecionados)
+            ->where('tipo', '!=', 'config')
+            ->distinct()
+            ->pluck('etapa')
+            ->toArray();
+
+        DB::transaction(function () use ($colunaFk, $etapasAfetadas) {
+            // Executa a exclusão dos blocos selecionados
+            CampoFormulario::where($colunaFk, $this->contextoId)
+                ->whereIn('id', $this->camposSelecionados)
+                ->where('tipo', '!=', 'config')
+                ->delete();
+
+            // Reindexa a ordem de cada página afetada para não deixar "buracos" na numeração
+            foreach ($etapasAfetadas as $numEtapa) {
+                $this->reindexarOrdensDaEtapa((int) $numEtapa);
+            }
+        });
+
+        $qtdRemovida = count($this->camposSelecionados);
+        $this->limparSelecaoCampos();
+
+        if ($this->campoId && in_array((string) $this->campoId, $this->camposSelecionados, true)) {
+            $this->cancelarEdicao();
+        } else {
+            $this->atualizarProximaOrdem();
+        }
+
+        $this->dispatch('sucesso', msg: "{$qtdRemovida} bloco(s) excluído(s) com sucesso!");
+    }
+
     public function cancelarEdicao()
     {
+        $this->camposSelecionados = [];
         $this->reset([
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
@@ -445,6 +859,7 @@ class DynamicFields extends Component
             'configuracoes', 'matriz_linhas', 'matriz_colunas', 'link_file_upload'
         ]);
         
+        $this->painelCampoAtivo = false;
         $this->configuracoes = [];
         $this->inicializarDefaultsDicas();
         $this->atualizarProximaOrdem();
@@ -506,12 +921,10 @@ class DynamicFields extends Component
     {
         if ($html === null) return '';
         $limpo = trim($html);
-        // Remove <p><br></p> vazios gerados pelo Quill
         if (in_array($limpo, ['<p><br></p>', '<p></p>', '<br>'])) {
             return '';
         }
-        // Se houver apenas um único parágrafo <p>...</p>, remove a tag externa <p> para manter alinhamento inline
-        if ( substr_count($limpo, '<p>') === 1 && str_starts_with($limpo, '<p>') && str_ends_with($limpo, '</p>') ) {
+        if (substr_count($limpo, '<p>') === 1 && str_starts_with($limpo, '<p>') && str_ends_with($limpo, '</p>')) {
             $limpo = substr($limpo, 3, -4);
         }
         return trim($limpo);
@@ -552,7 +965,6 @@ class DynamicFields extends Component
 
         $configToSave = $this->configuracoes ?? [];
 
-        // Higieniza os textos ricos das dicas e avisos
         $configToSave['dica_modo'] = $configToSave['dica_modo'] ?? 'nenhum';
         $configToSave['dica_1_texto'] = $this->limparHtmlQuill($configToSave['dica_1_texto'] ?? '');
         $configToSave['dica_1_tipo'] = $configToSave['dica_1_tipo'] ?? ($configToSave['dica_modo'] === 'tooltip' ? 'tooltip' : 'legenda');
@@ -577,6 +989,8 @@ class DynamicFields extends Component
             } elseif ($this->subtipo === 'cep') {
                 $this->regex_mascara = '99999-999';
                 $configToSave['viacep'] = filter_var($this->configuracoes['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            } elseif ($this->subtipo === 'date') {
+                $configToSave['calcular_idade'] = filter_var($this->configuracoes['calcular_idade'] ?? false, FILTER_VALIDATE_BOOLEAN);
             }
         }
         
@@ -671,6 +1085,25 @@ class DynamicFields extends Component
         $exibirNoTopoSalvo = filter_var($this->configuracoes['exibir_no_topo'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $deveCriarEnderecoViaCep = ($this->tipo === 'text' && $this->subtipo === 'cep' && !empty($configToSave['viacep']) && (!$isEditing || !empty($this->configuracoes['criar_campos_endereco'])));
 
+        if ($this->tipo === 'system') {
+            $configToSave['filtrar_por_uf'] = filter_var($this->configuracoes['filtrar_por_uf'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['vincular_curso_unidade'] = filter_var($this->configuracoes['vincular_curso_unidade'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['vincular_turno_curso'] = filter_var($this->configuracoes['vincular_turno_curso'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $configToSave['aplicar_regras'] = ($configToSave['vincular_curso_unidade'] || $configToSave['vincular_turno_curso']);
+        }
+
+        $deveCriarComboAcademico = ($this->tipo === 'system' && $this->subtipo === 'combo_academico' && !$isEditing);
+        if ($deveCriarComboAcademico) {
+            $this->subtipo = 'unidade';
+            $configToSave['combo_group'] = $nameSalvo;
+            $configToSave['combo_role'] = 'unidade';
+            $configToSave['combo_map'] = [
+                'unidade' => $nameSalvo,
+                'curso'   => $nameSalvo . '_curso',
+                'turno'   => $nameSalvo . '_turno',
+            ];
+        }
+
         if ($this->campoId) {
             $campo = CampoFormulario::findOrFail($this->campoId);
             $ordemAntiga = $campo->ordem;
@@ -758,6 +1191,10 @@ class DynamicFields extends Component
             $this->gerarCamposEnderecoViaCep($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo);
         }
 
+        if ($deveCriarComboAcademico) {
+            $this->gerarCamposComboAcademico($etapaSalva, $ordemSalva, $nameSalvo, $obrigatorioSalvo, $exibirNoTopoSalvo, $configToSave);
+        }
+
         $this->cancelarEdicao(); 
         $this->dispatch('sucesso', msg: $deveCriarEnderecoViaCep 
             ? 'Campo CEP e todos os campos de endereço (ViaCEP) foram adicionados com sucesso!' 
@@ -816,6 +1253,68 @@ class DynamicFields extends Component
         }
     }
 
+    private function gerarCamposComboAcademico(int $etapa, int $ordemUnidade, string $baseFieldName, bool $obrigatorio, bool $exibirNoTopo, array $cfgBase): void
+    {
+        $camposCombo = [
+            [
+                'sufixo'  => 'curso',
+                'subtipo' => 'curso',
+                'label'   => 'Curso',
+                'largura' => 4,
+            ],
+            [
+                'sufixo'  => 'turno',
+                'subtipo' => 'turno',
+                'label'   => 'Turno',
+                'largura' => 4,
+            ],
+        ];
+
+        $ordemAtual = $ordemUnidade;
+
+        foreach ($camposCombo as $item) {
+            $nomeCampo = $baseFieldName . '_' . $item['sufixo'];
+
+            $jaExiste = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('name', $nomeCampo)
+                ->exists();
+
+            if ($jaExiste) continue;
+
+            $ordemAtual++;
+
+            CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+                ->where('etapa', $etapa)
+                ->where('tipo', '!=', 'config')
+                ->where('ordem', '>=', $ordemAtual)
+                ->increment('ordem');
+
+            CampoFormulario::create([
+                'ciclo_id'      => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+                'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+                'etapa'         => $etapa,
+                'ordem'         => $ordemAtual,
+                'label'         => $item['label'],
+                'name'          => $nomeCampo,
+                'tipo'          => 'system',
+                'subtipo'       => $item['subtipo'],
+                'largura'       => $item['largura'],
+                'obrigatorio'   => $obrigatorio,
+                'configuracoes' => [
+                    'combo_group'            => $baseFieldName,
+                    'combo_role'             => $item['subtipo'],
+                    'combo_parent_unidade'   => $baseFieldName,
+                    'combo_parent_curso'     => $baseFieldName . '_curso',
+                    'filtrar_por_uf'         => $cfgBase['filtrar_por_uf'] ?? false,
+                    'vincular_curso_unidade' => $cfgBase['vincular_curso_unidade'] ?? true,
+                    'vincular_turno_curso'   => $cfgBase['vincular_turno_curso'] ?? true,
+                    'aplicar_regras'         => ($cfgBase['vincular_curso_unidade'] ?? true) || ($cfgBase['vincular_turno_curso'] ?? true),
+                    'exibir_no_topo'         => $exibirNoTopo,
+                ],
+            ]);
+        }
+    }
+
     public function excluir($id)
     {
         $campo = CampoFormulario::findOrFail($id);
@@ -830,7 +1329,14 @@ class DynamicFields extends Component
             ->where('ordem', '>', $ordemExcluida)
             ->decrement('ordem');
 
-        $this->atualizarProximaOrdem();
+        $this->camposSelecionados = array_values(array_diff($this->camposSelecionados, [(string) $id]));
+
+        if ($this->campoId == $id) {
+            $this->cancelarEdicao();
+        } else {
+            $this->atualizarProximaOrdem();
+        }
+
         $this->dispatch('sucesso', msg: 'Bloco removido do formulário!');
     }
 
@@ -859,13 +1365,16 @@ class DynamicFields extends Component
         $etapa = \App\Models\Etapa::find($id);
         if (!$etapa) return;
 
-        if ($etapa->numero == 1) {
+        $numeroRemovido = (int) $etapa->numero;
+        $colunaFk = $this->getContextColumn();
+
+        if ($numeroRemovido === 1) {
             $this->dispatch('erro', msg: 'A 1º Fase é obrigatória e não pode ser excluída.');
             return;
         }
         
-        $temCampos = \App\Models\CampoFormulario::where($this->getContextColumn(), $this->contextoId)
-            ->where('etapa', $etapa->numero)
+        $temCampos = \App\Models\CampoFormulario::where($colunaFk, $this->contextoId)
+            ->where('etapa', $numeroRemovido)
             ->where('tipo', '!=', 'config')
             ->exists();
             
@@ -874,12 +1383,62 @@ class DynamicFields extends Component
             return;
         }
         
-        $etapa->delete();
+        DB::transaction(function () use ($etapa, $numeroRemovido, $colunaFk) {
+            // 1. Exclui a página selecionada
+            $etapa->delete();
+
+            // 2. Decrementa o número da etapa nos campos de todas as páginas seguintes
+            \App\Models\CampoFormulario::where($colunaFk, $this->contextoId)
+                ->where('etapa', '>', $numeroRemovido)
+                ->where('tipo', '!=', 'config')
+                ->decrement('etapa');
+
+            // 3. Reordena sequencialmente (1, 2, 3...) as páginas restantes na tabela Etapas
+            $etapasRestantes = \App\Models\Etapa::where($colunaFk, $this->contextoId)
+                ->orderBy('numero', 'asc')
+                ->get();
+
+            foreach ($etapasRestantes as $idx => $etapaRestante) {
+                $novoNumero = $idx + 1;
+                if ((int) $etapaRestante->numero !== $novoNumero) {
+                    $novoNome = preg_replace('/^(\d+)(º\s*Fase|ª\s*Fase|ª\s*Etapa|º\s*Passo)$/iu', $novoNumero . '$2', trim($etapaRestante->nome));
+                    $novoNome = preg_replace('/^(Página|Etapa|Fase|Passo)\s+\d+$/iu', '$1 ' . $novoNumero, $novoNome);
+
+                    $etapaRestante->update([
+                        'numero' => $novoNumero,
+                        'nome'   => $novoNome,
+                    ]);
+                }
+            }
+
+            // 4. Atualiza também a numeração nas Fases Temporais (FormularioFase)
+            if (class_exists(\App\Models\FormularioFase::class)) {
+                $fases = \App\Models\FormularioFase::where($colunaFk, $this->contextoId)->get();
+                foreach ($fases as $fase) {
+                    $pags = is_string($fase->paginas) ? json_decode($fase->paginas, true) : ($fase->paginas ?? []);
+                    if (is_array($pags)) {
+                        $novasPags = [];
+                        foreach ($pags as $p) {
+                            $pInt = (int) $p;
+                            if ($pInt === $numeroRemovido) continue;
+                            $novasPags[] = $pInt > $numeroRemovido ? ($pInt - 1) : $pInt;
+                        }
+                        $fase->update(['paginas' => array_values(array_unique($novasPags))]);
+                    }
+                }
+            }
+        });
+
         $this->carregarEtapas();
         
-        if ($this->etapa == $etapa->numero) {
-            $this->etapa = $this->etapasDisponiveis->first()->numero ?? 1;
+        if ((int) $this->etapa === $numeroRemovido) {
+            $this->etapa = max(1, $numeroRemovido - 1);
+        } elseif ((int) $this->etapa > $numeroRemovido) {
+            $this->etapa = (int) $this->etapa - 1;
         }
+
+        $this->atualizarProximaOrdem();
+        $this->dispatch('sucesso', msg: 'Página removida e numeração das páginas seguintes atualizada!');
     }
 
     public function render()

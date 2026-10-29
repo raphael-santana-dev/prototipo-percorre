@@ -42,7 +42,23 @@
                     #{{ $template->id }}
                 </td>
                 <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="text-sm font-bold text-gray-900">{{ $template->nome }}</div>
+                    <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $template->nome }}</div>
+                </td>
+                <td class="px-4 py-2.5 whitespace-nowrap text-center">
+                    @php $canalTpl = $template->canal ?? 'email'; @endphp
+                    @if($canalTpl === 'whatsapp')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                        </span>
+                    @elseif($canalTpl === 'ambos')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purpura-50 text-purpura-700 border border-purpura-200">
+                            <i class="ph-fill ph-intersect"></i> Ambos
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                            <i class="ph-fill ph-envelope-simple"></i> E-mail
+                        </span>
+                    @endif
                 </td>
                 <td class="px-4 py-3">
                     <div class="text-sm text-gray-600 truncate max-w-sm">{{ $template->assunto }}</div>
@@ -83,7 +99,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="4" class="px-4 py-12 text-center text-gray-500 text-sm border-t border-gray-100">
+                <td colspan="5" class="px-4 py-12 text-center text-gray-500 text-sm border-t border-gray-100">
                     <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-200">
                         <i class="ph ph-layout text-3xl text-gray-400"></i>
                     </div>

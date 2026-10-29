@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-      :class="{ 'dark': tema === 'dark' }"
-      class="h-full">
+@if(app()->environment('production'))
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+    @else
+        <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+            x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
+            x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
+            :class="{ 'dark': tema === 'dark' }"
+            class="h-full">
+    @endif
 
     <head>
         <meta charset="utf-8">
@@ -12,15 +16,17 @@
         <title>{{ $title ?? 'Sistema Administrativo' }}</title>
         
         <script>
+        @if(!app()->environment('production'))
             if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
-            (function () {
-                var d = document.documentElement;
-                d.dataset.layout  = localStorage.getItem('layoutMode') || 'left';
-                d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
-            })();
-        </script>
+        @endif
+        (function () {
+            var d = document.documentElement;
+            d.dataset.layout  = localStorage.getItem('layoutMode') || 'left'; /* (ou 'top' no portal do aluno) */
+            d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
+        })();
+    </script>
 
         @includeIf('components.partials.analytics-heatmap')
         
@@ -327,11 +333,11 @@
                                 </a>
 
                                 {{-- Troca de tema protegida por feature e permissão --}}
-                                @if(feature('tema.alterar') && auth()->user()->can('tema.alterar'))
-                                <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
-                                    <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
-                                    <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
-                                </button>
+                                @if(!app()->environment('production'))
+                                    <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
+                                        <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
+                                        <i class="text-lg ph ph-sun text-ponkan-500" x-show="tema === 'dark'" x-cloak></i>
+                                    </button>
                                 @endif
                                 
                                 <button @click="toggleLayout()" class="hidden md:flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alterar Posição do Menu">
@@ -503,17 +509,15 @@
                     </div>
                 </nav>
 
-                {{-- MAIN CONTEÚDO --}}
                 <main class="flex-1 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 custom-scrollbar">
-                    <div class="w-full min-h-full pt-6 pb-8">
+                    <div class="w-full min-h-full pt-6">
                         <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
                             {{ $slot }}
                         </div>
                     </div>
                 </main>
             </div>
-
-            {{-- MENU MOBILE (DRAWER) --}}
+            
             <div x-show="drawerOpen" x-transition.opacity.duration.300ms @click="drawerOpen = false" class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden" x-cloak></div>
             <div class="fixed inset-y-0 left-0 z-50 flex flex-col w-4/5 max-w-sm transition-transform duration-300 ease-in-out transform bg-white shadow-2xl dark:bg-gray-800 md:hidden" :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'">
                 <div class="relative flex-shrink-0 h-40 overflow-hidden bg-petunia-900">

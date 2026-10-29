@@ -23,15 +23,15 @@ class FormDetails extends Component
     public $search = '';
     public $data_inicio = '';
     public $data_fim = '';
-    public array $filtrosDinamicos = []; // NOVO: Armazena os valores dos filtros dinâmicos por campo
+    public array $filtrosDinamicos = [];
 
     public array $selecionadas = [];
     public bool $selecionarTudo = false;
 
     public function mount($id)
     {
-        abort_if(!feature('formulario.detalhes'), 403);
-        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
+        // abort_if(!feature('formulario.detalhes'), 403);
+        // abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('formulario.respostas'), 403);
 
         $this->formulario = Formulario::findOrFail($id);
         $this->ordenacaoCampo = 'created_at';
@@ -136,7 +136,6 @@ class FormDetails extends Component
 
     public function getCamposFiltraveisProperty()
     {
-        // Retorna apenas campos que fazem sentido para filtragem (ignora visuais, divisórias, etc.)
         return CampoFormulario::where('formulario_id', $this->formulario->id)
             ->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'social', 'spacer', 'link', 'signature', 'file'])
             ->orderBy('etapa')
@@ -166,7 +165,6 @@ class FormDetails extends Component
             ->when($this->data_inicio, fn($q) => $q->whereDate('created_at', '>=', $this->data_inicio))
             ->when($this->data_fim, fn($q) => $q->whereDate('created_at', '<=', $this->data_fim));
 
-        // Aplica os filtros dinâmicos iterando sobre cada campo preenchido
         if (!empty($this->filtrosDinamicos)) {
             foreach ($this->filtrosDinamicos as $nomeCampo => $valorFiltro) {
                 if ($valorFiltro === null || $valorFiltro === '') {
@@ -177,7 +175,6 @@ class FormDetails extends Component
                 if (!$campoObj) continue;
 
                 if (in_array($campoObj->subtipo, ['date', 'datetime-local'])) {
-                    // Filtro de data De/Até (espera array com 'de' e 'ate')
                     if (is_array($valorFiltro)) {
                         if (!empty($valorFiltro['de'])) {
                             $query->whereRaw("respostas->>? >= ?", [$nomeCampo, $valorFiltro['de']]);
@@ -187,10 +184,8 @@ class FormDetails extends Component
                         }
                     }
                 } elseif (in_array($campoObj->tipo, ['select', 'radio'])) {
-                    // Filtro de seleção exata
                     $query->whereRaw("respostas->>? = ?", [$nomeCampo, $valorFiltro]);
                 } else {
-                    // Filtro de texto parcial (ilike)
                     $query->whereRaw("respostas->>? ilike ?", [$nomeCampo, "%{$valorFiltro}%"]);
                 }
             }

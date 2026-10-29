@@ -13,7 +13,7 @@
 
 <div class="min-h-screen flex flex-col relative w-full font-sans bg-transparent"
      x-data="{
-        storageKey: 'percorre_form_publico_{{ $formulario->id }}',
+        storageKey: 'percorre_form_publico_{{ $formulario->id }}{{ $isTeste ? '_TESTE' : '' }}',
         readyToSave: false,
         init() {
             if (@js((bool) request()->query('preview')) || @js($bloqueado)) return;
@@ -35,7 +35,7 @@
             this.readyToSave = true;
         },
         salvarNoLocalStorage() {
-            if (!this.readyToSave || @js((bool) request()->query('preview')) || @js($bloqueado)) return;
+            if (!this.readyToSave || @js($isPreview) || @js($isTeste) || @js($bloqueado)) return;
             if ($wire.finalizado) {
                 localStorage.removeItem(this.storageKey);
                 return;
@@ -64,6 +64,17 @@
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
     <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
+        @if($isTeste)
+            <div class="mb-6 p-4 bg-amber-400 text-amber-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-md ring-2 ring-amber-500 z-50">
+                <span class="flex items-center gap-2">
+                    <i class="ph-fill ph-flask text-lg text-amber-800"></i> 
+                    MODO DE TESTE (SANDBOX): Você está testando este formulário. Nenhuma resposta será gravada no banco de dados.
+                </span>
+                <button onclick="window.close()" class="px-3 py-1 bg-amber-900 text-amber-100 hover:bg-black hover:text-white transition-colors rounded text-[10px] font-extrabold uppercase tracking-wider">
+                    Encerrar Teste
+                </button>
+            </div>
+        @endif
         
         @if($bloqueado)
             <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center transition-all duration-300 relative overflow-hidden">
@@ -89,18 +100,27 @@
             </div>
 
         @elseif($finalizado)
-            <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-green-500 transition-all duration-300">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6 shadow-sm border border-green-200 dark:bg-green-900/30 dark:border-green-800">
+            <div class="{{ $cardClass }} p-10 md:p-16 rounded-xl text-center border-t-4 border-purpura-500 transition-all duration-300">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-purpura-100 text-purpura-600 mb-6 shadow-sm border border-purpura-200 dark:bg-purpura-900/30 dark:border-purpura-800">
                     <i class="ph-fill ph-check-circle text-4xl"></i>
                 </div>
-                <h2 class="text-3xl font-extrabold {{ $textoForm }} mb-4">Formulário Enviado!</h2>
-                <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-lg mx-auto">Suas respostas foram registradas com sucesso no sistema. Agradecemos pela sua participação.</p>
+                <h2 class="text-3xl font-extrabold {{ $textoForm }} mb-4">Formulário Concluído!</h2>
+                <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-lg mx-auto">
+                    Muito obrigado! As suas respostas foram registadas com sucesso no nosso sistema. Agradecemos a sua participação.
+                </p>
                 
-                <button type="button" onclick="window.location.reload()" class="mt-8 inline-flex items-center gap-2 bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
-                    <i class="ph-bold ph-arrow-counter-clockwise"></i> Preencher Novamente
-                </button>
-            </div>
+                <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button type="button" wire:click="baixarFichaPdf" wire:loading.attr="disabled" class="inline-flex items-center gap-2 bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-6 rounded-lg shadow-sm transition duration-200">
+                        <i class="ph-bold ph-file-pdf text-lg" wire:loading.remove wire:target="baixarFichaPdf"></i>
+                        <i class="ph-bold ph-spinner animate-spin text-lg" wire:loading wire:target="baixarFichaPdf"></i>
+                        <span>Baixar Ficha de Respostas (PDF)</span>
+                    </button>
 
+                    <button type="button" onclick="window.location.reload()" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Preencher Novamente
+                    </button>
+                </div>
+            </div>
         @else
             <div class="{{ $cardClass }} p-8 md:p-12 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
                 

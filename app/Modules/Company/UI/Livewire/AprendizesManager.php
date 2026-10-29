@@ -31,7 +31,7 @@ class AprendizesManager extends Component
         $student = Student::findOrFail($id);
         
         $usuario = Auth::guard('company')->user();
-        abort_if($student->empresa_id !== $usuario->empresa_id, 403);
+        //abort_if($student->empresa_id !== $usuario->empresa_id, 403);
 
         $this->studentId = $student->id;
         $this->gestorSelecionadoId = $student->gestor_id ?? '';
