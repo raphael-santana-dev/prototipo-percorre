@@ -6,13 +6,11 @@
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
 
-        @if(feature('unidade.criar') && (auth()->user()->hasRole('dev') || auth()->user()->can('unidade.criar')))
             <x-slot name="actions">
                 <button wire:click="openModal" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600">
                     <i class="ph ph-plus text-lg"></i> Nova Unidade
                 </button>
             </x-slot>
-        @endif
 
     </x-page-header>
 
