@@ -62,6 +62,7 @@
                         <option value="ignorado_saida">Poupados (Meta Atingida)</option>
                         <option value="ignorado_condicao">Poupados (Mudou Condição)</option>
                         <option value="ignorado_engajamento">Filtrados por Engajamento</option>
+                        <option value="cancelado_manual">Cancelados Manualmente</option>
                     </select>
 
                     <div class="flex items-center h-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xs px-2.5">
@@ -96,7 +97,7 @@
                         <th class="px-6 py-3.5 font-bold">Para Quem (Destinatário)</th>
                         <th class="px-6 py-3.5 font-bold">Etapa & Template Disparado</th>
                         <th class="px-6 py-3.5 font-bold text-center">Situação</th>
-                        <th class="px-6 py-3.5 font-bold text-right">Auditoria</th>
+                        <th class="px-6 py-3.5 font-bold text-right">Ações e Auditoria</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -146,6 +147,10 @@
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase bg-emerald-50 border border-emerald-200 text-emerald-700">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Disparado
                                     </span>
+                                @elseif($disp->status === 'cancelado_manual')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase bg-red-50 border border-red-200 text-red-700" title="{{ $disp->motivo_status }}">
+                                        <i class="ph-bold ph-prohibit"></i> Cancelado Manual
+                                    </span>
                                 @elseif($disp->status === 'ignorado_saida')
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase bg-blue-50 border border-blue-200 text-blue-700" title="{{ $disp->motivo_status }}">
                                         Meta Concluída
@@ -162,9 +167,46 @@
                             </td>
 
                             <td class="px-6 py-3.5 whitespace-nowrap text-right">
-                                <button wire:click="showQuickView({{ $disp->id }})" class="px-2.5 py-1 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-purpura-600 bg-gray-50 hover:bg-purpura-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg transition inline-flex items-center gap-1">
-                                    <i class="ph-bold ph-info"></i> Detalhes
-                                </button>
+                                <div class="inline-flex items-center justify-end gap-1.5">
+                                    {{-- Botão Reenviar / Forçar Envio da Etapa --}}
+                                    <button type="button"
+                                            wire:click="reenviarEtapa({{ $disp->id }})"
+                                            wire:confirm="Deseja {{ $disp->status === 'enviado' ? 'reenviar' : 'forçar o envio imediato d' }}esta etapa para {{ $disp->destinatario_email }}?"
+                                            class="px-2.5 py-1 text-xs font-bold text-purpura-700 dark:text-purpura-300 bg-purpura-50 hover:bg-purpura-100 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 rounded-lg transition inline-flex items-center gap-1"
+                                            title="{{ $disp->status === 'enviado' ? 'Reenviar esta etapa agora' : 'Forçar envio desta etapa agora' }}">
+                                        <i class="ph-bold ph-paper-plane-tilt"></i>
+                                        <span>{{ $disp->status === 'enviado' ? 'Reenviar' : 'Enviar Agora' }}</span>
+                                    </button>
+
+                                    {{-- Botão Cancelar Próximas Etapas ou Reativar --}}
+                                    @if($disp->status === 'cancelado_manual')
+                                        <button type="button"
+                                                wire:click="reativarDestinatario({{ $disp->id }})"
+                                                wire:confirm="Reativar as etapas futuras para {{ $disp->destinatario_email }} nesta esteira?"
+                                                class="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition inline-flex items-center gap-1"
+                                                title="Desbloquear etapas futuras para este destinatário">
+                                            <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                                            <span>Reativar</span>
+                                        </button>
+                                    @else
+                                        <button type="button"
+                                                wire:click="cancelarEtapasDestinatario({{ $disp->id }})"
+                                                wire:confirm="Cancelar todas as próximas etapas pendentes desta esteira para {{ $disp->destinatario_email }}?"
+                                                class="px-2.5 py-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition inline-flex items-center gap-1"
+                                                title="Interromper próximas etapas para este destinatário">
+                                            <i class="ph-bold ph-prohibit"></i>
+                                            <span>Cancelar Fila</span>
+                                        </button>
+                                    @endif
+
+                                    {{-- Botão Detalhes / Auditoria de Leitura e Cliques --}}
+                                    <button type="button"
+                                            wire:click="showQuickView({{ $disp->id }})"
+                                            class="px-2.5 py-1 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-purpura-600 bg-gray-50 hover:bg-purpura-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg transition inline-flex items-center gap-1"
+                                            title="Ver Auditoria de Leituras e Cliques">
+                                        <i class="ph-bold ph-info"></i> Detalhes
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty

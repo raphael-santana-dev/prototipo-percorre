@@ -58,6 +58,52 @@ class EsteiraDetails extends Component
         $this->dispatch('sucesso', msg: "Verificação executada! {$enviados} novo(s) disparo(s) processado(s).");
     }
 
+    public function reenviarEtapa(int $disparoId): void
+    {
+        $ok = EsteiraComunicacaoService::reenviarDisparoIndividual($disparoId);
+
+        if ($ok) {
+            $this->dispatch('sucesso', msg: 'E-mail da etapa colocado na fila de envio imediato para este destinatário!');
+        } else {
+            $this->dispatch('erro', msg: 'Não foi possível reenviar: verifique se o template da etapa ainda existe.');
+        }
+    }
+
+    public function cancelarEtapasDestinatario(int $disparoId): void
+    {
+        $disparo = EsteiraDisparo::findOrFail($disparoId);
+
+        if ($disparo->status !== 'enviado') {
+            $disparo->update([
+                'status'        => 'cancelado_manual',
+                'motivo_status' => 'Cancelado manualmente por ' . (auth()->user()->name ?? 'Administrador'),
+            ]);
+        }
+
+        $qtdBloqueada = EsteiraComunicacaoService::cancelarProximasEtapasDestinatario(
+            $this->esteira->id,
+            $disparo->destinatario_email,
+            $disparo->entidade_id,
+            $disparo->destinatario_nome,
+            $disparo->entidade_tipo
+        );
+
+        $this->dispatch('sucesso', msg: "Próximas etapas canceladas para {$disparo->destinatario_email} ({$qtdBloqueada} etapa(s) futura(s) bloqueada(s)).");
+    }
+
+    public function reativarDestinatario(int $disparoId): void
+    {
+        $disparo = EsteiraDisparo::findOrFail($disparoId);
+
+        $removidos = EsteiraComunicacaoService::reativarDestinatarioNaEsteira(
+            $this->esteira->id,
+            $disparo->destinatario_email,
+            $disparo->entidade_id
+        );
+
+        $this->dispatch('sucesso', msg: "Destinatário reativado na esteira! {$removidos} bloqueio(s) manual(is) removido(s).");
+    }
+
     public function showQuickView(int $disparoId)
     {
         $disparo = EsteiraDisparo::with(['etapa.template'])->findOrFail($disparoId);

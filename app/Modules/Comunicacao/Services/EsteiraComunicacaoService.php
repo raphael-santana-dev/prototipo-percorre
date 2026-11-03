@@ -545,4 +545,150 @@ class EsteiraComunicacaoService
 
         return true;
     }
+
+    /**
+     * Reenvia ou força o disparo imediato de um registro específico da esteira.
+     */
+    public static function reenviarDisparoIndividual(int $disparoId): bool
+    {
+        $disparo = EsteiraDisparo::with(['esteira.formulario', 'etapa.template'])->findOrFail($disparoId);
+        $esteira = $disparo->esteira;
+        $etapa   = $disparo->etapa;
+
+        if (!$esteira || !$etapa || !$etapa->template) {
+            return false;
+        }
+
+        $inscricao = null;
+        $dadosDinamicos = [];
+
+        if ($disparo->entidade_tipo === 'inscricao' && $disparo->entidade_id) {
+            $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo'])->find($disparo->entidade_id);
+            if ($inscricao) {
+                $dadosDinamicos = is_array($inscricao->dados_dinamicos)
+                    ? $inscricao->dados_dinamicos
+                    : (json_decode($inscricao->dados_dinamicos ?? '{}', true) ?: []);
+            }
+        } elseif ($disparo->entidade_tipo === 'resposta_formulario' && $disparo->entidade_id) {
+            $resp = RespostaFormulario::find($disparo->entidade_id);
+            if ($resp) {
+                $dadosDinamicos = is_array($resp->respostas)
+                    ? $resp->respostas
+                    : (json_decode($resp->respostas ?? '{}', true) ?: []);
+            }
+        } elseif ($disparo->entidade_tipo === 'student' && $disparo->entidade_id) {
+            $inscricao = Inscricao::where('student_id', $disparo->entidade_id)->latest()->first();
+        }
+
+        $nome = $disparo->destinatario_nome ?: ($inscricao->nome ?? 'Candidato');
+        $contextoEnvio = array_merge($dadosDinamicos, [
+            'nome'              => $nome,
+            'primeiro_nome'     => explode(' ', trim((string) $nome))[0],
+            'nome_esteira'      => $esteira->nome,
+            'nome_etapa'        => $etapa->nome,
+            'titulo_formulario' => $esteira->formulario->titulo ?? '',
+            'url_formulario'    => $esteira->formulario ? url('/f/' . $esteira->formulario->slug) : url('/'),
+        ]);
+
+        if ($etapa->tipo_acao === 'criar_aluno_enviar_email' && $inscricao) {
+            if (!$inscricao->student_id) {
+                $senhaPlana = Str::random(8);
+                $estudante = Student::firstOrCreate(
+                    ['email' => $inscricao->email],
+                    [
+                        'name'                 => $inscricao->nome,
+                        'password'             => Hash::make($senhaPlana),
+                        'is_active'            => true,
+                        'must_change_password' => true,
+                        'unidade_id'           => $inscricao->unidade_id,
+                    ]
+                );
+                $inscricao->update(['student_id' => $estudante->id]);
+                $contextoEnvio['senha_provisoria'] = $senhaPlana;
+                $contextoEnvio['link_login'] = url('/aluno/login');
+            } else {
+                $contextoEnvio['senha_provisoria'] = '******** (Você já possui cadastro no sistema)';
+                $contextoEnvio['link_login'] = url('/aluno/login');
+            }
+        }
+
+        $eventoGatilho = "esteira.{$esteira->id}.etapa.{$etapa->ordem}.reenvio";
+
+        DispararAutomacaoJob::dispatch(
+            $etapa->template,
+            $disparo->destinatario_email,
+            $inscricao,
+            $contextoEnvio,
+            $eventoGatilho
+        );
+
+        $disparo->update([
+            'status'        => 'enviado',
+            'motivo_status' => 'Reenviado / disparado manualmente por ' . (auth()->user()->name ?? 'Administrador') . ' em ' . now()->format('d/m/Y H:i'),
+            'enviado_em'    => now(),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Cancela todas as próximas etapas pendentes na esteira para um destinatário específico.
+     */
+    public static function cancelarProximasEtapasDestinatario(int $esteiraId, string $email, ?int $entidadeId = null, ?string $nome = null, ?string $entidadeTipo = null): int
+    {
+        $esteira = EsteiraComunicacao::with('etapas')->findOrFail($esteiraId);
+        $emailLimpo = strtolower(trim($email));
+        $bloqueados = 0;
+
+        foreach ($esteira->etapas as $etapa) {
+            $query = EsteiraDisparo::where('esteira_id', $esteira->id)
+                ->where('etapa_id', $etapa->id)
+                ->where('destinatario_email', $emailLimpo);
+
+            if ($entidadeId !== null) {
+                $query->where('entidade_id', $entidadeId);
+            }
+
+            $existente = $query->first();
+
+            if (!$existente) {
+                EsteiraDisparo::create([
+                    'esteira_id'         => $esteira->id,
+                    'etapa_id'           => $etapa->id,
+                    'destinatario_email' => $emailLimpo,
+                    'destinatario_nome'  => $nome,
+                    'entidade_tipo'      => $entidadeTipo ?? 'manual',
+                    'entidade_id'        => $entidadeId ?? 0,
+                    'status'             => 'cancelado_manual',
+                    'motivo_status'      => 'Etapa cancelada manualmente por ' . (auth()->user()->name ?? 'Administrador'),
+                    'enviado_em'         => now(),
+                ]);
+                $bloqueados++;
+            } elseif ($existente->status !== 'enviado' && $existente->status !== 'cancelado_manual') {
+                $existente->update([
+                    'status'        => 'cancelado_manual',
+                    'motivo_status' => 'Etapa cancelada manualmente por ' . (auth()->user()->name ?? 'Administrador'),
+                ]);
+                $bloqueados++;
+            }
+        }
+
+        return $bloqueados;
+    }
+
+    /**
+     * Reativa as etapas que haviam sido canceladas manualmente para este destinatário.
+     */
+    public static function reativarDestinatarioNaEsteira(int $esteiraId, string $email, ?int $entidadeId = null): int
+    {
+        $query = EsteiraDisparo::where('esteira_id', $esteiraId)
+            ->where('destinatario_email', strtolower(trim($email)))
+            ->where('status', 'cancelado_manual');
+
+        if ($entidadeId !== null) {
+            $query->where('entidade_id', $entidadeId);
+        }
+
+        return $query->delete();
+    }
 }
