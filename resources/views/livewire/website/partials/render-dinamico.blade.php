@@ -84,35 +84,47 @@
         }
     @endphp
 
-    <div class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
+    <div wire:key="campo-wrapper-{{ $campo->etapa }}-{{ $campo->id }}-{{ $campo->name }}"
+        class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
         @if($isCondicional)
-            data-target="{{ $campo->depende_valor }}"
             x-data="{
+                depField: @js((string) $campo->depende_de),
+                depTarget: @js((string) $campo->depende_valor),
+                depOp: @js((string) ($campo->depende_operador ?: '=')),
+                norm(v) {
+                    return String(v ?? '')
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .toLowerCase()
+                        .trim();
+                },
                 get isVisivel() {
-                    let respostas = $wire.respostas;
-                    let atual = null;
-                    if (respostas && respostas['{{ $campo->depende_de }}'] !== undefined && respostas['{{ $campo->depende_de }}'] !== '') {
-                        atual = respostas['{{ $campo->depende_de }}'];
-                    } else {
-                        atual = $wire.{{ $campo->depende_de }};
-                    }
+                    let respostas = $wire.respostas || {};
+                    let atual = (this.depField in respostas)
+                        ? respostas[this.depField]
+                        : ($wire[this.depField] !== undefined ? $wire[this.depField] : '');
+
                     if (atual === null || atual === undefined) atual = '';
-                    
-                    let target = String($el.dataset.target).toLowerCase().trim();
-                    let op = '{{ $campo->depende_operador }}';
-                    
+
+                    let target = this.norm(this.depTarget);
+                    let op = this.depOp || '=';
+
                     if (Array.isArray(atual)) {
-                        let atualArray = atual.map(s => String(s).toLowerCase().trim());
-                        let targetArray = target.split(',').map(s => s.trim());
+                        let atualArray = atual.map(s => this.norm(s)).filter(s => s !== '');
+                        let targetArray = target.split(',').map(s => s.trim()).filter(s => s !== '');
                         if (op === '=') return atualArray.includes(target);
-                        if (op === '!=') return !atualArray.includes(target);
+                        if (op === '!=') return atualArray.length > 0 && !atualArray.includes(target);
                         if (op === 'in') return atualArray.some(r => targetArray.includes(r));
                         return false;
                     }
 
-                    let val = String(atual).toLowerCase().trim();
-                    let numVal = Number(val);
-                    let numTarget = Number(target);
+                    let val = this.norm(atual);
+
+                    // Se o campo pai ainda não foi respondido, não exibe campos dependentes
+                    if (val === '') return false;
+
+                    let numVal = Number(val.replace(',', '.'));
+                    let numTarget = Number(target.replace(',', '.'));
 
                     if (op === '=') return val === target;
                     if (op === '!=') return val !== target;
@@ -121,7 +133,7 @@
                     if (op === '>=') return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
                     if (op === '<=') return !isNaN(numVal) && !isNaN(numTarget) && numVal <= numTarget;
                     if (op === 'in') return target.split(',').map(s => s.trim()).includes(val);
-                    
+
                     return false;
                 }
             }"
