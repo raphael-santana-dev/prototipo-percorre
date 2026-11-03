@@ -7,52 +7,40 @@
         <p class="text-gray-500 dark:text-gray-400 mt-2">Escolha abaixo o tipo de fluxo ou gerencie seus formulários publicados e em rascunho.</p>
     </div>
 
-    <!-- CARDS DE OPÇÕES -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- CARDS DE OPÇÕES (3 FLUXOS OFICIAIS) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <!-- PROCESSO SELETIVO (Padrão) -->
+        <!-- 1. PROCESSO SELETIVO (Inscrição Oficial) -->
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group cursor-pointer" wire:click="$set('modalCicloAberto', true)">
             <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-4">
                 <i class="ph-bold ph-calendar-check text-xl"></i>
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Inscrição Oficial</h3>
-            <p class="text-[11px] text-gray-500 leading-tight mb-4 flex-1">
-                Vinculado a um Ciclo Seletivo (Regular ou Projeto). Gera ranqueamento e pontuação.
+            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
+                Vinculado a um Ciclo Seletivo (Regular ou Projeto). Gera ranqueamento, pontuação e ficha oficial de inscrição.
             </p>
             <span class="text-xs font-bold text-indigo-600 group-hover:underline">Configurar Ciclo →</span>
         </div>
 
-        <!-- PRÉ-INSCRIÇÃO (Leads) -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group cursor-pointer" wire:click="$set('modalPreInscricaoAberto', true)">
-            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
-                <i class="ph-bold ph-users-three text-xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Pré-Inscrição (Leads)</h3>
-            <p class="text-[11px] text-gray-500 leading-tight mb-4 flex-1">
-                Formulário rápido para captação. Pode ser filtrado por unidade ou curso.
-            </p>
-            <span class="text-xs font-bold text-emerald-600 group-hover:underline">Criar Captação →</span>
-        </div>
-
-        <!-- AVALIAÇÃO DE APRENDIZAGEM -->
+        <!-- 2. AVALIAÇÃO DE APRENDIZAGEM -->
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group cursor-pointer" wire:click="$set('modalAprendizagemAberto', true)">
             <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 mb-4">
                 <i class="ph-bold ph-graduation-cap text-xl"></i>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Avaliação de Aprendiz.</h3>
-            <p class="text-[11px] text-gray-500 leading-tight mb-4 flex-1">
-                Formulários vinculados a um Workflow (permite múltiplos ativos ou criar em rascunho).
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Avaliação de Aprendizagem</h3>
+            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
+                Formulários vinculados a um Workflow de Aprendizagem (permite múltiplos ativos ou criar em rascunho).
             </p>
             <span class="text-xs font-bold text-orange-600 group-hover:underline">Criar Avaliação →</span>
         </div>
 
-        <!-- FORMULÁRIO GERAL -->
+        <!-- 3. FORMULÁRIO GERAL -->
         <a href="{{ route('formularios.create') }}" class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 flex flex-col transition hover:shadow-md hover:-translate-y-1 relative group">
             <div class="w-12 h-12 bg-purpura-100 rounded-xl flex items-center justify-center text-purpura-600 mb-4">
                 <i class="ph-bold ph-list-dashes text-xl"></i>
             </div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Formulário Geral</h3>
-            <p class="text-[11px] text-gray-500 leading-tight mb-4 flex-1">
+            <p class="text-xs text-gray-500 leading-relaxed mb-4 flex-1">
                 Pesquisas, questionários públicos (/f/slug) ou modelos em rascunho para vincular depois.
             </p>
             <span class="text-xs font-bold text-purpura-600 group-hover:underline">Criar Formulário →</span>
@@ -87,20 +75,19 @@
                 <div wire:key="hub-form-{{ $formItem->id }}" class="p-4 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition">
                     <div class="space-y-1">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-bold text-sm text-gray-900 dark:text-white">{{ $formItem->titulo }}</span>
+                            <a href="{{ route('formularios.show', $formItem->id) }}" class="font-bold text-sm text-gray-900 hover:text-purpura-600 dark:text-white">
+                                {{ $formItem->titulo }}
+                            </a>
                             <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded border {{ $formItem->is_rascunho ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
                                 {{ $formItem->is_rascunho ? 'Rascunho' : 'Publicado' }}
                             </span>
                             <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                {{ $formItem->tipo === 'geral' ? 'Formulário Público' : ($formItem->tipo === 'pre_inscricao' ? 'Pré-Inscrição' : 'Aprendizagem') }}
+                                {{ $formItem->tipo === 'aprendizagem' ? 'Aprendizagem' : 'Formulário Público' }}
                             </span>
                         </div>
                         <p class="text-xs text-gray-500">
                             @if($formItem->tipo === 'aprendizagem')
                                 Vínculo: <strong>{{ $formItem->faseAprendizagem?->ciclo?->nome ? $formItem->faseAprendizagem->ciclo->nome . ' — ' . $formItem->faseAprendizagem->nome : 'Sem Ciclo/Fase vinculado' }}</strong>
-                            @elseif($formItem->tipo === 'pre_inscricao')
-                                Captação: <strong>{{ $formItem->cicloSeletivo->nome ?? 'Qualquer Ciclo' }} &middot; {{ $formItem->unidade->nome ?? 'Todas Unidades' }} / {{ $formItem->curso->nome ?? 'Todos Cursos' }}</strong>
-                                &middot; <span class="font-mono text-[11px]">/pre-inscricao/{{ $formItem->slug }}</span>
                             @else
                                 Link Público: <a href="{{ url('/f/' . $formItem->slug) }}" target="_blank" class="font-mono text-purpura-600 hover:underline">/f/{{ $formItem->slug }}</a>
                                 @if($formItem->cicloSeletivo)
@@ -112,18 +99,17 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 shrink-0">
-                        @php
-                            $rotaTeste = $formItem->tipo === 'pre_inscricao'
-                                ? url('/pre-inscricao/' . $formItem->slug . '?modo=teste')
-                                : url('/f/' . $formItem->slug . '?modo=teste');
-                        @endphp
                         @if(auth()->user()->hasAnyRole(['dev', 'admin']) || auth()->user()->can('formulario.testar') || auth()->user()->can('inscricao.criar'))
-                            <a href="{{ $rotaTeste }}" target="_blank" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Testar preenchimento em Sandbox">
+                            <a href="{{ url('/f/' . $formItem->slug . '?modo=teste') }}" target="_blank" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Testar preenchimento em Sandbox">
                                 <i class="ph-fill ph-flask"></i> Testar
                             </a>
                         @endif
 
-                        <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Vincular a um Ciclo de Inscrição, Aprendizagem ou Formulário Geral">
+                        <a href="{{ route('formularios.show', $formItem->id) }}" class="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs font-bold flex items-center gap-1 transition" title="Ver Respostas">
+                            <i class="ph-bold ph-files"></i> Respostas
+                        </a>
+
+                        <button type="button" wire:click="abrirModalVincular({{ $formItem->id }})" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1 transition">
                             <i class="ph-bold ph-link"></i> Vincular Destino
                         </button>
 
@@ -178,58 +164,7 @@
         </div>
     @endif
 
-    <!-- Modal 2: PRÉ-INSCRIÇÃO (Leads) -->
-    @if($modalPreInscricaoAberto)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="$wire.set('modalPreInscricaoAberto', false)">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
-                    <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2"><i class="ph-fill ph-funnel"></i> Contexto da Pré-Inscrição</h3>
-                    <button wire:click="$set('modalPreInscricaoAberto', false)" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-lg"></i></button>
-                </div>
-                <div class="p-5 space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Título da Pré-Inscrição</label>
-                        <input type="text" wire:model="preInscricao.titulo" placeholder="Ex: Lista de Interesse 2026" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Para qual Ciclo Seletivo?</label>
-                        <select wire:model="preInscricao.ciclo_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-emerald-500">
-                            <option value="">-- Todos (Geral) --</option>
-                            @foreach($ciclos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Para qual Unidade?</label>
-                        <select wire:model="preInscricao.unidade_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-emerald-500">
-                            <option value="">-- Qualquer Unidade --</option>
-                            @foreach($unidades as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Para qual Curso?</label>
-                        <select wire:model="preInscricao.curso_id" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-emerald-500">
-                            <option value="">-- Qualquer Curso --</option>
-                            @foreach($cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                        </select>
-                    </div>
-                    <label class="flex items-start gap-2.5 p-3 rounded-lg border border-amber-200 bg-amber-50/60 cursor-pointer">
-                        <input type="checkbox" wire:model="preInscricao.is_rascunho" class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300">
-                        <div class="flex flex-col">
-                            <span class="text-xs font-bold text-amber-900">Guardar inicialmente como Rascunho</span>
-                            <span class="text-[10px] text-amber-700">Não ficará público até você clicar em Publicar.</span>
-                        </div>
-                    </label>
-                </div>
-                <div class="p-4 bg-gray-50 border-t border-gray-100">
-                    <button wire:click="criarFormularioPreInscricao" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition shadow-sm text-sm">
-                        Criar e Abrir Construtor
-                    </button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- Modal 3: AVALIAÇÃO DE APRENDIZAGEM -->
+    <!-- Modal 2: AVALIAÇÃO DE APRENDIZAGEM -->
     @if($modalAprendizagemAberto)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="$wire.set('modalAprendizagemAberto', false)">
@@ -282,7 +217,7 @@
         </div>
     @endif
 
-    <!-- Modal 4: MODAL UNIVERSAL PARA VINCULAR / CONVERTER DESTINO DO FORMULÁRIO -->
+    <!-- Modal 3: MODAL UNIVERSAL PARA VINCULAR / CONVERTER DESTINO DO FORMULÁRIO -->
     @if($modalVincularAberto)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" @click.outside="$wire.set('modalVincularAberto', false)">
@@ -305,7 +240,6 @@
                             <option value="geral">Formulário Público Geral (/f/slug)</option>
                             <option value="ciclo_inscricao">Aplicar Campos a um Ciclo de Inscrição Oficial (/inscricao)</option>
                             <option value="aprendizagem">Vincular a Ciclo / Fase de Aprendizagem</option>
-                            <option value="pre_inscricao">Vincular como Pré-Inscrição (Captação de Leads)</option>
                         </select>
                     </div>
 
@@ -353,37 +287,10 @@
                             @endif
                         </div>
 
-                    @elseif($destinoVinculo === 'pre_inscricao')
-                        <div class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1">Vincular a Ciclo (Opcional)</label>
-                                <select wire:model="vinculoCicloInscricaoId" class="w-full text-sm rounded-lg border-gray-300">
-                                    <option value="">-- Captação Geral --</option>
-                                    @foreach($ciclos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-800 mb-1">Unidade (Opcional)</label>
-                                    <select wire:model="vinculoUnidadeId" class="w-full text-xs rounded-lg border-gray-300">
-                                        <option value="">-- Todas --</option>
-                                        @foreach($unidades as $u) <option value="{{ $u->id }}">{{ $u->nome }}</option> @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-gray-800 mb-1">Curso (Opcional)</label>
-                                    <select wire:model="vinculoCursoId" class="w-full text-xs rounded-lg border-gray-300">
-                                        <option value="">-- Todos --</option>
-                                        @foreach($cursos as $c) <option value="{{ $c->id }}">{{ $c->nome }}</option> @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
                     @else
                         <div class="p-4 bg-purpura-50/50 border border-purpura-200 rounded-xl space-y-3">
                             <p class="text-xs text-gray-600">
-                                Este formulário responderá na URL pública <strong>/f/{slug}</strong> (`FormularioPublico`). Você pode opcionalmente associá-lo a um Ciclo Seletivo para organização:
+                                Este formulário responderá na URL pública <strong>/f/{slug}</strong>. Você pode opcionalmente associá-lo a um Ciclo Seletivo para organização:
                             </p>
                             <div>
                                 <label class="block text-xs font-bold text-gray-800 mb-1">Ciclo Seletivo Associado (Opcional)</label>

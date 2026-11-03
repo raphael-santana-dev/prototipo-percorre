@@ -78,6 +78,10 @@ class RegistrationManager extends Component
     public string $contatoConteudo = '';
     public bool $contatoHouveResposta = false;
     public array $historicoContatosCanal = [];
+
+    use \App\Traits\WithFichaPdfDownload;
+
+    public bool $selecionarTudo = false;
     
     public function mount()
     {
@@ -855,9 +859,75 @@ class RegistrationManager extends Component
         $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições capturadas com as regras avançadas.');
     }
 
+    public function updatedSelecionarTudo($value): void
+    {
+        if ($value) {
+            $idsPagina = $this->obterQueryFiltrada()
+                ->apenasVinculosPermitidos()
+                ->paginate($this->porPagina)
+                ->pluck('id')
+                ->map(fn($id) => (string) $id)
+                ->toArray();
+
+            $this->selecionadas = array_values(array_unique(array_merge($this->selecionadas, $idsPagina)));
+        } else {
+            $this->selecionadas = [];
+        }
+    }
+
     public function desmarcarTodas()
     {
         $this->selecionadas = [];
+        $this->selecionarTudo = false;
+    }
+
+    public function solicitarExportacao($formato = 'csv')
+    {
+        if (!is_string($formato)) {
+            $formato = 'csv';
+        }
+
+        $query = $this->obterQueryFiltrada()->apenasVinculosPermitidos();
+
+        if (!empty($this->selecionadas)) {
+            $query->whereIn('inscricoes.id', $this->selecionadas);
+        }
+
+        $queryCount = $query->count();
+
+        if ($queryCount === 0) {
+            $this->dispatch('erro', msg: 'Não há inscrições para exportar com base nesta seleção ou filtro.');
+            return;
+        }
+
+        $filtrosAtuais = [
+            'nome'             => $this->filtroNome,
+            'status'           => $this->filtroStatus,
+            'ciclo'            => $this->filtroCiclo,
+            'unidade'          => $this->filtroUnidade,
+            'turno'            => $this->filtroTurno,
+            'curso'            => $this->filtroCurso,
+            'etapa'            => $this->filtroEtapa,
+            'ids'              => $this->selecionadas,
+            'filtrosAvancados' => $this->filtrosAvancados,
+        ];
+
+        $sufixoTipo = !empty($this->selecionadas) ? count($this->selecionadas) . ' Selecionadas' : 'Filtro';
+
+        $tracking = SystemTask::create([
+            'user_id'            => auth()->id(),
+            'tipo'               => 'inscricoes',
+            'operacao'           => 'exportacao',
+            'formato'            => strtolower($formato),
+            'arquivo_nome'       => "Exportação de Inscrições - {$sufixoTipo} (" . strtoupper($formato) . ")",
+            'status'             => 'na_fila',
+            'total_linhas'       => $queryCount,
+            'linhas_processadas' => 0,
+        ]);
+
+        dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($tracking->id, $filtrosAtuais))->afterResponse();
+
+        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
     }
 
     public function abrirModalLote()
@@ -1024,44 +1094,7 @@ class RegistrationManager extends Component
         $this->alterarStatusLoteRapido($this->novoStatusId);
     }
 
-    public function solicitarExportacao($formato = 'csv')
-    {
-        if (!is_string($formato)) {
-            $formato = 'csv';
-        }
-
-        $filtrosAtuais = [
-            'nome' => $this->filtroNome,
-            'status' => $this->filtroStatus,
-            'ciclo' => $this->filtroCiclo,
-            'unidade' => $this->filtroUnidade,
-            'turno' => $this->filtroTurno,
-            'curso' => $this->filtroCurso,
-            'etapa' => $this->filtroEtapa,
-        ];
-
-        $queryCount = $this->obterQueryFiltrada()->count();
-
-        if ($queryCount === 0) {
-            $this->dispatch('erro', msg: 'Não há registros com os filtros atuais para exportar.');
-            return;
-        }
-
-        $tracking = SystemTask::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'inscricoes',
-            'operacao' => 'exportacao',
-            'formato' => strtolower($formato),
-            'arquivo_nome' => 'Exportação de Inscrições (' . strtoupper($formato) . ')',
-            'status' => 'na_fila',
-            'total_linhas' => $queryCount,
-            'linhas_processadas' => 0,
-        ]);
-
-        dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($tracking->id, $filtrosAtuais))->afterResponse();
-
-        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
-    }
+    
 
     public function recalcularScoresGlobais()
     {
@@ -1161,6 +1194,7 @@ class RegistrationManager extends Component
         return [
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
+            ['key' => 'possui_deficiencia', 'label' => 'PcD', 'sortable' => true, 'class' => 'text-center w-24'],
             ['key' => 'contatos', 'label' => 'Contatos', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'origem', 'label' => 'Origem', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
@@ -1171,6 +1205,7 @@ class RegistrationManager extends Component
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right'],
         ];
     }
+    
     public function abrirModalContato(int $inscricaoId, string $canal)
     {
         $inscricao = Inscricao::with('contatos')->findOrFail($inscricaoId);

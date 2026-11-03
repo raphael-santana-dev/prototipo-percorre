@@ -229,15 +229,24 @@
                                         
                                         <div wire:key="card-{{ $inscricao->id }}" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:border-purpura-400 dark:hover:border-purpura-500 hover:shadow-md transition group relative flex flex-col gap-2" data-id="{{ $inscricao->id }}">
                                             
-                                            <div class="flex justify-between items-start">
+                                            <div class="flex justify-between items-start gap-1">
                                                 <div class="flex items-center gap-2">
                                                     <input type="checkbox" wire:model.live="selecionados" value="{{ $inscricao->id }}" class="rounded text-purpura-600 border-gray-300 w-4 h-4 cursor-pointer" onmousedown="event.stopPropagation()">
                                                     <span class="text-[10px] font-bold text-gray-400 font-mono">#{{ str_pad($inscricao->id, 4, '0', STR_PAD_LEFT) }}</span>
                                                 </div>
                                                 
-                                                <span class="tag tag--small tag--filled tag--ponkan" title="Pontuação Total">
-                                                    {{ $inscricao->pontuacao_total ?? 0 }} pts
-                                                </span>
+                                                <div class="flex items-center gap-1">
+                                                    @if(in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true))
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
+                                                              title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}">
+                                                            <i class="ph-fill ph-wheelchair"></i> PcD
+                                                        </span>
+                                                    @endif
+
+                                                    <span class="tag tag--small tag--filled tag--ponkan" title="Pontuação Total">
+                                                        {{ $inscricao->pontuacao_total ?? 0 }} pts
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate" title="{{ $inscricao->nome }}">{{ $inscricao->nome }}</h4>

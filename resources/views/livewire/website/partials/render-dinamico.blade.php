@@ -842,6 +842,11 @@
                     $vincularCursoUnidade = filter_var($config['vincular_curso_unidade'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
                     $vincularTurnoCurso = filter_var($config['vincular_turno_curso'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
 
+                    // Opções restritas configuradas especificamente neste input dinâmico/combo
+                    $unidadesPermitidasCfg = array_values(array_filter(array_map('strval', (array) ($config['unidades_permitidas'] ?? []))));
+                    $cursosPermitidosCfg   = array_values(array_filter(array_map('strval', (array) ($config['cursos_permitidos'] ?? []))));
+                    $turnosPermitidosCfg   = array_values(array_filter(array_map('strval', (array) ($config['turnos_permitidos'] ?? []))));
+
                     // Descobre UF preenchida pelo candidato (campo fixo ou campo ViaCEP dinâmico)
                     $ufCandidato = $estado ?? null;
                     if (empty($ufCandidato) && !empty($respostas) && is_array($respostas)) {
@@ -853,7 +858,7 @@
                         }
                     }
 
-                    // Descobre Unidade e Curso selecionados (no combo ou em outro campo system da página)
+                    // Descobre Unidade e Curso selecionados no conjunto dinâmico atual
                     $parentUnidadeKey = $config['combo_parent_unidade'] ?? null;
                     $parentCursoKey   = $config['combo_parent_curso'] ?? null;
 
@@ -875,6 +880,12 @@
 
                     if ($campo->subtipo === 'unidade') {
                         $queryUni = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome');
+
+                        if (!empty($unidadesPermitidasCfg)) {
+                            $idsUniLimpos = array_map(fn($v) => (int) (explode('-', $v)[0] ?? $v), $unidadesPermitidasCfg);
+                            $queryUni->whereIn('id', $idsUniLimpos);
+                        }
+
                         $listaUni = $queryUni->get();
 
                         if ($filtrarPorUf && !empty($ufCandidato)) {
@@ -887,6 +898,23 @@
 
                     } elseif ($campo->subtipo === 'curso') {
                         $queryCur = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome');
+
+                        // Aplica filtro de cursos permitidos no input dinâmico (suporta 'cursoId' ou 'unidadeId-cursoId')
+                        if (!empty($cursosPermitidosCfg)) {
+                            $idsCursoValidos = [];
+                            foreach ($cursosPermitidosCfg as $itemCur) {
+                                if (str_contains($itemCur, '-')) {
+                                    [$uRef, $cRef] = explode('-', $itemCur, 2);
+                                    if (!$vincularCursoUnidade || empty($unidadeEscolhidaId) || (string) $uRef === (string) $unidadeEscolhidaId) {
+                                        $idsCursoValidos[] = (int) $cRef;
+                                    }
+                                } else {
+                                    $idsCursoValidos[] = (int) $itemCur;
+                                }
+                            }
+                            $queryCur->whereIn('id', !empty($idsCursoValidos) ? array_unique($idsCursoValidos) : [0]);
+                        }
+
                         if ($vincularCursoUnidade) {
                             if (!empty($unidadeEscolhidaId)) {
                                 $queryCur->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadeEscolhidaId));
@@ -899,15 +927,48 @@
                         }
 
                     } elseif ($campo->subtipo === 'turno') {
+                        // Aplica filtro de turnos permitidos no input dinâmico (suporta 'turnoId' ou 'unidadeId-cursoId-turnoId')
+                        $idsTurnoValidos = null;
+                        if (!empty($turnosPermitidosCfg)) {
+                            $idsTurnoValidos = [];
+                            foreach ($turnosPermitidosCfg as $itemTur) {
+                                $partes = explode('-', $itemTur);
+                                if (count($partes) === 3) {
+                                    [$uRef, $cRef, $tRef] = $partes;
+                                    $okUni = !$vincularCursoUnidade || empty($unidadeEscolhidaId) || (string) $uRef === (string) $unidadeEscolhidaId;
+                                    $okCur = !$vincularTurnoCurso || empty($cursoEscolhidoId) || (string) $cRef === (string) $cursoEscolhidoId;
+                                    if ($okUni && $okCur) {
+                                        $idsTurnoValidos[] = (int) $tRef;
+                                    }
+                                } elseif (count($partes) === 2) {
+                                    [$cRef, $tRef] = $partes;
+                                    if (!$vincularTurnoCurso || empty($cursoEscolhidoId) || (string) $cRef === (string) $cursoEscolhidoId) {
+                                        $idsTurnoValidos[] = (int) $tRef;
+                                    }
+                                } else {
+                                    $idsTurnoValidos[] = (int) $itemTur;
+                                }
+                            }
+                            $idsTurnoValidos = array_unique($idsTurnoValidos);
+                        }
+
                         if ($vincularTurnoCurso) {
                             if (!empty($cursoEscolhidoId)) {
                                 $cursoObj = \App\Models\Curso::with('turnosVinculados')->find($cursoEscolhidoId);
-                                $opcoesSistema = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome')->pluck('nome', 'id')->toArray() : [];
+                                $turnosCol = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome') : collect();
+                                if ($idsTurnoValidos !== null) {
+                                    $turnosCol = $turnosCol->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
+                                }
+                                $opcoesSistema = $turnosCol->pluck('nome', 'id')->toArray();
                             } else {
                                 $opcoesSistema = [];
                             }
                         } else {
-                            $opcoesSistema = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray();
+                            $queryTur = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome');
+                            if ($idsTurnoValidos !== null) {
+                                $queryTur->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
+                            }
+                            $opcoesSistema = $queryTur->pluck('nome', 'id')->toArray();
                         }
                     }
                 @endphp

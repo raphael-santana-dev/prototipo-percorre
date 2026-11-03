@@ -33,6 +33,13 @@
                     {{ \App\Models\StatusInscricao::find($inscricao->status_inscricao_id)->nome ?? 'Sem Status' }}
                 </span>
 
+                <button type="button"
+                        wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
+                        wire:loading.attr="disabled"
+                        class="btn btn--secondary btn--small !h-[30px] !px-3 !text-[11px] bg-white border border-gray-200 text-purpura-700 hover:bg-purpura-50 flex items-center gap-1.5 shadow-2xs">
+                    <i class="ph-bold ph-file-pdf text-sm text-purpura-600"></i> Ficha de Inscrição (PDF)
+                </button>
+
                 @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
                     <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200">
                         <select wire:model="status_selecionado" class="border-none bg-transparent rounded-md text-[11px] font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-6 cursor-pointer hover:bg-gray-100 transition-colors shadow-none">
