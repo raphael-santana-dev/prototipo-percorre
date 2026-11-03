@@ -16,6 +16,9 @@
                 <a href="{{ route('automacoes.create') }}" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none shadow-sm">
                     <i class="ph-bold ph-plus"></i> Nova Automação
                 </a>
+                <a href="{{ route('esteiras.create') }}" class="btn btn--secondary btn--medium bg-purpura-50 text-purpura-700 border-purpura-200 hover:bg-purpura-100">
+                    <i class="ph-bold ph-git-merge"></i> Nova Esteira de Disparos
+                </a>
             </x-slot>
         @endif
 
