@@ -317,90 +317,7 @@ class EsteiraComunicacaoService
         return $resultado;
     }
 
-    /**
-     * Avalia se o destinatário cumpre todas as condições da Esteira + Condições da Etapa.
-     */
-    public static function atendeCondicoes(EsteiraComunicacao $esteira, ?EsteiraEtapa $etapa, array $item): bool
-    {
-        $condicoes = is_array($esteira->condicoes) ? $esteira->condicoes : [];
-        $condEtapa = ($etapa && is_array($etapa->condicoes_etapa)) ? $etapa->condicoes_etapa : [];
-
-        // 1. Filtro de Status de Inscrição (Permite 1 ou mais status, ex: Aprovado + Documentação Pendente)
-        $statusPermitidos = !empty($condEtapa['status_ids'])
-            ? array_map('strval', $condEtapa['status_ids'])
-            : (!empty($condicoes['status_ids']) ? array_map('strval', $condicoes['status_ids']) : []);
-
-        if (!empty($statusPermitidos) && $item['entidade_tipo'] === 'inscricao') {
-            if (!in_array((string) ($item['status_id'] ?? ''), $statusPermitidos, true)) {
-                return false;
-            }
-        }
-
-        // 2. Filtro de Unidades
-        if (!empty($condicoes['unidades_ids']) && isset($item['unidade_id'])) {
-            $unidadesPermitidas = array_map('strval', $condicoes['unidades_ids']);
-            if (!in_array((string) $item['unidade_id'], $unidadesPermitidas, true)) {
-                return false;
-            }
-        }
-
-        // 3. Filtro de Cursos
-        if (!empty($condicoes['cursos_ids']) && isset($item['curso_id'])) {
-            $cursosPermitidos = array_map('strval', $condicoes['cursos_ids']);
-            if (!in_array((string) $item['curso_id'], $cursosPermitidos, true)) {
-                return false;
-            }
-        }
-
-        // 4. Filtro de Turnos
-        if (!empty($condicoes['turnos_ids']) && isset($item['turno_id'])) {
-            $turnosPermitidos = array_map('strval', $condicoes['turnos_ids']);
-            if (!in_array((string) $item['turno_id'], $turnosPermitidos, true)) {
-                return false;
-            }
-        }
-
-        // 5. Filtro de Progresso do Preenchimento (Incompleto vs. Finalizado)
-        $progressoFiltro = $condicoes['progresso_preenchimento'] ?? 'todos';
-        if ($progressoFiltro === 'incompleto' && ($item['etapa_atual'] ?? 1) >= 99) {
-            return false;
-        }
-        if ($progressoFiltro === 'finalizado' && ($item['etapa_atual'] ?? 1) != 99) {
-            return false;
-        }
-
-        // 6. Regras sobre Campos Dinâmicos do Formulário (JSON)
-        $regrasDinamicas = $condicoes['regras_dinamicas'] ?? [];
-        if (!empty($regrasDinamicas) && is_array($regrasDinamicas)) {
-            $respostas = $item['dados_dinamicos'] ?? [];
-            foreach ($regrasDinamicas as $regra) {
-                $campo = trim((string) ($regra['campo'] ?? ''));
-                if ($campo === '') continue;
-
-                $operador = $regra['operador'] ?? '=';
-                $valorEsperado = mb_strtolower(trim((string) ($regra['valor'] ?? '')), 'UTF-8');
-                $valorAtualRaw = $respostas[$campo] ?? '';
-                $valorAtual = is_array($valorAtualRaw)
-                    ? mb_strtolower(implode(',', $valorAtualRaw), 'UTF-8')
-                    : mb_strtolower(trim((string) $valorAtualRaw), 'UTF-8');
-
-                $passou = match ($operador) {
-                    '='        => $valorAtual === $valorEsperado,
-                    '!='       => $valorAtual !== $valorEsperado,
-                    'contem'   => str_contains($valorAtual, $valorEsperado),
-                    'preenchido' => $valorAtual !== '',
-                    'vazio'    => $valorAtual === '',
-                    default    => true,
-                };
-
-                if (!$passou) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
+   
 
     /**
      * Avalia se o destinatário já cumpriu o objetivo e deve sair da esteira.
@@ -520,5 +437,112 @@ class EsteiraComunicacaoService
             'motivo_status'      => "Etapa #{$etapa->ordem} ({$etapa->nome}) enviada com sucesso.",
             'enviado_em'         => now(),
         ]);
+    }
+
+    /**
+     * Avalia se o destinatário cumpre todas as condições da Esteira + Condições da Etapa,
+     * respeitando o relacionamento exato Unidade -> Curso -> Turno (chaves compostas).
+     */
+    public static function atendeCondicoes(EsteiraComunicacao $esteira, ?EsteiraEtapa $etapa, array $item): bool
+    {
+        $condicoes = is_array($esteira->condicoes) ? $esteira->condicoes : [];
+        $condEtapa = ($etapa && is_array($etapa->condicoes_etapa)) ? $etapa->condicoes_etapa : [];
+
+        // 1. Filtro de Status de Inscrição (1 ou mais status)
+        $statusPermitidos = !empty($condEtapa['status_ids'])
+            ? array_map('strval', $condEtapa['status_ids'])
+            : (!empty($condicoes['status_ids']) ? array_map('strval', $condicoes['status_ids']) : []);
+
+        if (!empty($statusPermitidos) && ($item['entidade_tipo'] ?? '') === 'inscricao') {
+            if (!in_array((string) ($item['status_id'] ?? ''), $statusPermitidos, true)) {
+                return false;
+            }
+        }
+
+        // 2. Filtro Hierárquico Unidade -> Curso -> Turno (Chaves Compostas iguais ao Form Builder)
+        $unidadesPermitidas = array_values(array_filter(array_map('strval', $condicoes['unidades_ids'] ?? [])));
+        $cursosPermitidos   = array_values(array_filter(array_map('strval', $condicoes['cursos_ids'] ?? [])));
+        $turnosPermitidos   = array_values(array_filter(array_map('strval', $condicoes['turnos_ids'] ?? [])));
+
+        $uItem = (string) ($item['unidade_id'] ?? '');
+        $cItem = (string) ($item['curso_id'] ?? '');
+        $tItem = (string) ($item['turno_id'] ?? '');
+
+        if (!empty($unidadesPermitidas)) {
+            if ($uItem === '' || !in_array($uItem, $unidadesPermitidas, true)) {
+                return false;
+            }
+        }
+
+        if (!empty($cursosPermitidos)) {
+            if ($cItem === '') {
+                return false;
+            }
+            $chaveCompostaCurso = "{$uItem}-{$cItem}";
+            // Suporta tanto chave composta "unidadeId-cursoId" quanto legado "cursoId"
+            $cursoValido = in_array($chaveCompostaCurso, $cursosPermitidos, true)
+                || in_array($cItem, $cursosPermitidos, true);
+
+            if (!$cursoValido) {
+                return false;
+            }
+        }
+
+        if (!empty($turnosPermitidos)) {
+            if ($tItem === '') {
+                return false;
+            }
+            $chaveCompostaTurno = "{$uItem}-{$cItem}-{$tItem}";
+            $chaveParcialTurno  = "{$cItem}-{$tItem}";
+
+            $turnoValido = in_array($chaveCompostaTurno, $turnosPermitidos, true)
+                || in_array($chaveParcialTurno, $turnosPermitidos, true)
+                || in_array($tItem, $turnosPermitidos, true);
+
+            if (!$turnoValido) {
+                return false;
+            }
+        }
+
+        // 3. Filtro de Progresso do Preenchimento
+        $progressoFiltro = $condicoes['progresso_preenchimento'] ?? 'todos';
+        if ($progressoFiltro === 'incompleto' && ($item['etapa_atual'] ?? 1) >= 99) {
+            return false;
+        }
+        if ($progressoFiltro === 'finalizado' && ($item['etapa_atual'] ?? 1) != 99) {
+            return false;
+        }
+
+        // 4. Regras sobre Campos Dinâmicos do Formulário (JSON)
+        $regrasDinamicas = $condicoes['regras_dinamicas'] ?? [];
+        if (!empty($regrasDinamicas) && is_array($regrasDinamicas)) {
+            $respostas = $item['dados_dinamicos'] ?? [];
+            foreach ($regrasDinamicas as $regra) {
+                $campo = trim((string) ($regra['campo'] ?? ''));
+                if ($campo === '') continue;
+
+                $operador = $regra['operador'] ?? '=';
+                $valorEsperado = mb_strtolower(trim((string) ($regra['valor'] ?? '')), 'UTF-8');
+                $valorAtualRaw = $respostas[$campo] ?? '';
+                $valorAtual = is_array($valorAtualRaw)
+                    ? mb_strtolower(implode(',', $valorAtualRaw), 'UTF-8')
+                    : mb_strtolower(trim((string) $valorAtualRaw), 'UTF-8');
+
+                $passou = match ($operador) {
+                    '='          => $valorAtual === $valorEsperado,
+                    '!='         => $valorAtual !== $valorEsperado,
+                    'contem'     => str_contains($valorAtual, $valorEsperado),
+                    'preenchido' => $valorAtual !== '',
+                    'vazio'      => $valorAtual === '',
+                    default      => true,
+                };
+
+                if (!$passou) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

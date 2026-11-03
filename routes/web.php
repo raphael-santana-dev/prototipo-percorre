@@ -16,7 +16,9 @@ use App\Modules\Period\UI\Livewire\PeriodManager;
 use App\Modules\FormBuilder\UI\Livewire\Hub as FormBuilderHub;
 use App\Modules\FormBuilder\UI\Livewire\DynamicFields;
 use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
+use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraManager;
 use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraForm;
+use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraDetails;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 
@@ -70,8 +72,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/conteudo/novo', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.create');
     Route::get('/conteudo/{id}/editar', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.edit');
 
+    Route::get('/comunicacao/esteiras', EsteiraManager::class)->name('esteiras.index');
     Route::get('/comunicacao/esteiras/nova', EsteiraForm::class)->name('esteiras.create');
     Route::get('/comunicacao/esteiras/{id}/editar', EsteiraForm::class)->name('esteiras.edit');
+    Route::get('/comunicacao/esteiras/{id}/detalhes', EsteiraDetails::class)->name('esteiras.show');
 
     Route::get('/dashboard', \App\Modules\Report\UI\Livewire\Dashboard::class)->name('dashboard');
     Route::get('/meu-perfil', \App\Modules\Auth\UI\Livewire\ProfileManager::class)->name('profile.show');

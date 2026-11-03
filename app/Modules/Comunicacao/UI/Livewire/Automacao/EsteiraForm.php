@@ -13,7 +13,6 @@ use App\Models\Formulario;
 use App\Models\StatusInscricao;
 use App\Models\Curso;
 use App\Modules\Unidade\Domain\Models\Unidade;
-use App\Modules\Turno\Domain\Models\Turno;
 use App\Models\CampoFormulario;
 use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\DB;
@@ -30,14 +29,22 @@ class EsteiraForm extends Component
     public $ciclo_id = '';
     public $formulario_id = '';
 
-    // Condições de Segmentação (Múltipla Escolha)
+    // Condições de Segmentação
     public array $status_ids = [];
     public array $unidades_ids = [];
     public array $cursos_ids = [];
     public array $turnos_ids = [];
-    public string $progresso_preenchimento = 'todos'; // 'todos', 'incompleto', 'finalizado'
+    public string $progresso_preenchimento = 'todos';
     public array $regras_dinamicas = [];
     public string $emails_manuais_texto = '';
+
+    // Modal de Configuração Hierárquica Unidade -> Curso -> Turno (mesmo padrão do Form Builder)
+    public bool $modalConfigComboAberto = false;
+    public array $comboUnidadesSelecionadas = [];
+    public array $comboCursosSelecionados = [];
+    public array $comboTurnosSelecionados = [];
+    public $comboActiveUnidadeId = null;
+    public $comboActiveCursoId = null;
 
     // Condições de Saída (Conversão)
     public bool $sair_ao_concluir_formulario = false;
@@ -47,14 +54,18 @@ class EsteiraForm extends Component
     public bool $revalidar_condicoes_no_envio = true;
     public bool $apenas_horario_comercial = false;
 
-    // Etapas da Esteira (Sequência 1, 2, 3...)
+    // Etapas da Esteira
     public array $etapas = [];
 
     public array $breadcrumbs = [];
 
     public function mount($id = null)
     {
-        $this->breadcrumbs = BreadcrumbHelper::generate($id ? 'Editar Esteira de Disparos' : 'Nova Esteira de Disparos');
+        $this->breadcrumbs = [
+            ['label' => 'Dashboard', 'url' => route('dashboard')],
+            ['label' => 'Esteiras de Disparo', 'url' => route('esteiras.index')],
+            ['label' => $id ? 'Editar Esteira' : 'Nova Esteira', 'url' => '#'],
+        ];
 
         if ($id) {
             $esteira = EsteiraComunicacao::with('etapas')->findOrFail($id);
@@ -67,17 +78,17 @@ class EsteiraForm extends Component
             $this->formulario_id = $esteira->formulario_id ?? '';
 
             $cond = is_array($esteira->condicoes) ? $esteira->condicoes : [];
-            $this->status_ids = array_map('strval', $cond['status_ids'] ?? []);
-            $this->unidades_ids = array_map('strval', $cond['unidades_ids'] ?? []);
-            $this->cursos_ids = array_map('strval', $cond['cursos_ids'] ?? []);
-            $this->turnos_ids = array_map('strval', $cond['turnos_ids'] ?? []);
+            $this->status_ids = array_values(array_map('strval', $cond['status_ids'] ?? []));
+            $this->unidades_ids = array_values(array_map('strval', $cond['unidades_ids'] ?? []));
+            $this->cursos_ids = array_values(array_map('strval', $cond['cursos_ids'] ?? []));
+            $this->turnos_ids = array_values(array_map('strval', $cond['turnos_ids'] ?? []));
             $this->progresso_preenchimento = $cond['progresso_preenchimento'] ?? 'todos';
             $this->regras_dinamicas = $cond['regras_dinamicas'] ?? [];
             $this->emails_manuais_texto = implode("\n", $cond['emails_manuais'] ?? []);
 
             $saida = is_array($esteira->condicao_saida) ? $esteira->condicao_saida : [];
             $this->sair_ao_concluir_formulario = (bool) ($saida['sair_ao_concluir_formulario'] ?? false);
-            $this->status_saida_ids = array_map('strval', $saida['status_saida_ids'] ?? []);
+            $this->status_saida_ids = array_values(array_map('strval', $saida['status_saida_ids'] ?? []));
 
             $this->revalidar_condicoes_no_envio = (bool) $esteira->revalidar_condicoes_no_envio;
             $this->apenas_horario_comercial = (bool) $esteira->apenas_horario_comercial;
@@ -104,6 +115,114 @@ class EsteiraForm extends Component
         }
     }
 
+    // =========================================================================
+    // MODAL DE CONFIGURAÇÃO UNIDADE / CURSO / TURNO (PADRÃO FORM BUILDER)
+    // =========================================================================
+
+    public function abrirModalConfigCombo(): void
+    {
+        $this->comboUnidadesSelecionadas = array_values(array_map('strval', $this->unidades_ids));
+        $this->comboCursosSelecionados   = array_values(array_map('strval', $this->cursos_ids));
+        $this->comboTurnosSelecionados   = array_values(array_map('strval', $this->turnos_ids));
+
+        if (!empty($this->comboUnidadesSelecionadas) && !$this->comboActiveUnidadeId) {
+            $this->comboActiveUnidadeId = $this->comboUnidadesSelecionadas[0];
+        }
+
+        $this->modalConfigComboAberto = true;
+    }
+
+    public function updatedComboUnidadesSelecionadas(): void
+    {
+        $unidadesAtivas = array_map('strval', $this->comboUnidadesSelecionadas);
+
+        $this->comboCursosSelecionados = array_values(array_filter($this->comboCursosSelecionados, function ($item) use ($unidadesAtivas) {
+            $uId = explode('-', (string) $item)[0] ?? '';
+            return in_array($uId, $unidadesAtivas, true);
+        }));
+
+        $this->comboTurnosSelecionados = array_values(array_filter($this->comboTurnosSelecionados, function ($item) use ($unidadesAtivas) {
+            $uId = explode('-', (string) $item)[0] ?? '';
+            return in_array($uId, $unidadesAtivas, true);
+        }));
+    }
+
+    public function updatedComboCursosSelecionados(): void
+    {
+        $cursosAtivos = array_map('strval', $this->comboCursosSelecionados);
+
+        foreach ($cursosAtivos as $cKey) {
+            if (str_contains($cKey, '-')) {
+                [$uId] = explode('-', $cKey, 2);
+                if (!in_array($uId, $this->comboUnidadesSelecionadas, true)) {
+                    $this->comboUnidadesSelecionadas[] = $uId;
+                }
+            }
+        }
+
+        $this->comboTurnosSelecionados = array_values(array_filter($this->comboTurnosSelecionados, function ($item) use ($cursosAtivos) {
+            $partes = explode('-', (string) $item);
+            if (count($partes) === 3) {
+                $chaveCurso = $partes[0] . '-' . $partes[1];
+                return in_array($chaveCurso, $cursosAtivos, true);
+            }
+            return true;
+        }));
+    }
+
+    public function updatedComboTurnosSelecionados(): void
+    {
+        foreach ($this->comboTurnosSelecionados as $tKey) {
+            $partes = explode('-', (string) $tKey);
+            if (count($partes) === 3) {
+                [$uId, $cId] = $partes;
+                $chaveCurso = "{$uId}-{$cId}";
+
+                if (!in_array($uId, $this->comboUnidadesSelecionadas, true)) {
+                    $this->comboUnidadesSelecionadas[] = $uId;
+                }
+                if (!in_array($chaveCurso, $this->comboCursosSelecionados, true)) {
+                    $this->comboCursosSelecionados[] = $chaveCurso;
+                }
+            }
+        }
+    }
+
+    public function setComboActiveUnidade($id): void
+    {
+        $this->comboActiveUnidadeId = $id;
+        $this->comboActiveCursoId = null;
+    }
+
+    public function setComboActiveCurso($id): void
+    {
+        $this->comboActiveCursoId = $id;
+    }
+
+    public function confirmarConfigComboAcademico(): void
+    {
+        $this->unidades_ids = array_values(array_unique(array_map('strval', $this->comboUnidadesSelecionadas)));
+        $this->cursos_ids   = array_values(array_unique(array_map('strval', $this->comboCursosSelecionados)));
+        $this->turnos_ids   = array_values(array_unique(array_map('strval', $this->comboTurnosSelecionados)));
+
+        $this->modalConfigComboAberto = false;
+        $this->dispatch('sucesso', msg: 'Filtro de Unidades, Cursos e Turnos aplicado à esteira!');
+    }
+
+    public function limparRestricaoComboAcademico(): void
+    {
+        $this->comboUnidadesSelecionadas = [];
+        $this->comboCursosSelecionados   = [];
+        $this->comboTurnosSelecionados   = [];
+        $this->unidades_ids = [];
+        $this->cursos_ids   = [];
+        $this->turnos_ids   = [];
+    }
+
+    // =========================================================================
+    // ETAPAS E REGRAS DINÂMICAS
+    // =========================================================================
+
     public function adicionarEtapa(): void
     {
         $num = count($this->etapas) + 1;
@@ -129,7 +248,6 @@ class EsteiraForm extends Component
         unset($this->etapas[$index]);
         $this->etapas = array_values($this->etapas);
 
-        // Garante que a nova Etapa 1 não fique como "após etapa anterior"
         if (($this->etapas[0]['tipo_agendamento'] ?? '') === 'apos_etapa_anterior') {
             $this->etapas[0]['tipo_agendamento'] = 'data_fixa';
         }
@@ -286,7 +404,7 @@ class EsteiraForm extends Component
         });
 
         $this->dispatch('sucesso', msg: 'Esteira de disparos configurada e agendada com sucesso!');
-        return redirect()->route('automacoes.index');
+        return redirect()->route('esteiras.index');
     }
 
     public function render()
@@ -296,9 +414,8 @@ class EsteiraForm extends Component
             'ciclos'           => Ciclo::orderBy('id', 'desc')->get(),
             'formularios'      => Formulario::orderBy('id', 'desc')->get(),
             'statusInscricoes' => StatusInscricao::orderBy('nome')->get(),
-            'unidades'         => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
-            'cursos'           => Curso::whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
-            'turnos'           => Turno::orderBy('nome')->get(),
+            'unidadesDb'       => Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get(),
+            'cursosDb'         => Curso::with(['unidades', 'turnosVinculados'])->whereIn('status', ['Ativo', '1', true])->orderBy('nome')->get(),
         ])->layout('components.layouts.app', [
             'title' => $this->esteiraId ? 'Editar Esteira de Disparos' : 'Nova Esteira de Disparos'
         ]);

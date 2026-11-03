@@ -7,8 +7,8 @@
         badge=""
         :breadcrumbs="$breadcrumbs">
         <x-slot name="actions">
-            <a href="{{ route('automacoes.index') }}" class="btn btn--secondary btn--medium bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
-                <i class="ph-bold ph-arrow-left"></i> Voltar
+            <a href="{{ route('esteiras.index') }}" class="btn btn--secondary btn--medium bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
+                <i class="ph-bold ph-arrow-left"></i> Voltar para Lista
             </a>
         </x-slot>
     </x-page-header>
@@ -86,7 +86,7 @@
                         <span class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-black text-xs flex items-center justify-center border border-blue-200">2</span>
                         <div>
                             <h3 class="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Condições para Receber os Disparos</h3>
-                            <p class="text-xs text-gray-500">Combine status, unidades, cursos ou respostas específicas do formulário.</p>
+                            <p class="text-xs text-gray-500">Combine status, vínculo hierárquico de unidades/cursos/turnos ou respostas do formulário.</p>
                         </div>
                     </div>
                 </div>
@@ -107,42 +107,42 @@
                         </div>
                         <p class="text-[11px] text-gray-400 mt-1">Se nenhum status for marcado, considera inscritos em qualquer status.</p>
                     </div>
+                @endif
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-1.5">Filtrar Unidades</label>
-                            <div class="max-h-36 overflow-y-auto p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl space-y-1.5 bg-gray-50/50 dark:bg-gray-900/50">
-                                @foreach($unidades as $u)
-                                    <label class="flex items-center gap-2 text-xs cursor-pointer">
-                                        <input type="checkbox" wire:model.live="unidades_ids" value="{{ $u->id }}" class="w-3.5 h-3.5 rounded text-purpura-600">
-                                        <span class="truncate">{{ $u->nome }}</span>
-                                    </label>
-                                @endforeach
+                @if(in_array($publico_alvo, ['inscricoes', 'estudantes']))
+                    @php
+                        $qtdUniCfg = count($unidades_ids);
+                        $qtdCurCfg = count($cursos_ids);
+                        $qtdTurCfg = count($turnos_ids);
+                    @endphp
+                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="p-4 bg-gray-50/70 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph-fill ph-tree-structure text-purpura-600 text-base"></i>
+                                    <span class="text-xs font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Filtro de Unidades, Cursos e Turnos</span>
+                                </div>
+                                @if($qtdUniCfg > 0 || $qtdCurCfg > 0 || $qtdTurCfg > 0)
+                                    <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] font-bold">
+                                        <span class="px-2 py-0.5 rounded bg-purpura-50 text-purpura-700 border border-purpura-200">{{ $qtdUniCfg }} Unidade(s)</span>
+                                        <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">{{ $qtdCurCfg }} Vínculo(s) de Curso</span>
+                                        <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $qtdTurCfg }} Vínculo(s) de Turno</span>
+                                        <button type="button" wire:click="limparRestricaoComboAcademico" class="text-xs font-bold text-red-500 hover:underline ml-2">
+                                            Limpar filtro (Usar Todos)
+                                        </button>
+                                    </div>
+                                @else
+                                    <p class="text-xs text-gray-500">
+                                        Enviando para todas as Unidades, Cursos e Turnos. Clique ao lado para restringir combinações específicas.
+                                    </p>
+                                @endif
                             </div>
-                        </div>
 
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-1.5">Filtrar Cursos</label>
-                            <div class="max-h-36 overflow-y-auto p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl space-y-1.5 bg-gray-50/50 dark:bg-gray-900/50">
-                                @foreach($cursos as $c)
-                                    <label class="flex items-center gap-2 text-xs cursor-pointer">
-                                        <input type="checkbox" wire:model.live="cursos_ids" value="{{ $c->id }}" class="w-3.5 h-3.5 rounded text-purpura-600">
-                                        <span class="truncate">{{ $c->nome }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-1.5">Filtrar Turnos</label>
-                            <div class="max-h-36 overflow-y-auto p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl space-y-1.5 bg-gray-50/50 dark:bg-gray-900/50">
-                                @foreach($turnos as $t)
-                                    <label class="flex items-center gap-2 text-xs cursor-pointer">
-                                        <input type="checkbox" wire:model.live="turnos_ids" value="{{ $t->id }}" class="w-3.5 h-3.5 rounded text-purpura-600">
-                                        <span class="truncate">{{ $t->nome }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
+                            <button type="button"
+                                    wire:click="abrirModalConfigCombo"
+                                    class="shrink-0 py-2.5 px-4 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs">
+                                <i class="ph-bold ph-tree-structure text-sm"></i> Configurar Unidades / Cursos / Turnos
+                            </button>
                         </div>
                     </div>
                 @endif
@@ -227,7 +227,6 @@
                 <div class="space-y-4 relative before:absolute before:top-6 before:bottom-6 before:left-5 before:w-0.5 before:bg-purpura-200 dark:before:bg-gray-700">
                     @foreach($etapas as $index => $etapa)
                         <div wire:key="esteira-etapa-{{ $index }}" class="relative pl-12">
-                            <!-- Marcador numérico da linha do tempo -->
                             <div class="absolute left-1.5 top-5 w-7 h-7 rounded-full bg-purpura-600 text-white text-xs font-black flex items-center justify-center shadow-sm ring-4 ring-white dark:ring-gray-800">
                                 {{ $index + 1 }}
                             </div>
@@ -270,7 +269,6 @@
                                     </div>
                                 </div>
 
-                                <!-- CONFIGURAÇÃO DE DATA OU ATRASO -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-200/70 dark:border-gray-700">
                                     @if(($etapa['tipo_agendamento'] ?? 'data_fixa') === 'data_fixa')
                                         <div>
@@ -317,17 +315,23 @@
             </div>
         </div>
 
-        <!-- COLUNA LATERAL DIREITA (4 COLUNAS): SIMULADOR DE ALCANCE E REGRAS DE SAÍDA -->
+        <!-- COLUNA LATERAL DIREITA (4 COLUNAS): SIMULADOR DE ALCANCE (SEM GRADIENTE) E REGRAS DE SAÍDA -->
         <div class="lg:col-span-4 space-y-6 sticky top-6">
             
-            <!-- CARD DE ALCANCE EM TEMPO REAL -->
-            <div class="bg-gradient-to-br from-purpura-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg">
+            <!-- CARD DE ALCANCE EM TEMPO REAL (SÓLIDO, SEM GRADIENTE) -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-purpura-600">
                 <div class="flex items-center justify-between">
-                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-purpura-100">Destinatários Elegíveis Agora</span>
-                    <i class="ph-fill ph-users-three text-2xl text-purpura-200"></i>
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Destinatários Elegíveis Agora
+                    </span>
+                    <div class="w-9 h-9 rounded-xl bg-purpura-50 dark:bg-purpura-900/30 border border-purpura-200 dark:border-purpura-800 flex items-center justify-center text-purpura-600 dark:text-purpura-400">
+                        <i class="ph-fill ph-users-three text-lg"></i>
+                    </div>
                 </div>
-                <div class="text-4xl font-black mt-2">{{ $this->estimativaPublicoAtual }}</div>
-                <p class="text-xs text-purpura-100 mt-1 leading-relaxed">
+                <div class="text-3xl font-black text-gray-900 dark:text-white mt-2">
+                    {{ $this->estimativaPublicoAtual }}
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
                     Pessoas que cumprem todas as condições selecionadas neste exato momento. Novos inscritos que entrarem na condição também serão incluídos automaticamente.
                 </p>
             </div>
@@ -363,7 +367,7 @@
                 </label>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <button type="submit" class="w-full py-3 px-5 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <button type="submit" class="w-full py-3 px-5 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-2">
                         <i class="ph-bold ph-floppy-disk text-base"></i>
                         <span>{{ $esteiraId ? 'Salvar Alterações da Esteira' : 'Ativar e Agendar Esteira' }}</span>
                     </button>
@@ -372,4 +376,120 @@
         </div>
 
     </form>
+
+    {{-- MODAL DE CONFIGURAÇÃO DE UNIDADES / CURSOS / TURNOS EM ÁRVORE (PADRÃO CONSTRUTOR DE FORMULÁRIOS) --}}
+    @if($modalConfigComboAberto)
+        <div class="fixed inset-0 z-[260] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+                    <div>
+                        <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="ph-fill ph-tree-structure text-purpura-600 text-lg"></i> Configurar Filtro: Unidades, Cursos e Turnos
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Selecione uma Unidade à esquerda para marcar apenas os Cursos daquela Unidade e os Turnos específicos daquele Curso.
+                        </p>
+                    </div>
+                    <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="text-gray-400 hover:text-red-500 p-1">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700">
+                    {{-- COLUNA 1: UNIDADES --}}
+                    <div class="flex-1 flex flex-col overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">1. Unidades</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboUnidadesSelecionadas) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @foreach($unidadesDb as $u)
+                                <div wire:key="esteira-uni-{{ $u->id }}"
+                                     wire:click="setComboActiveUnidade({{ $u->id }})"
+                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                    <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                        <input type="checkbox" wire:model.live="comboUnidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                        <span class="text-xs font-bold {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
+                                    </label>
+                                    <i class="ph ph-caret-right text-base {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 2: CURSOS DA UNIDADE SELECIONADA --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/40 dark:bg-gray-800/80 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">2. Cursos da Unidade</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboCursosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveUnidadeId)
+                                @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $comboActiveUnidadeId)) as $c)
+                                    @php $chaveCursoUnidade = $comboActiveUnidadeId . '-' . $c->id; @endphp
+                                    <div wire:key="esteira-cur-{{ $chaveCursoUnidade }}"
+                                         wire:click="setComboActiveCurso({{ $c->id }})"
+                                         class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                            <input type="checkbox" wire:model.live="comboCursosSelecionados" value="{{ $chaveCursoUnidade }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <span class="text-xs font-bold {{ $comboActiveCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                        </label>
+                                        <i class="ph ph-caret-right text-base {{ $comboActiveCursoId == $c->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-buildings text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione uma Unidade à esquerda</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 3: TURNOS DO CURSO NAQUELA UNIDADE --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/80 dark:bg-gray-900/30 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">3. Turnos Vinculados</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboTurnosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveUnidadeId && $comboActiveCursoId)
+                                @php $cursoComboObj = $cursosDb->firstWhere('id', $comboActiveCursoId); @endphp
+                                @if($cursoComboObj)
+                                    @foreach($cursoComboObj->turnosVinculados as $t)
+                                        @php $chaveTurnoCompleta = $comboActiveUnidadeId . '-' . $comboActiveCursoId . '-' . $t->id; @endphp
+                                        <div wire:key="esteira-tur-{{ $chaveTurnoCompleta }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                <input type="checkbox" wire:model.live="comboTurnosSelecionados" value="{{ $chaveTurnoCompleta }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-graduation-cap text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso ao centro</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/60 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <span class="text-[11px] text-gray-500">
+                        Se deixar tudo desmarcado, a esteira considerará todas as Unidades, Cursos e Turnos.
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="button" wire:click="confirmarConfigComboAcademico" class="px-5 py-2 text-xs font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm flex items-center gap-1.5">
+                            <i class="ph-bold ph-check"></i> Aplicar Filtro Acadêmico
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
