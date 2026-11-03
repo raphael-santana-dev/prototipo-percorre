@@ -1948,7 +1948,21 @@
                                             <option value="{{ $tId }}">{{ $tNome }}</option>
                                         @endforeach
                                     </select>
-                                    <p class="text-[9px] text-blue-500 dark:text-blue-300 mt-1.5 leading-tight">Se selecionado, o Cron Job disparará este e-mail no exato momento da "Data de Liberação" para os candidatos que alcançaram a fase anterior.</p>
+                                    <p class="text-[9px] text-blue-500 dark:text-blue-300 mt-1.5 leading-tight">
+                                        Se selecionado, o sistema disparará este template automaticamente na "Data de Liberação" para todos que iniciaram o preenchimento.
+                                    </p>
+                                    @php
+                                        $slugFasePreview = \Illuminate\Support\Str::slug($fasesConfig[$index]['nome'] ?? 'nova_fase', '_');
+                                        $prefixoGatilho = $contextoTipo === 'ciclo' ? 'inscricao.fase.' : 'formulario.fase.';
+                                        $gatilhoEspecifico = $prefixoGatilho . ($slugFasePreview ?: 'nome_da_fase');
+                                        $gatilhoGeral = $contextoTipo === 'ciclo' ? 'inscricao.fase_liberada' : 'formulario.fase_liberada';
+                                    @endphp
+                                    <div class="mt-2 pt-2 border-t border-blue-200/60 dark:border-blue-800/60 flex flex-wrap items-center gap-1.5 text-[10px]">
+                                        <span class="font-bold text-blue-800 dark:text-blue-300"><i class="ph-bold ph-lightning"></i> Gatilhos de Automação:</span>
+                                        <code class="px-1.5 py-0.5 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded text-purpura-700 dark:text-purpura-300 font-mono">{{ $gatilhoEspecifico }}</code>
+                                        <span class="text-gray-400">ou</span>
+                                        <code class="px-1.5 py-0.5 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded text-gray-600 dark:text-gray-300 font-mono">{{ $gatilhoGeral }}</code>
+                                    </div>
                                 </div>
                             </div>
                             
