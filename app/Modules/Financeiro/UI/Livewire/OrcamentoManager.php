@@ -98,6 +98,28 @@ class OrcamentoManager extends Component
         }
     }
 
+    public function resetarStatusOrcamento(int $id): void
+    {
+        abort_if(
+            !auth()->user()->hasRole('dev')
+            && !auth()->user()->can('financeiro.orcamentos.editar')
+            && !auth()->user()->can('financeiro.orcamentos.integrar'),
+            403,
+            'Sem permissão para resetar o status do orçamento.'
+        );
+
+        $orcamento = Orcamento::with('itens')->findOrFail($id);
+
+        $resultado = app(ProtheusOrcamentoService::class)->resetarStatusOrcamentoProtheus($orcamento);
+
+        if (!$resultado['sucesso']) {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+            return;
+        }
+
+        $this->dispatch('sucesso', msg: $resultado['mensagem']);
+    }
+
     public function sincronizarProtheus()
     {
         $resultado = ProtheusOrcamentoService::sincronizar();
