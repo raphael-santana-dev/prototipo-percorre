@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
+      x-data="{ tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }" 
+      x-init="$watch('tema', valor => { 
+          localStorage.setItem('tema_sistema', valor); 
+          document.documentElement.classList.toggle('dark', valor === 'dark'); 
+      })"
       :class="{ 'dark': tema === 'dark' }"
       class="h-full">
 <head>
@@ -11,12 +14,21 @@
     <title>{{ $title ?? 'Portal do Aluno' }}</title>
 
     <script>
-        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
         (function () {
             var d = document.documentElement;
-            d.dataset.layout  = localStorage.getItem('layoutMode') || 'top';
+            var tema = localStorage.getItem('tema_sistema');
+            if (!tema) {
+                tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                localStorage.setItem('tema_sistema', tema);
+            }
+            d.classList.toggle('dark', tema === 'dark');
+
+            var layout = localStorage.getItem('layoutMode');
+            if (!layout) {
+                layout = 'left';
+                localStorage.setItem('layoutMode', layout);
+            }
+            d.dataset.layout = layout;
             d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
         })();
     </script>
@@ -29,10 +41,12 @@
     
     <div x-data="{ 
         drawerOpen: false, 
-        layoutMode: localStorage.getItem('layoutMode') || 'top',
+        layoutMode: localStorage.getItem('layoutMode') || 'left',
         sidebarMinimized: localStorage.getItem('sidebarMinimized') === 'true',
         loaded: false,
         init() {
+            document.documentElement.dataset.layout = this.layoutMode;
+            document.documentElement.dataset.sidebar = this.sidebarMinimized ? 'min' : 'full';
             setTimeout(() => this.loaded = true, 50);
         },
         toggleLayout() {
@@ -53,9 +67,9 @@
             
             <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
                 <a href="{{ route('dashboard') }}">
-                <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                    <img src="{{ Vite::asset('resources/images/-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-                </div>
+                    <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
+                        <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                    </div>
                 </a>
                 <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher Menu">
                     <i class="text-xl ph ph-list"></i>

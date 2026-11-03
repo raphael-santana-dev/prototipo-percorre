@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 @if(app()->environment('production'))
     <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
-    @else
-        <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-            x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-            x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
-            :class="{ 'dark': tema === 'dark' }"
-            class="h-full">
-    @endif
+@else
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
+          x-data="{ tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }" 
+          x-init="$watch('tema', valor => { 
+              localStorage.setItem('tema_sistema', valor); 
+              document.documentElement.classList.toggle('dark', valor === 'dark'); 
+          })"
+          :class="{ 'dark': tema === 'dark' }"
+          class="h-full">
+@endif
 
     <head>
         <meta charset="utf-8">
@@ -16,20 +19,30 @@
         <title>{{ $title ?? 'Sistema Administrativo' }}</title>
         
         <script>
-        @if(!app()->environment('production'))
-            if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            }
-        @endif
-        (function () {
-            var d = document.documentElement;
-            d.dataset.layout  = localStorage.getItem('layoutMode') || 'left'; /* (ou 'top' no portal do aluno) */
-            d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
-        })();
-    </script>
+            (function () {
+                var d = document.documentElement;
+                @if(!app()->environment('production'))
+                    var tema = localStorage.getItem('tema_sistema');
+                    if (!tema) {
+                        tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                        localStorage.setItem('tema_sistema', tema);
+                    }
+                    d.classList.toggle('dark', tema === 'dark');
+                @else
+                    d.classList.remove('dark');
+                @endif
+
+                var layout = localStorage.getItem('layoutMode');
+                if (!layout) {
+                    layout = 'left';
+                    localStorage.setItem('layoutMode', layout);
+                }
+                d.dataset.layout = layout;
+                d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
+            })();
+        </script>
 
         @includeIf('components.partials.analytics-heatmap')
-        
 
         @livewireStyles
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -46,6 +59,8 @@
             sidebarMinimized: localStorage.getItem('sidebarMinimized') === 'true',
             loaded: false,
             init() {
+                document.documentElement.dataset.layout = this.layoutMode;
+                document.documentElement.dataset.sidebar = this.sidebarMinimized ? 'min' : 'full';
                 setTimeout(() => this.loaded = true, 50);
             },
             toggleLayout() {
@@ -67,9 +82,7 @@
                 <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
                     <a href="{{ route('dashboard') }}">
                         <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                        
                             <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-                         
                         </div>
                     </a>   
                     <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher / Expandir">
@@ -84,28 +97,28 @@
                         <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Dashboard</div>
                     </a>
 
-                        <div x-data="{ open: false }" class="relative group whitespace-nowrap">
-                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                                <div class="flex items-center gap-3">
-                                    <i class="text-xl ph ph-receipt shrink-0"></i>
-                                    <span x-show="!sidebarMinimized">Financeiro</span>
-                                </div>
-                                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                                <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a>
-                                <a href="{{ route('financeiro.aprovacoes') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Aprovações</a>
-                                <a href="{{ route('financeiro.centro_custo') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Centro de Custos</a>
-                                <a href="{{ route('financeiro.naturezas') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Naturezas</a>
+                    <div x-data="{ open: false }" class="relative group whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-receipt shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Financeiro</span>
                             </div>
-                            <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
-                                <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a>
-                                <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Aprovações</a>
-                                <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Centro de Custos</a>
-                                <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
-                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a>
+                            <a href="{{ route('financeiro.aprovacoes') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Aprovações</a>
+                            <a href="{{ route('financeiro.centro_custo') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Centro de Custos</a>
+                            <a href="{{ route('financeiro.naturezas') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Naturezas</a>
                         </div>
+                        <div x-show="sidebarMinimized" class="absolute left-full top-0 ml-3 w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                            <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a>
+                            <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Aprovações</a>
+                            <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Centro de Custos</a>
+                            <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
+                        </div>
+                    </div>
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                     <div x-data="{ open: false }" class="relative group whitespace-nowrap">
@@ -332,7 +345,6 @@
                                     <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
                                 </a>
 
-                                {{-- Troca de tema protegida por feature e permissão --}}
                                 @if(!app()->environment('production'))
                                     <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
                                         <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>
@@ -345,9 +357,7 @@
                                     <i class="text-lg ph ph-sidebar-simple" x-show="layoutMode === 'left'" x-cloak></i>
                                 </button>
                                 
-                                {{-- Componente System Task Progress adicionado aqui --}}
                                 @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
-                                
                                 @livewire(\App\Modules\Admin\UI\Livewire\NotificationBadge::class)
                                 
                                 <a href="{{ route('profile.show') }}" class="hidden sm:flex items-center gap-1.5 hover:text-purpura-300 transition-colors shrink-0 ml-1">
@@ -368,19 +378,17 @@
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
                             </a>
                             
-                            
-                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                                    <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
-                                        <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
-                                    </button>
-                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
-                                        <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a>
-                                        <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Aprovações</a>
-                                        <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Centro de Custos</a>
-                                        <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
-                                    </div>
+                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
+                                    <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                </button>
+                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
+                                    <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a>
+                                    <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Aprovações</a>
+                                    <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Centro de Custos</a>
+                                    <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
                                 </div>
-                                
+                            </div>
 
                             @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -433,8 +441,8 @@
                                     <i class="text-base ph ph-paper-plane-tilt"></i> Comunicação <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
                                 </button>
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-52 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
-                                    
-                                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))<div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
+                                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                        <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
                                         <a href="{{ route('conteudo.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Publicações</a>
                                         <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Categorias</a>
                                         <a href="{{ route('portal.index') }}" target="_blank" class="block px-4 py-1.5 text-xs font-medium text-purpura-600 hover:bg-purpura-50 dark:text-purpura-400 dark:hover:bg-gray-700">Ver Portal ↗</a>
@@ -454,8 +462,8 @@
                                 </button>
                                 <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
                                     @if(feature('ferramenta.mock') && auth()->user()->can('relatorio.acessar'))
-                                <div class="px-4 py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
-                                    @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Relatórios</a> @endcan
+                                        <div class="px-4 py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
+                                        @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Relatórios</a> @endcan
                                     @endif
                                     @if(feature('ferramenta.mock') && auth()->user()->can('periodo_avaliacao.listar'))
                                         @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Listar Períodos</a> @endcan
@@ -504,7 +512,6 @@
                                 </div>
                             </div>
                             @endcanany
-                            
                         </div>
                     </div>
                 </nav>
@@ -663,7 +670,6 @@
                         </div>
                     </div>
                     @endcanany
-
                 </div>
 
                 <div class="p-4 border-t border-gray-100 dark:border-gray-700">
