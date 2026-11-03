@@ -376,6 +376,9 @@ class EsteiraComunicacaoService
     /**
      * Realiza o disparo da etapa e registra na tabela de auditoria da esteira.
      */
+    /**
+     * Realiza o disparo da etapa e registra na tabela de auditoria da esteira.
+     */
     private static function executarDisparoEtapa(
         EsteiraComunicacao $esteira,
         EsteiraEtapa $etapa,
@@ -384,6 +387,8 @@ class EsteiraComunicacaoService
         int $entidadeId
     ): void {
         $inscricao = $item['inscricao'] ?? null;
+        
+        // Mescla as respostas do formulário/inscrição com as variáveis de contexto da Esteira
         $contextoEnvio = array_merge($item['dados_dinamicos'] ?? [], [
             'nome'              => $item['nome'] ?? 'Candidato',
             'primeiro_nome'     => explode(' ', trim((string) ($item['nome'] ?? 'Candidato')))[0],
@@ -393,6 +398,7 @@ class EsteiraComunicacaoService
             'url_formulario'    => $item['url_formulario'] ?? '',
         ]);
 
+        // Se a ação configurada nesta etapa exigir a criação do acesso ao Portal do Aluno
         if ($etapa->tipo_acao === 'criar_aluno_enviar_email' && $inscricao) {
             if (!$inscricao->student_id) {
                 $senhaPlana = Str::random(8);
@@ -406,7 +412,10 @@ class EsteiraComunicacaoService
                         'unidade_id'           => $inscricao->unidade_id,
                     ]
                 );
+                
                 $inscricao->update(['student_id' => $estudante->id]);
+                
+                // Injeta as variáveis de login no e-mail
                 $contextoEnvio['senha_provisoria'] = $senhaPlana;
                 $contextoEnvio['link_login'] = url('/aluno/login');
             } else {
@@ -415,8 +424,10 @@ class EsteiraComunicacaoService
             }
         }
 
+        // Cria um identificador único de gatilho para a auditoria do job
         $eventoGatilho = "esteira.{$esteira->id}.etapa.{$etapa->ordem}";
 
+        // Enfileira o disparo utilizando a estrutura existente de comunicação
         DispararAutomacaoJob::dispatch(
             $etapa->template,
             $email,
@@ -425,7 +436,7 @@ class EsteiraComunicacaoService
             $eventoGatilho
         );
 
-        // Registra o disparo na tabela da esteira
+        // Registra o disparo na tabela da esteira para controle de cadência e exibição na tela de Detalhes
         EsteiraDisparo::create([
             'esteira_id'         => $esteira->id,
             'etapa_id'           => $etapa->id,
