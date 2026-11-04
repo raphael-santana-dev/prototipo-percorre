@@ -7,17 +7,24 @@
             <p class="text-sm text-gray-500 mt-1">Gestão, simulação e envio de orçamentos por centro de custo.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" wire:click="sincronizarCadastrosProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
-                <i class="ph-bold ph-database" wire:loading.class="animate-spin" wire:target="sincronizarCadastrosProtheus"></i>
-                <span wire:loading.remove wire:target="sincronizarCadastrosProtheus">Sincronizar C. Custo e Naturezas</span>
-                <span wire:loading wire:target="sincronizarCadastrosProtheus">Sincronizando...</span>
-            </button>
+            
+            @if(feature('financeiro.centro_custo.sincronizar') && feature('financeiro.natureza.sincronizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.centro_custo.sincronizar') || auth()->user()->can('financeiro.natureza.sincronizar')))
+                <button type="button" wire:click="sincronizarCadastrosProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2">
+                    <i class="ph-bold ph-database" wire:loading.class="animate-spin" wire:target="sincronizarCadastrosProtheus"></i>
+                    <span wire:loading.remove wire:target="sincronizarCadastrosProtheus">Sincronizar C. Custo e Naturezas</span>
+                    <span wire:loading wire:target="sincronizarCadastrosProtheus">Sincronizando...</span>
+                </button>
+            @endif
 
-            <button type="button" wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-gray-900 border border-gray-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-black transition flex items-center gap-2">
-                <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
-                <span wire:loading.remove wire:target="sincronizarProtheus">Importar Orçamentos</span>
-                <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
-            </button>
+
+            @if(feature('financeiro.orcamentos.sincronizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.sincronizar')))
+                <button type="button" wire:click="sincronizarProtheus" wire:loading.attr="disabled" class="px-4 py-2 bg-gray-900 border border-gray-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-black transition flex items-center gap-2">
+                    <i class="ph-bold ph-arrows-clockwise" wire:loading.class="animate-spin" wire:target="sincronizarProtheus"></i> 
+                    <span wire:loading.remove wire:target="sincronizarProtheus">Importar Orçamentos</span>
+                    <span wire:loading wire:target="sincronizarProtheus">Buscando...</span>
+                </button>
+            @endif
+
         </div>
     </div>
 
@@ -81,29 +88,34 @@
                             <td class="px-4 py-3 font-semibold text-right text-gray-900">R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado']))
-                                        <button type="button"
-                                                wire:click="integrarAoProtheus({{ $orcamento->id }})"
-                                                wire:loading.attr="disabled"
-                                                onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus via PUT?') || event.stopImmediatePropagation()"
-                                                class="px-2.5 py-1 text-xs font-medium bg-emerald-700 text-white hover:bg-emerald-800 rounded transition flex items-center gap-1"
-                                                title="Finalizar e Integrar ao Protheus">
-                                            <i class="ph-bold ph-cloud-arrow-up"></i> Integrar
-                                        </button>
+                                    @if(feature('financeiro.orcamentos.integrar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.integrar')))
+                                        @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Aprovado']))
+                                            <button type="button"
+                                                    wire:click="integrarAoProtheus({{ $orcamento->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    onclick="confirm('Confirmar a integração definitiva deste orçamento com o Protheus via PUT?') || event.stopImmediatePropagation()"
+                                                    class="px-2.5 py-1 text-xs font-medium bg-emerald-700 text-white hover:bg-emerald-800 rounded transition flex items-center gap-1"
+                                                    title="Finalizar e Integrar ao Protheus">
+                                                <i class="ph-bold ph-cloud-arrow-up"></i> Integrar
+                                            </button>
+                                        @endif
+                                    @endif
+                                    
+                                    @if(feature('financeiro.orcamentos.resetar') && (auth()->user()->hasRole('dev') || auth()->user()->can('financeiro.orcamentos.resetar')))
+                                        @if($orcamento->status !== 'Importado')
+                                            <button type="button"
+                                                    wire:click="resetarStatusOrcamento({{ $orcamento->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="resetarStatusOrcamento({{ $orcamento->id }})"
+                                                    onclick="confirm('Deseja resetar o orçamento #{{ $orcamento->id }} (C.C. {{ $orcamento->ccusto }}) para o status inicial no Protheus e no sistema?') || event.stopImmediatePropagation()"
+                                                    class="px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 rounded transition flex items-center gap-1"
+                                                    title="Retornar orçamento para o status inicial (Protheus)">
+                                                <i class="ph-bold ph-arrow-counter-clockwise" wire:loading.class="animate-spin" wire:target="resetarStatusOrcamento({{ $orcamento->id }})"></i>
+                                                <span>Reset</span>
+                                            </button>
+                                        @endif
                                     @endif
 
-                                    @if($orcamento->status !== 'Importado')
-                                        <button type="button"
-                                                wire:click="resetarStatusOrcamento({{ $orcamento->id }})"
-                                                wire:loading.attr="disabled"
-                                                wire:target="resetarStatusOrcamento({{ $orcamento->id }})"
-                                                onclick="confirm('Deseja resetar o orçamento #{{ $orcamento->id }} (C.C. {{ $orcamento->ccusto }}) para o status inicial no Protheus e no sistema?') || event.stopImmediatePropagation()"
-                                                class="px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 rounded transition flex items-center gap-1"
-                                                title="Retornar orçamento para o status inicial (Protheus)">
-                                            <i class="ph-bold ph-arrow-counter-clockwise" wire:loading.class="animate-spin" wire:target="resetarStatusOrcamento({{ $orcamento->id }})"></i>
-                                            <span>Reset</span>
-                                        </button>
-                                    @endif
 
                                     @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
                                         <button type="button" wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
