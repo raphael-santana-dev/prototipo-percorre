@@ -350,6 +350,7 @@ trait WithFichaPdfDownload
                 if (in_array($chave, $chavesProcessadas, true)) continue;
                 if (str_contains(strtolower($chave), 'form_config') || str_starts_with(strtolower($chave), 'ui_')) continue;
                 if (in_array(strtolower(trim($chave)), ['submission started', 'last updated'], true)) continue;
+                if (str_starts_with(strtolower($chave), '_')) continue;
 
                 $labelChave = ucfirst(str_replace('_', ' ', $chave));
 
@@ -361,10 +362,18 @@ trait WithFichaPdfDownload
                         'valor' => $valor,
                     ];
                 } else {
+                    // Prevenção do erro "Array to string conversion" para matrizes importadas ou json corrompido
+                    if (is_array($valor)) {
+                        $arrFiltrado = array_filter($valor, fn($v) => is_scalar($v));
+                        $strValor = implode(', ', $arrFiltrado);
+                    } else {
+                        $strValor = (string) ($valor ?: '-');
+                    }
+
                     $itensDinamicos[] = [
                         'label' => $labelChave,
                         'tipo'  => 'texto',
-                        'valor' => is_array($valor) ? implode(', ', array_filter($valor)) : ((string) ($valor ?: '-')),
+                        'valor' => $strValor,
                     ];
                 }
             }
@@ -498,7 +507,7 @@ trait WithFichaPdfDownload
                         ['label' => 'Logradouro', 'valor' => ($this->logradouro ?: '-') . ($this->numero ? ", Nº {$this->numero}" : ''), 'largura' => 'full'],
                         ['label' => 'Bairro', 'valor' => $this->bairro ?: '-', 'largura' => 'half'],
                         ['label' => 'Complemento', 'valor' => $this->complemento ?: '-', 'largura' => 'half'],
-                        ['label' => 'Cidade / UF', 'valor' => ($this->cidade ?: '-') . ($insc->estado ?? $this->estado ? " / {$this->estado}" : ''), 'largura' => 'full'],
+                        ['label' => 'Cidade / UF', 'valor' => ($this->cidade ?: '-') . ($this->estado ? " / {$this->estado}" : ''), 'largura' => 'full'],
                     ],
                 ];
             }
