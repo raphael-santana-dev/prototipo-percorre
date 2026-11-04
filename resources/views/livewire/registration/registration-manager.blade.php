@@ -73,15 +73,18 @@
             
             <div x-data="{ openExport: false }" class="relative inline-block text-left">
                 <button @click="openExport = !openExport" @click.away="openExport = false" class="btn btn--secondary btn--medium bg-white">
-                    Exportar
+                    <i class="ph-bold ph-export text-purpura-600"></i>
+                    <span>Exportar {{ count($selecionadas) > 0 ? '(' . count($selecionadas) . ')' : '' }}</span>
                 </button>
-                <div x-show="openExport" x-cloak class="absolute right-0 w-48 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700 dark:divide-gray-700">
+                <div x-show="openExport" x-cloak class="absolute right-0 w-56 mt-2 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-lg shadow-xl z-50 dark:bg-gray-800 dark:border-gray-700">
                     <div class="py-1">
-                        <button wire:click="solicitarExportacao('csv')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
-                            <i class="ph-fill ph-file-csv text-lg text-purpura-500"></i> Formato CSV
+                        <button wire:click="solicitarExportacao('csv')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
+                            <i class="ph-fill ph-file-csv text-lg text-purpura-500"></i>
+                            <span>CSV (.csv) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
                         </button>
-                        <button wire:click="solicitarExportacao('xlsx')" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
-                            <i class="ph-fill ph-file-xls text-lg text-emerald-500"></i> Planilha Excel
+                        <button wire:click="solicitarExportacao('xlsx')" @click="openExport = false" class="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 font-bold text-left gap-2 dark:text-gray-300 dark:hover:bg-gray-700">
+                            <i class="ph-fill ph-file-xls text-lg text-emerald-500"></i>
+                            <span>Excel (.xlsx) — {{ count($selecionadas) > 0 ? count($selecionadas) . ' Selecionadas' : 'Todas Filtradas' }}</span>
                         </button>
                     </div>
                 </div>
@@ -163,13 +166,17 @@
 
                         {{-- LINHA 2: Área de Ações em Lote e Quick Select --}}
                         @if(feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
-                            <div class="flex items-center gap-3 text-sm mt-1">
+                            <div class="flex flex-wrap items-center gap-3 text-sm mt-1">
+                                <label class="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer mr-2">
+                                    <input type="checkbox" wire:model.live="selecionarTudo" class="rounded border-gray-300 text-purpura-600 focus:ring-purpura-500">
+                                    <span>Selecionar Página</span>
+                                </label>
                                 <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Seleção Rápida:</span>
                                 <button wire:click="selecionarTop(10)" class="text-purpura-600 font-bold hover:underline">Top 10</button> &middot;
                                 <button wire:click="selecionarTop(50)" class="text-purpura-600 font-bold hover:underline">Top 50</button> &middot;
                                 <button wire:click="selecionarTop(100)" class="text-purpura-600 font-bold hover:underline">Top 100</button>
                                 @if(count($selecionadas) > 0)
-                                    <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos</button>
+                                    <button wire:click="desmarcarTodas" class="text-gray-400 font-bold hover:text-red-500 hover:underline ml-2">Desmarcar Todos ({{ count($selecionadas) }})</button>
                                 @endif
                             </div>
                             
@@ -177,6 +184,15 @@
                             <div class="bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-3 rounded-lg flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm w-full transition-all mt-1">
                                 <div class="flex items-center shrink-0">
                                     <span class="font-medium text-white text-sm">{{ count($selecionadas) }} inscrições selecionadas</span>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" wire:click="solicitarExportacao('xlsx')" class="btn btn--ondark btn--small !bg-emerald-600 hover:!bg-emerald-700 border-none" title="Exportar Selecionadas para Excel">
+                                        <i class="ph-bold ph-file-xls"></i> Excel
+                                    </button>
+                                    <button type="button" wire:click="solicitarExportacao('csv')" class="btn btn--ondark btn--small !bg-blue-600 hover:!bg-blue-700 border-none" title="Exportar Selecionadas para CSV">
+                                        <i class="ph-bold ph-file-csv"></i> CSV
+                                    </button>
                                 </div>
                                 
                                 @if($cicloBloqueado)
@@ -233,6 +249,20 @@
                                     <span class="text-xs text-gray-500 leading-tight truncate max-w-[200px]">{{ $inscricao->email ?? $inscricao->cpf }}</span>
                                 </div>
                             </div>
+                        </td>
+
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @php
+                                $isPcd = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+                            @endphp
+                            @if($isPcd)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
+                                      title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}">
+                                    <i class="ph-fill ph-wheelchair text-xs"></i> Sim
+                                </span>
+                            @else
+                                <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
+                            @endif
                         </td>
 
                         {{-- COLUNA DE FLAGS DE CONTATO: E-MAIL, WHATSAPP E TELEFONE --}}
@@ -354,6 +384,14 @@
                                     <i class="text-lg ph-bold ph-link"></i>
                                 </button>
 
+                                <button type="button"
+                                        wire:click="baixarFichaInscricaoPdf({{ $inscricao->id }})"
+                                        wire:loading.attr="disabled"
+                                        class="p-1.5 text-gray-400 transition-colors rounded hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-600"
+                                        title="Baixar Ficha de Inscrição (PDF)">
+                                    <i class="text-lg ph-bold ph-file-pdf"></i>
+                                </button>
+
                                 <button wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualização Rápida"><i class="text-lg ph ph-info"></i></button>
                                 
                                 <button wire:click="abrirRegras({{ $inscricao->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Visualizar Critérios e Acertos"><i class="text-lg ph ph-star"></i></button>
@@ -387,6 +425,28 @@
                 <x-slot name="gridSlot">
                     @foreach($registros as $inscricao)
                         <div wire:key="card-inscricao-{{ $inscricao->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                            <div class="flex items-center justify-between mb-4 w-full">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    @php
+                                        $corHex = $inscricao->statusInscricao->cor ?? '#6B7280';
+                                        $isPcdCard = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
+                                        <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
+                                        {{ $inscricao->statusInscricao->nome ?? 'Pendente' }}
+                                    </span>
+
+                                    @if($isPcdCard)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Sim' }}">
+                                            <i class="ph-fill ph-wheelchair"></i> PcD
+                                        </span>
+                                    @endif
+                                </div>
+                                
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-card-{{ $inscricao->id }}">
+                                </div>
+                            </div>
                             
                             <div class="flex items-center justify-between mb-4 w-full">
                                 @php $corHex = $inscricao->statusInscricao->cor ?? '#6B7280'; @endphp

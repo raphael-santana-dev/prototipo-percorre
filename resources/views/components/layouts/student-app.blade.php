@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
+      x-data="{ tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }" 
+      x-init="$watch('tema', valor => { 
+          localStorage.setItem('tema_sistema', valor); 
+          document.documentElement.classList.toggle('dark', valor === 'dark'); 
+      })"
       :class="{ 'dark': tema === 'dark' }"
       class="h-full">
 <head>
@@ -11,12 +14,21 @@
     <title>{{ $title ?? 'Portal do Aluno' }}</title>
 
     <script>
-        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
         (function () {
             var d = document.documentElement;
-            d.dataset.layout  = localStorage.getItem('layoutMode') || 'top';
+            var tema = localStorage.getItem('tema_sistema');
+            if (!tema) {
+                tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                localStorage.setItem('tema_sistema', tema);
+            }
+            d.classList.toggle('dark', tema === 'dark');
+
+            var layout = localStorage.getItem('layoutMode');
+            if (!layout) {
+                layout = 'left';
+                localStorage.setItem('layoutMode', layout);
+            }
+            d.dataset.layout = layout;
             d.dataset.sidebar = localStorage.getItem('sidebarMinimized') === 'true' ? 'min' : 'full';
         })();
     </script>
@@ -29,10 +41,12 @@
     
     <div x-data="{ 
         drawerOpen: false, 
-        layoutMode: localStorage.getItem('layoutMode') || 'top',
+        layoutMode: localStorage.getItem('layoutMode') || 'left',
         sidebarMinimized: localStorage.getItem('sidebarMinimized') === 'true',
         loaded: false,
         init() {
+            document.documentElement.dataset.layout = this.layoutMode;
+            document.documentElement.dataset.sidebar = this.sidebarMinimized ? 'min' : 'full';
             setTimeout(() => this.loaded = true, 50);
         },
         toggleLayout() {
@@ -49,12 +63,12 @@
         
         {{-- DESKTOP: SIDEBAR VERTICAL --}}
         <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden" 
-               :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
+            :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
             
             <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
                 <a href="{{ route('dashboard') }}">
                 <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                    <img src="{{ Vite::asset('resources/images/-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                    <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
                 </div>
                 </a>
                 <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher Menu">
@@ -63,36 +77,87 @@
             </div>
             
             <div class="flex-1 overflow-y-auto custom-scrollbar py-4 space-y-2 px-3 min-w-[72px]">
-                <a href="{{ route('student.dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                
+                <a href="{{ route('student.dashboard') }}" 
+                x-data="{ hover: false }" 
+                @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                @mouseleave="hover = false"
+                class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                :class="sidebarMinimized ? 'justify-center' : ''">
                     <i class="text-xl ph ph-books shrink-0"></i>
                     <span x-show="!sidebarMinimized" x-transition.opacity>Meu Painel</span>
-                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Meu Painel</div>
+                    
+                    <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                        <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                            Meu Painel
+                        </div>
+                    </div>
                 </a>
 
-                <a href="{{ route('student.solicitacoes') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                <a href="{{ route('student.solicitacoes') }}" 
+                x-data="{ hover: false }" 
+                @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                @mouseleave="hover = false"
+                class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                :class="sidebarMinimized ? 'justify-center' : ''">
                     <i class="text-xl ph ph-envelope-open shrink-0"></i>
                     <span x-show="!sidebarMinimized" x-transition.opacity>Minhas Solicitações</span>
-                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Minhas Solicitações</div>
+                    
+                    <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                        <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                            Minhas Solicitações
+                        </div>
+                    </div>
                 </a>
                 
                 @if(auth('student')->user()->matriculado)
-                <a href="{{ route('avaliacoes.index') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                <a href="{{ route('avaliacoes.index') }}" 
+                x-data="{ hover: false }" 
+                @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                @mouseleave="hover = false"
+                class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                :class="sidebarMinimized ? 'justify-center' : ''">
                     <i class="text-xl ph ph-clipboard-text shrink-0"></i>
                     <span x-show="!sidebarMinimized" x-transition.opacity>Avaliações</span>
-                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Avaliações</div>
+                    
+                    <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                        <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                            Avaliações
+                        </div>
+                    </div>
                 </a>
                 @endif
                 
-                <a href="{{ route('portal.index') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                <a href="{{ route('portal.index') }}" 
+                x-data="{ hover: false }" 
+                @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                @mouseleave="hover = false"
+                class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                :class="sidebarMinimized ? 'justify-center' : ''">
                     <i class="text-xl ph ph-newspaper shrink-0"></i>
                     <span x-show="!sidebarMinimized" x-transition.opacity>Portal Editorial</span>
-                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Portal Editorial</div>
+                    
+                    <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                        <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                            Portal Editorial
+                        </div>
+                    </div>
                 </a>
 
-                <a href="{{ route('student.profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors group relative whitespace-nowrap" :class="sidebarMinimized ? 'justify-center' : ''">
+                <a href="{{ route('student.profile') }}" 
+                x-data="{ hover: false }" 
+                @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                @mouseleave="hover = false"
+                class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                :class="sidebarMinimized ? 'justify-center' : ''">
                     <i class="text-xl ph ph-user-circle shrink-0"></i>
                     <span x-show="!sidebarMinimized" x-transition.opacity>Meu Perfil</span>
-                    <div x-show="sidebarMinimized" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50">Meu Perfil</div>
+                    
+                    <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                        <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                            Meu Perfil
+                        </div>
+                    </div>
                 </a>
             </div>
         </aside>

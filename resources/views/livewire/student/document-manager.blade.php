@@ -98,6 +98,11 @@
                                             @endif
                                         </h4>
                                         <p class="text-[11px] text-gray-500 mt-1 leading-snug">{{ $doc->descricao }}</p>
+                                        @if(!empty($statusInfo['enviado_por_participante']))
+                                            <span class="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                <i class="ph-fill ph-user-switch"></i> Enviado por Participante ({{ $statusInfo['participante_nome'] ?? 'Equipe' }})
+                                            </span>
+                                        @endif
                                     </div>
 
                                     <div class="w-full shrink-0 sm:w-auto">

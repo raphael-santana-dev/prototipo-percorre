@@ -86,7 +86,7 @@ class Inscricao extends Component
         $this->isTeste   = $querTeste;
 
         $queryCiclo = Ciclo::with(['campos' => function($query) {
-            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc');
+            $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc')->orderBy('id', 'asc');
         }]);
 
         if ($this->isPreview || $this->isTeste) {
@@ -116,7 +116,13 @@ class Inscricao extends Component
         if ($ciclo) {
             $this->cicloAtivoId = $ciclo->id;
             $this->inscricoesAbertas = true;
-            $this->camposDinamicos = $ciclo->campos;
+            $this->camposDinamicos = $ciclo->campos
+                ->sortBy([
+                    ['etapa', 'asc'],
+                    ['ordem', 'asc'],
+                    ['id', 'asc'],
+                ])
+                ->values();
 
             $cfg = $this->camposDinamicos->firstWhere('name', '_form_config');
             if ($cfg && $cfg->configuracoes) {
@@ -157,6 +163,23 @@ class Inscricao extends Component
                 }
                 session()->forget('inscricao_retomada_id');
             }
+        }
+    }
+
+    /**
+     * Garante que, após a reidratação do Livewire, a coleção de campos
+     * preserve sempre a ordenação por etapa e ordem.
+     */
+    public function hydrate(): void
+    {
+        if ($this->camposDinamicos instanceof \Illuminate\Support\Collection) {
+            $this->camposDinamicos = $this->camposDinamicos
+                ->sortBy([
+                    ['etapa', 'asc'],
+                    ['ordem', 'asc'],
+                    ['id', 'asc'],
+                ])
+                ->values();
         }
     }
 
@@ -463,10 +486,151 @@ class Inscricao extends Component
         return $telefone;
     }
 
+    public function removerArquivo(string $campoName, $index = null)
+    {
+        if (isset($this->respostas[$campoName])) {
+            if ($index !== null && is_array($this->respostas[$campoName])) {
+                unset($this->respostas[$campoName][$index]);
+                $this->respostas[$campoName] = array_values($this->respostas[$campoName]);
+            } else {
+                $this->respostas[$campoName] = '';
+            }
+        }
+
+        if (isset($this->uploads[$campoName])) {
+            if ($index !== null && is_array($this->uploads[$campoName])) {
+                unset($this->uploads[$campoName][$index]);
+                $this->uploads[$campoName] = array_values($this->uploads[$campoName]);
+            } else {
+                unset($this->uploads[$campoName]);
+            }
+        }
+
+        $this->salvarRascunhoSilencioso();
+    }
+
+    private function normalizarTextoComparacao($valor): string
+    {
+        $str = mb_strtolower(trim((string) $valor), 'UTF-8');
+        return Str::ascii($str);
+    }
+
+    public function campoEstaVisivel($campo, array $visitados = []): bool
+    {
+        if (empty($campo->depende_de) || $campo->depende_valor === null || $campo->depende_valor === '') {
+            return true;
+        }
+
+        if (in_array($campo->name, $visitados, true)) {
+            return true;
+        }
+        $visitados[] = $campo->name;
+
+        // Se o campo pai também for um campo dinâmico, verifica recursivamente se o pai está visível
+        if ($this->camposDinamicos) {
+            $campoPai = collect($this->camposDinamicos)->firstWhere('name', $campo->depende_de);
+            if ($campoPai && !$this->campoEstaVisivel($campoPai, $visitados)) {
+                return false;
+            }
+        }
+
+        $valorGatilho = array_key_exists($campo->depende_de, $this->respostas)
+            ? $this->respostas[$campo->depende_de]
+            : (property_exists($this, $campo->depende_de) ? $this->{$campo->depende_de} : null);
+
+        $op = $campo->depende_operador ?: '=';
+        $tgt = $this->normalizarTextoComparacao($campo->depende_valor);
+
+        if (is_array($valorGatilho)) {
+            $arrayValores = array_values(array_filter(array_map(fn($v) => $this->normalizarTextoComparacao($v), $valorGatilho), fn($v) => $v !== ''));
+            if (empty($arrayValores)) {
+                return false;
+            }
+            $arrayAlvos = array_map(fn($v) => $this->normalizarTextoComparacao($v), explode(',', (string) $campo->depende_valor));
+            return match ($op) {
+                '='  => in_array($tgt, $arrayValores, true),
+                '!=' => !in_array($tgt, $arrayValores, true),
+                'in' => !empty(array_intersect($arrayValores, $arrayAlvos)),
+                default => false,
+            };
+        }
+
+        $val = $this->normalizarTextoComparacao($valorGatilho);
+        if ($val === '') {
+            return false;
+        }
+
+        $numVal = is_numeric(str_replace(',', '.', $val)) ? (float) str_replace(',', '.', $val) : null;
+        $numTgt = is_numeric(str_replace(',', '.', $tgt)) ? (float) str_replace(',', '.', $tgt) : null;
+
+        return match ($op) {
+            '='  => $val === $tgt,
+            '!=' => $val !== $tgt,
+            '>'  => $numVal !== null && $numTgt !== null && $numVal > $numTgt,
+            '<'  => $numVal !== null && $numTgt !== null && $numVal < $numTgt,
+            '>=' => $numVal !== null && $numTgt !== null && $numVal >= $numTgt,
+            '<=' => $numVal !== null && $numTgt !== null && $numVal <= $numTgt,
+            'in' => in_array($val, array_map(fn($v) => $this->normalizarTextoComparacao($v), explode(',', (string) $campo->depende_valor)), true),
+            default => false,
+        };
+    }
+
+    private function limparRespostasCondicionaisInativas(): void
+    {
+        if (!$this->camposDinamicos) return;
+
+        foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+            if (!empty($campo->depende_de) && !$this->campoEstaVisivel($campo)) {
+                $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                $valorVazio = (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) ? [] : '';
+
+                if (isset($this->respostas[$campo->name]) && $this->respostas[$campo->name] !== $valorVazio) {
+                    $this->respostas[$campo->name] = $valorVazio;
+                    $this->resetErrorBag('respostas.' . $campo->name);
+                }
+            }
+        }
+    }
+
+    protected function mensagensValidacao(): array
+    {
+        return [
+            'nome.required'                    => 'O nome completo é obrigatório.',
+            'nome.min'                         => 'Informe o seu nome completo.',
+            'nome_social.required_if'          => 'Informe o seu nome social.',
+            'cpf.required'                     => 'O CPF é obrigatório.',
+            'cpf.unique'                       => 'Já existe uma inscrição com este CPF neste processo seletivo.',
+            'data_nascimento.required'         => 'A data de nascimento é obrigatória.',
+            'data_nascimento.date'             => 'Informe uma data de nascimento válida.',
+            'celular.required'                 => 'O número de celular / telefone é obrigatório.',
+            'celular.min'                      => 'Informe um número de telefone válido com DDD.',
+            'email.required'                   => 'O campo e-mail é obrigatório.',
+            'email.email'                      => 'Informe um endereço de e-mail válido.',
+            'possui_deficiencia.required'      => 'Informe se possui deficiência.',
+            'natureza_deficiencia.required_if' => 'Selecione a natureza da deficiência.',
+            'cep.required'                     => 'O CEP é obrigatório.',
+            'cep.min'                          => 'Informe um CEP válido com 8 dígitos.',
+            'unidade.required'                 => 'Selecione a unidade.',
+            'curso.required'                   => 'Selecione o curso.',
+            'turno.required'                   => 'Selecione o turno.',
+            'curso_interesse.required'         => 'Selecione o curso de interesse.',
+            'turno_interesse.required'         => 'Selecione o turno de interesse.',
+            'autorizacao_uso_infos.accepted'   => 'Você precisa aceitar os termos para finalizar.',
+            'respostas.*.required'             => 'Este campo é obrigatório.',
+            'respostas.*.email'                => 'Informe um e-mail válido.',
+            'respostas.*.numeric'              => 'Este campo aceita apenas números.',
+            'uploads.*.required'               => 'O envio de arquivo é obrigatório.',
+            'uploads.*.max'                    => 'O arquivo excede o tamanho máximo permitido.',
+            'uploads.*.mimes'                  => 'Formato de arquivo não suportado.',
+            'uploads.*.*.max'                  => 'Um dos arquivos excede o tamanho máximo permitido.',
+            'uploads.*.*.mimes'                => 'Um dos arquivos possui formato não suportado.',
+        ];
+    }
+
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
-        if ($etapa === 1 && $this->exibirSelecaoCursoFixo) {
+        if ((int) $etapa === 1 && $this->exibirSelecaoCursoFixo) {
             if ($this->temVagasDisponiveis && $this->estado && ($this->data_nascimento < date('Y-m-d'))) {
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
@@ -477,42 +641,14 @@ class Inscricao extends Component
             }
         }
 
-        if ($etapa === $this->totalEtapas) {
+        if ((int) $etapa === (int) $this->totalEtapas) {
             $regras['autorizacao_uso_infos'] = 'accepted';
         }
 
         if ($this->camposDinamicos) {
             foreach ($this->camposDinamicos->where('etapa', $etapa)->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
-                if (!empty($campo->depende_de) && !empty($campo->depende_valor)) {
-                    $valorGatilho = $this->respostas[$campo->depende_de] ?? $this->{$campo->depende_de} ?? null;
-                    $op = $campo->depende_operador ?? '=';
-                    $tgt = strtolower(trim((string)$campo->depende_valor));
-                    $condicaoAtendida = false;
-
-                    if (is_array($valorGatilho)) {
-                        $arrayValores = array_map('strtolower', array_map('trim', $valorGatilho));
-                        $arrayAlvos = array_map('trim', explode(',', $tgt));
-                        switch($op) {
-                            case '=': $condicaoAtendida = in_array($tgt, $arrayValores); break;
-                            case '!=': $condicaoAtendida = !in_array($tgt, $arrayValores); break;
-                            case 'in': $condicaoAtendida = !empty(array_intersect($arrayValores, $arrayAlvos)); break;
-                        }
-                    } else {
-                        $val = strtolower(trim((string)$valorGatilho));
-                        switch($op) {
-                            case '=': $condicaoAtendida = ($val === $tgt); break;
-                            case '!=': $condicaoAtendida = ($val !== $tgt); break;
-                            case '>': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val > $tgt); break;
-                            case '<': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val < $tgt); break;
-                            case '>=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val >= $tgt); break;
-                            case '<=': $condicaoAtendida = (is_numeric($val) && is_numeric($tgt) && $val <= $tgt); break;
-                            case 'in': 
-                                $arrayAlvos = array_map('trim', explode(',', $tgt));
-                                $condicaoAtendida = in_array($val, $arrayAlvos);
-                                break;
-                        }
-                    }
-                    if (!$condicaoAtendida) continue; 
+                if (!$this->campoEstaVisivel($campo)) {
+                    continue;
                 }
 
                 if ($campo->tipo === 'signature') {
@@ -579,9 +715,36 @@ class Inscricao extends Component
                     continue;
                 }
 
+                if ($campo->tipo === 'social') {
+                    $cfgSocial = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                    $redes = $cfgSocial['redes_permitidas'] ?? [];
+                    if ($campo->obrigatorio && !empty($redes)) {
+                        $regras['respostas.' . $campo->name] = [
+                            'required',
+                            'array',
+                            function ($attribute, $value, $fail) {
+                                $preenchidas = is_array($value) ? array_filter(array_map('trim', $value)) : [];
+                                if (empty($preenchidas)) {
+                                    $fail('Preencha pelo menos uma rede social.');
+                                }
+                            }
+                        ];
+                    } else {
+                        $regras['respostas.' . $campo->name] = ['nullable', 'array'];
+                    }
+                    continue;
+                }
+
                 $ruleStr = [];
-                if ($campo->obrigatorio) $ruleStr[] = 'required';
-                else $ruleStr[] = 'nullable';
+                if ($campo->obrigatorio) {
+                    $ruleStr[] = 'required';
+                    if ($campo->tipo === 'check') {
+                        $ruleStr[] = 'array';
+                        $ruleStr[] = 'min:1';
+                    }
+                } else {
+                    $ruleStr[] = 'nullable';
+                }
 
                 $cfgVal = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
 
@@ -599,11 +762,11 @@ class Inscricao extends Component
                         $ruleStr[] = function ($attribute, $value, $fail) {
                             if (empty($value)) return;
                             $c = preg_replace('/\D/', '', $value);
-                            if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF dinâmico informado é inválido.');
+                            if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
                             for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                            if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF dinâmico informado é inválido.');
+                            if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
                             for ($s = 11, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
-                            if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF dinâmico informado é inválido.');
+                            if ($c[10] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
                         };
                     }
                     if (!$this->isTeste && filter_var($cfgVal['unico'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
@@ -611,6 +774,16 @@ class Inscricao extends Component
                             ->where('ciclo_id', $this->cicloAtivoId)
                             ->ignore($this->inscricaoId);
                     }
+                }
+
+                if ($campo->subtipo === 'tel') {
+                    $ruleStr[] = function ($attribute, $value, $fail) {
+                        if (empty($value)) return;
+                        $digitos = preg_replace('/\D/', '', (string) $value);
+                        if (strlen($digitos) < 10) {
+                            $fail('Informe um telefone válido com DDD.');
+                        }
+                    };
                 }
 
                 if ($campo->subtipo === 'number') $ruleStr[] = 'numeric';
@@ -623,7 +796,6 @@ class Inscricao extends Component
                 }
                 
                 if (!empty($ruleStr)) {
-                    // ARRAY DIRETO, NADA DE IMPLODE
                     $regras['respostas.' . $campo->name] = $ruleStr;
                 }
             }
@@ -640,50 +812,33 @@ class Inscricao extends Component
         if (str_starts_with($propertyName, 'uploads.')) {
             $regras = $this->regrasPorEtapa($this->etapaAtual);
             if (array_key_exists($propertyName, $regras) || array_key_exists($propertyName . '.*', $regras)) {
-                $this->validateOnly($propertyName, $regras, [
-                    'uploads.*.required' => 'O envio de arquivo é obrigatório.',
-                    'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-                    'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-                    'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-                    'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
-                ]);
+                $this->validateOnly($propertyName, $regras, $this->mensagensValidacao());
             }
             return;
+        }
+
+        if (str_starts_with($propertyName, 'respostas.')) {
+            $changedKey = str_replace('respostas.', '', $propertyName);
+            foreach ($this->camposDinamicos->where('tipo', 'system') as $cSys) {
+                $cfgSys = is_string($cSys->configuracoes) ? json_decode($cSys->configuracoes, true) : ($cSys->configuracoes ?? []);
+                if (($cfgSys['combo_parent_unidade'] ?? null) === $changedKey) {
+                    $this->respostas[$cSys->name] = '';
+                }
+                if (($cfgSys['combo_parent_curso'] ?? null) === $changedKey && $cSys->subtipo === 'turno') {
+                    $this->respostas[$cSys->name] = '';
+                }
+            }
+
+            // Limpa valores de campos condicionais que deixaram de ser visíveis
+            $this->limparRespostasCondicionaisInativas();
         }
 
         $this->salvarRascunhoSilencioso();
 
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
-        if (str_starts_with($propertyName, 'respostas.')) {
-            $this->validateOnly($propertyName, $regrasFinais, [
-                'respostas.*.required' => 'Este campo é obrigatório.',
-            ]);
-        } elseif (array_key_exists($propertyName, $regrasFinais)) {
-            $this->validateOnly($propertyName, $regrasFinais);
+        if (array_key_exists($propertyName, $regrasFinais)) {
+            $this->validateOnly($propertyName, $regrasFinais, $this->mensagensValidacao());
         }
-    }
-
-    public function removerArquivo(string $campoName, $index = null)
-    {
-        if (isset($this->respostas[$campoName])) {
-            if ($index !== null && is_array($this->respostas[$campoName])) {
-                unset($this->respostas[$campoName][$index]);
-                $this->respostas[$campoName] = array_values($this->respostas[$campoName]);
-            } else {
-                $this->respostas[$campoName] = '';
-            }
-        }
-
-        if (isset($this->uploads[$campoName])) {
-            if ($index !== null && is_array($this->uploads[$campoName])) {
-                unset($this->uploads[$campoName][$index]);
-                $this->uploads[$campoName] = array_values($this->uploads[$campoName]);
-            } else {
-                unset($this->uploads[$campoName]);
-            }
-        }
-
-        $this->salvarRascunhoSilencioso();
     }
 
     public function avancarEtapa()
@@ -701,20 +856,11 @@ class Inscricao extends Component
             $this->dispatch('erro', msg: "A próxima fase ({$this->bloqueioFaseSeguinte->nome}) só será liberada em {$dataLiberacaoFmt}. O seu progresso até aqui está guardado!");
             return; 
         }
-        
+
+        $this->limparRespostasCondicionaisInativas();
         $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
         
-        $this->validate($regrasFinais, [
-            'autorizacao_uso_infos.accepted' => 'Você precisa aceitar os termos.',
-            'respostas.*.required' => 'Este campo é obrigatório.',
-            'curso_interesse.required' => 'Obrigatório caso deseje informar.',
-            'turno_interesse.required' => 'Obrigatório caso deseje informar.',
-            'uploads.*.required' => 'O envio de arquivo é obrigatório.',
-            'uploads.*.max' => 'O arquivo excede o tamanho máximo permitido.',
-            'uploads.*.mimes' => 'Formato de arquivo não suportado.',
-            'uploads.*.*.max' => 'Um dos arquivos excede o tamanho máximo permitido.',
-            'uploads.*.*.mimes' => 'Um dos arquivos possui formato não suportado.',
-        ]);
+        $this->validate($regrasFinais, $this->mensagensValidacao());
 
         foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
             if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
@@ -795,11 +941,16 @@ class Inscricao extends Component
     {
         $regras = [];
 
+        // Os campos fixos pertencem apenas à Etapa 1
+        if ((int) $this->etapaAtual !== 1) {
+            return $regras;
+        }
+
         if ($this->exibirDadosPessoaisFixos) {
             $regrasCpf = [
                 'required',
                 function ($attribute, $value, $fail) {
-                    $c = preg_replace('/\D/', '', $value);
+                    $c = preg_replace('/\D/', '', (string) $value);
                     if (strlen($c) != 11 || preg_match("/^{$c[0]}{11}$/", $c)) return $fail('O CPF informado é inválido.');
                     for ($s = 10, $n = 0, $i = 0; $s >= 2; $n += $c[$i++] * $s--);
                     if ($c[9] != ((($n %= 11) < 2) ? 0 : 11 - $n)) return $fail('O CPF informado é inválido.');
@@ -815,15 +966,44 @@ class Inscricao extends Component
             }
 
             $regras['nome'] = 'required|min:3';
-            $regras['email'] = 'required|email';
-            $regras['cpf'] = $regrasCpf;
+            $regras['possui_nome_social'] = 'required|in:sim,nao';
             $regras['nome_social'] = 'required_if:possui_nome_social,sim';
-            $regras['possui_deficiencia'] = 'required';
+            $regras['cpf'] = $regrasCpf;
             $regras['data_nascimento'] = 'required|date';
+
+            // Valida Celular / Telefone obrigatório (respeitando máscara LGPD na retomada)
+            $regras['celular'] = [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if (!$this->editarCelular && !empty($this->celularOriginal) && str_contains((string) $value, '*')) {
+                        return;
+                    }
+                    $digitos = preg_replace('/\D/', '', (string) $value);
+                    if (strlen($digitos) < 10) {
+                        $fail('Informe um número de telefone válido com DDD.');
+                    }
+                },
+            ];
+
+            // Valida E-mail obrigatório (respeitando máscara LGPD na retomada)
+            $regras['email'] = [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if (!$this->editarEmail && !empty($this->emailOriginal) && str_contains((string) $value, '*')) {
+                        return;
+                    }
+                    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        $fail('Informe um endereço de e-mail válido.');
+                    }
+                },
+            ];
+
+            $regras['possui_deficiencia'] = 'required|in:sim,nao';
+            $regras['natureza_deficiencia'] = 'required_if:possui_deficiencia,sim';
         }
 
         if ($this->exibirEnderecoFixo) {
-            $regras['cep'] = 'required';
+            $regras['cep'] = 'required|min:8';
         }
 
         return $regras;
@@ -1283,8 +1463,8 @@ class Inscricao extends Component
             $valorAlvo = $valoresEsperados[0] ?? null;
 
             switch ($operador) {
-                case '=': return (strtolower(trim((string)$valorResposta)) === strtolower(trim((string)$valorAlvo)));
-                case '!=': return (strtolower(trim((string)$valorResposta)) !== strtolower(trim((string)$valorAlvo)));
+                case '=': return ($this->normalizarTextoComparacao($valorResposta) === $this->normalizarTextoComparacao($valorAlvo));
+                case '!=': return ($this->normalizarTextoComparacao($valorResposta) !== $this->normalizarTextoComparacao($valorAlvo));
                 case '>=': return ((float)$valorResposta >= (float)$valorAlvo);
                 case '<=': return ((float)$valorResposta <= (float)$valorAlvo);
                 case '>': return ((float)$valorResposta > (float)$valorAlvo);
@@ -1294,8 +1474,8 @@ class Inscricao extends Component
                     $max = (float)($valoresEsperados[1] ?? $min);
                     return ((float)$valorResposta >= $min && (float)$valorResposta <= $max);
                 case 'in':
-                    $respostasValidas = array_map(fn($v) => strtolower(trim((string)$v)), $valoresEsperados);
-                    return in_array(strtolower(trim((string)$valorResposta)), $respostasValidas);
+                    $respostasValidas = array_map(fn($v) => $this->normalizarTextoComparacao($v), $valoresEsperados);
+                    return in_array($this->normalizarTextoComparacao($valorResposta), $respostasValidas, true);
             }
             return false;
         };

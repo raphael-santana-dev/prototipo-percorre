@@ -192,8 +192,8 @@ class FormManager extends Component
 
     public function render()
     {
-        // Adicionamos o withCount para contabilizar as respostas e criar o atributo total_respostas
         $query = Formulario::query()
+            ->where('tipo', '!=', 'pre_inscricao')
             ->withCount('respostas as total_respostas');
 
         if ($this->ordenacaoCampo) {
@@ -203,12 +203,12 @@ class FormManager extends Component
         }
 
         return view('livewire.forms.form-manager', [
-            'registros' => $query->paginate($this->porPagina ?? 15),
-            'rolesDb' => Role::where('name', '!=', 'dev')->orderBy('name')->get(),
-            'usersDb' => User::orderBy('name')->get(),
+            'registros'  => $query->paginate($this->porPagina ?? 15),
+            'rolesDb'    => Role::where('name', '!=', 'dev')->orderBy('name')->get(),
+            'usersDb'    => User::orderBy('name')->get(),
             'unidadesDb' => Unidade::orderBy('nome')->get(),
-            'cursosDb' => Curso::orderBy('nome')->get(),
-            'turnosDb' => Turno::orderBy('nome')->get(),
+            'cursosDb'   => Curso::orderBy('nome')->get(),
+            'turnosDb'   => Turno::orderBy('nome')->get(),
         ]);
     }
 }

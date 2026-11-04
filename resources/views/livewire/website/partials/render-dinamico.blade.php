@@ -84,35 +84,47 @@
         }
     @endphp
 
-    <div class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
+    <div wire:key="campo-wrapper-{{ $campo->etapa }}-{{ $campo->id }}-{{ $campo->name }}"
+        class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
         @if($isCondicional)
-            data-target="{{ $campo->depende_valor }}"
             x-data="{
+                depField: @js((string) $campo->depende_de),
+                depTarget: @js((string) $campo->depende_valor),
+                depOp: @js((string) ($campo->depende_operador ?: '=')),
+                norm(v) {
+                    return String(v ?? '')
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .toLowerCase()
+                        .trim();
+                },
                 get isVisivel() {
-                    let respostas = $wire.respostas;
-                    let atual = null;
-                    if (respostas && respostas['{{ $campo->depende_de }}'] !== undefined && respostas['{{ $campo->depende_de }}'] !== '') {
-                        atual = respostas['{{ $campo->depende_de }}'];
-                    } else {
-                        atual = $wire.{{ $campo->depende_de }};
-                    }
+                    let respostas = $wire.respostas || {};
+                    let atual = (this.depField in respostas)
+                        ? respostas[this.depField]
+                        : ($wire[this.depField] !== undefined ? $wire[this.depField] : '');
+
                     if (atual === null || atual === undefined) atual = '';
-                    
-                    let target = String($el.dataset.target).toLowerCase().trim();
-                    let op = '{{ $campo->depende_operador }}';
-                    
+
+                    let target = this.norm(this.depTarget);
+                    let op = this.depOp || '=';
+
                     if (Array.isArray(atual)) {
-                        let atualArray = atual.map(s => String(s).toLowerCase().trim());
-                        let targetArray = target.split(',').map(s => s.trim());
+                        let atualArray = atual.map(s => this.norm(s)).filter(s => s !== '');
+                        let targetArray = target.split(',').map(s => s.trim()).filter(s => s !== '');
                         if (op === '=') return atualArray.includes(target);
-                        if (op === '!=') return !atualArray.includes(target);
+                        if (op === '!=') return atualArray.length > 0 && !atualArray.includes(target);
                         if (op === 'in') return atualArray.some(r => targetArray.includes(r));
                         return false;
                     }
 
-                    let val = String(atual).toLowerCase().trim();
-                    let numVal = Number(val);
-                    let numTarget = Number(target);
+                    let val = this.norm(atual);
+
+                    // Se o campo pai ainda não foi respondido, não exibe campos dependentes
+                    if (val === '') return false;
+
+                    let numVal = Number(val.replace(',', '.'));
+                    let numTarget = Number(target.replace(',', '.'));
 
                     if (op === '=') return val === target;
                     if (op === '!=') return val !== target;
@@ -121,7 +133,7 @@
                     if (op === '>=') return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
                     if (op === '<=') return !isNaN(numVal) && !isNaN(numTarget) && numVal <= numTarget;
                     if (op === 'in') return target.split(',').map(s => s.trim()).includes(val);
-                    
+
                     return false;
                 }
             }"
@@ -842,6 +854,11 @@
                     $vincularCursoUnidade = filter_var($config['vincular_curso_unidade'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
                     $vincularTurnoCurso = filter_var($config['vincular_turno_curso'] ?? ($config['aplicar_regras'] ?? false), FILTER_VALIDATE_BOOLEAN);
 
+                    // Opções restritas configuradas especificamente neste input dinâmico/combo
+                    $unidadesPermitidasCfg = array_values(array_filter(array_map('strval', (array) ($config['unidades_permitidas'] ?? []))));
+                    $cursosPermitidosCfg   = array_values(array_filter(array_map('strval', (array) ($config['cursos_permitidos'] ?? []))));
+                    $turnosPermitidosCfg   = array_values(array_filter(array_map('strval', (array) ($config['turnos_permitidos'] ?? []))));
+
                     // Descobre UF preenchida pelo candidato (campo fixo ou campo ViaCEP dinâmico)
                     $ufCandidato = $estado ?? null;
                     if (empty($ufCandidato) && !empty($respostas) && is_array($respostas)) {
@@ -853,7 +870,7 @@
                         }
                     }
 
-                    // Descobre Unidade e Curso selecionados (no combo ou em outro campo system da página)
+                    // Descobre Unidade e Curso selecionados no conjunto dinâmico atual
                     $parentUnidadeKey = $config['combo_parent_unidade'] ?? null;
                     $parentCursoKey   = $config['combo_parent_curso'] ?? null;
 
@@ -875,6 +892,12 @@
 
                     if ($campo->subtipo === 'unidade') {
                         $queryUni = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', 'ativa', '1', true])->orderBy('nome');
+
+                        if (!empty($unidadesPermitidasCfg)) {
+                            $idsUniLimpos = array_map(fn($v) => (int) (explode('-', $v)[0] ?? $v), $unidadesPermitidasCfg);
+                            $queryUni->whereIn('id', $idsUniLimpos);
+                        }
+
                         $listaUni = $queryUni->get();
 
                         if ($filtrarPorUf && !empty($ufCandidato)) {
@@ -887,6 +910,23 @@
 
                     } elseif ($campo->subtipo === 'curso') {
                         $queryCur = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome');
+
+                        // Aplica filtro de cursos permitidos no input dinâmico (suporta 'cursoId' ou 'unidadeId-cursoId')
+                        if (!empty($cursosPermitidosCfg)) {
+                            $idsCursoValidos = [];
+                            foreach ($cursosPermitidosCfg as $itemCur) {
+                                if (str_contains($itemCur, '-')) {
+                                    [$uRef, $cRef] = explode('-', $itemCur, 2);
+                                    if (!$vincularCursoUnidade || empty($unidadeEscolhidaId) || (string) $uRef === (string) $unidadeEscolhidaId) {
+                                        $idsCursoValidos[] = (int) $cRef;
+                                    }
+                                } else {
+                                    $idsCursoValidos[] = (int) $itemCur;
+                                }
+                            }
+                            $queryCur->whereIn('id', !empty($idsCursoValidos) ? array_unique($idsCursoValidos) : [0]);
+                        }
+
                         if ($vincularCursoUnidade) {
                             if (!empty($unidadeEscolhidaId)) {
                                 $queryCur->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadeEscolhidaId));
@@ -899,15 +939,48 @@
                         }
 
                     } elseif ($campo->subtipo === 'turno') {
+                        // Aplica filtro de turnos permitidos no input dinâmico (suporta 'turnoId' ou 'unidadeId-cursoId-turnoId')
+                        $idsTurnoValidos = null;
+                        if (!empty($turnosPermitidosCfg)) {
+                            $idsTurnoValidos = [];
+                            foreach ($turnosPermitidosCfg as $itemTur) {
+                                $partes = explode('-', $itemTur);
+                                if (count($partes) === 3) {
+                                    [$uRef, $cRef, $tRef] = $partes;
+                                    $okUni = !$vincularCursoUnidade || empty($unidadeEscolhidaId) || (string) $uRef === (string) $unidadeEscolhidaId;
+                                    $okCur = !$vincularTurnoCurso || empty($cursoEscolhidoId) || (string) $cRef === (string) $cursoEscolhidoId;
+                                    if ($okUni && $okCur) {
+                                        $idsTurnoValidos[] = (int) $tRef;
+                                    }
+                                } elseif (count($partes) === 2) {
+                                    [$cRef, $tRef] = $partes;
+                                    if (!$vincularTurnoCurso || empty($cursoEscolhidoId) || (string) $cRef === (string) $cursoEscolhidoId) {
+                                        $idsTurnoValidos[] = (int) $tRef;
+                                    }
+                                } else {
+                                    $idsTurnoValidos[] = (int) $itemTur;
+                                }
+                            }
+                            $idsTurnoValidos = array_unique($idsTurnoValidos);
+                        }
+
                         if ($vincularTurnoCurso) {
                             if (!empty($cursoEscolhidoId)) {
                                 $cursoObj = \App\Models\Curso::with('turnosVinculados')->find($cursoEscolhidoId);
-                                $opcoesSistema = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome')->pluck('nome', 'id')->toArray() : [];
+                                $turnosCol = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome') : collect();
+                                if ($idsTurnoValidos !== null) {
+                                    $turnosCol = $turnosCol->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
+                                }
+                                $opcoesSistema = $turnosCol->pluck('nome', 'id')->toArray();
                             } else {
                                 $opcoesSistema = [];
                             }
                         } else {
-                            $opcoesSistema = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome')->pluck('nome', 'id')->toArray();
+                            $queryTur = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome');
+                            if ($idsTurnoValidos !== null) {
+                                $queryTur->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
+                            }
+                            $opcoesSistema = $queryTur->pluck('nome', 'id')->toArray();
                         }
                     }
                 @endphp

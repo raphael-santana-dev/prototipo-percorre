@@ -42,6 +42,11 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa'] = 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
         $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
 
+        $this->eventosDisponiveis = array_merge(
+            $this->eventosDisponiveis, 
+            $this->listarGatilhosDeFasesDisponiveis()
+        );
+
         if ($id) {
             //abort_if(!feature('automacao.editar'), 403);
             //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
@@ -68,6 +73,40 @@ class AutomacaoForm extends Component
             return null;
         }
         return EmailTemplate::find($this->template_id);
+    }
+
+    /**
+     * Retorna a lista de gatilhos de Fases de Formulários/Ciclos disponíveis para criar automações.
+     */
+    public function listarGatilhosDeFasesDisponiveis(): array
+    {
+        $gatilhos = [
+            'inscricao.fase_liberada'  => 'Inscrição: Qualquer Nova Fase Liberada (Todos os Ciclos)',
+            'formulario.fase_liberada' => 'Formulário Público: Qualquer Nova Fase Liberada',
+        ];
+
+        if (class_exists(\App\Models\FormularioFase::class)) {
+            $fases = \App\Models\FormularioFase::with(['ciclo', 'formulario'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            foreach ($fases as $fase) {
+                $contexto = $fase->ciclo
+                    ? "Ciclo: {$fase->ciclo->nome}"
+                    : ($fase->formulario ? "Formulário: {$fase->formulario->titulo}" : 'Geral');
+
+                $gatilhos["formulario.fase_liberada.{$fase->id}"] = "Fase Liberada: {$fase->nome} ({$contexto})";
+
+                $slugFase = \Illuminate\Support\Str::slug($fase->nome, '_');
+                if ($fase->ciclo_id) {
+                    $gatilhos["inscricao.fase.{$slugFase}"] = "Inscrição - Fase Liberada: {$fase->nome}";
+                } elseif ($fase->formulario_id) {
+                    $gatilhos["formulario.fase.{$slugFase}"] = "Formulário - Fase Liberada: {$fase->nome}";
+                }
+            }
+        }
+
+        return $gatilhos;
     }
 
     public function salvar()

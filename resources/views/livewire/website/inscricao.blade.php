@@ -283,7 +283,7 @@
                                             @if(isset($editarCelular) && !$editarCelular && !empty($celularOriginal))
                                                 <input type="text" value="{{ $celular }}" readonly class="w-full rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-100 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 font-mono cursor-not-allowed">
                                             @else
-                                                <input wire:model.live.debounce.500ms="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @if(!empty($celular)) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif">
+                                                <input wire:model.live.debounce.500ms="celular" x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'" type="text" placeholder="(00) 00000-0000" class="{{ $inputClassBase }} @error('celular') !border-red-500 !bg-red-50 dark:!bg-red-900/30 @else @if(!empty($celular) && strlen($celular) >= 14) !border-green-500 !bg-green-50 dark:!bg-green-900/20 @endif @enderror">
                                             @endif
                                             @error('celular') <span class="text-red-500 dark:text-red-400 text-xs mt-1 font-bold">{{ $message }}</span> @enderror
                                         </div>

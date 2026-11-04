@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" 
-      x-data="{ tema: localStorage.getItem('tema_sistema') || 'light' }" 
-      x-init="$watch('tema', valor => localStorage.setItem('tema_sistema', valor))"
+      x-data="{ tema: localStorage.getItem('tema_sistema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }" 
+      x-init="$watch('tema', valor => { 
+          localStorage.setItem('tema_sistema', valor); 
+          document.documentElement.classList.toggle('dark', valor === 'dark'); 
+      })"
       :class="{ 'dark': tema === 'dark' }"
       class="h-full">
 <head>
@@ -11,9 +14,15 @@
     <title>{{ $title ?? 'Acesso ao Sistema' }}</title>
 
     <script>
-        if (localStorage.getItem('tema_sistema') === 'dark' || (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
+        (function () {
+            var d = document.documentElement;
+            var tema = localStorage.getItem('tema_sistema');
+            if (!tema) {
+                tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                localStorage.setItem('tema_sistema', tema);
+            }
+            d.classList.toggle('dark', tema === 'dark');
+        })();
     </script>
     
     @livewireStyles

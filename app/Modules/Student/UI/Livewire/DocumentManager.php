@@ -68,7 +68,9 @@ class DocumentManager extends Component
                     'status' => $salvo->status_analise,
                     'tentativas' => $salvo->tentativas_ia,
                     'motivo_rejeicao' => $salvo->log_ia['motivo_rejeicao'] ?? '',
-                    'motivo_rejeicao_humana' => $salvo->log_ia['motivo_rejeicao_humana'] ?? ''
+                    'motivo_rejeicao_humana' => $salvo->log_ia['motivo_rejeicao_humana'] ?? '',
+                    'enviado_por_participante' => !empty($salvo->log_ia['enviado_por_participante']),
+                    'participante_nome' => $salvo->log_ia['participante_nome'] ?? null,
                 ];
             } else {
                 $this->arquivosEnviados[$doc->id] = [

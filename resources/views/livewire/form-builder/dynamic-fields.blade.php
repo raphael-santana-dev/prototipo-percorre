@@ -487,62 +487,149 @@
                             </div>
                         </div>
 
-                        @forelse($camposPorEtapa as $numEtapa => $camposDaEtapa)
+                        @foreach($etapasDisponiveis as $etapaObj)
+                            @php
+                                $numEtapa = (int) $etapaObj->numero;
+                                $camposDaEtapa = $camposPorEtapa->get($numEtapa, collect());
+                                $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
+
+                                $gruposRender = [];
+                                if ($numEtapa === 1 && $contextoTipo === 'ciclo') {
+                                    $camposTopo = $camposDaEtapa->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return !empty($cfg['exibir_no_topo']);
+                                    });
+                                    $camposRodape = $camposDaEtapa->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return empty($cfg['exibir_no_topo']);
+                                    });
+                                    
+                                    if ($camposTopo->count() > 0) {
+                                        $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
+                                    }
+                                    $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                                    if ($camposRodape->count() > 0) {
+                                        $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                                    }
+                                } else {
+                                    $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
+                                }
+                            @endphp
+
                             <div class="mb-10" wire:key="grupo-etapa-{{ $numEtapa }}">
                                 <div class="flex items-center gap-3 mb-5">
                                     <span class="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-purpura-600 rounded-full shadow-sm">{{ $numEtapa }}</span>
-                                    @php 
-                                        $etapaObj = $etapasDisponiveis->firstWhere('numero', $numEtapa);
-                                        $nomeEtapaPreview = $etapaObj ? $etapaObj->nome : "Etapa $numEtapa";
-
-                                        $gruposRender = [];
-                                        if ($numEtapa == 1 && $contextoTipo === 'ciclo') {
-                                            $camposTopo = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return isset($cfg['exibir_no_topo']) && $cfg['exibir_no_topo'] == true;
-                                            });
-                                            $camposRodape = $camposDaEtapa->filter(function($c) {
-                                                $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                                return !isset($cfg['exibir_no_topo']) || $cfg['exibir_no_topo'] == false;
-                                            });
-                                            
-                                            if ($camposTopo->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
-                                            }
-                                            $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                                            if ($camposRodape->count() > 0) {
-                                                $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
-                                            }
-                                        } else {
-                                            $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
-                                        }
-                                    @endphp
                                     <h3 class="text-lg font-bold {{ $textoForm }}">{{ $nomeEtapaPreview }}</h3>
-                                    <button type="button" wire:click="selecionarTodosDaEtapa({{ $numEtapa }})" class="text-[10px] font-bold text-purpura-600 hover:underline px-2 py-0.5 rounded bg-purpura-50 border border-purpura-200">
-                                        Selecionar página
-                                    </button>
+                                    @if($camposDaEtapa->count() > 0)
+                                        <button type="button" wire:click="selecionarTodosDaEtapa({{ $numEtapa }})" class="text-[10px] font-bold text-purpura-600 hover:underline px-2 py-0.5 rounded bg-purpura-50 border border-purpura-200">
+                                            Selecionar página
+                                        </button>
+                                    @endif
                                     <div class="flex-1 h-px ml-2 bg-gray-200"></div>
                                 </div>
 
-                                    @foreach($gruposRender as $grupo)
-                                        @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                                @foreach($gruposRender as $grupo)
+                                    @if($grupo['titulo'] === 'placeholder_dados_pessoais')
                                         @php
                                             $showPersonal = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                             $showAddress  = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_address'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                             $showCourse   = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_course'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                         @endphp
                                         @if($showPersonal || $showAddress || $showCourse)
-                                            <div class="w-full my-6 pointer-events-none">
-                                                <div class="border-2 border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50 opacity-70">
-                                                    <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                                        <i class="ph-fill ph-lock-key"></i> Campos Fixos Ativos:
-                                                        @if($showPersonal) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Dados Pessoais</span> @endif
-                                                        @if($showAddress) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Endereço</span> @endif
-                                                        @if($showCourse) <span class="px-2 py-0.5 bg-white border rounded text-[10px]">Unidade/Curso/Turno</span> @endif
-                                                    </h4>
-                                                    <div class="grid grid-cols-2 gap-3">
-                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
-                                                        <div class="h-9 bg-gray-200 rounded-md"></div>
+                                            <div class="w-full my-5">
+                                                <div class="rounded-xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/50 via-white to-purpura-50/30 p-5 shadow-2xs">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-4 border-b border-indigo-100">
+                                                        <div class="flex items-center gap-2.5">
+                                                            <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+                                                                <i class="ph-fill ph-shield-check text-base"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                                    Campos Padrões e Fixos da 1ª Página
+                                                                </h4>
+                                                                <p class="text-[11px] text-gray-500">
+                                                                    Estes blocos nativos são carregados automaticamente para o candidato nesta etapa inicial.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        @if($isCicloCustomizado)
+                                                            <button type="button"
+                                                                    @click="$wire.set('drawerFormSettingsAberto', true)"
+                                                                    class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition flex items-center gap-1">
+                                                                <i class="ph-bold ph-sliders-horizontal"></i> Personalizar Fixos
+                                                            </button>
+                                                        @else
+                                                            <span class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-indigo-100/80 border border-indigo-200 rounded-md uppercase tracking-wider flex items-center gap-1">
+                                                                <i class="ph-fill ph-lock-key"></i> Bloco Nativo Obrigatório
+                                                            </span>
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pointer-events-none">
+                                                        @if($showPersonal)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-identification-card text-purpura-600 text-base"></i> 1. Dados Pessoais
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">Ativo</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Nome Completo, Nome Social, CPF, Data de Nascimento, E-mail, Celular e Declaração de PcD.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cpf</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">nome</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">email</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">pcd</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($showAddress)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-map-pin-line text-rose-500 text-base"></i> 2. Endereço Residencial
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">ViaCEP</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Busca automática por CEP, Logradouro, Número, Complemento, Bairro, Cidade, UF e Região.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cep</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">logradouro</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">cidade/uf</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($showCourse)
+                                                            <div class="p-3.5 rounded-lg bg-white border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800">
+                                                                            <i class="ph-fill ph-graduation-cap text-indigo-600 text-base"></i> 3. Unidade / Curso / Turno
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">Ativo</span>
+                                                                    </div>
+                                                                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                                        Seleção em cascata de Unidade, Curso e Turno sincronizada com a oferta de vagas e faixa etária.
+                                                                    </p>
+                                                                </div>
+                                                                <div class="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">unidade_id</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">curso_id</span>
+                                                                    <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-mono">turno_id</span>
+                                                                </div>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -577,7 +664,6 @@
                                                     $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
                                                     $layoutOpcoes = ($isActive && isset($configuracoes['layout_opcoes'])) ? $configuracoes['layout_opcoes'] : ($cfg['layout_opcoes'] ?? 'horizontal');
 
-                                                    // Resolve dicas (Tooltip e Legenda) do campo para o preview
                                                     $dicaModoPv = $cfg['dica_modo'] ?? 'nenhum';
                                                     $tooltipTextoPv = null;
                                                     $tooltipTriggerPv = 'hover';
@@ -611,7 +697,6 @@
                                                     <div class="relative z-10">
                                                         <div class="flex justify-between items-start mb-1.5 gap-2">
                                                             <div class="flex items-center gap-2 flex-wrap">
-                                                                {{-- Checkbox para selecionar múltiplos inputs --}}
                                                                 <input type="checkbox"
                                                                        wire:model.live="camposSelecionados"
                                                                        value="{{ (string) $c->id }}"
@@ -629,7 +714,6 @@
                                                                         @if($c->obrigatorio) <span class="text-red-500">*</span> @endif
                                                                     </label>
 
-                                                                    {{-- Ícone de Tooltip no Preview --}}
                                                                     @if(!empty($tooltipTextoPv))
                                                                         <div x-data="{ showTip: false }" class="relative inline-flex items-center" @click.stop>
                                                                             <button type="button"
@@ -639,7 +723,7 @@
                                                                                         @click="showTip = !showTip" @click.away="showTip = false"
                                                                                     @endif
                                                                                     class="text-purpura-600 hover:text-purpura-800 focus:outline-none inline-flex items-center justify-center w-4 h-4 rounded-full bg-purpura-50 border border-purpura-200"
-                                                                                    title="Dica ({{ $tooltipTriggerPv === 'hover' ? 'Ao passar o rato' : 'Ao clicar' }})">
+                                                                                    title="Dica">
                                                                                 <i class="ph-bold ph-question text-[10px]"></i>
                                                                             </button>
                                                                             <div x-show="showTip" x-cloak class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[11px] rounded-lg shadow-xl z-50 leading-relaxed">
@@ -684,66 +768,29 @@
                                                                 <p class="text-[11px] font-bold text-gray-600">
                                                                     {{ ($cfg['tipo_assinante'] ?? $c->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
                                                                 </p>
-                                                                <span class="text-[9px] text-gray-400">Área de desenho com rato / ecrã tátil</span>
                                                             </div>
 
                                                         @elseif($c->tipo === 'link')
                                                             @php
                                                                 $destinoPv = $cfg['tipo_destino'] ?? 'externo';
                                                                 $extPv = strtolower($cfg['arquivo_extensao'] ?? '');
-                                                                $permDownloadPv = !empty($cfg['permitir_download']);
-                                                                $abrirPreviewPv = !empty($cfg['abrir_preview']);
                                                             @endphp
                                                             <div class="w-full p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg flex items-center justify-between gap-3 pointer-events-none">
                                                                 <div class="flex items-center gap-3 min-w-0">
                                                                     <div class="w-9 h-9 rounded-lg bg-white border border-blue-200 flex items-center justify-center shrink-0 text-blue-600">
-                                                                        @if($destinoPv === 'arquivo')
-                                                                            @if($extPv === 'pdf') <i class="ph-fill ph-file-pdf text-xl text-red-500"></i>
-                                                                            @elseif(in_array($extPv, ['xls', 'xlsx'])) <i class="ph-fill ph-file-xls text-xl text-emerald-600"></i>
-                                                                            @else <i class="ph-fill ph-file-doc text-xl text-blue-600"></i> @endif
-                                                                        @elseif($destinoPv === 'interno')
-                                                                            <i class="ph-bold ph-compass text-xl text-indigo-600"></i>
-                                                                        @else
-                                                                            <i class="ph-bold ph-arrow-square-out text-xl text-blue-600"></i>
-                                                                        @endif
+                                                                        <i class="ph-bold ph-link-simple text-xl"></i>
                                                                     </div>
                                                                     <div class="min-w-0">
-                                                                        <p class="text-xs font-bold text-gray-900 truncate">{!! formatRichFormText($c->label ?: ($cfg['arquivo_nome'] ?? 'Link / Documento')) !!}</p>
-                                                                        <p class="text-[10px] text-gray-500 truncate">
-                                                                            @if($destinoPv === 'arquivo')
-                                                                                Arquivo: {{ $cfg['arquivo_nome'] ?? 'Aguardando upload...' }}
-                                                                            @else
-                                                                                {{ $cfg['url'] ?? 'URL não definida' }}
-                                                                            @endif
-                                                                        </p>
+                                                                        <p class="text-xs font-bold text-gray-900 truncate">{!! formatRichFormText($c->label ?: ($cfg['arquivo_nome'] ?? 'Link')) !!}</p>
+                                                                        <p class="text-[10px] text-gray-500 truncate">{{ $cfg['url'] ?? 'URL não definida' }}</p>
                                                                     </div>
-                                                                </div>
-                                                                <div class="flex items-center gap-1 shrink-0">
-                                                                    @if($destinoPv === 'arquivo')
-                                                                        @if($abrirPreviewPv)
-                                                                            <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Ver</span>
-                                                                        @endif
-                                                                        @if($permDownloadPv)
-                                                                            <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">Baixar</span>
-                                                                        @else
-                                                                            <span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-[9px] font-bold rounded">S/ Download</span>
-                                                                        @endif
-                                                                    @else
-                                                                        <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-bold rounded">Acessar</span>
-                                                                    @endif
                                                                 </div>
                                                             </div>
 
                                                         @elseif($c->tipo === 'file')
-                                                            @php
-                                                                $tipoArquivoPv = $cfg['tipo_arquivo'] ?? 'todos';
-                                                                $multiPv = !empty($cfg['aceita_multiplos']);
-                                                                $maxMbPv = $cfg['max_size_mb'] ?? 10;
-                                                            @endphp
                                                             <div class="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 bg-gray-50/60 text-center pointer-events-none">
                                                                 <i class="ph ph-cloud-arrow-up text-xl text-purpura-500"></i>
-                                                                <p class="text-xs font-bold text-gray-700">Carregar Anexo ({{ ucfirst($tipoArquivoPv) }})</p>
-                                                                <span class="text-[10px] text-gray-400">{{ $multiPv ? 'Múltiplos' : 'Único' }} &middot; Máx: {{ $maxMbPv }}MB</span>
+                                                                <p class="text-xs font-bold text-gray-700">Carregar Anexo</p>
                                                             </div>
 
                                                         @elseif($c->tipo === 'select')
@@ -777,32 +824,7 @@
                                                             </div>
 
                                                         @elseif($c->tipo === 'matriz')
-                                                            @php
-                                                                $linhasPv = !empty($cfg['linhas']) ? $cfg['linhas'] : ['Item 1', 'Item 2'];
-                                                                $colunasPv = !empty($cfg['colunas']) ? $cfg['colunas'] : ['Opção A', 'Opção B'];
-                                                            @endphp
-                                                            <div class="overflow-x-auto w-full border border-gray-200 rounded-lg pointer-events-none bg-white mt-1">
-                                                                <table class="min-w-full text-[11px] text-left">
-                                                                    <thead class="bg-gray-50 border-b border-gray-200">
-                                                                        <tr>
-                                                                            <th class="p-1.5"></th>
-                                                                            @foreach($colunasPv as $col)
-                                                                                <th class="p-1.5 text-center text-gray-600 font-bold border-l border-gray-100">{{ $col }}</th>
-                                                                            @endforeach
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody class="divide-y divide-gray-100">
-                                                                        @foreach($linhasPv as $linha)
-                                                                            <tr>
-                                                                                <td class="p-1.5 font-medium text-gray-800">{{ $linha }}</td>
-                                                                                @foreach($colunasPv as $col)
-                                                                                    <td class="p-1.5 text-center border-l border-gray-100"><div class="w-3 h-3 border border-gray-300 rounded-full inline-block"></div></td>
-                                                                                @endforeach
-                                                                            </tr>
-                                                                        @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
+                                                            <div class="w-full p-2 bg-white border border-gray-200 rounded text-xs text-gray-500 font-bold">Matriz de Avaliação</div>
 
                                                         @elseif($c->tipo === 'html')
                                                             <div class="text-gray-800">
@@ -814,9 +836,6 @@
                                                                 @elseif($c->subtipo === 'info_card') 
                                                                     <div class="p-2.5 bg-blue-50 border-l-4 border-blue-500 text-blue-800 rounded-r-md">
                                                                         <p class="font-bold text-xs">{!! formatRichFormText($c->label) !!}</p>
-                                                                        @if(!empty($cfg['descricao']))
-                                                                            <div class="text-[11px] mt-1">{!! formatRichFormText($cfg['descricao']) !!}</div>
-                                                                        @endif
                                                                     </div>
                                                                 @endif
                                                             </div>
@@ -825,8 +844,8 @@
                                                             <hr class="border-t-2 border-dashed border-gray-300 my-2">
 
                                                         @elseif($c->tipo === 'spacer')
-                                                            <div class="w-full h-10 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50/60 text-gray-400 text-[11px] font-semibold select-none">
-                                                                <i class="ph ph-arrows-out-line-horizontal mr-1.5"></i> Espaço ({{ $c->largura == 0 ? "Restante: {$larguraEfetiva}/12" : "{$c->largura}/12" }})
+                                                            <div class="w-full h-10 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 text-gray-400 text-[11px] font-semibold select-none">
+                                                                Espaço ({{ $c->largura == 0 ? "Restante" : "{$c->largura}/12" }})
                                                             </div>
 
                                                         @elseif($c->tipo === 'media')
@@ -880,16 +899,15 @@
                                         </div>
                                     @endif
                                 @endforeach
+
+                                @if($grupo['campos']->isEmpty() && !($numEtapa === 1 && $contextoTipo === 'ciclo'))
+                                    <div class="py-8 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 text-xs">
+                                        Nenhum campo personalizado adicionado nesta página. Clique num tipo de input à esquerda para inserir.
+                                    </div>
+                                @endif
                             </div>
-                        @empty
-                            <div class="flex flex-col items-center justify-center py-16 text-center">
-                                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-200">
-                                    <i class="ph ph-list-plus text-3xl text-gray-400"></i>
-                                </div>
-                                <h3 class="text-base font-bold text-gray-900 mb-1">Formulário Vazio</h3>
-                                <p class="text-gray-500 text-xs max-w-xs">Selecione um tipo de input na coluna da esquerda para iniciar a configuração.</p>
-                            </div>
-                        @endforelse
+                        @endforeach
+
                     </div>
                 </div>
             </div>
@@ -1447,6 +1465,43 @@
                                         </div>
                                     @endif
 
+                                    {{-- CONFIGURADOR DE OPÇÕES (UNIDADES / CURSOS / TURNOS) IGUAL AO CADASTRO DE CICLO --}}
+                                    @php
+                                        $qtdUniCfg = count($configuracoes['unidades_permitidas'] ?? []);
+                                        $qtdCurCfg = count($configuracoes['cursos_permitidos'] ?? []);
+                                        $qtdTurCfg = count($configuracoes['turnos_permitidos'] ?? []);
+                                    @endphp
+                                    <div class="p-3 bg-white border border-purpura-200 rounded-lg space-y-2.5 shadow-2xs">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                                                <i class="ph-fill ph-Sliders text-purpura-600"></i> Opções Disponíveis
+                                            </span>
+                                            @if($qtdUniCfg > 0 || $qtdCurCfg > 0 || $qtdTurCfg > 0)
+                                                <button type="button" wire:click="limparRestricaoComboAcademico" class="text-[10px] font-bold text-red-500 hover:underline">
+                                                    Usar Todas
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        @if($qtdUniCfg > 0 || $qtdCurCfg > 0 || $qtdTurCfg > 0)
+                                            <div class="flex flex-wrap gap-1.5 text-[10px] font-bold">
+                                                <span class="px-2 py-0.5 rounded bg-purpura-50 text-purpura-700 border border-purpura-200">{{ $qtdUniCfg }} Unidade(s)</span>
+                                                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">{{ $qtdCurCfg }} Curso(s)</span>
+                                                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $qtdTurCfg }} Turno(s)</span>
+                                            </div>
+                                        @else
+                                            <p class="text-[10px] text-gray-500 leading-tight">
+                                                Exibindo todas as Unidades, Cursos e Turnos ativos. Clique abaixo para selecionar opções específicas.
+                                            </p>
+                                        @endif
+
+                                        <button type="button"
+                                                wire:click="abrirModalConfigCombo"
+                                                class="w-full py-2 px-3 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs">
+                                            <i class="ph-bold ph-tree-structure text-sm"></i> Configurar Unidades / Cursos / Turnos
+                                        </button>
+                                    </div>
+
                                     @if(in_array($subtipo, ['unidade', 'combo_academico']))
                                         <label class="flex items-start gap-2.5 cursor-pointer pt-1">
                                             <input type="checkbox" wire:model.live="configuracoes.filtrar_por_uf" class="mt-0.5 h-4 w-4 text-purpura-600 rounded border-gray-300">
@@ -1650,9 +1705,7 @@
         </div>
     </fieldset>
 
-    <!-- ========================================================================= -->
-    <!-- NAVIGATION DRAWER: CONFIGURAÇÕES GLOBAIS DO FORMULÁRIO                    -->
-    <!-- ========================================================================= -->
+    {{-- NAVIGATION DRAWER: CONFIGURAÇÕES GLOBAIS DO FORMULÁRIO --}}
     <div class="relative z-[150]" role="dialog" aria-modal="true" x-show="$wire.drawerFormSettingsAberto" x-cloak>
         <div x-show="$wire.drawerFormSettingsAberto" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
 
@@ -1895,7 +1948,21 @@
                                             <option value="{{ $tId }}">{{ $tNome }}</option>
                                         @endforeach
                                     </select>
-                                    <p class="text-[9px] text-blue-500 dark:text-blue-300 mt-1.5 leading-tight">Se selecionado, o Cron Job disparará este e-mail no exato momento da "Data de Liberação" para os candidatos que alcançaram a fase anterior.</p>
+                                    <p class="text-[9px] text-blue-500 dark:text-blue-300 mt-1.5 leading-tight">
+                                        Se selecionado, o sistema disparará este template automaticamente na "Data de Liberação" para todos que iniciaram o preenchimento.
+                                    </p>
+                                    @php
+                                        $slugFasePreview = \Illuminate\Support\Str::slug($fasesConfig[$index]['nome'] ?? 'nova_fase', '_');
+                                        $prefixoGatilho = $contextoTipo === 'ciclo' ? 'inscricao.fase.' : 'formulario.fase.';
+                                        $gatilhoEspecifico = $prefixoGatilho . ($slugFasePreview ?: 'nome_da_fase');
+                                        $gatilhoGeral = $contextoTipo === 'ciclo' ? 'inscricao.fase_liberada' : 'formulario.fase_liberada';
+                                    @endphp
+                                    <div class="mt-2 pt-2 border-t border-blue-200/60 dark:border-blue-800/60 flex flex-wrap items-center gap-1.5 text-[10px]">
+                                        <span class="font-bold text-blue-800 dark:text-blue-300"><i class="ph-bold ph-lightning"></i> Gatilhos de Automação:</span>
+                                        <code class="px-1.5 py-0.5 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded text-purpura-700 dark:text-purpura-300 font-mono">{{ $gatilhoEspecifico }}</code>
+                                        <span class="text-gray-400">ou</span>
+                                        <code class="px-1.5 py-0.5 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded text-gray-600 dark:text-gray-300 font-mono">{{ $gatilhoGeral }}</code>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1942,6 +2009,122 @@
                 <button type="button" wire:click="acceptTransfer" class="px-3 py-1.5 rounded-md bg-purpura-600 hover:bg-purpura-700 text-white border-none text-xs font-bold transition">
                     Aceitar e Sair
                 </button>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE CONFIGURAÇÃO DE UNIDADES / CURSOS / TURNOS DO CONJUNTO ACADÊMICO --}}
+    @if($modalConfigComboAberto)
+        <div class="fixed inset-0 z-[260] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+                    <div>
+                        <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="ph-fill ph-tree-structure text-purpura-600 text-lg"></i> Configurar Opções: Unidades, Cursos e Turnos
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            Selecione as Unidades, Cursos e Turnos que estarão disponíveis neste conjunto de campos (mesmo padrão da configuração de Ciclo).
+                        </p>
+                    </div>
+                    <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="text-gray-400 hover:text-red-500 p-1">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700">
+                    {{-- COLUNA 1: UNIDADES --}}
+                    <div class="flex-1 flex flex-col overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">1. Unidades Ofertadas</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboUnidadesSelecionadas) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @foreach($unidadesDb as $u)
+                                <div wire:key="combo-uni-{{ $u->id }}"
+                                     wire:click="setComboActiveUnidade({{ $u->id }})"
+                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/40 ring-1 ring-purpura-300' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                    <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                        <input type="checkbox" wire:model.live="comboUnidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                        <span class="text-xs font-bold {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
+                                    </label>
+                                    <i class="ph ph-caret-right text-base {{ $comboActiveUnidadeId == $u->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 2: CURSOS DA UNIDADE --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/40 dark:bg-gray-800/80 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">2. Cursos da Unidade</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboCursosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveUnidadeId)
+                                @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $comboActiveUnidadeId)) as $c)
+                                    @php $chaveCursoUnidade = $comboActiveUnidadeId . '-' . $c->id; @endphp
+                                    <div wire:key="combo-cur-{{ $chaveCursoUnidade }}"
+                                         wire:click="setComboActiveCurso({{ $c->id }})"
+                                         class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $comboActiveCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-300' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                            <input type="checkbox" wire:model.live="comboCursosSelecionados" value="{{ $chaveCursoUnidade }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                            <span class="text-xs font-bold {{ $comboActiveCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                        </label>
+                                        <i class="ph ph-caret-right text-base {{ $comboActiveCursoId == $c->id ? 'text-purpura-600' : 'text-gray-300' }}"></i>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-buildings text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione uma Unidade à esquerda</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- COLUNA 3: TURNOS VINCULADOS --}}
+                    <div class="flex-1 flex flex-col bg-gray-50/80 dark:bg-gray-900/30 overflow-hidden">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">3. Turnos Vinculados</span>
+                            <span class="text-[10px] font-bold text-purpura-600">{{ count($comboTurnosSelecionados) }} sel.</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($comboActiveUnidadeId && $comboActiveCursoId)
+                                @php $cursoComboObj = $cursosDb->firstWhere('id', $comboActiveCursoId); @endphp
+                                @if($cursoComboObj)
+                                    @foreach($cursoComboObj->turnosVinculados as $t)
+                                        @php $chaveTurnoCompleta = $comboActiveUnidadeId . '-' . $comboActiveCursoId . '-' . $t->id; @endphp
+                                        <div wire:key="combo-tur-{{ $chaveTurnoCompleta }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                                <input type="checkbox" wire:model.live="comboTurnosSelecionados" value="{{ $chaveTurnoCompleta }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500">
+                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 p-4 text-center">
+                                    <i class="ph ph-graduation-cap text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso ao centro</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/60 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <span class="text-[11px] text-gray-500">
+                        Se deixar tudo desmarcado, o conjunto listará todas as Unidades, Cursos e Turnos ativos do sistema.
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" wire:click="$set('modalConfigComboAberto', false)" class="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="button" wire:click="confirmarConfigComboAcademico" class="px-5 py-2 text-xs font-bold text-white bg-purpura-600 hover:bg-purpura-700 rounded-lg shadow-sm flex items-center gap-1.5">
+                            <i class="ph-bold ph-check"></i> Aplicar Opções ao Conjunto
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     @endif

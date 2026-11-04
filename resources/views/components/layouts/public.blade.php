@@ -28,17 +28,10 @@
               toggleTema() {
                   this.tema = this.tema === 'light' ? 'dark' : 'light';
                   localStorage.setItem('tema_sistema', this.tema);
-                  if (this.tema === 'dark') {
-                      document.documentElement.classList.add('dark');
-                  } else {
-                      document.documentElement.classList.remove('dark');
-                  }
+                  document.documentElement.classList.toggle('dark', this.tema === 'dark');
               }
           }" 
-          x-init="
-              if (tema === 'dark') { document.documentElement.classList.add('dark'); }
-              else { document.documentElement.classList.remove('dark'); }
-          "
+          x-init="document.documentElement.classList.toggle('dark', tema === 'dark')"
           :class="tema === 'dark' ? 'dark h-full' : 'h-full'">
 @endif
       
@@ -49,17 +42,19 @@
     <title>{{ $title ?? 'Instituto Percorre' }}</title>
 
     <script>
-        @if(!app()->environment('production'))
-            (function() {
-                const temaSalvo = localStorage.getItem('tema_sistema');
-                const prefereEscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (temaSalvo === 'dark' || (!temaSalvo && prefereEscuro)) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
+        (function() {
+            var d = document.documentElement;
+            @if(!app()->environment('production'))
+                var tema = localStorage.getItem('tema_sistema');
+                if (!tema) {
+                    tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    localStorage.setItem('tema_sistema', tema);
                 }
-            })();
-        @endif
+                d.classList.toggle('dark', tema === 'dark');
+            @else
+                d.classList.remove('dark');
+            @endif
+        })();
     </script>
 
     @includeIf('components.partials.analytics-heatmap')

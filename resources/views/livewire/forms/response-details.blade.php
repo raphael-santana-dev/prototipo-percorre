@@ -1,135 +1,131 @@
-<div class="p-6 max-w-4xl mx-auto font-sans relative">
-    
-    <x-page-header 
-        title="Resposta #{{ str_pad($resposta->id, 5, '0', STR_PAD_LEFT) }}" 
-        icon="ph ph-file-text"
-        badge="Resposta">
+<div class="p-6 max-w-[1400px] mx-auto font-sans">
+
+    <x-breadcrumb :items="[
+        ['label' => 'Formulários', 'url' => route('formularios.index')],
+        ['label' => $formulario->titulo, 'url' => route('formularios.show', $formulario->id)],
+        ['label' => 'Ficha de Resposta #' . str_pad($resposta->id, 5, '0', STR_PAD_LEFT), 'url' => '#']
+    ]" />
+
+    <x-details-card 
+        title="Ficha de Resposta" 
+        subtitle="Submetida em {{ $resposta->created_at->format('d/m/Y \à\s H:i') }}"
+        backUrl="{{ route('formularios.show', $formulario->id) }}"
+        backLabel="Voltar às Respostas"
+        avatarInitials="{{ strtoupper(substr($nomeParticipante, 0, 2)) }}"
+        itemName="{{ $nomeParticipante }}"
+        itemDescription="{{ $cpfParticipante ? 'CPF: ' . $cpfParticipante : '' }}{{ ($cpfParticipante && $emailParticipante) ? ' • ' : '' }}{{ $emailParticipante ?: 'Formulário: ' . $formulario->titulo }}">
         
-        <x-slot name="actions">
-            <a href="{{ route('formularios.show', $formulario->id) }}" class="px-4 py-2 text-sm font-bold border rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 flex items-center gap-2">
-                <i class="ph-bold ph-arrow-left"></i> Voltar
-            </a>
-            <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 text-white bg-purpura-600 hover:bg-purpura-700 shadow-sm transition rounded-lg font-bold text-sm">
-                <i class="ph-bold ph-printer text-lg"></i> Imprimir
-            </button>
+        <x-slot name="badge">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <span class="tag tag--small tag--filled tag--pistache border-0 uppercase">
+                    Protocolo #{{ str_pad($resposta->id, 6, '0', STR_PAD_LEFT) }}
+                </span>
+
+                <button type="button"
+                        wire:click="baixarFichaRespostaPdf({{ $resposta->id }})"
+                        wire:loading.attr="disabled"
+                        class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none shadow-xs flex items-center gap-1.5">
+                    <i class="ph-bold ph-file-pdf text-sm"></i>
+                    <span>Ficha de Respostas (PDF)</span>
+                </button>
+            </div>
         </x-slot>
-    </x-page-header>
 
-    <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        <i class="ph-fill ph-clock"></i> Formulário respondido em {{ $resposta->created_at->format('d \d\e F \d\e Y \à\s H:i') }}
-    </div>
-
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden print:shadow-none print:border-none">
-        
-        <div class="bg-indigo-50 border-b border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800 p-6 flex items-start gap-4 print:bg-white print:border-b-2 print:border-gray-800">
-            <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-sm print:text-black print:bg-gray-100 shrink-0">
-                <i class="ph-fill ph-file-text"></i>
-            </div>
-            <div>
-                <h3 class="text-lg font-extrabold text-indigo-900 dark:text-indigo-300 print:text-black">{{ $formulario->titulo }}</h3>
-                <p class="text-indigo-700 dark:text-indigo-400 text-sm mt-1 print:text-gray-600">Visualização das respostas do usuário.</p>
-            </div>
+        <div>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Protocolo Oficial</span>
+            <span class="block text-sm font-mono font-bold text-gray-900 mt-1">#{{ str_pad($resposta->id, 6, '0', STR_PAD_LEFT) }}</span>
         </div>
+        <div>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Data e Hora de Envio</span>
+            <span class="block text-sm font-bold text-gray-900 mt-1">{{ $resposta->created_at->format('d/m/Y \à\s H:i') }}</span>
+        </div>
+        <div>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Formulário Vinculado</span>
+            <span class="block text-sm font-bold text-gray-900 mt-1 truncate" title="{{ $formulario->titulo }}">{{ $formulario->titulo }}</span>
+        </div>
+        <div>
+            <span class="block t-label-12-semibold text-gray-500 uppercase tracking-wider mb-1">Perguntas Estruturadas</span>
+            <span class="block text-sm font-bold text-purpura-600 mt-1">{{ $totalPerguntas }} campo(s)</span>
+        </div>
+    </x-details-card>
 
-        <div class="p-6 md:p-8 space-y-8">
-            
-            @php 
-                $respostasSalvas = is_string($resposta->respostas) ? json_decode($resposta->respostas, true) : $resposta->respostas;
-            @endphp
+    {{-- CONTEÚDO EM GRID NO MESMO PADRÃO DA FICHA DE INSCRIÇÃO --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div class="lg:col-span-2">
+            <div class="card p-6 md:p-8 space-y-10">
+                @forelse($camposPorEtapa as $etapaNum => $campos)
+                    <section>
+                        <div class="flex justify-between items-center mb-5 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
+                                <i class="ph-fill ph-list-dashes text-lg text-purpura-500"></i> Etapa {{ $etapaNum }} — Respostas Registradas
+                            </h3>
+                            <span class="tag tag--small tag--outline tag--neutral">{{ count($campos) }} item(ns)</span>
+                        </div>
 
-            @forelse($camposPorEtapa as $etapaNum => $campos)
-                <div class="mb-8 print:mb-6">
-                    <h4 class="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
-                        <span class="w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300">{{ $etapaNum }}</span> 
-                        Respostas da Etapa {{ $etapaNum }}
-                    </h4>
-                    
-                    <div class="space-y-6">
-                        @foreach($campos as $campo)
-                            @continue(in_array($campo->tipo, ['config', 'html', 'divider', 'media', 'spacer', 'link']))
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-6">
+                            @foreach($campos as $campo)
+                                @php 
+                                    $valor = $respostasSalvas[$campo->name] ?? null; 
+                                    $temResposta = !empty($valor) || $valor === '0' || $valor === 0;
+                                    $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                                    $isFullWidth = in_array($campo->tipo, ['textarea', 'matriz', 'signature', 'file', 'social']) || ($campo->largura ?? 12) == 12;
+                                @endphp
 
-                            @php 
-                                $valor = $respostasSalvas[$campo->name] ?? null; 
-                                $temResposta = !empty($valor) || $valor === '0' || $valor === 0;
-                                $cfg = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-                            @endphp
+                                <div class="{{ $isFullWidth ? 'md:col-span-2' : '' }}">
+                                    <dt class="block t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                                        @if($campo->tipo === 'signature')
+                                            {{ ($cfg['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do Responsável' : ($campo->label ?: 'Assinatura do Participante') }}
+                                        @else
+                                            {{ strip_tags($campo->label) }}
+                                        @endif
+                                    </dt>
 
-                            <div class="bg-gray-50/50 dark:bg-gray-900/30 p-4 rounded-lg border border-gray-100 dark:border-gray-700 print:p-0 print:border-none print:bg-white print:mb-4">
-                                <label class="block text-sm font-bold text-gray-800 dark:text-gray-300 mb-2 print:text-base print:mb-1">
-                                    @if($campo->tipo === 'signature')
-                                        {{ ($cfg['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do responsável' : 'Sua assinatura' }}
-                                    @else
-                                        {{ $campo->label }}
-                                    @endif
-                                </label>
-                                
-                                @if(!$temResposta)
-                                    <p class="text-gray-400 dark:text-gray-500 text-sm italic border-l-2 border-gray-300 dark:border-gray-600 pl-3">Nenhuma resposta fornecida ou campo ocultado por regra condicional.</p>
-                                @else
-                                    
-                                    {{-- EXIBIÇÃO DA ASSINATURA À MÃO --}}
-                                    @if($campo->tipo === 'signature' || (is_string($valor) && str_starts_with($valor, 'data:image/')))
-                                        <div class="mt-2 inline-flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
-                                            <img src="{{ $valor }}" alt="{{ $campo->label }}" class="max-h-32 w-auto object-contain">
-                                            <div class="w-full border-t border-gray-100 mt-2 pt-1.5 flex items-center justify-between gap-4 text-[10px] text-gray-500 print:hidden">
-                                                <span class="font-bold uppercase">
-                                                    {{ ($cfg['tipo_assinante'] ?? $campo->subtipo) === 'responsavel' ? 'Assinatura do Responsável' : 'Sua Assinatura' }}
-                                                </span>
-                                                <a href="{{ $valor }}" download="assinatura-{{ $campo->name }}.png" class="text-purpura-600 hover:underline font-bold flex items-center gap-1">
+                                    @if(!$temResposta)
+                                        <dd class="text-xs text-gray-400 italic">Não preenchido ou oculto por regra condicional</dd>
+
+                                    @elseif($campo->tipo === 'signature' || (is_string($valor) && str_starts_with($valor, 'data:image/')))
+                                        <dd class="inline-flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl shadow-xs mt-1">
+                                            <img src="{{ $valor }}" alt="Assinatura" class="max-h-28 w-auto object-contain">
+                                            <div class="w-full border-t border-gray-100 mt-2 pt-1.5 flex items-center justify-between gap-4 text-[10px] text-gray-500">
+                                                <span class="font-bold uppercase">Assinatura Digital</span>
+                                                <a href="{{ $valor }}" download="assinatura-{{ $resposta->id }}.png" class="text-purpura-600 hover:underline font-bold flex items-center gap-1">
                                                     <i class="ph-bold ph-download-simple"></i> Baixar PNG
                                                 </a>
                                             </div>
-                                        </div>
+                                        </dd>
 
-                                    {{-- EXIBIÇÃO DE ARQUIVOS ANEXADOS --}}
                                     @elseif($campo->tipo === 'file')
                                         @php $arquivos = is_array($valor) ? $valor : [$valor]; @endphp
-                                        <div class="flex flex-wrap gap-2 mt-2">
+                                        <dd class="flex flex-wrap gap-2 mt-1">
                                             @foreach(array_filter($arquivos) as $arqPath)
-                                                <a href="{{ asset('storage/' . $arqPath) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-purpura-600 dark:text-purpura-400 hover:border-purpura-400 shadow-sm transition">
+                                                <a href="{{ asset('storage/' . $arqPath) }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-purpura-600 hover:border-purpura-400 shadow-2xs transition">
                                                     <i class="ph-bold ph-paperclip text-sm"></i>
                                                     <span class="truncate max-w-[220px]">{{ basename($arqPath) }}</span>
                                                     <i class="ph-bold ph-arrow-square-out"></i>
                                                 </a>
                                             @endforeach
-                                        </div>
+                                        </dd>
 
-                                    {{-- EXIBIÇÃO DE CHECKBOXES --}}
-                                    @elseif($campo->tipo === 'check' && is_array($valor))
-                                        <div class="flex flex-wrap gap-2 mt-2">
-                                            @foreach($valor as $v)
-                                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 text-sm font-medium border border-indigo-100 dark:border-indigo-800 print:border-none print:p-0 print:bg-white print:text-black print:before:content-['✓']">
-                                                    <i class="ph-bold ph-check text-indigo-500 dark:text-indigo-400 print:hidden"></i> {{ $v }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-
-                                    {{-- EXIBIÇÃO DE MATRIZ --}}
                                     @elseif($campo->tipo === 'matriz' && is_array($valor))
-                                        @php
-                                            $linhas = $cfg['linhas'] ?? [];
-                                        @endphp
-                                        <div class="mt-3 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden bg-white dark:bg-gray-800">
-                                            <table class="min-w-full text-sm">
+                                        @php $linhas = $cfg['linhas'] ?? []; @endphp
+                                        <dd class="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                                            <table class="min-w-full text-xs">
                                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                                     @foreach($linhas as $idx => $linhaTexto)
                                                         <tr class="{{ $loop->even ? 'bg-gray-50 dark:bg-gray-900/50' : 'bg-white dark:bg-gray-800' }}">
                                                             <td class="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium w-1/2 border-r border-gray-100 dark:border-gray-700">{{ $linhaTexto }}</td>
-                                                            <td class="px-4 py-2 text-gray-900 dark:text-gray-200 font-bold w-1/2">
-                                                                {{ $valor[$idx] ?? '-' }}
-                                                            </td>
+                                                            <td class="px-4 py-2 text-gray-900 dark:text-gray-200 font-bold w-1/2">{{ $valor[$idx] ?? '-' }}</td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
                                             </table>
-                                        </div>
+                                        </dd>
 
-                                    {{-- EXIBIÇÃO DE REDES SOCIAIS --}}
                                     @elseif($campo->tipo === 'social' && is_array($valor))
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                                        <dd class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
                                             @foreach($valor as $rede => $userRede)
                                                 @continue(empty($userRede))
-                                                <div class="flex items-center gap-2.5 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                                <div class="flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                                     <i class="ph-fill ph-{{ strtolower($rede) }}-logo text-lg text-purpura-600"></i>
                                                     <div class="min-w-0">
                                                         <span class="block text-[10px] font-bold uppercase text-gray-400">{{ $rede }}</span>
@@ -137,36 +133,47 @@
                                                     </div>
                                                 </div>
                                             @endforeach
-                                        </div>
+                                        </dd>
 
-                                    {{-- EXIBIÇÃO DE RATING (ESTRELAS) --}}
-                                    @elseif($campo->tipo === 'rating')
-                                        @php $maxStars = $cfg['max_stars'] ?? 5; @endphp
-                                        <div class="flex gap-1 text-2xl text-yellow-400 mt-1">
-                                            @for($i = 1; $i <= $maxStars; $i++)
-                                                <i class="{{ $i <= $valor ? 'ph-fill' : 'ph' }} ph-star {{ $i > $valor ? 'text-gray-300 dark:text-gray-600' : '' }}"></i>
-                                            @endfor
-                                            <span class="ml-2 text-sm text-gray-500 font-bold self-center">({{ $valor }}/{{ $maxStars }})</span>
-                                        </div>
-
-                                    {{-- TEXTO COMUM / CPF / CNPJ / CEP / TELEFONE / MOEDA / ESCALA --}}
                                     @else
-                                        <p class="text-gray-900 dark:text-white text-base border-l-2 border-indigo-400 dark:border-indigo-600 pl-3 bg-white dark:bg-transparent py-1 print:border-none print:pl-0 print:font-bold">
-                                            {{ is_array($valor) ? implode(', ', $valor) : $valor }}
-                                        </p>
+                                        <dd class="text-sm font-bold text-gray-900 dark:text-white break-words">
+                                            {{ is_array($valor) ? implode(', ', array_filter($valor)) : $valor }}
+                                        </dd>
                                     @endif
+                                </div>
+                            @endforeach
+                        </dl>
+                    </section>
+                @empty
+                    <p class="text-sm text-gray-500">Nenhuma pergunta configurada para este formulário.</p>
+                @endforelse
+            </div>
+        </div>
 
-                                @endif
-                            </div>
-                        @endforeach
+        {{-- COLUNA LATERAL DIREITA: COMPROVANTE / FICHA PDF --}}
+        <div class="lg:col-span-1 space-y-6">
+            <div class="card p-6 space-y-4">
+                <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-purpura-50 text-purpura-600 flex items-center justify-center text-xl border border-purpura-100">
+                        <i class="ph-fill ph-file-pdf"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Comprovante Oficial</h3>
+                        <p class="text-xs text-gray-500">Mesmo documento gerado ao final do preenchimento.</p>
                     </div>
                 </div>
-            @empty
-                <div class="text-center py-10">
-                    <p class="text-gray-500 dark:text-gray-400">Este formulário não possuía perguntas ativas no momento desta resposta.</p>
-                </div>
-            @endforelse
 
+                <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Exporte a ficha completa desta resposta em formato PDF (padrão A4 com protocolo, respostas e termo de ciência/assinatura).
+                </p>
+
+                <button type="button"
+                        wire:click="baixarFichaRespostaPdf({{ $resposta->id }})"
+                        wire:loading.attr="disabled"
+                        class="btn btn--primary btn--medium w-full bg-purpura-600 hover:bg-purpura-700 border-none justify-center">
+                    <i class="ph-bold ph-download-simple text-base"></i> Baixar Ficha de Respostas (PDF)
+                </button>
+            </div>
         </div>
     </div>
 </div>

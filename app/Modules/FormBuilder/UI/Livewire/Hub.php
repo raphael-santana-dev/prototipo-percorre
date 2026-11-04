@@ -18,36 +18,29 @@ use App\Models\CicloAprendizagem;
 class Hub extends Component
 {
     public $modalCicloAberto = false;
-    public $modalPreInscricaoAberto = false;
     public $modalAprendizagemAberto = false;
     public $modalVincularAberto = false;
 
     public $ciclos, $unidades, $cursos, $ciclosAprendizagem;
 
-    public $preInscricao = ['titulo' => '', 'ciclo_id' => '', 'unidade_id' => '', 'curso_id' => '', 'is_rascunho' => false];
     public $aprendizagem = ['titulo' => '', 'ciclo_id' => '', 'fase_id' => '', 'is_rascunho' => false];
     public $fasesAprendizagem = [];
 
-    public string $abaStatus = 'ativos'; // 'ativos' ou 'rascunhos'
+    public string $abaStatus = 'ativos';
 
     // Propriedades do Modal Universal de Vínculo
     public ?int $formVincularId = null;
     public string $formVincularTitulo = '';
-    public string $destinoVinculo = 'geral'; // 'ciclo_inscricao', 'aprendizagem', 'pre_inscricao', 'geral'
+    public string $destinoVinculo = 'geral'; // 'ciclo_inscricao', 'aprendizagem', 'geral'
     public $vinculoCicloInscricaoId = '';
     public bool $substituirCamposCiclo = false;
     public $vinculoAprendizagemCicloId = '';
     public $vinculoAprendizagemFaseId = '';
     public array $fasesVinculoDisponiveis = [];
-    public $vinculoUnidadeId = '';
-    public $vinculoCursoId = '';
     public bool $publicarAoVincular = true;
 
     public function mount()
     {
-        //abort_if(!feature('formulario.listar'), 403, 'Módulo desativado.');
-        //abort_if(!auth()->user()->hasRole('dev|admin') && !auth()->user()->can('formulario.listar'), 403, 'Acesso restrito.');
-        
         $this->ciclos = Ciclo::orderBy('id', 'desc')->get();
         $this->unidades = \App\Modules\Unidade\Domain\Models\Unidade::whereIn('status', ['Ativa', '1', true])->orderBy('nome')->get();
         $this->cursos = \App\Models\Curso::whereIn('status', ['Ativo', 'ativo', '1', true])->orderBy('nome')->get();
@@ -73,29 +66,6 @@ class Hub extends Component
         $this->vinculoAprendizagemFaseId = '';
     }
 
-    public function criarFormularioPreInscricao()
-    {
-        $hash = substr(md5(uniqid()), 0, 6);
-        $titulo = trim($this->preInscricao['titulo'] ?? '') ?: 'Nova Pré-Inscrição';
-        $isRascunho = (bool) ($this->preInscricao['is_rascunho'] ?? false);
-
-        $form = Formulario::create([
-            'titulo'      => $titulo,
-            'slug'        => Str::slug($titulo) . '-' . $hash,
-            'tipo'        => 'pre_inscricao',
-            'ciclo_id'    => $this->preInscricao['ciclo_id'] ?: null,
-            'unidade_id'  => $this->preInscricao['unidade_id'] ?: null,
-            'curso_id'    => $this->preInscricao['curso_id'] ?: null,
-            'is_rascunho' => $isRascunho,
-            'status'      => !$isRascunho,
-        ]);
-
-        return redirect()->route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]);
-    }
-
-    /**
-     * Permite criar N formulários de aprendizagem ativos ou em rascunho
-     */
     public function criarFormularioAprendizagem()
     {
         $isRascunho = (bool) ($this->aprendizagem['is_rascunho'] ?? false);
@@ -145,20 +115,14 @@ class Hub extends Component
         return redirect()->route('construtor.campos', ['tipo' => 'formulario', 'id' => $form->id]);
     }
 
-    /**
-     * Abre o modal permitindo vincular qualquer formulário a:
-     * 1) Ciclo de Inscrição Oficial, 2) Aprendizagem, 3) Pré-Inscrição ou 4) Formulário Geral (FormularioPublico)
-     */
     public function abrirModalVincular(int $id)
     {
         $form = Formulario::with('faseAprendizagem')->findOrFail($id);
 
         $this->formVincularId = $form->id;
         $this->formVincularTitulo = $form->titulo;
-        $this->destinoVinculo = in_array($form->tipo, ['aprendizagem', 'pre_inscricao', 'geral']) ? $form->tipo : 'geral';
+        $this->destinoVinculo = in_array($form->tipo, ['aprendizagem', 'geral']) ? $form->tipo : 'geral';
         $this->vinculoCicloInscricaoId = $form->ciclo_id ?? '';
-        $this->vinculoUnidadeId = $form->unidade_id ?? '';
-        $this->vinculoCursoId = $form->curso_id ?? '';
         $this->substituirCamposCiclo = false;
         $this->publicarAoVincular = true;
 
@@ -195,7 +159,6 @@ class Hub extends Component
                 FormularioFase::where('ciclo_id', $cicloAlvoId)->delete();
             }
 
-            // Copia as Etapas (Páginas) do formulário para o Ciclo
             foreach (Etapa::where('formulario_id', $form->id)->get() as $etapaForm) {
                 Etapa::firstOrCreate(
                     ['ciclo_id' => $cicloAlvoId, 'numero' => $etapaForm->numero],
@@ -203,7 +166,6 @@ class Hub extends Component
                 );
             }
 
-            // Copia as Fases Temporais do formulário para o Ciclo
             foreach (FormularioFase::where('formulario_id', $form->id)->get() as $faseForm) {
                 $novaFase = $faseForm->replicate();
                 $novaFase->formulario_id = null;
@@ -211,7 +173,6 @@ class Hub extends Component
                 $novaFase->save();
             }
 
-            // Copia os Campos Dinâmicos do formulário para o Ciclo
             $maxOrdemExistente = CampoFormulario::where('ciclo_id', $cicloAlvoId)->max('ordem') ?? 0;
             foreach ($form->campos as $campoOrig) {
                 if ($campoOrig->name === '_form_config') {
@@ -277,25 +238,6 @@ class Hub extends Component
             return;
         }
 
-        if ($this->destinoVinculo === 'pre_inscricao') {
-            $form->update([
-                'titulo'                     => $this->formVincularTitulo ?: $form->titulo,
-                'tipo'                       => 'pre_inscricao',
-                'ciclo_id'                   => $this->vinculoCicloInscricaoId ?: null,
-                'unidade_id'                 => $this->vinculoUnidadeId ?: null,
-                'curso_id'                   => $this->vinculoCursoId ?: null,
-                'ciclo_aprendizagem_fase_id' => null,
-                'is_rascunho'                => !$this->publicarAoVincular,
-                'status'                     => $this->publicarAoVincular,
-            ]);
-
-            $this->modalVincularAberto = false;
-            $this->abaStatus = $this->publicarAoVincular ? 'ativos' : 'rascunhos';
-            $this->dispatch('sucesso', msg: 'Formulário configurado como Pré-Inscrição (Captação) com sucesso!');
-            return;
-        }
-
-        // Destino: 'geral' (FormularioPublico em /f/{slug})
         $form->update([
             'titulo'                     => $this->formVincularTitulo ?: $form->titulo,
             'tipo'                       => 'geral',
@@ -333,7 +275,8 @@ class Hub extends Component
 
     public function render()
     {
-        $formulariosList = Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo', 'unidade', 'curso'])
+        $formulariosList = Formulario::with(['faseAprendizagem.ciclo', 'cicloSeletivo'])
+            ->where('tipo', '!=', 'pre_inscricao')
             ->withCount('campos')
             ->where('is_rascunho', $this->abaStatus === 'rascunhos')
             ->orderBy('updated_at', 'desc')
