@@ -92,6 +92,19 @@
                                         </button>
                                     @endif
 
+                                    @if($orcamento->status !== 'Importado')
+                                        <button type="button"
+                                                wire:click="resetarStatusOrcamento({{ $orcamento->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="resetarStatusOrcamento({{ $orcamento->id }})"
+                                                onclick="confirm('Deseja resetar o orçamento #{{ $orcamento->id }} (C.C. {{ $orcamento->ccusto }}) para o status inicial no Protheus e no sistema?') || event.stopImmediatePropagation()"
+                                                class="px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 rounded transition flex items-center gap-1"
+                                                title="Retornar orçamento para o status inicial (Protheus)">
+                                            <i class="ph-bold ph-arrow-counter-clockwise" wire:loading.class="animate-spin" wire:target="resetarStatusOrcamento({{ $orcamento->id }})"></i>
+                                            <span>Reset</span>
+                                        </button>
+                                    @endif
+
                                     @if(in_array($orcamento->status, ['Finalizado – Aprovado', 'Finalizado - Aprovado', 'Finalizado – Integrado ao Protheus', 'Finalizado - Integrado ao Protheus', 'Aprovado', 'Aprovado com ressalvas']))
                                         <button type="button" wire:click="verJsonConsolidado({{ $orcamento->id }})" class="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition" title="Ver JSON Consolidado (Protheus)">
                                             <i class="text-lg ph-bold ph-brackets-curly"></i>

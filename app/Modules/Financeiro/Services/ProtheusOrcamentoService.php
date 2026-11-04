@@ -540,4 +540,114 @@ class ProtheusOrcamentoService
         $orcamento->updateQuietly(['dados_consolidados' => $payload]);
         return $payload;
     }
+
+    /**
+     * Aciona a rota PROTHEUS_API_RESET_STATUS_URL via PUT para retornar o orçamento ao status inicial.
+     * Payload exigido pela API: {"ano":"","cc":"","status":""}
+     */
+    public function resetarStatusOrcamentoProtheus(Orcamento $orcamento, string $codigoStatusInicial = '2'): array
+    {
+        $url = rtrim((string) env('PROTHEUS_API_RESET_STATUS_URL'), '/');
+
+        $payload = [
+            'ano'    => trim((string) $orcamento->ano),
+            'cc'     => trim((string) $orcamento->ccusto),
+            'status' => $codigoStatusInicial,
+        ];
+
+        if (!$url) {
+            $msg = 'URL de reset de status do Protheus (PROTHEUS_API_RESET_STATUS_URL) não configurada no .env.';
+            self::registrarLogIntegracao('integracao_erro_env_reset', 'orcamentos', $orcamento->id, $payload, $msg);
+
+            return [
+                'sucesso'  => false,
+                'mensagem' => $msg,
+                'payload'  => $payload,
+            ];
+        }
+
+        try {
+            $response = self::httpClient()->put($url, $payload);
+
+            if (!$response->successful()) {
+                $erroDetalhe = $response->body();
+                Log::error("[PROTHEUS - ERRO RESET STATUS PUT] Orçamento #{$orcamento->id} | HTTP {$response->status()}", [
+                    'url'      => $url,
+                    'payload'  => $payload,
+                    'resposta' => $erroDetalhe,
+                ]);
+
+                self::registrarLogIntegracao(
+                    'integracao_erro_reset_status',
+                    'orcamentos',
+                    $orcamento->id,
+                    ['url' => $url, 'payload' => $payload],
+                    $erroDetalhe
+                );
+
+                $erroDecoded = json_decode($erroDetalhe, true);
+                $mensagemProtheus = $erroDecoded['errorMessage']
+                    ?? $erroDecoded['message']
+                    ?? (\Illuminate\Support\Str::limit($erroDetalhe, 160));
+
+                return [
+                    'sucesso'  => false,
+                    'mensagem' => "Falha ao resetar status no Protheus (HTTP {$response->status()}): " . $mensagemProtheus,
+                    'payload'  => $payload,
+                ];
+            }
+
+            // Atualiza os metadados consolidados e retorna o orçamento e seus itens para o status inicial
+            $dadosConsolidados = is_array($orcamento->dados_consolidados) ? $orcamento->dados_consolidados : [];
+            $dadosConsolidados['status'] = $codigoStatusInicial;
+            $dadosConsolidados['statusDescricao'] = 'Em revisão/atualização';
+
+            $orcamento->update([
+                'status'             => 'Importado',
+                'dados_consolidados' => $dadosConsolidados,
+            ]);
+
+            $orcamento->itens()->update(['status' => 'Importado']);
+
+            self::registrarLogIntegracao(
+                'integracao_sucesso_reset_status',
+                'orcamentos',
+                $orcamento->id,
+                ['url' => $url, 'payload' => $payload],
+                $response->json() ?? $response->body()
+            );
+
+            OrcamentoAvaliacao::create([
+                'orcamento_id'    => $orcamento->id,
+                'user_id'         => auth()->id() ?? 1,
+                'user_nome'       => auth()->user()->name ?? 'Sistema',
+                'status_aplicado' => 'Importado (Reset Protheus)',
+                'comentario'      => "Orçamento retornado ao status inicial via API Protheus (PUT - CC: {$payload['cc']} / Ano: {$payload['ano']} / Status: {$payload['status']}).",
+                'tipo_evento'     => 'reset_status_protheus',
+            ]);
+
+            return [
+                'sucesso'  => true,
+                'mensagem' => "Orçamento #{$orcamento->id} (C.C. {$orcamento->ccusto}) retornado ao status inicial com sucesso!",
+                'payload'  => $payload,
+                'resposta' => $response->json(),
+            ];
+        } catch (\Throwable $e) {
+            Log::error("[PROTHEUS - EXCEÇÃO RESET STATUS PUT] Orçamento #{$orcamento->id}: " . $e->getMessage());
+
+            self::registrarLogIntegracao(
+                'integracao_excecao_reset_status',
+                'orcamentos',
+                $orcamento->id,
+                ['url' => $url, 'payload' => $payload],
+                $e->getMessage()
+            );
+
+            return [
+                'sucesso'  => false,
+                'mensagem' => 'Erro de comunicação ao resetar status no Protheus: ' . $e->getMessage(),
+                'payload'  => $payload,
+            ];
+        }
+    }
 }

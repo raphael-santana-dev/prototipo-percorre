@@ -123,6 +123,21 @@ class OrcamentoAprovacaoManager extends Component
         return $query;
     }
 
+    public function resetarStatusOrcamento(int $id): void
+    {
+        $orcamento = Orcamento::with('itens')->findOrFail($id);
+
+        $resultado = app(\App\Modules\Financeiro\Services\ProtheusOrcamentoService::class)
+            ->resetarStatusOrcamentoProtheus($orcamento);
+
+        if (!$resultado['sucesso']) {
+            $this->dispatch('erro', msg: $resultado['mensagem']);
+            return;
+        }
+
+        $this->dispatch('sucesso', msg: $resultado['mensagem']);
+    }
+
     public function render()
     {
         $query = $this->obterQueryFiltrada();

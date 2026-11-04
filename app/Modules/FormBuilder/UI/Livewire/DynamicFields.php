@@ -424,7 +424,17 @@ class DynamicFields extends Component
                 ];
 
                 if (!empty($cfg['id'])) {
-                    \App\Models\FormularioFase::where('id', $cfg['id'])->update($dadosFase);
+                    $faseExistente = \App\Models\FormularioFase::find($cfg['id']);
+                    if ($faseExistente) {
+                        // Se a data de liberação foi alterada para o futuro, reseta a flag de disparo
+                        $novaData = \Carbon\Carbon::parse($cfg['data_liberacao']);
+                        if (!$faseExistente->data_liberacao || !$faseExistente->data_liberacao->equalTo($novaData)) {
+                            if ($novaData->isFuture()) {
+                                $dadosFase['notificacao_enviada_em'] = null;
+                            }
+                        }
+                        $faseExistente->update($dadosFase);
+                    }
                 } else {
                     \App\Models\FormularioFase::create($dadosFase);
                 }
@@ -432,7 +442,7 @@ class DynamicFields extends Component
         }
 
         $this->modalFasesAberto = false;
-        $this->dispatch('sucesso', msg: 'Fases, bloqueios de data e automações guardadas com sucesso!');
+        $this->dispatch('sucesso', msg: 'Fases, bloqueios de data e gatilhos de automação guardados com sucesso!');
     }
 
     private function inicializarDefaultsDicas(): void

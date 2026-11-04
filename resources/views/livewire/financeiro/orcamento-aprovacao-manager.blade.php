@@ -70,10 +70,23 @@
                                 R$ {{ number_format($orcamento->valor_total, 2, ',', '.') }}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button type="button" wire:click="avaliarOrcamento({{ $orcamento->id }})" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-md transition inline-flex items-center gap-1.5" title="Analisar Orçamento">
-                                    <i class="ph-bold ph-magnifying-glass"></i> Analisar
-                                </button>
-                            </td>
+                             <div class="inline-flex items-center justify-end gap-1.5">
+                                 <button type="button"
+                                         wire:click="resetarStatusOrcamento({{ $orcamento->id }})"
+                                         wire:loading.attr="disabled"
+                                         wire:target="resetarStatusOrcamento({{ $orcamento->id }})"
+                                         onclick="confirm('Deseja resetar o orçamento #{{ $orcamento->id }} (C.C. {{ $orcamento->ccusto }}) para o status inicial no Protheus e no sistema?') || event.stopImmediatePropagation()"
+                                         class="px-2.5 py-1.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 rounded-md transition inline-flex items-center gap-1"
+                                         title="Retornar orçamento para o status inicial (Protheus)">
+                                     <i class="ph-bold ph-arrow-counter-clockwise" wire:loading.class="animate-spin" wire:target="resetarStatusOrcamento({{ $orcamento->id }})"></i>
+                                     <span>Reset</span>
+                                 </button>
+
+                                 <button type="button" wire:click="avaliarOrcamento({{ $orcamento->id }})" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-md transition inline-flex items-center gap-1.5" title="Analisar Orçamento">
+                                     <i class="ph-bold ph-magnifying-glass"></i> Analisar
+                                 </button>
+                             </div>
+                         </td>
                         </tr>
                     @empty
                         <tr>
