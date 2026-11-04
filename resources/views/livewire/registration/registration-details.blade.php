@@ -535,6 +535,8 @@
 
             <div class="lg:col-span-1 space-y-6">
                 <div class="card !p-0 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-ponkan-400 rounded-bl-full -z-0 opacity-10"></div>
+                    
                     <div class="p-6 relative z-10 w-full">
                         <div class="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
                             <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
@@ -546,20 +548,37 @@
                                 </span>
                             </div>
                         </div>
-
+                        
                         @if($inscricao->pontuacao_detalhes)
                             @php
                                 $detalhes = is_string($inscricao->pontuacao_detalhes) ? json_decode($inscricao->pontuacao_detalhes, true) : $inscricao->pontuacao_detalhes;
                             @endphp
+                            
                             @if(isset($detalhes['auditoria_detalhada']) && count($detalhes['auditoria_detalhada']) > 0)
                                 <div class="space-y-3 mb-4">
+                                    <p class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-2">Regras Atendidas / Cálculos:</p>
                                     @foreach($detalhes['auditoria_detalhada'] as $info)
-                                        <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center shadow-sm">
+                                        @php
+                                            $isPadrao = ($info['tipo_regra'] ?? 'padrao') === 'padrao';
+                                        @endphp
+                                        <div class="bg-white border border-gray-100 p-3 rounded-lg flex justify-between items-center group hover:border-ponkan-400 transition-colors shadow-sm">
                                             <div class="flex-1 pr-3">
                                                 <span class="text-[10px] font-bold text-gray-900 uppercase block mb-1">
                                                     {{ str_replace('_', ' ', $info['campo_avaliado'] ?? 'Regra Padrão') }}
                                                 </span>
-                                                <p class="text-xs text-gray-600">Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b></p>
+                                                
+                                                @if($isPadrao)
+                                                    <p class="text-xs text-gray-600 mb-1">
+                                                        Resposta: <b class="text-gray-900">{{ $info['resposta_dada'] ?? '-' }}</b>
+                                                    </p>
+                                                    <p class="text-[9px] text-gray-400 font-bold mt-1 leading-tight">
+                                                        <i class="ph-fill ph-info"></i> Condição atendida: {{ str_replace('Exigência: ', '', $info['condicao'] ?? '') }}
+                                                    </p>
+                                                @else
+                                                    <p class="text-[10px] text-petunia-600 font-bold mt-1 leading-tight">
+                                                        <i class="ph-fill ph-info"></i> {{ str_replace('Exigência: ', '', $info['condicao'] ?? 'Bônus/Multiplicador aplicado') }}
+                                                    </p>
+                                                @endif
                                             </div>
                                             <span class="text-pistache-700 font-extrabold bg-pistache-50 px-2 py-1 rounded-md text-[11px] border border-pistache-200 shrink-0">
                                                 +{{ $info['pontos_ganhos'] ?? 0 }}
@@ -567,18 +586,52 @@
                                         </div>
                                     @endforeach
                                 </div>
-                                <button wire:click="abrirRegras" class="btn btn--secondary btn--small w-full">
-                                    <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo
-                                </button>
+                                <div class="mt-3 text-right">
+                                    <button wire:click="abrirRegras" class="btn btn--secondary btn--small w-full">
+                                        <i class="ph-bold ph-list-numbers text-sm"></i> Ver mapa completo
+                                    </button>
+                                </div>
                             @endif
                         @else
                             <div class="py-10 text-center">
                                 <i class="ph-fill ph-calculator text-3xl text-gray-200 mb-2"></i>
-                                <p class="text-gray-400 text-xs font-bold leading-snug">Nenhuma pontuação vinculada.</p>
+                                <p class="text-gray-400 text-xs font-bold leading-snug">Nenhuma pontuação vinculada.<br>Cálculos não foram realizados.</p>
+                            </div>
+                        @endif
+                    
+                        @if($inscricao->posicao_ranking_geral || $inscricao->posicao_ranking)
+                            <div class="mt-6 border-t border-gray-100 pt-5">
+                                <h4 class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-3">Classificação (Ranking)</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    @if($inscricao->posicao_ranking_geral)
+                                        <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
+                                            <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_geral }}º</span>
+                                            <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Geral</span>
+                                        </div>
+                                    @endif
+                                    @if($inscricao->posicao_ranking_unidade)
+                                        <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
+                                            <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_unidade }}º</span>
+                                            <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Unidade</span>
+                                        </div>
+                                    @endif
+                                    @if($inscricao->posicao_ranking_curso)
+                                        <div class="bg-gray-50 border border-gray-200 p-2 rounded-lg text-center shadow-sm">
+                                            <span class="block text-xl font-black text-gray-700">{{ $inscricao->posicao_ranking_curso }}º</span>
+                                            <span class="block text-[9px] text-gray-500 uppercase font-bold mt-1">Curso</span>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         @endif
                     </div>
                 </div>
+                
+                <div class="card !p-5 bg-purpura-50/50 border-purpura-100 text-center">
+                    <span class="block t-label-12-semibold text-purpura-400 uppercase tracking-wider mb-1 w-full">Ciclo Operacional</span>
+                    <span class="block text-sm font-bold text-purpura-900 w-full">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>
+                </div>
+
             </div>
         </div>
 
@@ -714,10 +767,10 @@
     {{-- ABA 3: FORMULÁRIOS INCORPORADOS (EMBED) PARA PREENCHIMENTO ASSISTIDO  --}}
     {{-- ===================================================================== --}}
     @elseif($abaAtiva === 'formularios')
-        <div class="mt-6 space-y-6 animate-fade-in-down">
-            <div class="card !p-6 md:!p-8 space-y-6">
-                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-gray-100 pb-5">
-                    <div>
+        <div class="mt-6 space-y-6 animate-fade-in-down w-full block">
+            <div class="card !p-6 md:!p-8 space-y-6 w-full block">
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-gray-100 pb-5 w-full">
+                    <div class="flex-1 min-w-0">
                         <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
                             <i class="ph-fill ph-browsers text-purpura-600 text-xl"></i> Preencher Formulário em Nome do Candidato (Embed)
                         </h3>
@@ -726,10 +779,10 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-end gap-3">
+                    <div class="flex flex-wrap items-end gap-3 shrink-0">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Tipo de Formulário</label>
-                            <select wire:model.live="tipoFormularioEmbed" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3">
+                            <select wire:model.live="tipoFormularioEmbed" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3 w-full sm:w-auto">
                                 <option value="inscricao">Formulário da Própria Inscrição (Retomada)</option>
                                 <option value="formulario_sistema">Outro Formulário do Sistema (Avaliação / Geral)</option>
                             </select>
@@ -738,7 +791,7 @@
                         @if($tipoFormularioEmbed === 'formulario_sistema')
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Selecione o Formulário</label>
-                                <select wire:model="formularioEmbedId" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3 min-w-[240px]">
+                                <select wire:model="formularioEmbedId" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3 min-w-[240px] w-full sm:w-auto">
                                     <option value="">-- Escolha um formulário --</option>
                                     @foreach($this->formulariosDisponiveisEmbed as $fDisp)
                                         <option value="{{ $fDisp->id }}">{{ $fDisp->titulo }} ({{ strtoupper($fDisp->tipo) }})</option>
@@ -747,20 +800,20 @@
                             </div>
                         @endif
 
-                        <button type="button" wire:click="abrirFormularioEmbed" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center gap-1.5">
-                            <i class="ph-bold ph-play"></i> Carregar Formulário Embed
+                        <button type="button" wire:click="abrirFormularioEmbed" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 w-full sm:w-auto">
+                            <i class="ph-bold ph-play"></i> Carregar Formulário
                         </button>
 
                         @if($urlEmbedAtiva)
-                            <button type="button" wire:click="fecharFormularioEmbed" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition flex items-center gap-1">
-                                <i class="ph-bold ph-x"></i> Fechar e Sincronizar Ficha
+                            <button type="button" wire:click="fecharFormularioEmbed" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 w-full sm:w-auto">
+                                <i class="ph-bold ph-x"></i> Fechar 
                             </button>
                         @endif
                     </div>
                 </div>
 
                 @if(!empty($formulariosAssistidos))
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2 w-full">
                         <span class="text-[11px] font-bold text-gray-500 uppercase">Formulários preenchidos por Participante:</span>
                         @foreach($formulariosAssistidos as $fa)
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -772,23 +825,23 @@
                 @endif
 
                 @if($urlEmbedAtiva)
-                    <div class="rounded-2xl border-2 border-indigo-200 overflow-hidden shadow-inner bg-gray-50">
+                    <div class="w-full rounded-2xl border-2 border-indigo-200 overflow-hidden shadow-inner bg-gray-50">
                         <div class="px-4 py-2.5 bg-indigo-600 text-white text-xs font-bold flex items-center justify-between">
-                            <span class="flex items-center gap-2">
-                                <i class="ph-fill ph-user-switch text-base"></i>
-                                Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }} (Participante: {{ auth()->user()->name }})
+                            <span class="flex items-center gap-2 truncate">
+                                <i class="ph-fill ph-user-switch text-base shrink-0"></i>
+                                <span class="truncate">Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }} (Participante: {{ auth()->user()->name }})</span>
                             </span>
-                            <a href="{{ $urlEmbedAtiva }}" target="_blank" class="text-[11px] underline hover:text-indigo-200 flex items-center gap-1">
+                            <a href="{{ $urlEmbedAtiva }}" target="_blank" class="text-[11px] underline hover:text-indigo-200 flex items-center gap-1 shrink-0 ml-2">
                                 Abrir em nova guia <i class="ph-bold ph-arrow-square-out"></i>
                             </a>
                         </div>
-                        <iframe src="{{ $urlEmbedAtiva }}" class="w-full h-[780px] border-0 bg-white"></iframe>
+                        <iframe src="{{ $urlEmbedAtiva }}" class="w-full h-[780px] border-0 bg-white block"></iframe>
                     </div>
                 @else
-                    <div class="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-gray-400">
+                    <div class="w-full py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-gray-400 block">
                         <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-purpura-400"></i>
                         <p class="text-sm font-bold text-gray-700">Nenhum formulário carregado no momento</p>
-                        <p class="text-xs text-gray-500 mt-1">Selecione o formulário acima e clique em <b>"Carregar Formulário Embed"</b> para preenchê-lo em nome do candidato.</p>
+                        <p class="text-xs text-gray-500 mt-1">Selecione o formulário acima e clique em <b>"Carregar Formulário"</b> para preenchê-lo em nome do candidato.</p>
                     </div>
                 @endif
             </div>

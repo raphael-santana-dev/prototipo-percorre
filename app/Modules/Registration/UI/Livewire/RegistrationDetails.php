@@ -49,7 +49,6 @@ class RegistrationDetails extends Component
     // =========================================================================
     public bool $validarComIa = true;
     public array $uploads = [];
-    public array $uploadsLote = [];
     public array $arquivosEnviados = [];
 
     // =========================================================================
@@ -345,7 +344,7 @@ class RegistrationDetails extends Component
             Storage::disk('local')->delete($docMatricula->arquivo_caminho);
         }
 
-        // Salva também no disco public para permitir visualização rápida pela equipe, além do local
+        // Salva também no disco public para permitir visualização rápida pela equipe
         $caminho = $file->store("matriculas/{$this->inscricao->id}");
         try {
             Storage::disk('public')->put($caminho, file_get_contents($file->getRealPath()));
@@ -481,7 +480,7 @@ class RegistrationDetails extends Component
             $this->tituloEmbedAtivo = $form->titulo . ' (' . strtoupper($form->tipo) . ')';
         }
 
-        // Registra no JSON da inscrição e na Auditoria que o formulário foi aberto/preenchido via Atendimento Assistido
+        // Registra no JSON da inscrição e na Auditoria que o formulário foi aberto via Atendimento Assistido
         $dinamicos = is_string($this->inscricao->dados_dinamicos)
             ? json_decode($this->inscricao->dados_dinamicos, true)
             : ($this->inscricao->dados_dinamicos ?? []);
