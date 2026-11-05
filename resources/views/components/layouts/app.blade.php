@@ -76,304 +76,308 @@
         }" class="flex h-screen w-full overflow-hidden">
             
             {{-- DESKTOP: SIDEBAR VERTICAL --}}
-<aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden" 
-       :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
-    
-    <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
-        <a href="{{ route('dashboard') }}">
-            <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
-                <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
-            </div>
-        </a>   
-        <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher / Expandir">
-            <i class="text-xl ph ph-list"></i>
-        </button>
-    </div>
-    
-    <div class="flex-1 overflow-y-auto custom-scrollbar py-4 space-y-1.5 px-3 min-w-[72px]">
-        
-        {{-- Item Simples (Dashboard) --}}
-        <a href="{{ route('dashboard') }}" 
-           x-data="{ hover: false }" 
-           @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-           @mouseleave="hover = false" 
-           class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
-           :class="sidebarMinimized ? 'justify-center' : ''">
-            <i class="text-xl ph ph-squares-four shrink-0"></i>
-            <span x-show="!sidebarMinimized" x-transition.opacity>Dashboard</span>
-            
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
-                <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
-                    Dashboard
+            <aside class="js-sidebar hidden md:flex flex-col bg-petunia-900 dark:bg-petunia-1000 z-40 shrink-0 shadow-lg overflow-x-hidden" 
+                :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
+                
+                <div class="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 min-w-[72px]">
+                    <a href="{{ route('dashboard') }}">
+                        <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap" x-show="!sidebarMinimized" x-transition.opacity.duration.300ms>
+                            <img src="{{ Vite::asset('resources/images/logo-nav-white.svg') }}" class="h-8 w-auto" alt="Instituto Percorre">
+                        </div>
+                    </a>   
+                    <button @click="toggleMinimize()" class="p-1.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors shrink-0" :class="sidebarMinimized ? 'mx-auto' : ''" title="Recolher / Expandir">
+                        <i class="text-xl ph ph-list"></i>
+                    </button>
                 </div>
-            </div>
-        </a>
+                
+                <div class="flex-1 overflow-y-auto custom-scrollbar py-4 space-y-1.5 px-3 min-w-[72px]">
+                    
+                    {{-- Item Simples (Dashboard) --}}
+                    <a href="{{ route('dashboard') }}" 
+                    x-data="{ hover: false }" 
+                    @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = ($el.getBoundingClientRect().top + 6) + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                    @mouseleave="hover = false" 
+                    class="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors relative whitespace-nowrap" 
+                    :class="sidebarMinimized ? 'justify-center' : ''">
+                        <i class="text-xl ph ph-squares-four shrink-0"></i>
+                        <span x-show="!sidebarMinimized" x-transition.opacity>Dashboard</span>
+                        
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2 pointer-events-none">
+                            <div class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded shadow-lg">
+                                Dashboard
+                            </div>
+                        </div>
+                    </a>
 
-        {{-- Dropdown: Financeiro --}}
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-receipt shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Financeiro</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a>
-                <a href="{{ route('financeiro.aprovacoes') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Aprovações</a>
-                <a href="{{ route('financeiro.centro_custo') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Centro de Custos</a>
-                <a href="{{ route('financeiro.naturezas') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Naturezas</a>
-            </div>
-            
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
-                    <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a>
-                    <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Aprovações</a>
-                    <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Centro de Custos</a>
-                    <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
-                </div>
-            </div>
-        </div>
-
-        {{-- Dropdown: Processos Seletivos --}}
-        @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-calendar-check shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Processos Seletivos</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ciclos de Inscrição</a> @endcan
-                @can('inscricao.listar') 
-                    <a href="{{ route('inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Inscrições</a> 
-                    <a href="{{ route('ciclos.crm') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Kanban (CRM)</a>
-                @endcan
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Processos Seletivos</div>
-                    @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Ciclos de Inscrição</a> @endcan
-                    @can('inscricao.listar') 
-                        <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Inscrições</a> 
-                        <a href="{{ route('ciclos.crm') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Kanban (CRM)</a>
-                    @endcan
-                </div>
-            </div>
-        </div>
-        @endcanany
-
-        {{-- Dropdown: Secretaria --}}
-        @canany(['estudante.listar', 'status.listar'])
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-folder-user shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Secretaria</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                @can('estudante.listar') <a href="{{ route('students.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Base de Alunos</a> @endcan
-                @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Tags de Status</a> @endcan
-                @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))
-                    @role('dev') <a href="{{ route('empresas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Empresas Parceiras</a> @endrole
-                @endif
-                <a href="{{ route('solicitacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Solicitações</a>
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Secretaria</div>
-                    @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Base de Alunos</a> @endcan
-                    @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Tags de Status</a> @endcan
-                    @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))@role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Empresas Parceiras</a> @endrole@endif
-                    <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Solicitações</a>
-                </div>
-            </div>
-        </div>
-        @endcanany
-
-        {{-- Dropdown: Instituição --}}
-        @canany(['curso.listar', 'turno.listar', 'unidade.listar', 'formulario.listar'])
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-buildings shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Instituição</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Cursos</a> @endcan
-                @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Grade de Turnos</a> @endcan
-                @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Unidades</a> @endcan
-                @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Formulários</a> @endcan
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Instituição</div>
-                    @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Cursos</a> @endcan
-                    @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Grade de Turnos</a> @endcan
-                    @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Unidades</a> @endcan
-                    @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Formulários</a> @endcan
-                </div>
-            </div>
-        </div>
-        @endcanany
-
-        {{-- Dropdown: Comunicação --}}
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-paper-plane-tilt shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Comunicação</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
-                    <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
-                    <a href="{{ route('conteudo.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Publicações</a>
-                    <a href="{{ route('conteudo.categorias') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Categorias</a>
-                    <a href="{{ route('portal.index') }}" target="_blank" class="block py-1.5 text-xs text-purpura-400 hover:text-purpura-300">Ver Portal ↗</a>
-                @endif
-                <div class="py-1 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
-                @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Comunicados</a> @endcan
-                @can('template.listar') <a href="{{ route('templates.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Templates</a> @endcan
-                @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Automações</a> @endcan
-                @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Agenda de E-mails</a> @endcan
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Comunicação</div>
-                    <a href="{{ route('conteudo.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Publicações</a>
-                    <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Categorias</a>
-                    @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Comunicados</a> @endcan
-                    @can('template.listar') <a href="{{ route('templates.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Templates</a> @endcan
-                    @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Automações</a> @endcan
-                    @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Agenda de E-mails</a> @endcan
-                </div>
-            </div>
-        </div>
-
-        {{-- Dropdown: Educacional --}}
-        @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-graduation-cap shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Educacional</span>
-                </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
-                @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Relatórios</a> @endcan
-                @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Listar Períodos</a> @endcan
-                @can('ferramenta.mock') 
-                    <a href="{{ route('avaliacoes.gerador') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gerador Mock</a> 
-                    <a href="{{ route('avaliacoes.gerador-aprendizagem') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gerador Aprendizagem</a>
-                @endcan
-                <div class="py-1 text-[9px] font-bold text-gray-500 uppercase mt-2">Matrículas e Turmas</div>
-                @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ver Matrículas</a> @endcan
-                @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ver Turmas</a> @endcan
-                <a href="{{ route('matriculas.acompanhamento') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Portal IA</a>
-                @if(feature('aprendizagem.listar') && auth()->user()->can('aprendizagem.listar'))
-                    @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ciclos de Aprendizagem</a> @endcan
-                @endif
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Educacional</div>
-                    @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Relatórios de Avaliação</a> @endcan
-                    @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Períodos de Avaliação</a> @endcan
-                    @can('ferramenta.mock') 
-                        <a href="{{ route('avaliacoes.gerador') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Gerador Mock</a>
-                        <a href="{{ route('avaliacoes.gerador-aprendizagem') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Gerador Aprendizagem</a>
-                    @endcan
-                    @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Matrículas</a> @endcan
-                    @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Turmas</a> @endcan
-                    <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Portal IA</a>
-                    @if(feature('aprendizagem.listar') && auth()->user()->can('aprendizagem.listar'))
-                        @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Ciclos de Aprendizagem</a> @endcan
+                    {{-- Dropdown: Financeiro --}}
+                    @canany(['financeiro.centro_custo.listar', 'financeiro.natureza.listar', 'financeiro.orcamentos.listar', 'financeiro.visao_global', 'financeiro.orcamentos.aprovar', 'financeiro.visao_global.aprovacao'])
+                        <div x-data="{ open: false, hover: false }" 
+                            @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                            @mouseleave="hover = false" 
+                            class="relative whitespace-nowrap">
+                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                                <div class="flex items-center gap-3">
+                                    <i class="text-xl ph ph-receipt shrink-0"></i>
+                                    <span x-show="!sidebarMinimized">Financeiro</span>
+                                </div>
+                                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            </button>
+                            
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                <a href="{{ route('financeiro.orcamentos') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Orçamentos</a>
+                                <a href="{{ route('financeiro.aprovacoes') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Aprovações</a>
+                                <a href="{{ route('financeiro.centro_custo') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Centro de Custos</a>
+                                <a href="{{ route('financeiro.naturezas') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Naturezas</a>
+                            </div>
+                            
+                            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                                <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Financeiro</div>
+                                    <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Orçamentos</a>
+                                    <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Aprovações</a>
+                                    <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Centro de Custos</a>
+                                    <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Naturezas</a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
-                </div>
-            </div>
-        </div>
-        @endcanany
 
-        {{-- Dropdown: Administração --}}
-        @canany(['usuario.listar', 'acl.role.listar', 'auditoria.listar', 'tarefas.acessar'])
-        <div x-data="{ open: false, hover: false }" 
-             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
-             @mouseleave="hover = false" 
-             class="relative whitespace-nowrap">
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
-                <div class="flex items-center gap-3">
-                    <i class="text-xl ph ph-gear shrink-0"></i>
-                    <span x-show="!sidebarMinimized">Administração</span>
+                    {{-- Dropdown: Processos Seletivos --}}
+                    @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
+                    <div x-data="{ open: false, hover: false }" 
+                        @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                        @mouseleave="hover = false" 
+                        class="relative whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-calendar-check shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Processos Seletivos</span>
+                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ciclos de Inscrição</a> @endcan
+                            @can('inscricao.listar') 
+                                <a href="{{ route('inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Inscrições</a> 
+                                <a href="{{ route('ciclos.crm') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Kanban (CRM)</a>
+                            @endcan
+                        </div>
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                            <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Processos Seletivos</div>
+                                @can('ciclo.listar') <a href="{{ route('ciclos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Ciclos de Inscrição</a> @endcan
+                                @can('inscricao.listar') 
+                                    <a href="{{ route('inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Inscrições</a> 
+                                    <a href="{{ route('ciclos.crm') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Kanban (CRM)</a>
+                                @endcan
+                            </div>
+                        </div>
+                    </div>
+                    @endcanany
+
+                    {{-- Dropdown: Secretaria --}}
+                    @canany(['estudante.listar', 'status.listar'])
+                    <div x-data="{ open: false, hover: false }" 
+                        @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                        @mouseleave="hover = false" 
+                        class="relative whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-folder-user shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Secretaria</span>
+                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            @can('estudante.listar') <a href="{{ route('students.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Base de Alunos</a> @endcan
+                            @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Tags de Status</a> @endcan
+                            @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))
+                                @role('dev') <a href="{{ route('empresas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Empresas Parceiras</a> @endrole
+                            @endif
+                            <a href="{{ route('solicitacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Solicitações</a>
+                        </div>
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                            <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Secretaria</div>
+                                @can('estudante.listar') <a href="{{ route('students.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Base de Alunos</a> @endcan
+                                @can('status.listar') <a href="{{ route('status-inscricoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Tags de Status</a> @endcan
+                                @if(feature('empresas.listar') && auth()->user()->can('empresas.listar'))@role('dev') <a href="{{ route('empresas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Empresas Parceiras</a> @endrole@endif
+                                <a href="{{ route('solicitacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Solicitações</a>
+                            </div>
+                        </div>
+                    </div>
+                    @endcanany
+
+                    {{-- Dropdown: Instituição --}}
+                    @canany(['curso.listar', 'turno.listar', 'unidade.listar', 'formulario.listar'])
+                    <div x-data="{ open: false, hover: false }" 
+                        @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                        @mouseleave="hover = false" 
+                        class="relative whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-buildings shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Instituição</span>
+                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Cursos</a> @endcan
+                            @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Grade de Turnos</a> @endcan
+                            @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Unidades</a> @endcan
+                            @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Formulários</a> @endcan
+                        </div>
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                            <div class="w-48 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Instituição</div>
+                                @can('curso.listar') <a href="{{ route('cursos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Cursos</a> @endcan
+                                @can('turno.listar') <a href="{{ route('turnos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Grade de Turnos</a> @endcan
+                                @can('unidade.listar') <a href="{{ route('unidades.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Unidades</a> @endcan
+                                @can('formulario.listar') <a href="{{ route('formularios.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Formulários</a> @endcan
+                            </div>
+                        </div>
+                    </div>
+                    @endcanany
+
+                    {{-- Dropdown: Comunicação --}}
+                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                        <div x-data="{ open: false, hover: false }" 
+                            @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                            @mouseleave="hover = false" 
+                            class="relative whitespace-nowrap">
+                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                                <div class="flex items-center gap-3">
+                                    <i class="text-xl ph ph-paper-plane-tilt shrink-0"></i>
+                                    <span x-show="!sidebarMinimized">Comunicação</span>
+                                </div>
+                                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                    <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
+                                    <a href="{{ route('conteudo.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Publicações</a>
+                                    <a href="{{ route('conteudo.categorias') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Categorias</a>
+                                    <a href="{{ route('portal.index') }}" target="_blank" class="block py-1.5 text-xs text-purpura-400 hover:text-purpura-300">Ver Portal ↗</a>
+                                @endif
+                                <div class="py-1 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
+                                @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Comunicados</a> @endcan
+                                @can('template.listar') <a href="{{ route('templates.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Templates</a> @endcan
+                                @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Automações</a> @endcan
+                                @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Agenda de E-mails</a> @endcan
+                            </div>
+                            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                                <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Comunicação</div>
+                                    <a href="{{ route('conteudo.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Publicações</a>
+                                    <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Categorias</a>
+                                    @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Comunicados</a> @endcan
+                                    @can('template.listar') <a href="{{ route('templates.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Templates</a> @endcan
+                                    @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Automações</a> @endcan
+                                    @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Agenda de E-mails</a> @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Dropdown: Educacional --}}
+                    @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
+                    <div x-data="{ open: false, hover: false }" 
+                        @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                        @mouseleave="hover = false" 
+                        class="relative whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-graduation-cap shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Educacional</span>
+                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            <div class="py-1 text-[9px] font-bold text-gray-500 uppercase">Avaliações</div>
+                            @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Relatórios</a> @endcan
+                            @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Listar Períodos</a> @endcan
+                            @can('ferramenta.mock') 
+                                <a href="{{ route('avaliacoes.gerador') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gerador Mock</a> 
+                                <a href="{{ route('avaliacoes.gerador-aprendizagem') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gerador Aprendizagem</a>
+                            @endcan
+                            <div class="py-1 text-[9px] font-bold text-gray-500 uppercase mt-2">Matrículas e Turmas</div>
+                            @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ver Matrículas</a> @endcan
+                            @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ver Turmas</a> @endcan
+                            <a href="{{ route('matriculas.acompanhamento') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Portal IA</a>
+                            @if(feature('aprendizagem.listar') && auth()->user()->can('aprendizagem.listar'))
+                                @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Ciclos de Aprendizagem</a> @endcan
+                            @endif
+                        </div>
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                            <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Educacional</div>
+                                @can('relatorio.acessar') <a href="{{ route('avaliacoes.relatorios') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Relatórios de Avaliação</a> @endcan
+                                @can('periodo_avaliacao.listar') <a href="{{ route('avaliacoes.periodos.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Períodos de Avaliação</a> @endcan
+                                @can('ferramenta.mock') 
+                                    <a href="{{ route('avaliacoes.gerador') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Gerador Mock</a>
+                                    <a href="{{ route('avaliacoes.gerador-aprendizagem') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Gerador Aprendizagem</a>
+                                @endcan
+                                @can('matricula.listar') <a href="{{ route('matriculas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Matrículas</a> @endcan
+                                @can('turma.listar') <a href="{{ route('turmas.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Turmas</a> @endcan
+                                <a href="{{ route('matriculas.acompanhamento') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Portal IA</a>
+                                @if(feature('aprendizagem.listar') && auth()->user()->can('aprendizagem.listar'))
+                                    @can('aprendizagem.listar') <a href="{{ route('aprendizagem.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Ciclos de Aprendizagem</a> @endcan
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endcanany
+
+                    {{-- Dropdown: Administração --}}
+                    @canany(['usuario.listar', 'acl.role.listar', 'auditoria.listar', 'tarefas.acessar'])
+                    <div x-data="{ open: false, hover: false }" 
+                        @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
+                        @mouseleave="hover = false" 
+                        class="relative whitespace-nowrap">
+                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-white/80 rounded-lg hover:bg-white/10 hover:text-white transition-colors" :class="sidebarMinimized ? 'justify-center' : ''">
+                            <div class="flex items-center gap-3">
+                                <i class="text-xl ph ph-gear shrink-0"></i>
+                                <span x-show="!sidebarMinimized">Administração</span>
+                            </div>
+                            <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                        </button>
+                        <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                            @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) 
+                                <a href="{{ route('configuracoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Configurações Base</a>
+                            @endif
+                            @can('usuario.listar') <a href="{{ route('users.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Usuários</a> @endcan
+                            @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Perfis (Roles)</a> @endcan
+                            @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Permissões</a> @endcan
+                            @can('feature.listar') <a href="{{ route('features.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Feature Toggles</a> @endcan
+                            @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Auditoria Geral</a> @endcan
+                            @can('tarefas.acessar') 
+                                <a href="{{ route('system_tasks.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Motor de Importações</a>
+                                <a href="{{ route('system_tasks.hub') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Hub de Tarefas</a>
+                            @endcan
+                            @can('form.builder') <a href="{{ route('formbuilder.hub') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Form Builder</a> @endcan
+                            <a href="{{ route('system.errors.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Central de Erros</a>
+                        </div>
+                        <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
+                            <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                                <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Administração</div>
+                                @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) <a href="{{ route('configuracoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Configurações</a> @endif
+                                @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Usuários</a> @endcan
+                                @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Perfis (Roles)</a> @endcan
+                                @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Permissões</a> @endcan
+                                @can('feature.listar') <a href="{{ route('features.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Feature Toggles</a> @endcan
+                                @can('form.builder') <a href="{{ route('formbuilder.hub') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Form Builder</a> @endcan
+                                @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Auditoria</a> @endcan
+                                @can('tarefas.acessar') 
+                                    <a href="{{ route('system_tasks.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Motor de Importações</a>
+                                    <a href="{{ route('system_tasks.hub') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Hub de Tarefas</a>
+                                @endcan
+                                <a href="{{ route('system.errors.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Central de Erros</a>
+                            </div>
+                        </div>
+                    </div>
+                    @endcanany
                 </div>
-                <i x-show="!sidebarMinimized" class="ph ph-caret-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
-            </button>
-            <div x-show="open && !sidebarMinimized" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) 
-                    <a href="{{ route('configuracoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Configurações Base</a>
-                @endif
-                @can('usuario.listar') <a href="{{ route('users.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Usuários</a> @endcan
-                @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Perfis (Roles)</a> @endcan
-                @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Permissões</a> @endcan
-                @can('feature.listar') <a href="{{ route('features.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Feature Toggles</a> @endcan
-                @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Auditoria Geral</a> @endcan
-                @can('tarefas.acessar') 
-                    <a href="{{ route('system_tasks.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Motor de Importações</a>
-                    <a href="{{ route('system_tasks.hub') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Hub de Tarefas</a>
-                @endcan
-                @can('form.builder') <a href="{{ route('formbuilder.hub') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Form Builder</a> @endcan
-                <a href="{{ route('system.errors.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Central de Erros</a>
-            </div>
-            <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
-                <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
-                    <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Administração</div>
-                    @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) <a href="{{ route('configuracoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Configurações</a> @endif
-                    @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Usuários</a> @endcan
-                    @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Perfis (Roles)</a> @endcan
-                    @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Permissões</a> @endcan
-                    @can('feature.listar') <a href="{{ route('features.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Feature Toggles</a> @endcan
-                    @can('form.builder') <a href="{{ route('formbuilder.hub') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Form Builder</a> @endcan
-                    @can('auditoria.listar') <a href="{{ route('auditoria.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Auditoria</a> @endcan
-                    @can('tarefas.acessar') 
-                        <a href="{{ route('system_tasks.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Motor de Importações</a>
-                        <a href="{{ route('system_tasks.hub') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Hub de Tarefas</a>
-                    @endcan
-                    <a href="{{ route('system.errors.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Central de Erros</a>
-                </div>
-            </div>
-        </div>
-        @endcanany
-    </div>
-</aside>
+            </aside>
             
             {{-- ÁREA PRINCIPAL --}}
             <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
@@ -397,9 +401,11 @@
                             </div>
 
                             <div class="flex items-center gap-3 sm:gap-4 text-white dark:text-gray-200 ml-auto">
-                                <a href="{{ route('portal.index') }}" target="_blank" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors shadow-sm whitespace-nowrap shrink-0" title="Abrir Portal Público">
-                                    <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
-                                </a>
+                                @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                    <a href="{{ route('portal.index') }}" target="_blank" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors shadow-sm whitespace-nowrap shrink-0" title="Abrir Portal Público">
+                                        <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
+                                    </a>
+                                @endif
 
                                 @if(!app()->environment('production'))
                                     <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
@@ -414,7 +420,10 @@
                                 </button>
                                 
                                 @livewire(\App\Modules\SystemTasks\UI\Livewire\SystemTaskProgress::class)
-                                @livewire(\App\Modules\Admin\UI\Livewire\NotificationBadge::class)
+
+                                @if(feature('portal.noticias'))
+                                    @livewire(\App\Modules\Admin\UI\Livewire\NotificationBadge::class)
+                                @endif
                                 
                                 <a href="{{ route('profile.show') }}" class="hidden sm:flex items-center gap-1.5 hover:text-purpura-300 transition-colors shrink-0 ml-1">
                                     <span class="text-sm font-bold whitespace-nowrap">{{ explode(' ', auth()->user()->name)[0] }}</span>
@@ -425,7 +434,7 @@
                     </div>
                 </header>
 
-                {{-- NAVBAR HORIZONTAL (Z-INDEX 100) --}}
+                
                 <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-[100] shrink-0 origin-top"
                      :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
                     <div class="w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -434,17 +443,19 @@
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
                             </a>
                             
-                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                                <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
-                                    <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
-                                </button>
-                                <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
-                                    <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a>
-                                    <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Aprovações</a>
-                                    <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Centro de Custos</a>
-                                    <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
+                            @canany(['financeiro.centro_custo.listar', 'financeiro.natureza.listar', 'financeiro.orcamentos.listar', 'financeiro.visao_global', 'financeiro.orcamentos.aprovar', 'financeiro.visao_global.aprovacao'])
+                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                    <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
+                                        <i class="text-base ph ph-receipt"></i> Financeiro <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                    </button>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-48 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
+                                        <a href="{{ route('financeiro.orcamentos') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Orçamentos</a>
+                                        <a href="{{ route('financeiro.aprovacoes') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Aprovações</a>
+                                        <a href="{{ route('financeiro.centro_custo') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Centro de Custos</a>
+                                        <a href="{{ route('financeiro.naturezas') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Naturezas</a>
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
 
                             @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -492,24 +503,27 @@
                             </div>
                             @endcanany
 
-                            <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                                <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
-                                    <i class="text-base ph ph-paper-plane-tilt"></i> Comunicação <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
-                                </button>
-                                <div x-show="open" x-transition.opacity class="absolute left-0 w-52 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
-                                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
-                                        <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
-                                        <a href="{{ route('conteudo.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Publicações</a>
-                                        <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Categorias</a>
-                                        <a href="{{ route('portal.index') }}" target="_blank" class="block px-4 py-1.5 text-xs font-medium text-purpura-600 hover:bg-purpura-50 dark:text-purpura-400 dark:hover:bg-gray-700">Ver Portal ↗</a>
-                                    @endif
-                                    <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
-                                    @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Comunicados</a> @endcan
-                                    @can('template.listar') <a href="{{ route('templates.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Templates</a> @endcan
-                                    @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Automações</a> @endcan
-                                    @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Agenda de E-mails</a> @endcan
+
+                            @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                                    <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
+                                        <i class="text-base ph ph-paper-plane-tilt"></i> Comunicação <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
+                                    </button>
+                                    <div x-show="open" x-transition.opacity class="absolute left-0 w-52 py-2 mt-1 bg-white border border-gray-100 rounded-lg shadow-xl dark:bg-gray-800 dark:border-gray-700 z-[110]" x-cloak>
+                                        @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                            <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase">Portal & Notícias</div>
+                                            <a href="{{ route('conteudo.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Gestão de Publicações</a>
+                                            <a href="{{ route('conteudo.categorias') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Categorias</a>
+                                            <a href="{{ route('portal.index') }}" target="_blank" class="block px-4 py-1.5 text-xs font-medium text-purpura-600 hover:bg-purpura-50 dark:text-purpura-400 dark:hover:bg-gray-700">Ver Portal ↗</a>
+                                        @endif
+                                        <div class="py-1 px-4 text-[9px] font-bold text-gray-500 uppercase mt-2">Mensagens & Envio</div>
+                                        @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Comunicados</a> @endcan
+                                        @can('template.listar') <a href="{{ route('templates.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Templates</a> @endcan
+                                        @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Automações</a> @endcan
+                                        @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Agenda de E-mails</a> @endcan
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
 
                             @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
@@ -601,18 +615,20 @@
                         <i class="text-lg ph ph-squares-four"></i> Dashboard
                     </a>
                     
-                    <div x-data="{ open: false }" class="space-y-1">
-                        <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
-                            <div class="flex items-center gap-3"><i class="text-lg ph ph-receipt"></i> Financeiro</div>
-                            <i class="ph ph-caret-down transition-transform" :class="open ? 'rotate-180' : ''"></i>
-                        </button>
-                        <div x-show="open" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                            <a href="{{ route('financeiro.orcamentos') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Orçamentos</a>
-                            <a href="{{ route('financeiro.aprovacoes') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Aprovações</a>
-                            <a href="{{ route('financeiro.centro_custo') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Centro de Custos</a>
-                            <a href="{{ route('financeiro.naturezas') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Naturezas</a>
+                    @canany(['financeiro.centro_custo.listar', 'financeiro.natureza.listar', 'financeiro.orcamentos.listar', 'financeiro.visao_global', 'financeiro.orcamentos.aprovar', 'financeiro.visao_global.aprovacao'])
+                        <div x-data="{ open: false }" class="space-y-1">
+                            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg dark:text-gray-200 hover:bg-purpura-50 hover:text-purpura-600 dark:hover:bg-gray-700">
+                                <div class="flex items-center gap-3"><i class="text-lg ph ph-receipt"></i> Financeiro</div>
+                                <i class="ph ph-caret-down transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="open" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                <a href="{{ route('financeiro.orcamentos') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Orçamentos</a>
+                                <a href="{{ route('financeiro.aprovacoes') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Aprovações</a>
+                                <a href="{{ route('financeiro.centro_custo') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Centro de Custos</a>
+                                <a href="{{ route('financeiro.naturezas') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Naturezas</a>
+                            </div>
                         </div>
-                    </div>
+                     @endif
 
                     @canany(['ciclo.listar', 'etapa.listar', 'inscricao.listar'])
                     <div x-data="{ open: false }" class="space-y-1">
@@ -667,16 +683,18 @@
                             <div class="flex items-center gap-3"><i class="text-lg ph ph-paper-plane-tilt"></i> Comunicação</div>
                             <i class="ph ph-caret-down transition-transform" :class="open ? 'rotate-180' : ''"></i>
                         </button>
-                        <div x-show="open" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
-                            @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
-                                <a href="{{ route('conteudo.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Gestão de Publicações</a>
-                                <a href="{{ route('conteudo.categorias') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Categorias</a>
-                            @endif
-                            @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Comunicados</a> @endcan
-                            @can('template.listar') <a href="{{ route('templates.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Templates</a> @endcan
-                            @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Automações</a> @endcan
-                            @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Agenda de E-mails</a> @endcan
-                        </div>
+                        @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                            <div x-show="open" class="pl-10 pr-3 py-1 space-y-1" x-collapse>
+                                @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
+                                    <a href="{{ route('conteudo.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Gestão de Publicações</a>
+                                    <a href="{{ route('conteudo.categorias') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Categorias</a>
+                                @endif
+                                @can('comunicado.listar') <a href="{{ route('comunicados.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Comunicados</a> @endcan
+                                @can('template.listar') <a href="{{ route('templates.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Templates</a> @endcan
+                                @can('automacao.listar') <a href="{{ route('automacoes.index') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Automações</a> @endcan
+                                @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purpura-600">Agenda de E-mails</a> @endcan
+                            </div>
+                        @endif
                     </div>
 
                     @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])

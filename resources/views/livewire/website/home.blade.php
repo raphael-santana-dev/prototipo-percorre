@@ -3,7 +3,7 @@
         <img src="{{ asset('images/ios-agora-e-percorre-1.png') }}" alt="IOS agora é Instituto Percorre" style="height: 32px; width: auto; margin: 0 auto; display: block;">
     </div>
 
-    <section id="hero" class="relative flex items-center justify-center bg-[#310B47] bg-center bg-no-repeat bg-cover transition-colors duration-300 dark:bg-gray-900" style="background-image: url('{{ Vite::asset('resources/images/bg-hero.svg') }}'); min-height: 670px; padding: 100px 20px;">
+    <section id="hero" class="relative flex items-center justify-center bg-[#310B47] bg-center bg-no-repeat bg-cover transition-colors duration-300 dark:bg-gray-900" style="background-image: url('{{ asset('images/ios-agora-e-percorre-1.png') }}'); min-height: 670px; padding: 100px 20px;">
         <div class="px-4 mx-auto text-center max-w-5xl sm:px-6 lg:px-8">
 
             <h1 class="text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight text-white leading-[1.15] font-sans">
