@@ -19,6 +19,7 @@ use App\Modules\GestaoEducacional\UI\Livewire\CicloAprendizagem\Acompanhamento;
 use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraManager;
 use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraForm;
 use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraDetails;
+use App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard;
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 
@@ -67,6 +68,9 @@ Route::middleware('auth:web,student,company')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/comunicacao/suri/laboratorio', SuriTestDashboard::class)->name('suri.dashboard');
+
+    
     Route::get('/conteudo/categorias', \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class)->name('conteudo.categorias');
     Route::get('/conteudo', \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class)->name('conteudo.index');
     Route::get('/conteudo/novo', \App\Modules\Conteudo\UI\Livewire\ConteudoForm::class)->name('conteudo.create');
