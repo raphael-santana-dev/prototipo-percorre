@@ -106,7 +106,7 @@ class FormularioPublico extends Component
             $liberado = false;
 
             if (!auth('web')->check() && !auth('student')->check()) {
-                $this->bloquearAcesso('Formulário restrito. Inicie sessão na sua conta para aceder.', 'ph-lock-key', true);
+                $this->bloquearAcesso('Formulário restrito. Inicie sessão na sua conta para acessar.', 'ph-lock-key', true);
                 return;
             }
 

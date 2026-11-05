@@ -53,7 +53,7 @@ class OrcamentoWorkflowNotification extends Notification
         }
 
         if (!empty($this->dados['url'])) {
-            $mail->action($this->dados['texto_botao'] ?? 'Aceder ao Orçamento', $this->dados['url']);
+            $mail->action($this->dados['texto_botao'] ?? 'Acessar Orçamento', $this->dados['url']);
         }
 
         return $mail->line('Esta é uma mensagem automática do Módulo de Gestão Orçamentária — Instituto Percorre.');
