@@ -23,7 +23,7 @@ Schedule::call(function () {
     RdCrmService::enviarNegociacoesPendentes();
 })->everyMinute();
 
-Schedule::job(new AtualizarStatusConteudoJob)->everyMinute();
+// Schedule::job(new AtualizarStatusConteudoJob)->everyMinute();
 
 Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
 Schedule::command('fases:processar')->everyMinute()->withoutOverlapping();
