@@ -378,11 +378,21 @@
                             <td class="px-4 py-3 text-right">
                                 <div class="inline-flex items-center justify-end gap-1.5">
                                     <button type="button"
+                                            wire:click="replayLog({{ $logItem->id }})"
+                                            wire:confirm="Deseja reenviar (Replay) exatamente esta mesma requisição ({{ $logItem->metodo }} {{ $logItem->acao }}) para a Suri?"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center gap-1"
+                                            title="Reenviar este mesmo payload para a Suri">
+                                        <i class="ph-bold ph-arrows-clockwise"></i>
+                                        <span>Replay</span>
+                                    </button>
+
+                                    <button type="button"
                                             wire:click="carregarLogNoConsole({{ $logItem->id }})"
                                             class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1 {{ $logSelecionadoId === $logItem->id ? 'bg-purpura-600 text-white' : 'bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200' }}">
                                         <i class="ph-bold ph-terminal-window"></i>
-                                        <span>{{ $logSelecionadoId === $logItem->id ? 'No Console' : 'Inspecionar no Console' }}</span>
+                                        <span>{{ $logSelecionadoId === $logItem->id ? 'No Console' : 'Inspecionar' }}</span>
                                     </button>
+
                                     <button type="button"
                                             wire:click="excluirLog({{ $logItem->id }})"
                                             class="p-1 text-gray-400 hover:text-red-600 rounded transition"

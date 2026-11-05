@@ -194,6 +194,47 @@ class SuriTestDashboard extends Component
         ];
     }
 
+    /**
+     * Botão de Replay: Reenvia exatamente o mesmo método, endpoint e payload de um log salvo no histórico.
+     */
+    public function replayLog(int $logId): void
+    {
+        $log = SuriTestLog::findOrFail($logId);
+        $service = app(SuriApiService::class);
+
+        $res = $service->reexecutarLog(
+            $log->metodo ?? 'POST',
+            $log->url,
+            is_array($log->payload) ? $log->payload : []
+        );
+
+        $this->registrarResultado("Replay: {$log->acao}", $res);
+    }
+
+    /**
+     * Testa GET {{baseUrl}}/api/templates diretamente no Laboratório Suri.
+     */
+    public function dispararListarTemplatesSuri(): void
+    {
+        $res = app(SuriApiService::class)->listarTemplates();
+        $this->registrarResultado('Listar Templates (GET /api/templates)', $res);
+    }
+
+    /**
+     * Testa GET {{baseUrl}}/api/templates/:template_id diretamente no Laboratório Suri.
+     */
+    public function dispararBuscarTemplateEspecifico(): void
+    {
+        $this->validate([
+            'templateId' => 'required|string',
+        ], [
+            'templateId.required' => 'Informe o templateId para consultar GET /api/templates/:template_id.',
+        ]);
+
+        $res = app(SuriApiService::class)->obterTemplate($this->templateId);
+        $this->registrarResultado("Obter Template ({$this->templateId})", $res);
+    }
+
     public function excluirLog(int $logId): void
     {
         SuriTestLog::where('id', $logId)->delete();
