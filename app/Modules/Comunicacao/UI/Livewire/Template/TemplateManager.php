@@ -7,6 +7,7 @@ use Livewire\WithPagination;
 use App\Traits\ComPadraoListagem;
 use App\Helpers\BreadcrumbHelper;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
+use App\Modules\Teste\Suri\Services\SuriApiService;
 
 class TemplateManager extends Component
 {
@@ -29,6 +30,29 @@ class TemplateManager extends Component
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = false;
+    }
+
+    public function sincronizarSuri($id)
+    {
+        abort_if(!feature('template.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('template.editar'), 403);
+
+        $template = EmailTemplate::findOrFail($id);
+
+        if (!empty($template->suri_template_id)) {
+            $this->dispatch('erro', msg: 'Este template já está sincronizado.');
+            return;
+        }
+
+        $suriService = app(SuriApiService::class);
+        $suriId = $suriService->syncTemplate($template);
+
+        if ($suriId) {
+            $template->update(['suri_template_id' => $suriId]);
+            $this->dispatch('sucesso', msg: 'Template sincronizado com a Suri com sucesso!');
+        } else {
+            $this->dispatch('erro', msg: 'Falha ao sincronizar. Verifique os logs do sistema.');
+        }
     }
 
     public function getHeadersProperty()
