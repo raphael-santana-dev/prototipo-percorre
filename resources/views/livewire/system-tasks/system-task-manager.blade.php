@@ -56,8 +56,8 @@
 
         <x-slot name="actions">
             @if(feature('tarefas.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('tarefas.exportar')))
-                <button wire:click="solicitarExportacao" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 mr-2">
-                    <i class="text-lg ph ph-export"></i> Solicitar Exportação
+                <button type="button" wire:click="abrirModalExportacao" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 transition-colors bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 mr-2">
+                    <i class="text-lg ph ph-export text-purpura-600"></i> Solicitar Exportação
                 </button>
             @endif
 
@@ -635,6 +635,101 @@
                         </div>
                         
                     </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL: SOLICITAR EXPORTAÇÃO (INSCRIÇÕES OU RESPOSTAS DE FORMULÁRIO PÚBLICO) --}}
+    @if($modalExportacaoAberto)
+        <div class="fixed inset-0 z-[85] overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity bg-gray-900/60 backdrop-blur-sm" wire:click="$set('modalExportacaoAberto', false)"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+
+                <div class="relative z-10 inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-2xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 border border-gray-200">
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                        <h3 class="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                            <i class="ph-fill ph-export text-purpura-600 text-xl"></i> Solicitar Exportação de Dados
+                        </h3>
+                        <button type="button" wire:click="$set('modalExportacaoAberto', false)" class="text-gray-400 hover:text-red-500">
+                            <i class="ph-bold ph-x text-lg"></i>
+                        </button>
+                    </div>
+
+                    <form wire:submit.prevent="solicitarExportacao" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                                O que você deseja exportar?
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <label class="flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition {{ $exportTipo === 'inscricoes' ? 'border-purpura-500 bg-purpura-50/40 ring-1 ring-purpura-500' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <input type="radio" wire:model.live="exportTipo" value="inscricoes" class="mt-0.5 text-purpura-600 focus:ring-purpura-500">
+                                    <div>
+                                        <span class="text-xs font-extrabold text-gray-900 block">Inscrições (Ciclos)</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight block">Candidatos de processos seletivos e projetos.</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition {{ $exportTipo === 'respostas_formulario' ? 'border-purpura-500 bg-purpura-50/40 ring-1 ring-purpura-500' : 'border-gray-200 hover:bg-gray-50' }}">
+                                    <input type="radio" wire:model.live="exportTipo" value="respostas_formulario" class="mt-0.5 text-purpura-600 focus:ring-purpura-500">
+                                    <div>
+                                        <span class="text-xs font-extrabold text-gray-900 block">Formulário Público</span>
+                                        <span class="text-[10px] text-gray-500 leading-tight block">Respostas submetidas em formulários gerais.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        @if($exportTipo === 'respostas_formulario')
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                                    Selecione o Formulário Público <span class="text-red-500">*</span>
+                                </label>
+                                <select wire:model="exportFormularioId" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                    <option value="">Escolha um formulário...</option>
+                                    @foreach($formulariosDisponiveis as $formItem)
+                                        <option value="{{ $formItem->id }}">
+                                            {{ $formItem->titulo }} ({{ $formItem->respostas_count ?? 0 }} resposta(s))
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('exportFormularioId') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                        @else
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                                    Filtrar por Ciclo de Inscrição (Opcional)
+                                </label>
+                                <select wire:model="exportCicloId" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                    <option value="">Todos os Ciclos (Geral)</option>
+                                    @foreach($ciclosDisponiveis as $ciclo)
+                                        <option value="{{ $ciclo->id }}">{{ $ciclo->nome }}</option>
+                                    @endforeach
+                                </select>
+                                @error('exportCicloId') <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                        @endif
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                                Formato do Arquivo
+                            </label>
+                            <select wire:model="exportFormato" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-purpura-500 focus:ring-purpura-500">
+                                <option value="xlsx">Planilha Excel (.XLSX)</option>
+                                <option value="csv">Arquivo CSV separado por ponto e vírgula (.CSV)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <button type="button" wire:click="$set('modalExportacaoAberto', false)" class="px-4 py-2 text-xs font-bold border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-5 py-2 text-xs font-bold text-white rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 flex items-center gap-1.5">
+                                <i class="ph-bold ph-export text-sm"></i> Gerar Exportação em Background
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
