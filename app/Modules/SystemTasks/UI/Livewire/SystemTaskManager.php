@@ -28,6 +28,14 @@ class SystemTaskManager extends Component
     public $modalMonitoramentoAberto = false;
     public $taskReprocessarId = null;
 
+    public bool $modalExportacaoAberto = false;
+    public string $exportTipo = 'inscricoes'; // 'inscricoes' ou 'respostas_formulario'
+    public $exportCicloId = '';
+    public $exportFormularioId = '';
+    public string $exportFormato = 'xlsx';
+    public $formulariosDisponiveis = [];
+    public $filtro_tipo = '';
+
     public $arquivo;
     public $tipoOperacao = 'inscricoes';
     public $cicloSelecionadoId = null;
@@ -92,6 +100,10 @@ class SystemTaskManager extends Component
 
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->ciclosDisponiveis = Ciclo::orderBy('nome', 'asc')->get();
+
+        $this->formulariosDisponiveis = \App\Models\Formulario::withCount('respostas')
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
     public function updating($nomePropriedade)
@@ -541,27 +553,7 @@ class SystemTaskManager extends Component
         $this->resetPage();
     }
 
-    public function excluirImportacao($id)
-    {
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
-        
-        $task = SystemTask::find($id);
-        
-        if ($task) {
-            if ($task->arquivo_caminho) Storage::disk('local')->delete($task->arquivo_caminho);
-            if ($task->arquivo_gerado_caminho) Storage::disk('local')->delete($task->arquivo_gerado_caminho);
-            $task->delete();
-        }
-
-        if ($this->taskAtualId == $id) {
-            $this->reset(['modalMapeamentoAberto', 'taskAtualId', 'cabecalhos', 'mapeamento', 'modalMonitoramentoAberto']);
-        }
-        if ($this->taskDetalhes && $this->taskDetalhes->id == $id) {
-            $this->reset(['modalDetalhesAberto', 'taskDetalhes']);
-        }
-
-        $this->dispatch('sucesso', msg: 'Registro e arquivos removidos do servidor.');
-    }
+    
 
     public function verDetalhes($id)
     {
@@ -706,31 +698,7 @@ class SystemTaskManager extends Component
         $this->dispatch('erro', msg: 'O arquivo original não foi encontrado no servidor.');
     }
 
-    public function solicitarExportacao()
-    {
-        //abort_if(!feature('tarefas.exportar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.exportar'), 403);
-
-        $ativos = SystemTask::where('user_id', auth()->id())->whereIn('status', ['mapeamento', 'na_fila', 'processando'])->count();
-        if ($ativos >= 5) {
-            $this->dispatch('sucesso', msg: 'Sua fila está cheia. Aguarde as tarefas atuais terminarem.');
-            return;
-        }
-
-        $exportacao = SystemTask::create([
-            'user_id' => auth()->id(),
-            'tipo' => 'inscricoes',
-            'operacao' => 'exportacao',
-            'formato' => 'xlsx',
-            'arquivo_nome' => "Exportacao_Sistema.xlsx",
-            'status' => 'na_fila',
-            'total_linhas' => 0, 
-        ]);
-
-        dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($exportacao))->afterResponse();
-
-        $this->dispatch('sucesso', msg: 'Exportação solicitada! O sistema está processando em background.');
-    }
+    
 
     public function baixarExportacao($id)
     {
@@ -741,43 +709,169 @@ class SystemTaskManager extends Component
         $this->dispatch('sucesso', msg: 'Arquivo não encontrado ou geração não concluída.');
     }
 
-    public function reentrarNaFila($id)
+    public function abrirModalExportacao(): void
     {
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('tarefas.acessar'), 403);
+        $this->resetValidation();
+        $this->exportTipo = 'inscricoes';
+        $this->exportFormato = 'xlsx';
+        $this->exportCicloId = '';
+        $this->exportFormularioId = '';
+        $this->modalExportacaoAberto = true;
+    }
 
-        $task = SystemTask::findOrFail($id);
+    public function solicitarExportacao()
+    {
+        $ativos = SystemTask::where('user_id', auth()->id())
+            ->whereIn('status', ['mapeamento', 'na_fila', 'processando'])
+            ->count();
 
-        // Reseta o estado para reprocessamento limpo e limpa as datas de execução anteriores
-        $task->update([
-            'status' => 'na_fila',
+        if ($ativos >= 5) {
+            $this->dispatch('erro', msg: 'Sua fila está cheia. Aguarde as tarefas atuais terminarem.');
+            return;
+        }
+
+        $formato = in_array(strtolower($this->exportFormato), ['xlsx', 'csv'], true)
+            ? strtolower($this->exportFormato)
+            : 'xlsx';
+
+        if ($this->exportTipo === 'respostas_formulario') {
+            $this->validate([
+                'exportFormularioId' => 'required|exists:formularios,id',
+            ], [
+                'exportFormularioId.required' => 'Selecione qual formulário público deseja exportar.',
+            ]);
+
+            $formulario = \App\Models\Formulario::findOrFail($this->exportFormularioId);
+            $qtdRespostas = \App\Models\RespostaFormulario::where('formulario_id', $formulario->id)->count();
+
+            if ($qtdRespostas === 0) {
+                $this->addError('exportFormularioId', 'Este formulário ainda não possui respostas registradas para exportar.');
+                return;
+            }
+
+            $tracking = SystemTask::create([
+                'user_id'            => auth()->id(),
+                'tipo'               => 'respostas_formulario',
+                'operacao'           => 'exportacao',
+                'formato'            => $formato,
+                'arquivo_nome'       => 'Respostas - ' . Str::limit($formulario->titulo, 28) . ' (' . strtoupper($formato) . ')',
+                'status'             => 'na_fila',
+                'total_linhas'       => $qtdRespostas,
+                'linhas_processadas' => 0,
+                'mapeamento'         => [
+                    'formulario_id' => $formulario->id,
+                    'filtros'       => [],
+                ],
+            ]);
+
+            $this->modalExportacaoAberto = false;
+            dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $formulario->id, []))->afterResponse();
+
+            $this->dispatch('sucesso', msg: "Exportação das respostas de '{$formulario->titulo}' enviada para a fila!");
+            return;
+        }
+
+        // Exportação de Inscrições (Geral ou Filtrada por Ciclo)
+        $filtros = [];
+        $sufixoNome = 'Geral';
+
+        if (!empty($this->exportCicloId)) {
+            $ciclo = Ciclo::find($this->exportCicloId);
+            $filtros['ciclo'] = $this->exportCicloId;
+            $sufixoNome = $ciclo ? Str::limit($ciclo->nome, 24) : "Ciclo #{$this->exportCicloId}";
+        }
+
+        $queryCount = \App\Models\Inscricao::when(!empty($filtros['ciclo']), fn($q) => $q->where('ciclo_id', $filtros['ciclo']))->count();
+
+        if ($queryCount === 0) {
+            $this->addError('exportCicloId', 'Não há inscrições registradas para exportar neste filtro.');
+            return;
+        }
+
+        $exportacao = SystemTask::create([
+            'user_id'            => auth()->id(),
+            'tipo'               => 'inscricoes',
+            'operacao'           => 'exportacao',
+            'formato'            => $formato,
+            'arquivo_nome'       => "Exportação de Inscrições - {$sufixoNome} (" . strtoupper($formato) . ")",
+            'status'             => 'na_fila',
+            'total_linhas'       => $queryCount,
             'linhas_processadas' => 0,
-            'erro_mensagem' => null,
-            'started_at' => null,
-            'finished_at' => null,
+            'mapeamento'         => ['filtros' => $filtros],
         ]);
 
-        // Despacha novamente para a fila de acordo com a operação exata da tarefa
+        $this->modalExportacaoAberto = false;
+        dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($exportacao->id, $filtros))->afterResponse();
+
+        $this->dispatch('sucesso', msg: 'Exportação de inscrições solicitada! O sistema está processando em segundo plano.');
+    }
+
+    public function excluirImportacao($id)
+    {
+        $task = SystemTask::find($id);
+
+        if ($task) {
+            if ($task->arquivo_caminho) {
+                Storage::disk('local')->delete($task->arquivo_caminho);
+            }
+            if ($task->arquivo_gerado_caminho) {
+                Storage::disk('public')->delete($task->arquivo_gerado_caminho);
+            }
+            $task->delete();
+        }
+
+        if ($this->taskAtualId == $id) {
+            $this->reset(['modalMapeamentoAberto', 'taskAtualId', 'cabecalhos', 'mapeamento', 'modalMonitoramentoAberto']);
+        }
+        if ($this->taskDetalhes && $this->taskDetalhes->id == $id) {
+            $this->reset(['modalDetalhesAberto', 'taskDetalhes']);
+        }
+
+        $this->dispatch('sucesso', msg: 'Registro e arquivos removidos do servidor.');
+    }
+
+    public function reentrarNaFila($id)
+    {
+        $task = SystemTask::findOrFail($id);
+
+        $task->update([
+            'status'             => 'na_fila',
+            'linhas_processadas' => 0,
+            'erro_mensagem'      => null,
+            'started_at'         => null,
+            'finished_at'        => null,
+        ]);
+
         switch ($task->operacao) {
             case 'importacao':
                 dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task));
                 break;
+
             case 'exportacao':
-                if (str_contains($task->arquivo_nome ?? '', 'Inscrições')) {
+                if ($task->tipo === 'respostas_formulario') {
+                    $formId = $task->mapeamento['formulario_id'] ?? null;
+                    $filtros = $task->mapeamento['filtros'] ?? [];
+                    if ($formId) {
+                        dispatch(new \App\Jobs\ExportarRespostasFormularioJob($task->id, $formId, $filtros));
+                    }
+                } elseif ($task->tipo === 'inscricoes' || str_contains($task->arquivo_nome ?? '', 'Inscrições')) {
                     dispatch(new \App\Jobs\ExportarInscricoesFiltradasJob($task->id, $task->mapeamento['filtros'] ?? []));
                 } else {
                     dispatch(new \App\Jobs\ProcessarExportacaoUniversalJob($task));
                 }
                 break;
+
             case 'recalculo':
                 $cicloId = $task->mapeamento['ciclo_id'] ?? null;
                 dispatch(new \App\Jobs\RecalcularPontuacoesGlobaisJob($task->id, $cicloId));
                 break;
+
             case 'ranking':
                 $cicloId = $task->mapeamento['ciclo_id'] ?? null;
                 dispatch(new \App\Jobs\GerarRankingGlobalJob($task->id, $cicloId));
                 break;
+
             default:
-                // Fallback geral para importação caso o tipo não mapeado
                 dispatch(new \App\Jobs\ProcessarImportacaoUniversalJob($task));
                 break;
         }
@@ -787,11 +881,18 @@ class SystemTaskManager extends Component
 
     public function render()
     {
-        $query = SystemTask::with('user')->where('tipo', 'inscricoes');
-        
-        if (!empty($this->filtro_status)) $query->where('status', $this->filtro_status);
-        if (!empty($this->filtro_usuario)) $query->where('user_id', $this->filtro_usuario);
-        
+        // Exibe todas as tarefas em segundo plano (Inscrições + Respostas de Formulários Públicos)
+        $query = SystemTask::with('user');
+
+        if (!empty($this->filtro_tipo)) {
+            $query->where('tipo', $this->filtro_tipo);
+        }
+        if (!empty($this->filtro_status)) {
+            $query->where('status', $this->filtro_status);
+        }
+        if (!empty($this->filtro_usuario)) {
+            $query->where('user_id', $this->filtro_usuario);
+        }
         if (!empty($this->filtro_data_inicio)) {
             $query->where('created_at', '>=', str_replace('T', ' ', $this->filtro_data_inicio));
         }
@@ -802,15 +903,19 @@ class SystemTaskManager extends Component
             $query->where('created_at', '<=', $dataFim);
         }
 
-        if ($this->ordenacaoCampo) $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
-        else $query->orderBy('id', 'desc');
+        if ($this->ordenacaoCampo) {
+            $query->orderBy($this->ordenacaoCampo, $this->ordenacaoDirecao);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
 
         $usuariosDisponiveis = User::whereIn('id', SystemTask::select('user_id')->distinct())
-            ->orderBy('name')->pluck('name', 'id');
+            ->orderBy('name')
+            ->pluck('name', 'id');
 
         return view('livewire.system-tasks.system-task-manager', [
-            'registros' => $query->paginate($this->porPagina),
-            'usuariosDisponiveis' => $usuariosDisponiveis
+            'registros'           => $query->paginate($this->porPagina),
+            'usuariosDisponiveis' => $usuariosDisponiveis,
         ])->layout('components.layouts.app', ['title' => 'Gestor de Processamento (Background)']);
     }
 }

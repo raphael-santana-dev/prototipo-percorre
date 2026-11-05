@@ -92,6 +92,10 @@ class FormDetails extends Component
 
     public function solicitarExportacao($formato = 'csv')
     {
+        if (!is_string($formato) || !in_array(strtolower($formato), ['csv', 'xlsx'], true)) {
+            $formato = 'csv';
+        }
+
         $query = $this->obterQueryFiltrada();
 
         if (!empty($this->selecionadas)) {
@@ -105,30 +109,36 @@ class FormDetails extends Component
             return;
         }
 
-        $tracking = \App\Models\SystemTask::create([
-            'user_id'            => auth()->id(),
-            'tipo'               => 'respostas_formulario',
-            'operacao'           => 'exportacao',
-            'formato'            => strtolower($formato),
-            'arquivo_nome'       => 'Respostas - ' . Str::limit($this->formulario->titulo, 20) . ' (' . strtoupper($formato) . ')',
-            'status'             => 'na_fila',
-            'total_linhas'       => $queryCount,
-            'linhas_processadas' => 0,
-        ]);
-
         $filtrosAtuais = [
             'search'           => $this->search,
             'data_inicio'      => $this->data_inicio,
             'data_fim'         => $this->data_fim,
             'filtrosDinamicos' => $this->filtrosDinamicos,
             'ids'              => $this->selecionadas,
-            'sortField'        => str_starts_with($this->ordenacaoCampo, 'respostas->') || in_array($this->ordenacaoCampo, ['id', 'created_at']) ? $this->ordenacaoCampo : 'created_at',
+            'sortField'        => str_starts_with((string) $this->ordenacaoCampo, 'respostas->') || in_array($this->ordenacaoCampo, ['id', 'created_at'], true)
+                ? $this->ordenacaoCampo
+                : 'created_at',
             'sortDirection'    => $this->ordenacaoDirecao ?? 'desc',
         ];
 
+        $tracking = \App\Models\SystemTask::create([
+            'user_id'            => auth()->id(),
+            'tipo'               => 'respostas_formulario',
+            'operacao'           => 'exportacao',
+            'formato'            => strtolower($formato),
+            'arquivo_nome'       => 'Respostas - ' . Str::limit($this->formulario->titulo, 28) . ' (' . strtoupper($formato) . ')',
+            'status'             => 'na_fila',
+            'total_linhas'       => $queryCount,
+            'linhas_processadas' => 0,
+            'mapeamento'         => [
+                'formulario_id' => $this->formulario->id,
+                'filtros'       => $filtrosAtuais,
+            ],
+        ]);
+
         dispatch(new \App\Jobs\ExportarRespostasFormularioJob($tracking->id, $this->formulario->id, $filtrosAtuais))->afterResponse();
 
-        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gerenciador (I/O).');
+        $this->dispatch('sucesso', msg: 'Exportação enviada para o plano de fundo! Acompanhe a geração do arquivo no Gestor de Processamento.');
     }
 
     public function getHeadersProperty()
