@@ -4,7 +4,6 @@ namespace App\Modules\Teste\Suri\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
 
 class SuriApiService
@@ -30,102 +29,220 @@ class SuriApiService
     }
 
     /**
-     * Sincroniza um EmailTemplate local criando-o na Suri.
+     * Monta o payload completo de criação de Template na Suri respeitando todas as regras da Meta:
+     * - Variáveis {{1}}, {{2}} + templateExample [exemplo] + bodyExamples
+     * - Rodapé (footer)
+     * - Cabeçalho (headerType: 0 = Imagem c/ url, 2 = Documento PDF c/ base64File)
+     * - Botões (type 0 = URL estática/dinâmica, 1 = Ligar, 2 = Resposta rápida, 3 = Copiar código)
      */
-    public function syncTemplate(EmailTemplate $template): ?string
+    public function montarPayloadTemplate(EmailTemplate $template): array
     {
-        $cleanBody = strip_tags(html_entity_decode((string) $template->corpo, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $cfg = is_string($template->configuracoes_suri)
+            ? (json_decode($template->configuracoes_suri, true) ?? [])
+            : ($template->configuracoes_suri ?? []);
 
-        preg_match_all('/\{\{([a-zA-Z0-9_]+)\}\}/', $cleanBody, $matches);
-        $variaveisNomeadas = array_values(array_unique($matches[1] ?? []));
+        $botoesRaw = is_string($template->botoes)
+            ? (json_decode($template->botoes, true) ?? [])
+            : ($template->botoes ?? []);
 
-        if (empty($variaveisNomeadas)) {
-            return $this->cadastrarTemplateSimples($template, $cleanBody);
+        // Converte quebras de parágrafo do Quill em quebras de linha limpas
+        $htmlCorpo = (string) $template->corpo;
+        $htmlCorpo = preg_replace('/<\/(p|div|h1|h2|h3|li)>/i', "\n", $htmlCorpo);
+        $htmlCorpo = preg_replace('/<br\s*\/?>/i', "\n", $htmlCorpo);
+        $cleanBody = trim(strip_tags(html_entity_decode($htmlCorpo, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $cleanBody = preg_replace("/\n{3,}/", "\n\n", $cleanBody);
+
+        // Extrai variáveis {{variavel}} ou {{1}} na ordem de aparição
+        preg_match_all('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/', $cleanBody, $matches);
+        $variaveisEncontradas = [];
+        foreach ($matches[1] ?? [] as $v) {
+            if (!in_array($v, $variaveisEncontradas, true)) {
+                $variaveisEncontradas[] = $v;
+            }
         }
 
-        return $this->cadastrarTemplateComVariaveis($template, $cleanBody, $variaveisNomeadas);
-    }
-
-    private function cadastrarTemplateSimples(EmailTemplate $template, string $cleanBody): ?string
-    {
-        $payload = [
-            'template' => [
-                'title'     => Str::limit(Str::slug($template->nome, '_'), 50, ''),
-                'body'      => trim($cleanBody),
-                'subject'   => Str::limit((string) ($template->assunto ?: $template->nome), 50, ''),
-                'channelId' => $this->channelId,
-                'category'  => 'MARKETING',
-                'language'  => 'pt_BR',
-            ],
-            'templateExample' => trim($cleanBody),
-            'bodyExamples'    => [],
-        ];
-
-        return $this->enviarRequisicaoTemplate($payload);
-    }
-
-    private function cadastrarTemplateComVariaveis(EmailTemplate $template, string $cleanBody, array $variaveisNomeadas): ?string
-    {
+        $exemplosSalvos = is_array($cfg['body_examples'] ?? null) ? $cfg['body_examples'] : [];
         $suriBody = $cleanBody;
         $templateExample = $cleanBody;
         $bodyExamples = [];
 
-        foreach ($variaveisNomeadas as $index => $varNome) {
+        foreach ($variaveisEncontradas as $index => $varNome) {
             $numeroSuri = $index + 1;
-            $exemploTexto = strtoupper($varNome);
+            $valorExemplo = trim((string) ($exemplosSalvos[$varNome] ?? $exemplosSalvos[$index] ?? $this->gerarExemploPadraoVariavel($varNome)));
 
-            $suriBody = str_replace('{{' . $varNome . '}}', '{{' . $numeroSuri . '}}', $suriBody);
-            $templateExample = str_replace('{{' . $varNome . '}}', '[' . $exemploTexto . ']', $templateExample);
-            $bodyExamples[] = $exemploTexto;
+            $suriBody = preg_replace('/\{\{\s*' . preg_quote($varNome, '/') . '\s*\}\}/', '{{' . $numeroSuri . '}}', $suriBody);
+            $templateExample = preg_replace('/\{\{\s*' . preg_quote($varNome, '/') . '\s*\}\}/', '[' . $valorExemplo . ']', $templateExample);
+            $bodyExamples[] = $valorExemplo;
+        }
+
+        $templateNode = [
+            'title'     => trim((string) $template->nome),
+            'body'      => trim($suriBody),
+            'subject'   => trim((string) ($template->assunto ?: 'TESTE')),
+            'channelId' => !empty($cfg['channel_id']) ? $cfg['channel_id'] : $this->channelId,
+            'category'  => in_array($cfg['category'] ?? '', ['MARKETING', 'UTILITY'], true) ? $cfg['category'] : 'MARKETING',
+        ];
+
+        // Rodapé opcional
+        if (!empty(trim((string) ($cfg['footer'] ?? '')))) {
+            $templateNode['footer'] = trim((string) $cfg['footer']);
+        }
+
+        // Cabeçalho opcional (0 = Imagem, 2 = Documento PDF)
+        $headerMode = $cfg['header_mode'] ?? 'none';
+        $sampleFile = null;
+
+        if ($headerMode === 'image') {
+            $templateNode['headerType'] = 0;
+            $sampleFile = [
+                'url'      => trim((string) ($cfg['sample_file_url'] ?? '')),
+                'fileName' => trim((string) ($cfg['sample_file_name'] ?? 'imagem.png')) ?: 'imagem.png',
+            ];
+        } elseif ($headerMode === 'document') {
+            $templateNode['headerType'] = 2;
+            $sampleFile = [
+                'base64File' => trim((string) ($cfg['sample_file_base64'] ?? '')),
+                'fileName'   => trim((string) ($cfg['sample_file_name'] ?? 'documento.pdf')) ?: 'documento.pdf',
+            ];
+        }
+
+        // Montagem dos Botões (Ordenados: Ligar/Copiar/URL primeiro, Resposta Rápida por último)
+        $botoesAcao = [];
+        $botoesUrl = [];
+        $botoesQuickReply = [];
+
+        foreach ($botoesRaw as $btn) {
+            $textoBtn = trim((string) ($btn['texto'] ?? $btn['text'] ?? ''));
+            if ($textoBtn === '') continue;
+
+            $tipoBtn = isset($btn['suri_type']) ? (int) $btn['suri_type'] : (empty($btn['url']) ? 2 : 0);
+
+            if ($tipoBtn === 1) {
+                // Botão de Ligar (type: 1)
+                $fone = trim((string) ($btn['phone'] ?? ''));
+                if ($fone !== '' && !str_starts_with($fone, '+')) {
+                    $fone = '+' . preg_replace('/\D/', '', $fone);
+                }
+                $botoesAcao[] = [
+                    'text'  => $textoBtn,
+                    'type'  => 1,
+                    'phone' => $fone,
+                ];
+            } elseif ($tipoBtn === 3) {
+                // Botão de Copiar Código (type: 3)
+                $botoesAcao[] = [
+                    'text'    => $textoBtn,
+                    'type'    => 3,
+                    'example' => trim((string) ($btn['example'] ?? 'CODIGO10')) ?: 'CODIGO10',
+                ];
+            } elseif ($tipoBtn === 0) {
+                // Botão de URL Estática ou Dinâmica (type: 0)
+                $urlBtn = trim((string) ($btn['url'] ?? ''));
+                $itemUrl = [
+                    'text' => $textoBtn,
+                    'type' => 0,
+                    'url'  => $urlBtn,
+                ];
+                if (!empty(trim((string) ($btn['example'] ?? ''))) || str_ends_with($urlBtn, '{{1}}')) {
+                    $itemUrl['example'] = trim((string) ($btn['example'] ?? 'detalhe')) ?: 'detalhe';
+                }
+                $botoesUrl[] = $itemUrl;
+            } else {
+                // Botão de Resposta Rápida (type: 2) - sempre por último
+                $botoesQuickReply[] = [
+                    'text' => $textoBtn,
+                    'type' => 2,
+                ];
+            }
+        }
+
+        $botoesFinais = array_slice(array_merge($botoesAcao, $botoesUrl, $botoesQuickReply), 0, 10);
+        if (!empty($botoesFinais)) {
+            $templateNode['buttons'] = $botoesFinais;
         }
 
         $payload = [
-            'template' => [
-                'title'     => Str::limit(Str::slug($template->nome, '_'), 50, ''),
-                'body'      => trim($suriBody),
-                'subject'   => Str::limit((string) ($template->assunto ?: $template->nome), 50, ''),
-                'channelId' => $this->channelId,
-                'category'  => 'MARKETING',
-                'language'  => 'pt_BR',
-            ],
+            'template'        => $templateNode,
             'templateExample' => trim($templateExample),
             'bodyExamples'    => $bodyExamples,
         ];
 
-        return $this->enviarRequisicaoTemplate($payload);
+        if ($sampleFile !== null) {
+            $payload['sampleFile'] = $sampleFile;
+        }
+
+        return $payload;
     }
 
-    private function enviarRequisicaoTemplate(array $payload): ?string
+    private function gerarExemploPadraoVariavel(string $varNome): string
     {
+        $lower = strtolower($varNome);
+        return match (true) {
+            str_contains($lower, 'nome')  => 'Maria',
+            str_contains($lower, 'valor') || str_contains($lower, 'fatura') => 'R$ 249,90',
+            str_contains($lower, 'data') || str_contains($lower, 'venc')    => '10/08/2026',
+            str_contains($lower, 'curso') => 'Administração',
+            default                       => strtoupper($varNome),
+        };
+    }
+
+    /**
+     * Sincroniza um EmailTemplate local criando-o na Suri e retorna os detalhes completos da chamada.
+     */
+    public function syncTemplateComDetalhes(EmailTemplate $template): array
+    {
+        $payload = $this->montarPayloadTemplate($template);
         $res = $this->postEndpoint('/api/templates', $payload);
 
+        $suriId = null;
         if ($res['sucesso']) {
-            return data_get($res['resposta'], 'data.id')
+            $suriId = data_get($res['resposta'], 'data.id')
                 ?? data_get($res['resposta'], 'id');
         }
 
-        return null;
+        $res['suri_template_id'] = $suriId;
+        return $res;
+    }
+
+    public function syncTemplate(EmailTemplate $template): ?string
+    {
+        $res = $this->syncTemplateComDetalhes($template);
+        return $res['suri_template_id'] ?? null;
     }
 
     // =========================================================================
-    // 0. LISTAR CONTATOS: GET {{baseUrl}}/api/contacts?continuationToken=&limit=
+    // TEMPLATES NA SURI: GET /api/templates E GET /api/templates/:template_id
     // =========================================================================
-    public function listarContatos(?string $continuationToken = null, string|int $limit = 1000): array
-    {
-        $queryParams = [
-            'limit' => (string) $limit,
-        ];
 
+    public function listarTemplates(array $queryParams = []): array
+    {
+        return $this->getEndpoint('/api/templates', $queryParams);
+    }
+
+    public function obterTemplate(string $templateId): array
+    {
+        $idEncoded = urlencode(trim($templateId));
+        return $this->getEndpoint("/api/templates/{$idEncoded}");
+    }
+
+    public function criarTemplateDireto(array $payload): array
+    {
+        return $this->postEndpoint('/api/templates', $payload);
+    }
+
+    // =========================================================================
+    // CONTATOS E MENSAGENS NA SURI
+    // =========================================================================
+
+    public function listarContatos(?string $continuationToken = null, string|int $limit = '20'): array
+    {
+        $queryParams = ['limit' => (string) $limit];
         if ($continuationToken !== null && trim($continuationToken) !== '') {
             $queryParams['continuationToken'] = trim($continuationToken);
         }
-
         return $this->getEndpoint('/api/contacts', $queryParams);
     }
 
-    // =========================================================================
-    // 1. IMPORTAR CONTATO: POST {{baseUrl}}/api/contacts
-    // =========================================================================
     public function importarContato(
         string $name,
         string $phone,
@@ -140,13 +257,9 @@ class SuriApiService
             'channelId'   => $channelId ?: $this->channelId,
             'channelType' => $channelType,
         ];
-
         return $this->postEndpoint('/api/contacts', $payload);
     }
 
-    // =========================================================================
-    // 2. ENVIAR MENSAGEM COM TEMPLATE SIMPLES: POST {{baseUrl}}/api/messages/send
-    // =========================================================================
     public function enviarTemplateSimples(
         string $userId,
         string $templateId,
@@ -157,8 +270,7 @@ class SuriApiService
         $payload = [
             'userId'  => trim($userId),
             'message' => [
-                'templateId'     => trim($templateId),
-                'bodyParameters' => [],
+                'templateId' => trim($templateId),
             ],
         ];
 
@@ -173,9 +285,6 @@ class SuriApiService
         return $this->postEndpoint('/api/messages/send', $payload);
     }
 
-    // =========================================================================
-    // 3. ENVIAR MENSAGEM COM TEMPLATE COM BOTÕES: POST {{baseUrl}}/api/messages/send
-    // =========================================================================
     public function enviarTemplateComBotoes(
         string $userName,
         string $userPhone,
@@ -204,9 +313,6 @@ class SuriApiService
         return $this->postEndpoint('/api/messages/send', $payload);
     }
 
-    // =========================================================================
-    // 4. ENVIAR TEMPLATE COM VARIÁVEIS: POST {{baseUrl}}/api/messages/send
-    // =========================================================================
     public function enviarTemplateComVariaveis(
         string $userName,
         string $userPhone,
@@ -219,8 +325,18 @@ class SuriApiService
         int $gender = 0,
         ?string $channelId = null,
         int $channelType = 1,
-        ?string $defaultDepartmentId = null
+        ?string $defaultDepartmentId = null,
+        array $buttonsParameters = []
     ): array {
+        $messageNode = [
+            'templateId'     => trim($templateId),
+            'bodyParameters' => array_values(array_map('strval', $bodyParameters)),
+        ];
+
+        if (!empty($buttonsParameters)) {
+            $messageNode['buttonsParameters'] = array_values(array_map('strval', $buttonsParameters));
+        }
+
         $payload = [
             'user' => [
                 'name'                => trim($userName),
@@ -231,10 +347,7 @@ class SuriApiService
                 'channelType'         => $channelType,
                 'defaultDepartmentId' => !empty($defaultDepartmentId) ? trim($defaultDepartmentId) : null,
             ],
-            'message' => [
-                'templateId'     => trim($templateId),
-                'bodyParameters' => array_values(array_map('strval', $bodyParameters)),
-            ],
+            'message' => $messageNode,
         ];
 
         if (!empty(trim((string) $flowId))) {
@@ -248,22 +361,15 @@ class SuriApiService
         return $this->postEndpoint('/api/messages/send', $payload);
     }
 
-    // =========================================================================
-    // 5. ENVIAR MENSAGEM SIMPLES SEM TEMPLATE: POST {{baseUrl}}/api/messages/send
-    // =========================================================================
     public function enviarMensagemSimples(
         string $userId,
         string $texto,
         ?string $contextMsgId = null
     ): array {
-        $messageData = [
-            'text' => $texto,
-        ];
+        $messageData = ['text' => $texto];
 
         if (!empty(trim((string) $contextMsgId))) {
-            $messageData['context'] = [
-                'msgId' => trim($contextMsgId),
-            ];
+            $messageData['context'] = ['msgId' => trim($contextMsgId)];
         }
 
         $payload = [
@@ -275,8 +381,20 @@ class SuriApiService
     }
 
     /**
-     * Chamada GET padronizada para a API da Suri com Query Params.
+     * Reexecuta (Replay) qualquer requisição salva no histórico de logs da Suri.
      */
+    public function reexecutarLog(string $metodo, string $urlCompleta, array $payload = []): array
+    {
+        $metodoUpper = strtoupper($metodo);
+        $path = parse_url($urlCompleta, PHP_URL_PATH) ?: '/api/messages/send';
+
+        if ($metodoUpper === 'GET') {
+            return $this->getEndpoint($path, $payload);
+        }
+
+        return $this->postEndpoint($path, $payload);
+    }
+
     public function getEndpoint(string $endpoint, array $queryParams = []): array
     {
         $urlBase = $this->baseUrl . '/' . ltrim($endpoint, '/');
@@ -324,9 +442,6 @@ class SuriApiService
         }
     }
 
-    /**
-     * Disparo padronizado POST para a API da Suri com captura de logs e métricas.
-     */
     public function postEndpoint(string $endpoint, array $payload): array
     {
         $url = $this->baseUrl . '/' . ltrim($endpoint, '/');

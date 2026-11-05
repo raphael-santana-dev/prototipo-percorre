@@ -316,36 +316,151 @@
                     @error('corpo') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- CARD 3: CONSTRUTOR DE BOTÕES / OPÇÕES INTERATIVAS (WHATSAPP & E-MAIL) -->
+                <!-- CARD 3: CONFIGURAÇÕES OFICIAIS DA SURI (CATEGORIA, CABEÇALHO, RODAPÉ E EXEMPLOS DE VARIÁVEIS) -->
                 @if(in_array($canal, ['whatsapp', 'ambos']))
+                    <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-4">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                            <div>
+                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
+                                    <i class="ph-fill ph-whatsapp-logo text-emerald-600 text-base"></i>
+                                    Estrutura do Template na Suri (Cabeçalho, Rodapé e Exemplos)
+                                </h3>
+                                <p class="text-[11px] text-gray-500 mt-0.5">
+                                    Configure categoria da Meta, mídia de cabeçalho (headerType), rodapé (footer) e os valores de exemplo obrigatórios para cada variável.
+                                </p>
+                            </div>
+                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 text-[11px] font-mono font-bold bg-gray-900 text-emerald-400 rounded-lg hover:bg-black transition">
+                                { } Ver JSON Suri
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Categoria na Meta (category)</label>
+                                <select wire:model.live="suriCategory" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    <option value="MARKETING">MARKETING (Promoções, Avisos, Convites)</option>
+                                    <option value="UTILITY">UTILITY (Faturas, Agendamentos, Status)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cabeçalho de Mídia (headerType)</label>
+                                <select wire:model.live="suriHeaderMode" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    <option value="none">Sem Cabeçalho de Mídia</option>
+                                    <option value="image">Imagem (headerType: 0 + URL)</option>
+                                    <option value="document">Documento PDF (headerType: 2 + Base64)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Rodapé Opcional (footer)</label>
+                                <input type="text" wire:model.live.debounce.250ms="suriFooter" maxlength="60" placeholder="Ex: Suri • Mensagem automática" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+                        </div>
+
+                        @if($suriHeaderMode === 'image')
+                            <div class="p-3.5 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase mb-1">URL da Imagem de Exemplo (sampleFile.url) *</label>
+                                    <input type="url" wire:model.live.debounce.300ms="sampleFileUrl" placeholder="https://cdn.exemplo.com.br/banners/promo.png" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileUrl') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase mb-1">Nome do Arquivo (fileName) *</label>
+                                    <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="promo.png" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileName') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        @elseif($suriHeaderMode === 'document')
+                            <div class="p-3.5 rounded-xl bg-amber-50/50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Enviar PDF p/ Converter em Base64 *</label>
+                                        <input type="file" wire:model="samplePdfUpload" accept=".pdf" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Nome do Arquivo (sampleFile.fileName) *</label>
+                                        <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="fatura-exemplo.pdf" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                        @error('sampleFileName') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Base64 do Documento (sampleFile.base64File)</label>
+                                    <input type="text" wire:model.live.debounce.300ms="sampleFileBase64" placeholder="data:application/pdf;base64,JVBERi0xLjQK..." class="w-full text-[11px] font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileBase64') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(count($bodyExamples) > 0)
+                            <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                                <span class="block text-[10px] font-extrabold uppercase text-purpura-700 dark:text-purpura-400">
+                                    Exemplos das Variáveis do Corpo (bodyExamples & templateExample)
+                                </span>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    @foreach($bodyExamples as $varKey => $exemploVal)
+                                        <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <span class="px-1.5 py-0.5 bg-purpura-100 text-purpura-800 rounded font-mono text-[10px] font-bold shrink-0">
+                                                &#123;&#123;{{ $loop->iteration }}&#125;&#125; ({{ $varKey }})
+                                            </span>
+                                            <input type="text" wire:model.live.debounce.250ms="bodyExamples.{{ $varKey }}" placeholder="Ex: Maria" class="w-full text-xs rounded border-gray-300 py-1 px-2">
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- CARD 4: CONSTRUTOR DE BOTÕES / OPÇÕES INTERATIVAS (TIPOS 0, 1, 2 e 3 DA SURI) -->
                     <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
                             <div>
                                 <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
                                     <i class="ph-fill ph-hand-tap text-emerald-600 text-base"></i>
-                                    Botões de Ação / Opções Interativas
+                                    Botões do Template (Máx. 10 • Ordem automática: Ligar/Copiar/URL → Resposta Rápida)
                                 </h3>
                                 <p class="text-[11px] text-gray-500 mt-0.5">
-                                    No <strong>WhatsApp</strong> serão exibidos como opções clicáveis; no <strong>E-mail</strong>, você escolhe se devem aparecer como botões de link.
+                                    Suporta <b>Resposta Rápida (type 2)</b>, <b>URL Estática ou Dinâmica (type 0)</b>, <b>Ligar (type 1)</b> e <b>Copiar Código (type 3)</b>.
                                 </p>
                             </div>
 
-                            <button type="button" wire:click="adicionarBotao" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
-                                <i class="ph-bold ph-plus"></i> Adicionar Botão / Opção
-                            </button>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <button type="button" wire:click="adicionarBotao(2)" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold transition">
+                                    + Resposta Rápida
+                                </button>
+                                <button type="button" wire:click="adicionarBotao(0)" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition">
+                                    + Botão URL
+                                </button>
+                                <button type="button" wire:click="adicionarBotao(1)" class="px-2.5 py-1.5 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-200 rounded-lg text-[11px] font-bold transition">
+                                    + Botão Ligar
+                                </button>
+                                <button type="button" wire:click="adicionarBotao(3)" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold transition">
+                                    + Copiar Código
+                                </button>
+                            </div>
                         </div>
+
+                        @error('botoes')
+                            <div class="p-3 rounded-lg bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+                                {{ $message }}
+                            </div>
+                        @enderror
 
                         <div class="space-y-3">
                             @forelse($botoes as $index => $btn)
-                                <div wire:key="tpl-btn-{{ $btn['id'] ?? $index }}" class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 space-y-3 relative group">
-                                    <div class="flex items-start justify-between gap-3">
+                                @php $tipoSuriBtn = (int) ($btn['suri_type'] ?? 2); @endphp
+                                <div wire:key="tpl-btn-{{ $btn['id'] ?? $index }}" class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 space-y-3">
+                                    <div class="flex items-center justify-between gap-3">
                                         <div class="flex items-center gap-2">
                                             <span class="w-6 h-6 rounded-full bg-purpura-600 text-white text-[11px] font-extrabold flex items-center justify-center">
                                                 {{ $index + 1 }}
                                             </span>
-                                            <span class="text-xs font-bold text-gray-800 dark:text-gray-200">
-                                                Opção / Botão #{{ $index + 1 }}
-                                            </span>
+                                            <select wire:model.live="botoes.{{ $index }}.suri_type" class="text-xs font-extrabold rounded-lg border-gray-300 py-1 pl-2.5 pr-7 bg-white">
+                                                <option value="2">Tipo 2: Resposta Rápida (Quick Reply)</option>
+                                                <option value="0">Tipo 0: Acessar URL (Estática ou Dinâmica c/ &#123;&#123;1&#125;&#125;)</option>
+                                                <option value="1">Tipo 1: Ligar para Telefone (+DDI+DDD+Número)</option>
+                                                <option value="3">Tipo 3: Copiar Código / Cupom</option>
+                                            </select>
                                         </div>
 
                                         <button type="button" wire:click="removerBotao({{ $index }})" class="text-gray-400 hover:text-red-500 p-1 rounded transition" title="Remover Botão">
@@ -354,67 +469,46 @@
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
-                                        <div class="{{ $canal === 'ambos' ? 'md:col-span-5' : 'md:col-span-8' }}">
-                                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                                Texto do Botão / Opção (WhatsApp & E-mail) <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.texto" placeholder="Ex: Assinar Contrato Digital" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                                        <div class="md:col-span-4">
+                                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Texto do Botão (text) *</label>
+                                            <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.texto" placeholder="Ex: Confirmar / Ver plano" class="w-full text-xs font-bold rounded-lg border-gray-300">
                                             @error("botoes.{$index}.texto") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                         </div>
 
-                                        @if($canal === 'whatsapp')
-                                            <div class="md:col-span-4">
-                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                                    URL ou Ação Opcional
-                                                </label>
-                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.url" placeholder="Ex: @{{link_assinatura}} ou resposta rápida" class="w-full text-xs font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                                        @if($tipoSuriBtn === 0)
+                                            <div class="md:col-span-5">
+                                                <label class="block text-[10px] font-bold text-blue-700 uppercase mb-1">URL (Para dinâmica, termine com &#123;&#123;1&#125;&#125;) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.url" placeholder="https://suri.ai/planos/&#123;&#123;1&#125;&#125;" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                                @error("botoes.{$index}.url") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                             </div>
-                                        @endif
-
-                                        @if($canal === 'ambos')
-                                            <div class="md:col-span-7 space-y-2.5 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                                                <label class="flex items-center gap-2 cursor-pointer">
-                                                    <input type="checkbox" wire:model.live="botoes.{{ $index }}.exibir_email" class="rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
-                                                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200">
-                                                        Exibir este botão no corpo do E-mail?
-                                                    </span>
-                                                </label>
-
-                                                @if(!empty($botoes[$index]['exibir_email']))
-                                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                                                        <div class="sm:col-span-2">
-                                                            <label class="block text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase mb-1">
-                                                                URL de Destino no E-mail <span class="text-red-500">*</span>
-                                                            </label>
-                                                            <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.url" placeholder="Ex: @{{link_assinatura}} ou https://..." class="w-full text-xs font-mono rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                                                            @error("botoes.{$index}.url") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
-                                                        </div>
-                                                        <div>
-                                                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                                                Cor no E-mail
-                                                            </label>
-                                                            <select wire:model.live="botoes.{{ $index }}.cor" class="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                                                                <option value="purpura">Roxo Percorre</option>
-                                                                <option value="emerald">Verde</option>
-                                                                <option value="blue">Azul</option>
-                                                                <option value="dark">Escuro</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <p class="text-[10px] text-gray-400 italic">
-                                                        Este botão aparecerá apenas como opção interativa no WhatsApp e ficará oculto no E-mail.
-                                                    </p>
-                                                @endif
+                                            <div class="md:col-span-3">
+                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Example (Trecho final)</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="Ex: premium-anual" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                            </div>
+                                        @elseif($tipoSuriBtn === 1)
+                                            <div class="md:col-span-8">
+                                                <label class="block text-[10px] font-bold text-purpura-700 uppercase mb-1">Telefone Fixo (+DDI + DDD + Número) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.phone" placeholder="+5585991976502" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                                @error("botoes.{$index}.phone") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                            </div>
+                                        @elseif($tipoSuriBtn === 3)
+                                            <div class="md:col-span-8">
+                                                <label class="block text-[10px] font-bold text-amber-700 uppercase mb-1">Código de Exemplo Obrigatório (example) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="Ex: SURI20" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                                @error("botoes.{$index}.example") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                            </div>
+                                        @else
+                                            <div class="md:col-span-8 flex items-center pt-5 text-[11px] text-gray-500">
+                                                <i class="ph-fill ph-info text-emerald-600 mr-1.5"></i>
+                                                Botão de Resposta Rápida (<code class="font-mono">type: 2</code>) — sempre posicionado ao final da lista no envio à Suri.
                                             </div>
                                         @endif
                                     </div>
                                 </div>
                             @empty
                                 <div class="p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-center">
-                                    <i class="ph-duotone ph-hand-tap text-3xl text-gray-400 mb-1"></i>
-                                    <p class="text-xs font-bold text-gray-600 dark:text-gray-300">Nenhum botão ou opção adicionado.</p>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">Clique em "+ Adicionar Botão / Opção" acima para incluir interações na mensagem.</p>
+                                    <p class="text-xs font-bold text-gray-600 dark:text-gray-300">Nenhum botão adicionado.</p>
+                                    <p class="text-[11px] text-gray-400 mt-0.5">Use os botões acima para adicionar Resposta Rápida, URL, Ligar ou Copiar Código.</p>
                                 </div>
                             @endforelse
                         </div>
@@ -441,6 +535,11 @@
                         @if(in_array($canal, ['whatsapp', 'ambos']))
                             <button type="button" wire:click="$set('abaPreview', 'whatsapp')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 {{ $abaPreview === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-emerald-600 shadow-2xs' : 'text-gray-600 dark:text-gray-400' }}">
                                 <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                            </button>
+                        @endif
+                        @if(in_array($canal, ['whatsapp', 'ambos']))
+                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 {{ $abaPreview === 'json_suri' ? 'bg-gray-900 text-emerald-400 shadow-2xs' : 'text-gray-600 dark:text-gray-400' }}">
+                                <i class="ph-bold ph-brackets-curly"></i> JSON Suri
                             </button>
                         @endif
                     </div>
@@ -529,6 +628,13 @@
                                     </div>
                                 @endif
                             </div>
+                        </div>
+                    @elseif($abaPreview === 'json_suri')
+                        <div class="bg-gray-950 text-emerald-300 p-4 rounded-xl border border-gray-800 font-mono text-[11px] overflow-x-auto shadow-inner">
+                            <div class="text-[10px] font-bold uppercase text-gray-400 mb-2 border-b border-gray-800 pb-1.5">
+                                Payload POST {{ rtrim(env('SURI_API_URL', ''), '/') }}/api/templates
+                            </div>
+                            <pre class="leading-relaxed">{{ json_encode($this->payloadSuriPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                         </div>
 
                     @else

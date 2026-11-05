@@ -20,7 +20,7 @@
                     @endif
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Simule listagem e importação de contatos, disparos de templates (simples, com botões, com variáveis) e mensagens livres.
+                    Simule listagem e importação de contatos, disparos de templates e mensagens livres. Todos os testes ficam registrados no Log Exclusivo abaixo.
                 </p>
                 <div class="flex flex-wrap items-center gap-4 mt-2.5 text-[11px] font-mono text-gray-600 dark:text-gray-300">
                     <span><b>SURI_API_URL:</b> {{ $configSuri['base_url'] }}</span>
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    <!-- PAINEL INFERIOR: TEMPLATES WHATSAPP LOCAIS + CONSOLE DE INSPEÇÃO JSON -->
+    <!-- PAINEL DO MEIO: TEMPLATES WHATSAPP LOCAIS + CONSOLE DE INSPEÇÃO JSON -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- LISTA RÁPIDA DE TEMPLATES WHATSAPP DO SISTEMA -->
@@ -217,7 +217,12 @@
             <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-900 text-white">
                 <div class="flex items-center gap-2">
                     <i class="ph-bold ph-terminal-window text-emerald-400 text-lg"></i>
-                    <span class="text-xs font-extrabold uppercase tracking-wider">Console de Inspeção HTTP (Payload & Resposta Suri)</span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider">
+                        Console de Inspeção HTTP (Payload & Resposta Suri)
+                        @if(!empty($ultimoResultado['id']))
+                            <span class="text-gray-400 font-mono ml-1">#Log {{ $ultimoResultado['id'] }}</span>
+                        @endif
+                    </span>
                 </div>
                 @if($ultimoResultado)
                     <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded {{ $ultimoResultado['sucesso'] ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-red-500/20 text-red-300 border border-red-500/40' }}">
@@ -228,12 +233,18 @@
 
             @if($ultimoResultado)
                 <div class="p-5 space-y-4 bg-gray-950 text-gray-100 font-mono text-xs max-h-[460px] overflow-y-auto custom-scrollbar">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase text-purpura-400 block mb-1">Endpoint Acionado ({{ $ultimoResultado['acao'] }}):</span>
-                        <code class="px-2.5 py-1.5 bg-gray-900 border border-gray-800 rounded block text-emerald-300 break-all">
-                            {{ $ultimoResultado['metodo'] ?? 'POST' }} {{ $ultimoResultado['url'] }}
-                        </code>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-[10px] font-bold uppercase text-purpura-400">
+                            Endpoint Acionado ({{ $ultimoResultado['acao'] }}):
+                        </span>
+                        @if(!empty($ultimoResultado['user_nome']))
+                            <span class="text-[10px] text-gray-400">Executado por: <b class="text-gray-200">{{ $ultimoResultado['user_nome'] }}</b></span>
+                        @endif
                     </div>
+
+                    <code class="px-2.5 py-1.5 bg-gray-900 border border-gray-800 rounded block text-emerald-300 break-all">
+                        {{ $ultimoResultado['metodo'] ?? 'POST' }} {{ $ultimoResultado['url'] }}
+                    </code>
 
                     @php
                         $erroMsgSuri = (string) data_get($ultimoResultado, 'resposta.error', '');
@@ -244,7 +255,7 @@
                                 <i class="ph-fill ph-warning-circle text-base"></i> Diagnóstico do Erro (#132001 - Template name does not exist in the translation):
                             </p>
                             <p class="leading-relaxed">
-                                1. Verifique no <b>Portal da Suri → Configurações → Templates</b> se este template já foi <b>Aprovado pela Meta</b> (templates recém-criados ou em análise retornam #132001).<br>
+                                1. Verifique no <b>Portal da Suri → Configurações → Templates</b> se este template já foi <b>Aprovado pela Meta</b>.<br>
                                 2. Confira se o template pertence ao mesmo canal (<code class="font-mono">{{ $configSuri['channel_id'] }}</code>) do contato que está recebendo a mensagem.
                             </p>
                         </div>
@@ -270,6 +281,133 @@
                 </div>
             @endif
         </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TABELA DE LOGS EXCLUSIVA DO LABORATÓRIO SURI                          -->
+    <!-- ===================================================================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/60 dark:bg-gray-900/40">
+            <div>
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="ph-fill ph-clock-counter-clockwise text-purpura-600 text-base"></i>
+                    Histórico de Logs Exclusivo do Laboratório Suri ({{ $totalLogsSalvos }})
+                </h3>
+                <p class="text-[11px] text-gray-500 mt-0.5">
+                    Clique em <b>"Inspecionar no Console"</b> em qualquer registro abaixo para recarregar o Payload e a Resposta HTTP no console acima.
+                </p>
+            </div>
+
+            <!-- Filtros e Limpeza do Log -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="relative w-full sm:w-56">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" wire:model.live.debounce.300ms="filtroBuscaLog" placeholder="Buscar no payload, resposta, URL..." class="w-full pl-8 pr-3 h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                </div>
+
+                <select wire:model.live="filtroAcaoLog" class="h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white font-semibold py-0 px-2.5">
+                    <option value="">Todas as Ações</option>
+                    @foreach($acoesDistintas as $acaoItem)
+                        <option value="{{ $acaoItem }}">{{ $acaoItem }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="filtroStatusLog" class="h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white font-semibold py-0 px-2.5">
+                    <option value="">Todos os Status</option>
+                    <option value="1">Sucesso (2xx)</option>
+                    <option value="0">Falha / Erro</option>
+                </select>
+
+                @if($filtroBuscaLog !== '' || $filtroAcaoLog !== '' || $filtroStatusLog !== '')
+                    <button type="button" wire:click="limparFiltrosLog" class="h-8 px-2.5 text-xs font-bold text-gray-500 hover:text-red-600 bg-gray-100 rounded-lg transition">
+                        Limpar Filtro
+                    </button>
+                @endif
+
+                @if($totalLogsSalvos > 0)
+                    <button type="button"
+                            wire:click="limparTodosOsLogs"
+                            wire:confirm="Tem certeza de que deseja apagar todo o histórico de logs de testes da Suri?"
+                            class="h-8 px-3 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition flex items-center gap-1">
+                        <i class="ph-bold ph-trash"></i> Limpar Histórico
+                    </button>
+                @endif
+            </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs whitespace-nowrap">
+                <thead class="bg-gray-50 dark:bg-gray-900/60 text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="px-4 py-3">#ID</th>
+                        <th class="px-4 py-3">Data / Hora</th>
+                        <th class="px-4 py-3">Ação Executada</th>
+                        <th class="px-4 py-3">Método & Endpoint</th>
+                        <th class="px-4 py-3 text-center">HTTP Status</th>
+                        <th class="px-4 py-3">Usuário</th>
+                        <th class="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse($logsHistorico as $logItem)
+                        <tr wire:key="suri-log-{{ $logItem->id }}"
+                            class="transition-colors {{ $logSelecionadoId === $logItem->id ? 'bg-purpura-50/60 dark:bg-purpura-900/20' : 'hover:bg-gray-50/80 dark:hover:bg-gray-800/40' }}">
+                            <td class="px-4 py-3 font-mono font-bold text-gray-500">
+                                #{{ $logItem->id }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">
+                                {{ $logItem->created_at ? $logItem->created_at->format('d/m/Y H:i:s') : '-' }}
+                            </td>
+                            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
+                                {{ $logItem->acao }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-[11px] text-gray-600 dark:text-gray-300 max-w-md truncate" title="{{ $logItem->url }}">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold {{ $logItem->metodo === 'GET' ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-blue-50 text-blue-700 border border-blue-200' }} mr-1">
+                                    {{ $logItem->metodo }}
+                                </span>
+                                {{ $logItem->url }}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold {{ $logItem->sucesso ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+                                    HTTP {{ $logItem->http_status }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                {{ $logItem->user_nome ?: 'Sistema' }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="inline-flex items-center justify-end gap-1.5">
+                                    <button type="button"
+                                            wire:click="carregarLogNoConsole({{ $logItem->id }})"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1 {{ $logSelecionadoId === $logItem->id ? 'bg-purpura-600 text-white' : 'bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200' }}">
+                                        <i class="ph-bold ph-terminal-window"></i>
+                                        <span>{{ $logSelecionadoId === $logItem->id ? 'No Console' : 'Inspecionar no Console' }}</span>
+                                    </button>
+                                    <button type="button"
+                                            wire:click="excluirLog({{ $logItem->id }})"
+                                            class="p-1 text-gray-400 hover:text-red-600 rounded transition"
+                                            title="Excluir este log">
+                                        <i class="ph-bold ph-trash text-sm"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-10 text-center text-gray-400 text-xs">
+                                Nenhum teste registrado no histórico até o momento.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($logsHistorico->hasPages())
+            <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                {{ $logsHistorico->links() }}
+            </div>
+        @endif
     </div>
 
     <!-- ===================================================================== -->
@@ -306,7 +444,7 @@
                 <!-- Corpo do Modal -->
                 <div class="p-6 space-y-4 max-h-[78vh] overflow-y-auto custom-scrollbar">
 
-                    {{-- MODAL 0: LISTAR CONTATOS (GET /api/contacts?continuationToken=string&limit=string) --}}
+                    {{-- MODAL 0: LISTAR CONTATOS --}}
                     @if($modalAtivo === 'listar_contatos')
                         <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                             <div class="sm:col-span-6">
@@ -370,7 +508,7 @@
                             </div>
                         @else
                             <div class="py-8 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-xl">
-                                Clique em <b>"Buscar"</b> acima para listar os contatos da Suri (o JSON completo também será exibido no console da página).
+                                Clique em <b>"Buscar"</b> acima para listar os contatos da Suri.
                             </div>
                         @endif
 
