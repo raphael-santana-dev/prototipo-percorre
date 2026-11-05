@@ -167,7 +167,9 @@ class TemplateForm extends Component
         }
 
         // Sincroniza com a Suri se ainda não possuir ID
-        if (empty($template->suri_template_id)) {
+        // Sincroniza com a Suri se o canal incluir WhatsApp e ainda não possuir ID
+        if (in_array($this->canal, ['whatsapp', 'ambos']) && empty($template->suri_template_id)) {
+            $suriService = app(SuriApiService::class);
             $suriId = $suriService->syncTemplate($template);
             
             if ($suriId) {

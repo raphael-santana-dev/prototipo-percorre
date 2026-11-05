@@ -11,6 +11,10 @@
                 <a href="{{ route('templates.create') }}" class="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg shadow-sm bg-purpura-500 hover:bg-purpura-600 font-bold text-sm">
                     <i class="ph ph-plus text-lg"></i> Novo Template
                 </a>
+
+                <a href="{{ route('suri.dashboard') }}" class="flex items-center gap-2 px-4 py-2 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors rounded-lg shadow-sm font-bold text-sm">
+                    <i class="ph-fill ph-whatsapp-logo text-lg"></i> Laboratório Suri
+                </a>
             </x-slot>
         @endif
 
