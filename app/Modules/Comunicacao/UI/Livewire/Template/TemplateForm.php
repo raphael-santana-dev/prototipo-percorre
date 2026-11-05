@@ -181,6 +181,7 @@ class TemplateForm extends Component
         }
 
         $this->dispatch('sucesso', msg: 'Template salvo e sincronizado com sucesso!');
+        
         return redirect()->route('templates.index');
     }
 

@@ -1098,8 +1098,8 @@ class RegistrationManager extends Component
 
     public function recalcularScoresGlobais()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+        abort_if(!feature('inscricao.editar'), 403);
+        abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
         
         $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
 
@@ -1131,8 +1131,8 @@ class RegistrationManager extends Component
 
     public function gerarRankingGlobal()
     {
-        //abort_if(!feature('inscricao.editar'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
+       abort_if(!feature('inscricao.editar'), 403);
+       abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('inscricao.editar'), 403);
 
         $cicloIdReferencia = $this->filtroCiclo ?: $this->obterCicloPadrao()?->id;
 

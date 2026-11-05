@@ -55,6 +55,7 @@ class SuriApiService
                 'subject'   => Str::limit((string) ($template->assunto ?: $template->nome), 50, ''),
                 'channelId' => $this->channelId,
                 'category'  => 'MARKETING',
+                'language'  => 'pt_BR',
             ],
             'templateExample' => trim($cleanBody),
             'bodyExamples'    => [],
@@ -85,6 +86,7 @@ class SuriApiService
                 'subject'   => Str::limit((string) ($template->assunto ?: $template->nome), 50, ''),
                 'channelId' => $this->channelId,
                 'category'  => 'MARKETING',
+                'language'  => 'pt_BR',
             ],
             'templateExample' => trim($templateExample),
             'bodyExamples'    => $bodyExamples,
@@ -103,6 +105,22 @@ class SuriApiService
         }
 
         return null;
+    }
+
+    // =========================================================================
+    // 0. LISTAR CONTATOS: GET {{baseUrl}}/api/contacts?continuationToken=&limit=
+    // =========================================================================
+    public function listarContatos(?string $continuationToken = null, string|int $limit = 1000): array
+    {
+        $queryParams = [
+            'limit' => (string) $limit,
+        ];
+
+        if ($continuationToken !== null && trim($continuationToken) !== '') {
+            $queryParams['continuationToken'] = trim($continuationToken);
+        }
+
+        return $this->getEndpoint('/api/contacts', $queryParams);
     }
 
     // =========================================================================
@@ -139,7 +157,8 @@ class SuriApiService
         $payload = [
             'userId'  => trim($userId),
             'message' => [
-                'templateId' => trim($templateId),
+                'templateId'     => trim($templateId),
+                'bodyParameters' => [],
             ],
         ];
 
@@ -256,6 +275,56 @@ class SuriApiService
     }
 
     /**
+     * Chamada GET padronizada para a API da Suri com Query Params.
+     */
+    public function getEndpoint(string $endpoint, array $queryParams = []): array
+    {
+        $urlBase = $this->baseUrl . '/' . ltrim($endpoint, '/');
+        $urlCompleta = !empty($queryParams) ? ($urlBase . '?' . http_build_query($queryParams)) : $urlBase;
+
+        if (empty($this->baseUrl) || empty($this->token)) {
+            return [
+                'sucesso'     => false,
+                'metodo'      => 'GET',
+                'http_status' => 0,
+                'url'         => $urlCompleta,
+                'payload'     => $queryParams,
+                'resposta'    => ['erro' => 'Variáveis SURI_API_URL ou SURI_API_TOKEN ausentes no .env.'],
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->token)
+                ->acceptJson()
+                ->timeout(30)
+                ->get($urlBase, $queryParams);
+
+            $json = $response->json();
+            $sucesso = $response->successful() && ($json['success'] ?? true) !== false;
+
+            return [
+                'sucesso'     => $sucesso,
+                'metodo'      => 'GET',
+                'http_status' => $response->status(),
+                'url'         => $urlCompleta,
+                'payload'     => $queryParams,
+                'resposta'    => $json ?? ['raw_body' => $response->body()],
+            ];
+        } catch (\Throwable $e) {
+            Log::error("Exceção GET Suri [{$endpoint}]: " . $e->getMessage());
+
+            return [
+                'sucesso'     => false,
+                'metodo'      => 'GET',
+                'http_status' => 500,
+                'url'         => $urlCompleta,
+                'payload'     => $queryParams,
+                'resposta'    => ['exception' => $e->getMessage()],
+            ];
+        }
+    }
+
+    /**
      * Disparo padronizado POST para a API da Suri com captura de logs e métricas.
      */
     public function postEndpoint(string $endpoint, array $payload): array
@@ -265,6 +334,7 @@ class SuriApiService
         if (empty($this->baseUrl) || empty($this->token)) {
             return [
                 'sucesso'     => false,
+                'metodo'      => 'POST',
                 'http_status' => 0,
                 'url'         => $url,
                 'payload'     => $payload,
@@ -291,6 +361,7 @@ class SuriApiService
 
             return [
                 'sucesso'     => $sucesso,
+                'metodo'      => 'POST',
                 'http_status' => $response->status(),
                 'url'         => $url,
                 'payload'     => $payload,
@@ -301,6 +372,7 @@ class SuriApiService
 
             return [
                 'sucesso'     => false,
+                'metodo'      => 'POST',
                 'http_status' => 500,
                 'url'         => $url,
                 'payload'     => $payload,

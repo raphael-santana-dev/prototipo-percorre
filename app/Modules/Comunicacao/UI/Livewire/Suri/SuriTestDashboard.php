@@ -13,7 +13,13 @@ use App\Models\Inscricao;
 #[Title('Laboratório de Integração Suri (WhatsApp)')]
 class SuriTestDashboard extends Component
 {
-    public ?string $modalAtivo = null; // 'contato', 'tpl_simples', 'tpl_botoes', 'tpl_variaveis', 'msg_simples', 'guia_suri'
+    public ?string $modalAtivo = null; // 'listar_contatos', 'contato', 'tpl_simples', 'tpl_botoes', 'tpl_variaveis', 'msg_simples', 'guia_suri'
+
+    // Parâmetros de Listagem de Contatos (GET /api/contacts)
+    public string $continuationToken = '';
+    public string $limit = '20';
+    public array $contatosListadosSuri = [];
+    public ?string $proximoContinuationToken = null;
 
     // Campos comuns dos Modais
     public string $name = '';
@@ -50,6 +56,10 @@ class SuriTestDashboard extends Component
     {
         $this->resetValidation();
         $this->modalAtivo = $tipo;
+
+        if ($tipo === 'listar_contatos' && empty($this->contatosListadosSuri)) {
+            $this->dispararListarContatos();
+        }
     }
 
     public function fecharModal(): void
@@ -62,7 +72,7 @@ class SuriTestDashboard extends Component
         if (!$id) return;
         $insc = Inscricao::find($id);
         if ($insc) {
-            $this->name  = (string) $insc->nome;
+            $this->name = (string) $insc->nome;
             $telefoneLimpo = preg_replace('/\D/', '', (string) $insc->celular);
             if ($telefoneLimpo !== '' && !str_starts_with($telefoneLimpo, '55')) {
                 $telefoneLimpo = '55' . $telefoneLimpo;
@@ -93,17 +103,62 @@ class SuriTestDashboard extends Component
         array_unshift($this->historicoTestes, $this->ultimoResultado);
         $this->historicoTestes = array_slice($this->historicoTestes, 0, 10);
 
-        // Se a importação de contato retornou o ID do contato na Suri, já preenche $this->userId para facilitar os próximos testes
         $contatoIdRetornado = data_get($resultado, 'resposta.data.id') ?? data_get($resultado, 'resposta.id');
         if ($acao === 'Importar Contato' && $contatoIdRetornado) {
             $this->userId = (string) $contatoIdRetornado;
         }
 
         if ($resultado['sucesso']) {
-            $this->dispatch('sucesso', msg: "{$acao}: Requisição enviada com sucesso (HTTP {$resultado['http_status']})!");
+            $this->dispatch('sucesso', msg: "{$acao}: Requisição executada com sucesso (HTTP {$resultado['http_status']})!");
         } else {
             $this->dispatch('erro', msg: "{$acao}: Falha na requisição (HTTP {$resultado['http_status']}). Verifique o console abaixo.");
         }
+    }
+
+    // =========================================================================
+    // LISTAR CONTATOS (GET /api/contacts?continuationToken=string&limit=string)
+    // =========================================================================
+    public function dispararListarContatos(bool $usarProximoToken = false): void
+    {
+        if ($usarProximoToken && $this->proximoContinuationToken) {
+            $this->continuationToken = $this->proximoContinuationToken;
+        }
+
+        $this->validate([
+            'limit'             => 'required|string',
+            'continuationToken' => 'nullable|string',
+        ]);
+
+        $service = app(SuriApiService::class);
+        $res = $service->listarContatos(
+            $this->continuationToken !== '' ? $this->continuationToken : null,
+            $this->limit
+        );
+
+        if ($res['sucesso']) {
+            $dados = data_get($res, 'resposta.data.items')
+                ?? data_get($res, 'resposta.data.data')
+                ?? data_get($res, 'resposta.data')
+                ?? data_get($res, 'resposta.items')
+                ?? [];
+
+            $this->contatosListadosSuri = is_array($dados) && isset($dados[0]) ? $dados : [];
+
+            $this->proximoContinuationToken = data_get($res, 'resposta.data.continuationToken')
+                ?? data_get($res, 'resposta.continuationToken');
+        }
+
+        $this->registrarResultado('Listar Contatos', $res);
+    }
+
+    public function selecionarContatoSuri(string $id, string $nome = '', string $telefone = '', string $canalId = ''): void
+    {
+        $this->userId = $id;
+        if ($nome !== '') $this->name = $nome;
+        if ($telefone !== '') $this->phone = $telefone;
+        if ($canalId !== '') $this->channelId = $canalId;
+
+        $this->dispatch('sucesso', msg: "Contato '{$id}' selecionado e carregado para os testes de envio!");
     }
 
     public function dispararImportarContato(): void

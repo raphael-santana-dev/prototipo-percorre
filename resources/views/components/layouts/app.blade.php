@@ -240,7 +240,6 @@
                     @endcanany
 
                     {{-- Dropdown: Comunicação --}}
-                    @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
                         <div x-data="{ open: false, hover: false }" 
                             @mouseenter="hover = true; if(sidebarMinimized) { $refs.pop.style.top = $el.getBoundingClientRect().top + 'px'; $refs.pop.style.left = $el.getBoundingClientRect().right + 'px'; }" 
                             @mouseleave="hover = false" 
@@ -277,7 +276,6 @@
                                 </div>
                             </div>
                         </div>
-                    @endif
 
                     {{-- Dropdown: Educacional --}}
                     @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
@@ -504,7 +502,6 @@
                             @endcanany
 
 
-                            @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
                                 <div x-data="{ open: false }" @click.away="open = false" class="relative">
                                     <button @click="open = !open" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                         <i class="text-base ph ph-paper-plane-tilt"></i> Comunicação <i class="ph ph-caret-down text-[10px] opacity-70 transition-transform duration-200" :class="{'rotate-180': open}"></i>
@@ -523,7 +520,6 @@
                                         @can('email_log.listar') <a href="{{ route('monitor.emails') }}" class="block px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Agenda de E-mails</a> @endcan
                                     </div>
                                 </div>
-                            @endif
 
                             @canany(['periodo_avaliacao.listar', 'relatorio.acessar', 'matricula.listar', 'turma.listar', 'ferramenta.mock'])
                             <div x-data="{ open: false }" @click.away="open = false" class="relative">
