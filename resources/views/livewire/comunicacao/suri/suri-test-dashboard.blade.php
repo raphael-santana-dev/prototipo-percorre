@@ -20,11 +20,16 @@
                     @endif
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Simule chamadas POST de importação de contatos, disparos de templates (simples, com botões, com variáveis) e mensagens livres.
+                    Simule listagem e importação de contatos, disparos de templates e mensagens livres. Todos os testes ficam registrados no Log Exclusivo abaixo.
                 </p>
                 <div class="flex flex-wrap items-center gap-4 mt-2.5 text-[11px] font-mono text-gray-600 dark:text-gray-300">
                     <span><b>SURI_API_URL:</b> {{ $configSuri['base_url'] }}</span>
                     <span><b>SURI_CHANNEL_ID:</b> {{ $configSuri['channel_id'] }}</span>
+                    @if($userId)
+                        <span class="px-2 py-0.5 bg-purpura-50 text-purpura-700 border border-purpura-200 rounded font-bold">
+                            Contato Ativo (userId): {{ $userId }}
+                        </span>
+                    @endif
                 </div>
             </div>
         </div>
@@ -39,10 +44,29 @@
         </div>
     </div>
 
-    <!-- ATALHOS DOS 5 ENDPOINTS DE TESTE -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- ATALHOS DOS 6 ENDPOINTS DE TESTE -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         
-        <!-- CARD 1: IMPORTAR CONTATO -->
+        <!-- CARD 0: LISTAR CONTATOS (GET) -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col justify-between gap-4 hover:border-teal-400 transition">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 border border-teal-200 flex items-center justify-center">
+                        <i class="ph-bold ph-address-book text-lg"></i>
+                    </span>
+                    <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200 rounded">GET /api/contacts</span>
+                </div>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">1. Listar Contatos</h3>
+                <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                    Consulta os contatos da Suri usando <code class="font-mono text-teal-600">continuationToken</code> e <code class="font-mono text-teal-600">limit</code> para capturar o <code class="font-mono">userId</code>.
+                </p>
+            </div>
+            <button type="button" wire:click="abrirModal('listar_contatos')" class="w-full py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+                <i class="ph-bold ph-magnifying-glass"></i> Listar Contatos
+            </button>
+        </div>
+
+        <!-- CARD 1: IMPORTAR CONTATO (POST) -->
         <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xs flex flex-col justify-between gap-4 hover:border-purpura-400 transition">
             <div>
                 <div class="flex items-center justify-between mb-3">
@@ -51,7 +75,7 @@
                     </span>
                     <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-gray-100 text-gray-600 rounded">POST /api/contacts</span>
                 </div>
-                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">1. Importar Contato</h3>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">2. Importar Contato</h3>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">
                     Registra o contato na Suri com nome, DDI+DDD+Telefone e canal, retornando o <code class="font-mono text-purpura-600">userId</code>.
                 </p>
@@ -70,9 +94,9 @@
                     </span>
                     <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-gray-100 text-gray-600 rounded">POST /api/messages/send</span>
                 </div>
-                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">2. Template Simples</h3>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">3. Template Simples</h3>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">
-                    Envia um template sem variáveis usando o <code class="font-mono text-purpura-600">userId</code> do contato e redireciona para um <code class="font-mono">flowId</code>.
+                    Envia um template aprovado usando o <code class="font-mono text-purpura-600">userId</code> do contato e redireciona para um <code class="font-mono">flowId</code>.
                 </p>
             </div>
             <button type="button" wire:click="abrirModal('tpl_simples')" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
@@ -89,7 +113,7 @@
                     </span>
                     <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-gray-100 text-gray-600 rounded">POST /api/messages/send</span>
                 </div>
-                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">3. Template c/ Botões</h3>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">4. Template c/ Botões</h3>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">
                     Envia o objeto <code class="font-mono text-purpura-600">user</code> completo + <code class="font-mono">templateId</code> com botões interativos.
                 </p>
@@ -108,7 +132,7 @@
                     </span>
                     <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-gray-100 text-gray-600 rounded">POST /api/messages/send</span>
                 </div>
-                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">4. Template c/ Variáveis</h3>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">5. Template c/ Variáveis</h3>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">
                     Envia o objeto <code class="font-mono">user</code>, o <code class="font-mono">templateId</code>, a lista <code class="font-mono text-purpura-600">bodyParameters</code> e a ação de fluxo.
                 </p>
@@ -127,7 +151,7 @@
                     </span>
                     <span class="px-2 py-0.5 text-[9px] font-mono font-bold bg-gray-100 text-gray-600 rounded">POST /api/messages/send</span>
                 </div>
-                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">5. Mensagem Livre</h3>
+                <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">6. Mensagem Livre</h3>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">
                     Envia texto livre para janelas de 24h abertas usando <code class="font-mono text-purpura-600">userId</code> e <code class="font-mono">context.msgId</code> opcional.
                 </p>
@@ -138,7 +162,7 @@
         </div>
     </div>
 
-    <!-- PAINEL INFERIOR: TEMPLATES WHATSAPP LOCAIS + CONSOLE DE INSPEÇÃO JSON -->
+    <!-- PAINEL DO MEIO: TEMPLATES WHATSAPP LOCAIS + CONSOLE DE INSPEÇÃO JSON -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- LISTA RÁPIDA DE TEMPLATES WHATSAPP DO SISTEMA -->
@@ -193,7 +217,12 @@
             <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-900 text-white">
                 <div class="flex items-center gap-2">
                     <i class="ph-bold ph-terminal-window text-emerald-400 text-lg"></i>
-                    <span class="text-xs font-extrabold uppercase tracking-wider">Console de Inspeção HTTP (Payload & Resposta Suri)</span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider">
+                        Console de Inspeção HTTP (Payload & Resposta Suri)
+                        @if(!empty($ultimoResultado['id']))
+                            <span class="text-gray-400 font-mono ml-1">#Log {{ $ultimoResultado['id'] }}</span>
+                        @endif
+                    </span>
                 </div>
                 @if($ultimoResultado)
                     <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded {{ $ultimoResultado['sucesso'] ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-red-500/20 text-red-300 border border-red-500/40' }}">
@@ -203,15 +232,40 @@
             </div>
 
             @if($ultimoResultado)
-                <div class="p-5 space-y-4 bg-gray-950 text-gray-100 font-mono text-xs max-h-[420px] overflow-y-auto custom-scrollbar">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase text-purpura-400 block mb-1">Endpoint Acionado ({{ $ultimoResultado['acao'] }}):</span>
-                        <code class="px-2.5 py-1.5 bg-gray-900 border border-gray-800 rounded block text-emerald-300 break-all">POST {{ $ultimoResultado['url'] }}</code>
+                <div class="p-5 space-y-4 bg-gray-950 text-gray-100 font-mono text-xs max-h-[460px] overflow-y-auto custom-scrollbar">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-[10px] font-bold uppercase text-purpura-400">
+                            Endpoint Acionado ({{ $ultimoResultado['acao'] }}):
+                        </span>
+                        @if(!empty($ultimoResultado['user_nome']))
+                            <span class="text-[10px] text-gray-400">Executado por: <b class="text-gray-200">{{ $ultimoResultado['user_nome'] }}</b></span>
+                        @endif
                     </div>
+
+                    <code class="px-2.5 py-1.5 bg-gray-900 border border-gray-800 rounded block text-emerald-300 break-all">
+                        {{ $ultimoResultado['metodo'] ?? 'POST' }} {{ $ultimoResultado['url'] }}
+                    </code>
+
+                    @php
+                        $erroMsgSuri = (string) data_get($ultimoResultado, 'resposta.error', '');
+                    @endphp
+                    @if(str_contains($erroMsgSuri, '132001'))
+                        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-200 font-sans text-xs space-y-1">
+                            <p class="font-extrabold text-amber-300 flex items-center gap-1.5">
+                                <i class="ph-fill ph-warning-circle text-base"></i> Diagnóstico do Erro (#132001 - Template name does not exist in the translation):
+                            </p>
+                            <p class="leading-relaxed">
+                                1. Verifique no <b>Portal da Suri → Configurações → Templates</b> se este template já foi <b>Aprovado pela Meta</b>.<br>
+                                2. Confira se o template pertence ao mesmo canal (<code class="font-mono">{{ $configSuri['channel_id'] }}</code>) do contato que está recebendo a mensagem.
+                            </p>
+                        </div>
+                    @endif
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <span class="text-[10px] font-bold uppercase text-blue-400 block mb-1">Body Enviado (JSON):</span>
+                            <span class="text-[10px] font-bold uppercase text-blue-400 block mb-1">
+                                {{ ($ultimoResultado['metodo'] ?? 'POST') === 'GET' ? 'Query Params Enviados:' : 'Body Enviado (JSON):' }}
+                            </span>
                             <pre class="p-3 bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto text-[11px] text-blue-200">{{ json_encode($ultimoResultado['payload'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                         </div>
                         <div>
@@ -222,11 +276,148 @@
                 </div>
             @else
                 <div class="p-12 text-center text-gray-400 bg-gray-950 font-mono text-xs">
-                    <i class="ph-duotone ph-Brackets-curly text-4xl text-gray-600 mb-2 block mx-auto"></i>
-                    Clique em qualquer um dos 5 cartões acima e execute um teste para inspecionar o JSON enviado e o retorno da API da Suri.
+                    <i class="ph-duotone ph-brackets-curly text-4xl text-gray-600 mb-2 block mx-auto"></i>
+                    Clique em qualquer um dos 6 cartões acima e execute um teste para inspecionar os parâmetros enviados e o retorno da API da Suri.
                 </div>
             @endif
         </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TABELA DE LOGS EXCLUSIVA DO LABORATÓRIO SURI                          -->
+    <!-- ===================================================================== -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/60 dark:bg-gray-900/40">
+            <div>
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="ph-fill ph-clock-counter-clockwise text-purpura-600 text-base"></i>
+                    Histórico de Logs Exclusivo do Laboratório Suri ({{ $totalLogsSalvos }})
+                </h3>
+                <p class="text-[11px] text-gray-500 mt-0.5">
+                    Clique em <b>"Inspecionar no Console"</b> em qualquer registro abaixo para recarregar o Payload e a Resposta HTTP no console acima.
+                </p>
+            </div>
+
+            <!-- Filtros e Limpeza do Log -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="relative w-full sm:w-56">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" wire:model.live.debounce.300ms="filtroBuscaLog" placeholder="Buscar no payload, resposta, URL..." class="w-full pl-8 pr-3 h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                </div>
+
+                <select wire:model.live="filtroAcaoLog" class="h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white font-semibold py-0 px-2.5">
+                    <option value="">Todas as Ações</option>
+                    @foreach($acoesDistintas as $acaoItem)
+                        <option value="{{ $acaoItem }}">{{ $acaoItem }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="filtroStatusLog" class="h-8 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white font-semibold py-0 px-2.5">
+                    <option value="">Todos os Status</option>
+                    <option value="1">Sucesso (2xx)</option>
+                    <option value="0">Falha / Erro</option>
+                </select>
+
+                @if($filtroBuscaLog !== '' || $filtroAcaoLog !== '' || $filtroStatusLog !== '')
+                    <button type="button" wire:click="limparFiltrosLog" class="h-8 px-2.5 text-xs font-bold text-gray-500 hover:text-red-600 bg-gray-100 rounded-lg transition">
+                        Limpar Filtro
+                    </button>
+                @endif
+
+                @if($totalLogsSalvos > 0)
+                    <button type="button"
+                            wire:click="limparTodosOsLogs"
+                            wire:confirm="Tem certeza de que deseja apagar todo o histórico de logs de testes da Suri?"
+                            class="h-8 px-3 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition flex items-center gap-1">
+                        <i class="ph-bold ph-trash"></i> Limpar Histórico
+                    </button>
+                @endif
+            </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs whitespace-nowrap">
+                <thead class="bg-gray-50 dark:bg-gray-900/60 text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="px-4 py-3">#ID</th>
+                        <th class="px-4 py-3">Data / Hora</th>
+                        <th class="px-4 py-3">Ação Executada</th>
+                        <th class="px-4 py-3">Método & Endpoint</th>
+                        <th class="px-4 py-3 text-center">HTTP Status</th>
+                        <th class="px-4 py-3">Usuário</th>
+                        <th class="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse($logsHistorico as $logItem)
+                        <tr wire:key="suri-log-{{ $logItem->id }}"
+                            class="transition-colors {{ $logSelecionadoId === $logItem->id ? 'bg-purpura-50/60 dark:bg-purpura-900/20' : 'hover:bg-gray-50/80 dark:hover:bg-gray-800/40' }}">
+                            <td class="px-4 py-3 font-mono font-bold text-gray-500">
+                                #{{ $logItem->id }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">
+                                {{ $logItem->created_at ? $logItem->created_at->format('d/m/Y H:i:s') : '-' }}
+                            </td>
+                            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">
+                                {{ $logItem->acao }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-[11px] text-gray-600 dark:text-gray-300 max-w-md truncate" title="{{ $logItem->url }}">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold {{ $logItem->metodo === 'GET' ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-blue-50 text-blue-700 border border-blue-200' }} mr-1">
+                                    {{ $logItem->metodo }}
+                                </span>
+                                {{ $logItem->url }}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold {{ $logItem->sucesso ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+                                    HTTP {{ $logItem->http_status }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                {{ $logItem->user_nome ?: 'Sistema' }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="inline-flex items-center justify-end gap-1.5">
+                                    <button type="button"
+                                            wire:click="replayLog({{ $logItem->id }})"
+                                            wire:confirm="Deseja reenviar (Replay) exatamente esta mesma requisição ({{ $logItem->metodo }} {{ $logItem->acao }}) para a Suri?"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center gap-1"
+                                            title="Reenviar este mesmo payload para a Suri">
+                                        <i class="ph-bold ph-arrows-clockwise"></i>
+                                        <span>Replay</span>
+                                    </button>
+
+                                    <button type="button"
+                                            wire:click="carregarLogNoConsole({{ $logItem->id }})"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1 {{ $logSelecionadoId === $logItem->id ? 'bg-purpura-600 text-white' : 'bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200' }}">
+                                        <i class="ph-bold ph-terminal-window"></i>
+                                        <span>{{ $logSelecionadoId === $logItem->id ? 'No Console' : 'Inspecionar' }}</span>
+                                    </button>
+
+                                    <button type="button"
+                                            wire:click="excluirLog({{ $logItem->id }})"
+                                            class="p-1 text-gray-400 hover:text-red-600 rounded transition"
+                                            title="Excluir este log">
+                                        <i class="ph-bold ph-trash text-sm"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-10 text-center text-gray-400 text-xs">
+                                Nenhum teste registrado no histórico até o momento.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($logsHistorico->hasPages())
+            <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                {{ $logsHistorico->links() }}
+            </div>
+        @endif
     </div>
 
     <!-- ===================================================================== -->
@@ -234,21 +425,23 @@
     <!-- ===================================================================== -->
     @if($modalAtivo)
         <div class="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/65 backdrop-blur-sm px-4 overflow-y-auto">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-200 dark:border-gray-700 overflow-hidden my-8">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-200 dark:border-gray-700 overflow-hidden my-8">
                 
                 <!-- Topo do Modal -->
                 <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                        @if($modalAtivo === 'contato')
-                            <i class="ph-fill ph-user-plus text-blue-600 text-xl"></i> 1. Importar Contato para a Suri
+                        @if($modalAtivo === 'listar_contatos')
+                            <i class="ph-fill ph-address-book text-teal-600 text-xl"></i> 1. Listar Contatos da Suri (GET /api/contacts)
+                        @elseif($modalAtivo === 'contato')
+                            <i class="ph-fill ph-user-plus text-blue-600 text-xl"></i> 2. Importar Contato para a Suri
                         @elseif($modalAtivo === 'tpl_simples')
-                            <i class="ph-fill ph-chat-text text-emerald-600 text-xl"></i> 2. Enviar Mensagem com Template Simples
+                            <i class="ph-fill ph-chat-text text-emerald-600 text-xl"></i> 3. Enviar Mensagem com Template Simples
                         @elseif($modalAtivo === 'tpl_botoes')
-                            <i class="ph-fill ph-hand-tap text-purpura-600 text-xl"></i> 3. Enviar Mensagem com Template com Botões
+                            <i class="ph-fill ph-hand-tap text-purpura-600 text-xl"></i> 4. Enviar Mensagem com Template com Botões
                         @elseif($modalAtivo === 'tpl_variaveis')
-                            <i class="ph-fill ph-brackets-curly text-amber-600 text-xl"></i> 4. Enviar Mensagem com Template com Variáveis
+                            <i class="ph-fill ph-brackets-curly text-amber-600 text-xl"></i> 5. Enviar Mensagem com Template com Variáveis
                         @elseif($modalAtivo === 'msg_simples')
-                            <i class="ph-fill ph-chat-circle-dots text-indigo-600 text-xl"></i> 5. Enviar Mensagem Simples (Sem Template)
+                            <i class="ph-fill ph-chat-circle-dots text-indigo-600 text-xl"></i> 6. Enviar Mensagem Simples (Sem Template)
                         @else
                             <i class="ph-fill ph-book-open text-indigo-600 text-xl"></i> Guia: Onde encontrar cada ID no Portal da Suri
                         @endif
@@ -261,8 +454,80 @@
                 <!-- Corpo do Modal -->
                 <div class="p-6 space-y-4 max-h-[78vh] overflow-y-auto custom-scrollbar">
 
+                    {{-- MODAL 0: LISTAR CONTATOS --}}
+                    @if($modalAtivo === 'listar_contatos')
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <div class="sm:col-span-6">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">continuationToken (Opcional)</label>
+                                <input type="text" wire:model="continuationToken" placeholder="Token de paginação da Suri..." class="w-full rounded-lg border-gray-300 text-xs font-mono">
+                            </div>
+                            <div class="sm:col-span-3">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">limit (Qtd. por página) *</label>
+                                <input type="text" wire:model="limit" placeholder="Ex: 20" class="w-full rounded-lg border-gray-300 text-xs font-mono">
+                            </div>
+                            <div class="sm:col-span-3 flex gap-1.5">
+                                <button type="button" wire:click="dispararListarContatos(false)" class="w-full py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1">
+                                    <i class="ph-bold ph-magnifying-glass"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+
+                        @if($proximoContinuationToken)
+                            <div class="flex items-center justify-between p-2.5 rounded-lg bg-teal-50 border border-teal-200 text-xs text-teal-800">
+                                <span class="truncate font-mono text-[11px]"><b>Próximo continuationToken:</b> {{ $proximoContinuationToken }}</span>
+                                <button type="button" wire:click="dispararListarContatos(true)" class="shrink-0 ml-2 px-3 py-1 bg-teal-600 text-white font-bold rounded-md text-[11px] hover:bg-teal-700">
+                                    Carregar Próxima Página →
+                                </button>
+                            </div>
+                        @endif
+
+                        @if(!empty($contatosListadosSuri))
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-gray-50 dark:bg-gray-900 text-[10px] font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="px-3.5 py-2.5">ID do Contato (userId)</th>
+                                            <th class="px-3.5 py-2.5">Nome</th>
+                                            <th class="px-3.5 py-2.5">Telefone</th>
+                                            <th class="px-3.5 py-2.5 text-right">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        @foreach($contatosListadosSuri as $cSuri)
+                                            @php
+                                                $cId = (string) ($cSuri['id'] ?? $cSuri['userId'] ?? '');
+                                                $cNome = (string) ($cSuri['name'] ?? 'Sem nome');
+                                                $cFone = (string) ($cSuri['phone'] ?? '');
+                                                $cCanal = (string) ($cSuri['channelId'] ?? '');
+                                            @endphp
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td class="px-3.5 py-2.5 font-mono text-[11px] text-purpura-700 dark:text-purpura-300 font-bold">{{ $cId }}</td>
+                                                <td class="px-3.5 py-2.5 font-semibold text-gray-900 dark:text-white">{{ $cNome }}</td>
+                                                <td class="px-3.5 py-2.5 font-mono text-gray-600">{{ $cFone ?: '-' }}</td>
+                                                <td class="px-3.5 py-2.5 text-right">
+                                                    <button type="button"
+                                                            wire:click="selecionarContatoSuri('{{ $cId }}', '{{ addslashes($cNome) }}', '{{ $cFone }}', '{{ $cCanal }}')"
+                                                            class="px-2.5 py-1 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-200 rounded-md font-bold text-[11px] transition">
+                                                        Usar Contato
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="py-8 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-xl">
+                                Clique em <b>"Buscar"</b> acima para listar os contatos da Suri.
+                            </div>
+                        @endif
+
+                        <div class="flex justify-end pt-3 border-t border-gray-100">
+                            <button type="button" wire:click="fecharModal" class="btn btn--secondary btn--medium">Fechar</button>
+                        </div>
+                    @endif
+
                     @if(in_array($modalAtivo, ['contato', 'tpl_botoes', 'tpl_variaveis']))
-                        <!-- Autopreenchimento opcional com candidato do banco -->
                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Preencher rápido com dados de um Candidato (Opcional)</label>
                             <select wire:model.live="inscricaoTesteId" class="w-full rounded-lg border-gray-300 text-xs">
@@ -319,7 +584,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1">ID do Contato na Suri (userId) *</label>
-                                <input type="text" wire:model="userId" placeholder="Ex: wp332148629991857-5585987755801" class="w-full rounded-lg border-gray-300 text-xs font-mono">
+                                <input type="text" wire:model="userId" placeholder="Ex: wp483709398162745:5511964616752" class="w-full rounded-lg border-gray-300 text-xs font-mono">
                                 @error('userId') <span class="text-[11px] text-red-500 font-bold">{{ $message }}</span> @enderror
                             </div>
                             <div>
@@ -447,7 +712,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1">ID do Contato na Suri (userId) *</label>
-                                <input type="text" wire:model="userId" placeholder="Ex: wp332148629991857-5585987755801" class="w-full rounded-lg border-gray-300 text-xs font-mono">
+                                <input type="text" wire:model="userId" placeholder="Ex: wp483709398162745:5511964616752" class="w-full rounded-lg border-gray-300 text-xs font-mono">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1">Conteúdo da Mensagem (message.text) *</label>
@@ -471,27 +736,17 @@
                         <div class="space-y-3 text-xs text-gray-700 dark:text-gray-200 leading-relaxed">
                             <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                                 <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">1. Onde pegar o <code class="font-mono">userId</code> (ID do Contato)?</h4>
-                                <p class="mt-1">• Ao executar o cartão <b>"1. Importar Contato"</b> (`POST /api/contacts`), a Suri devolve o `id` do contato no JSON de resposta (geralmente no formato `channelId-5511999999999`).<br>• No Portal da Suri: vá em <b>Contatos</b>, clique sobre o contato desejado e veja o identificador na URL ou nos detalhes do perfil.</p>
+                                <p class="mt-1">• Clique no cartão <b>"1. Listar Contatos"</b> (`GET /api/contacts`) e clique em <b>"Usar Contato"</b> na tabela, ou execute o cartão <b>"2. Importar Contato"</b> (`POST /api/contacts`).<br>• O `userId` na Suri tem o formato `channelId:5511999999999` (ex: `wp483709398162745:5511964616752`).</p>
                             </div>
 
                             <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                                <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">2. Onde pegar o <code class="font-mono">templateId</code>?</h4>
-                                <p class="mt-1">• No próprio sistema: ao salvar ou sincronizar um Template WhatsApp, o ID gerado pela Suri fica salvo na coluna `suri_template_id` (listado na tabela à esquerda).<br>• No Portal da Suri: vá em <b>Configurações (⚙️) → Templates (Mensagens HSM / WhatsApp)</b>, clique sobre o template aprovado pela Meta e copie o <b>ID do Template</b>.</p>
+                                <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">2. Onde pegar o <code class="font-mono">templateId</code> (e evitar o erro #132001)?</h4>
+                                <p class="mt-1">• No Portal da Suri: vá em <b>Configurações (⚙️) → Templates</b>. Certifique-se de que o template esteja com status <b>Aprovado (Approved)</b> pela Meta e vinculado ao mesmo canal do contato.</p>
                             </div>
 
                             <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                                 <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">3. Onde pegar o <code class="font-mono">flowId</code> (sendTo)?</h4>
-                                <p class="mt-1">• No Portal da Suri: acesse o menu <b>Fluxos de Atendimento (Automação / Chatbot)</b>, clique para editar o fluxo para onde o usuário deve ir quando responder ao template, e copie o <b>UUID que aparece no final da URL do navegador</b> (ex: `.../flows/a1b2c3d4-...`).</p>
-                            </div>
-
-                            <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                                <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">4. Onde pegar o <code class="font-mono">defaultDepartmentId</code>?</h4>
-                                <p class="mt-1">• No Portal da Suri: vá em <b>Configurações (⚙️) → Departamentos</b>, clique em editar o departamento desejado e copie o ID na URL (ou via `GET {{baseUrl}}/api/departments`).</p>
-                            </div>
-
-                            <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                                <h4 class="font-extrabold text-purpura-700 dark:text-purpura-400">5. Onde pegar o <code class="font-mono">msgId</code> (`wamid.XXX...`)?</h4>
-                                <p class="mt-1">• Esse campo é <b>opcional</b> e serve apenas quando você quer responder citando (reply) uma mensagem específica do usuário. Ele vem no payload de Webhook da Suri (`message.id` ou `context.id` iniciado por `wamid.`).</p>
+                                <p class="mt-1">• No Portal da Suri: acesse o menu <b>Fluxos de Atendimento (Chatbot)</b>, clique no fluxo desejado e copie o <b>UUID no final da URL</b>.</p>
                             </div>
                         </div>
                     @endif
