@@ -160,7 +160,7 @@
                                 </div>
                             </th>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-[20%]">Descrição do Item</th>
-                            <th class="py-2 px-1 border-r border-gray-200 font-medium text-center w-[62px]">Memo</th>
+                            <th class="py-2 px-1 border-r border-gray-200 font-medium text-center w-[62px]">Comentário(s)</th>
                             <th class="py-2 px-1 border-r border-gray-200 font-medium text-center w-[72px]">Revisão</th>
                             <th class="py-2 px-2.5 border-r border-gray-200 font-medium w-[21%]">Natureza Financeira</th>
                             <th class="py-2 px-2 border-r border-gray-200 font-medium w-[105px]">Cenário</th>
@@ -217,7 +217,7 @@
                                     <button type="button"
                                             wire:click="abrirComentariosDoItem({{ $index }}, {{ $item->id }})"
                                             class="px-1.5 py-0.5 text-[10px] rounded border {{ $qtdComentarios > 0 ? 'bg-sky-50 text-sky-700 border-sky-200 font-semibold' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
-                                        Memo {{ $qtdComentarios > 0 ? "({$qtdComentarios})" : '' }}
+                                        Comentário(s) {{ $qtdComentarios > 0 ? "({$qtdComentarios})" : '' }}
                                     </button>
                                 </td>
 
