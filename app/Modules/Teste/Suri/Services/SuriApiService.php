@@ -5,6 +5,7 @@ namespace App\Modules\Teste\Suri\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
+use App\Modules\Teste\Suri\Models\SuriTestLog;
 
 class SuriApiService
 {
@@ -28,13 +29,10 @@ class SuriApiService
         ];
     }
 
-    /**
-     * Monta o payload completo de criação de Template na Suri respeitando todas as regras da Meta:
-     * - Variáveis {{1}}, {{2}} + templateExample [exemplo] + bodyExamples
-     * - Rodapé (footer)
-     * - Cabeçalho (headerType: 0 = Imagem c/ url, 2 = Documento PDF c/ base64File)
-     * - Botões (type 0 = URL estática/dinâmica, 1 = Ligar, 2 = Resposta rápida, 3 = Copiar código)
-     */
+    // =========================================================================
+    // MONTAGEM DO PAYLOAD E SINCRONIZAÇÃO DE TEMPLATES
+    // =========================================================================
+
     public function montarPayloadTemplate(EmailTemplate $template): array
     {
         $cfg = is_string($template->configuracoes_suri)
@@ -45,14 +43,12 @@ class SuriApiService
             ? (json_decode($template->botoes, true) ?? [])
             : ($template->botoes ?? []);
 
-        // Converte quebras de parágrafo do Quill em quebras de linha limpas
         $htmlCorpo = (string) $template->corpo;
         $htmlCorpo = preg_replace('/<\/(p|div|h1|h2|h3|li)>/i', "\n", $htmlCorpo);
         $htmlCorpo = preg_replace('/<br\s*\/?>/i', "\n", $htmlCorpo);
         $cleanBody = trim(strip_tags(html_entity_decode($htmlCorpo, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
         $cleanBody = preg_replace("/\n{3,}/", "\n\n", $cleanBody);
 
-        // Extrai variáveis {{variavel}} ou {{1}} na ordem de aparição
         preg_match_all('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/', $cleanBody, $matches);
         $variaveisEncontradas = [];
         foreach ($matches[1] ?? [] as $v) {
@@ -81,14 +77,13 @@ class SuriApiService
             'subject'   => trim((string) ($template->assunto ?: 'TESTE')),
             'channelId' => !empty($cfg['channel_id']) ? $cfg['channel_id'] : $this->channelId,
             'category'  => in_array($cfg['category'] ?? '', ['MARKETING', 'UTILITY'], true) ? $cfg['category'] : 'MARKETING',
+            'language'  => 'pt_BR', // Evita o erro #132001
         ];
 
-        // Rodapé opcional
         if (!empty(trim((string) ($cfg['footer'] ?? '')))) {
             $templateNode['footer'] = trim((string) $cfg['footer']);
         }
 
-        // Cabeçalho opcional (0 = Imagem, 2 = Documento PDF)
         $headerMode = $cfg['header_mode'] ?? 'none';
         $sampleFile = null;
 
@@ -106,7 +101,6 @@ class SuriApiService
             ];
         }
 
-        // Montagem dos Botões (Ordenados: Ligar/Copiar/URL primeiro, Resposta Rápida por último)
         $botoesAcao = [];
         $botoesUrl = [];
         $botoesQuickReply = [];
@@ -118,41 +112,20 @@ class SuriApiService
             $tipoBtn = isset($btn['suri_type']) ? (int) $btn['suri_type'] : (empty($btn['url']) ? 2 : 0);
 
             if ($tipoBtn === 1) {
-                // Botão de Ligar (type: 1)
                 $fone = trim((string) ($btn['phone'] ?? ''));
-                if ($fone !== '' && !str_starts_with($fone, '+')) {
-                    $fone = '+' . preg_replace('/\D/', '', $fone);
-                }
-                $botoesAcao[] = [
-                    'text'  => $textoBtn,
-                    'type'  => 1,
-                    'phone' => $fone,
-                ];
+                if ($fone !== '' && !str_starts_with($fone, '+')) $fone = '+' . preg_replace('/\D/', '', $fone);
+                $botoesAcao[] = ['text' => $textoBtn, 'type' => 1, 'phone' => $fone];
             } elseif ($tipoBtn === 3) {
-                // Botão de Copiar Código (type: 3)
-                $botoesAcao[] = [
-                    'text'    => $textoBtn,
-                    'type'    => 3,
-                    'example' => trim((string) ($btn['example'] ?? 'CODIGO10')) ?: 'CODIGO10',
-                ];
+                $botoesAcao[] = ['text' => $textoBtn, 'type' => 3, 'example' => trim((string) ($btn['example'] ?? 'CODIGO10')) ?: 'CODIGO10'];
             } elseif ($tipoBtn === 0) {
-                // Botão de URL Estática ou Dinâmica (type: 0)
                 $urlBtn = trim((string) ($btn['url'] ?? ''));
-                $itemUrl = [
-                    'text' => $textoBtn,
-                    'type' => 0,
-                    'url'  => $urlBtn,
-                ];
+                $itemUrl = ['text' => $textoBtn, 'type' => 0, 'url' => $urlBtn];
                 if (!empty(trim((string) ($btn['example'] ?? ''))) || str_ends_with($urlBtn, '{{1}}')) {
                     $itemUrl['example'] = trim((string) ($btn['example'] ?? 'detalhe')) ?: 'detalhe';
                 }
                 $botoesUrl[] = $itemUrl;
             } else {
-                // Botão de Resposta Rápida (type: 2) - sempre por último
-                $botoesQuickReply[] = [
-                    'text' => $textoBtn,
-                    'type' => 2,
-                ];
+                $botoesQuickReply[] = ['text' => $textoBtn, 'type' => 2];
             }
         }
 
@@ -167,9 +140,7 @@ class SuriApiService
             'bodyExamples'    => $bodyExamples,
         ];
 
-        if ($sampleFile !== null) {
-            $payload['sampleFile'] = $sampleFile;
-        }
+        if ($sampleFile !== null) $payload['sampleFile'] = $sampleFile;
 
         return $payload;
     }
@@ -186,18 +157,14 @@ class SuriApiService
         };
     }
 
-    /**
-     * Sincroniza um EmailTemplate local criando-o na Suri e retorna os detalhes completos da chamada.
-     */
     public function syncTemplateComDetalhes(EmailTemplate $template): array
     {
         $payload = $this->montarPayloadTemplate($template);
-        $res = $this->postEndpoint('/api/templates', $payload);
+        $res = $this->postEndpoint('/api/templates', $payload, 'Sincronizar Template Local');
 
         $suriId = null;
         if ($res['sucesso']) {
-            $suriId = data_get($res['resposta'], 'data.id')
-                ?? data_get($res['resposta'], 'id');
+            $suriId = data_get($res['resposta'], 'data.id') ?? data_get($res['resposta'], 'id');
         }
 
         $res['suri_template_id'] = $suriId;
@@ -210,28 +177,24 @@ class SuriApiService
         return $res['suri_template_id'] ?? null;
     }
 
-    // =========================================================================
-    // TEMPLATES NA SURI: GET /api/templates E GET /api/templates/:template_id
-    // =========================================================================
-
     public function listarTemplates(array $queryParams = []): array
     {
-        return $this->getEndpoint('/api/templates', $queryParams);
+        return $this->getEndpoint('/api/templates', $queryParams, 'Listar Templates Suri');
     }
 
     public function obterTemplate(string $templateId): array
     {
         $idEncoded = urlencode(trim($templateId));
-        return $this->getEndpoint("/api/templates/{$idEncoded}");
+        return $this->getEndpoint("/api/templates/{$idEncoded}", [], "Inspecionar Template ({$templateId})");
     }
 
     public function criarTemplateDireto(array $payload): array
     {
-        return $this->postEndpoint('/api/templates', $payload);
+        return $this->postEndpoint('/api/templates', $payload, 'Criar Template Direto');
     }
 
     // =========================================================================
-    // CONTATOS E MENSAGENS NA SURI
+    // ENDPOINTS DE MENSAGENS E CONTATOS
     // =========================================================================
 
     public function listarContatos(?string $continuationToken = null, string|int $limit = '20'): array
@@ -240,7 +203,7 @@ class SuriApiService
         if ($continuationToken !== null && trim($continuationToken) !== '') {
             $queryParams['continuationToken'] = trim($continuationToken);
         }
-        return $this->getEndpoint('/api/contacts', $queryParams);
+        return $this->getEndpoint('/api/contacts', $queryParams, 'Listar Contatos');
     }
 
     public function importarContato(
@@ -257,7 +220,7 @@ class SuriApiService
             'channelId'   => $channelId ?: $this->channelId,
             'channelType' => $channelType,
         ];
-        return $this->postEndpoint('/api/contacts', $payload);
+        return $this->postEndpoint('/api/contacts', $payload, 'Importar Contato');
     }
 
     public function enviarTemplateSimples(
@@ -269,9 +232,7 @@ class SuriApiService
     ): array {
         $payload = [
             'userId'  => trim($userId),
-            'message' => [
-                'templateId' => trim($templateId),
-            ],
+            'message' => ['templateId' => trim($templateId)],
         ];
 
         if (!empty(trim((string) $flowId))) {
@@ -282,7 +243,7 @@ class SuriApiService
             ];
         }
 
-        return $this->postEndpoint('/api/messages/send', $payload);
+        return $this->postEndpoint('/api/messages/send', $payload, 'Disparo: Template Simples');
     }
 
     public function enviarTemplateComBotoes(
@@ -305,12 +266,10 @@ class SuriApiService
                 'channelType'         => $channelType,
                 'defaultDepartmentId' => !empty($defaultDepartmentId) ? trim($defaultDepartmentId) : null,
             ],
-            'message' => [
-                'templateId' => trim($templateId),
-            ],
+            'message' => ['templateId' => trim($templateId)],
         ];
 
-        return $this->postEndpoint('/api/messages/send', $payload);
+        return $this->postEndpoint('/api/messages/send', $payload, 'Disparo: Template c/ Botões');
     }
 
     public function enviarTemplateComVariaveis(
@@ -358,7 +317,7 @@ class SuriApiService
             ];
         }
 
-        return $this->postEndpoint('/api/messages/send', $payload);
+        return $this->postEndpoint('/api/messages/send', $payload, 'Disparo: Template c/ Variáveis');
     }
 
     public function enviarMensagemSimples(
@@ -367,7 +326,6 @@ class SuriApiService
         ?string $contextMsgId = null
     ): array {
         $messageData = ['text' => $texto];
-
         if (!empty(trim((string) $contextMsgId))) {
             $messageData['context'] = ['msgId' => trim($contextMsgId)];
         }
@@ -377,25 +335,26 @@ class SuriApiService
             'message' => $messageData,
         ];
 
-        return $this->postEndpoint('/api/messages/send', $payload);
+        return $this->postEndpoint('/api/messages/send', $payload, 'Disparo: Texto Livre');
     }
 
-    /**
-     * Reexecuta (Replay) qualquer requisição salva no histórico de logs da Suri.
-     */
-    public function reexecutarLog(string $metodo, string $urlCompleta, array $payload = []): array
+    public function reexecutarLog(string $metodo, string $urlCompleta, array $payload = [], string $acao = 'Replay'): array
     {
         $metodoUpper = strtoupper($metodo);
         $path = parse_url($urlCompleta, PHP_URL_PATH) ?: '/api/messages/send';
 
         if ($metodoUpper === 'GET') {
-            return $this->getEndpoint($path, $payload);
+            return $this->getEndpoint($path, $payload, $acao);
         }
 
-        return $this->postEndpoint($path, $payload);
+        return $this->postEndpoint($path, $payload, $acao);
     }
 
-    public function getEndpoint(string $endpoint, array $queryParams = []): array
+    // =========================================================================
+    // COMUNICADORES HTTP E GRAVAÇÃO DO LOG EXCLUSIVO
+    // =========================================================================
+
+    public function getEndpoint(string $endpoint, array $queryParams = [], string $acao = 'Requisição API'): array
     {
         $urlBase = $this->baseUrl . '/' . ltrim($endpoint, '/');
         $urlCompleta = !empty($queryParams) ? ($urlBase . '?' . http_build_query($queryParams)) : $urlBase;
@@ -408,6 +367,7 @@ class SuriApiService
                 'url'         => $urlCompleta,
                 'payload'     => $queryParams,
                 'resposta'    => ['erro' => 'Variáveis SURI_API_URL ou SURI_API_TOKEN ausentes no .env.'],
+                'log_id'      => null
             ];
         }
 
@@ -420,6 +380,19 @@ class SuriApiService
             $json = $response->json();
             $sucesso = $response->successful() && ($json['success'] ?? true) !== false;
 
+            $logModel = SuriTestLog::create([
+                'acao'        => $acao,
+                'metodo'      => 'GET',
+                'url'         => $urlCompleta,
+                'http_status' => $response->status(),
+                'sucesso'     => $sucesso,
+                'payload'     => $queryParams,
+                'resposta'    => $json ?? ['raw_body' => $response->body()],
+                'user_id'     => auth()->id(),
+                'user_nome'   => auth()->user()?->name ?? 'Sistema (Worker)',
+                'ip'          => request()->ip() ?? '127.0.0.1',
+            ]);
+
             return [
                 'sucesso'     => $sucesso,
                 'metodo'      => 'GET',
@@ -427,9 +400,23 @@ class SuriApiService
                 'url'         => $urlCompleta,
                 'payload'     => $queryParams,
                 'resposta'    => $json ?? ['raw_body' => $response->body()],
+                'log_id'      => $logModel->id,
             ];
         } catch (\Throwable $e) {
             Log::error("Exceção GET Suri [{$endpoint}]: " . $e->getMessage());
+
+            $logModel = SuriTestLog::create([
+                'acao'        => $acao,
+                'metodo'      => 'GET',
+                'url'         => $urlCompleta,
+                'http_status' => 500,
+                'sucesso'     => false,
+                'payload'     => $queryParams,
+                'resposta'    => ['exception' => $e->getMessage()],
+                'user_id'     => auth()->id(),
+                'user_nome'   => auth()->user()?->name ?? 'Sistema (Worker)',
+                'ip'          => request()->ip() ?? '127.0.0.1',
+            ]);
 
             return [
                 'sucesso'     => false,
@@ -438,11 +425,12 @@ class SuriApiService
                 'url'         => $urlCompleta,
                 'payload'     => $queryParams,
                 'resposta'    => ['exception' => $e->getMessage()],
+                'log_id'      => $logModel->id,
             ];
         }
     }
 
-    public function postEndpoint(string $endpoint, array $payload): array
+    public function postEndpoint(string $endpoint, array $payload, string $acao = 'Requisição API'): array
     {
         $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
 
@@ -454,6 +442,7 @@ class SuriApiService
                 'url'         => $url,
                 'payload'     => $payload,
                 'resposta'    => ['erro' => 'Variáveis SURI_API_URL ou SURI_API_TOKEN ausentes no .env.'],
+                'log_id'      => null
             ];
         }
 
@@ -474,6 +463,19 @@ class SuriApiService
                 ]);
             }
 
+            $logModel = SuriTestLog::create([
+                'acao'        => $acao,
+                'metodo'      => 'POST',
+                'url'         => $url,
+                'http_status' => $response->status(),
+                'sucesso'     => $sucesso,
+                'payload'     => $payload,
+                'resposta'    => $json ?? ['raw_body' => $response->body()],
+                'user_id'     => auth()->id(),
+                'user_nome'   => auth()->user()?->name ?? 'Sistema (Worker)',
+                'ip'          => request()->ip() ?? '127.0.0.1',
+            ]);
+
             return [
                 'sucesso'     => $sucesso,
                 'metodo'      => 'POST',
@@ -481,9 +483,23 @@ class SuriApiService
                 'url'         => $url,
                 'payload'     => $payload,
                 'resposta'    => $json ?? ['raw_body' => $response->body()],
+                'log_id'      => $logModel->id,
             ];
         } catch (\Throwable $e) {
             Log::error("Exceção ao comunicar com a Suri [{$endpoint}]: " . $e->getMessage());
+
+            $logModel = SuriTestLog::create([
+                'acao'        => $acao,
+                'metodo'      => 'POST',
+                'url'         => $url,
+                'http_status' => 500,
+                'sucesso'     => false,
+                'payload'     => $payload,
+                'resposta'    => ['exception' => $e->getMessage()],
+                'user_id'     => auth()->id(),
+                'user_nome'   => auth()->user()?->name ?? 'Sistema (Worker)',
+                'ip'          => request()->ip() ?? '127.0.0.1',
+            ]);
 
             return [
                 'sucesso'     => false,
@@ -492,6 +508,7 @@ class SuriApiService
                 'url'         => $url,
                 'payload'     => $payload,
                 'resposta'    => ['exception' => $e->getMessage()],
+                'log_id'      => $logModel->id,
             ];
         }
     }

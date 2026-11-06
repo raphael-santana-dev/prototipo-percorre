@@ -17,9 +17,9 @@ class SuriTestDashboard extends Component
 {
     use WithPagination;
 
-    public ?string $modalAtivo = null; // 'listar_contatos', 'contato', 'tpl_simples', 'tpl_botoes', 'tpl_variaveis', 'msg_simples', 'guia_suri'
+    public ?string $modalAtivo = null;
 
-    // Parâmetros de Listagem de Contatos (GET /api/contacts)
+    // Parâmetros de Listagem de Contatos
     public string $continuationToken = '';
     public string $limit = '20';
     public array $contatosListadosSuri = [];
@@ -44,14 +44,12 @@ class SuriTestDashboard extends Component
     public string $textoMensagem = '';
     public string $contextMsgId = '';
 
-    // Preenchimento rápido a partir de um inscrito do banco
     public $inscricaoTesteId = '';
 
-    // Console de Resposta da Última Execução / Log Selecionado
+    // Console de Resposta e Histórico
     public ?array $ultimoResultado = null;
     public ?int $logSelecionadoId = null;
 
-    // Filtros do Histórico de Logs Exclusivo
     public string $filtroBuscaLog = '';
     public string $filtroAcaoLog = '';
     public string $filtroStatusLog = '';
@@ -60,7 +58,6 @@ class SuriTestDashboard extends Component
     {
         $this->channelId = (string) env('SURI_CHANNEL_ID', '');
 
-        // Carrega o último teste realizado no banco para já exibi-lo no Console
         $ultimoLog = SuriTestLog::latest('id')->first();
         if ($ultimoLog) {
             $this->carregarLogNoConsole($ultimoLog->id);
@@ -126,54 +123,27 @@ class SuriTestDashboard extends Component
     }
 
     /**
-     * Registra todas as informações do Console de Inspeção HTTP na tabela exclusiva suri_test_logs
+     * O serviço já gravou o log. Aqui recuperamos pelo log_id retornado.
      */
     private function registrarResultado(string $acao, array $resultado): void
     {
-        $user = auth()->user();
-
-        $logModel = SuriTestLog::create([
-            'acao'        => $acao,
-            'metodo'      => $resultado['metodo'] ?? 'POST',
-            'url'         => $resultado['url'] ?? '',
-            'http_status' => (int) ($resultado['http_status'] ?? 0),
-            'sucesso'     => (bool) ($resultado['sucesso'] ?? false),
-            'payload'     => $resultado['payload'] ?? [],
-            'resposta'    => $resultado['resposta'] ?? [],
-            'user_id'     => $user?->id,
-            'user_nome'   => $user?->name ?? 'Sistema',
-            'ip'          => request()->ip(),
-        ]);
-
-        $this->logSelecionadoId = $logModel->id;
-        $this->ultimoResultado = [
-            'id'          => $logModel->id,
-            'acao'        => $logModel->acao,
-            'metodo'      => $logModel->metodo,
-            'url'         => $logModel->url,
-            'http_status' => $logModel->http_status,
-            'sucesso'     => $logModel->sucesso,
-            'payload'     => $logModel->payload,
-            'resposta'    => $logModel->resposta,
-            'user_nome'   => $logModel->user_nome,
-            'horario'     => $logModel->created_at->format('d/m/Y H:i:s'),
-        ];
+        $logId = $resultado['log_id'] ?? null;
+        if ($logId) {
+            $this->carregarLogNoConsole($logId);
+        }
 
         $contatoIdRetornado = data_get($resultado, 'resposta.data.id') ?? data_get($resultado, 'resposta.id');
-        if ($acao === 'Importar Contato' && $contatoIdRetornado) {
+        if (str_contains($acao, 'Importar Contato') && $contatoIdRetornado) {
             $this->userId = (string) $contatoIdRetornado;
         }
 
         if ($resultado['sucesso']) {
-            $this->dispatch('sucesso', msg: "{$acao}: Requisição executada e gravada no Log (HTTP {$resultado['http_status']})!");
+            $this->dispatch('sucesso', msg: "{$acao}: Executada com sucesso (HTTP {$resultado['http_status']})!");
         } else {
-            $this->dispatch('erro', msg: "{$acao}: Falha na requisição (HTTP {$resultado['http_status']}). Registro salvo no Log.");
+            $this->dispatch('erro', msg: "{$acao}: Falha na requisição (HTTP {$resultado['http_status']}). Verifique o console.");
         }
     }
 
-    /**
-     * Carrega qualquer registro do histórico de logs de volta para o Console de Inspeção HTTP
-     */
     public function carregarLogNoConsole(int $logId): void
     {
         $log = SuriTestLog::find($logId);
@@ -194,41 +164,31 @@ class SuriTestDashboard extends Component
         ];
     }
 
-    /**
-     * Botão de Replay: Reenvia exatamente o mesmo método, endpoint e payload de um log salvo no histórico.
-     */
     public function replayLog(int $logId): void
     {
         $log = SuriTestLog::findOrFail($logId);
-        $service = app(SuriApiService::class);
-
-        $res = $service->reexecutarLog(
+        $res = app(SuriApiService::class)->reexecutarLog(
             $log->metodo ?? 'POST',
             $log->url,
-            is_array($log->payload) ? $log->payload : []
+            is_array($log->payload) ? $log->payload : [],
+            "Replay: {$log->acao}"
         );
 
         $this->registrarResultado("Replay: {$log->acao}", $res);
     }
 
-    /**
-     * Testa GET {{baseUrl}}/api/templates diretamente no Laboratório Suri.
-     */
     public function dispararListarTemplatesSuri(): void
     {
         $res = app(SuriApiService::class)->listarTemplates();
-        $this->registrarResultado('Listar Templates (GET /api/templates)', $res);
+        $this->registrarResultado('Listar Templates', $res);
     }
 
-    /**
-     * Testa GET {{baseUrl}}/api/templates/:template_id diretamente no Laboratório Suri.
-     */
     public function dispararBuscarTemplateEspecifico(): void
     {
         $this->validate([
             'templateId' => 'required|string',
         ], [
-            'templateId.required' => 'Informe o templateId para consultar GET /api/templates/:template_id.',
+            'templateId.required' => 'Informe o templateId para consultar.',
         ]);
 
         $res = app(SuriApiService::class)->obterTemplate($this->templateId);
@@ -248,7 +208,6 @@ class SuriTestDashboard extends Component
                 $this->logSelecionadoId = null;
             }
         }
-
         $this->dispatch('sucesso', msg: 'Registro de log excluído.');
     }
 
@@ -261,23 +220,16 @@ class SuriTestDashboard extends Component
         $this->dispatch('sucesso', msg: 'Histórico de logs de testes da Suri limpo com sucesso!');
     }
 
-    // =========================================================================
-    // ENDPOINTS DE TESTE DA SURI
-    // =========================================================================
-
     public function dispararListarContatos(bool $usarProximoToken = false): void
     {
         if ($usarProximoToken && $this->proximoContinuationToken) {
             $this->continuationToken = $this->proximoContinuationToken;
         }
-
         $this->validate([
             'limit'             => 'required|string',
             'continuationToken' => 'nullable|string',
         ]);
-
-        $service = app(SuriApiService::class);
-        $res = $service->listarContatos(
+        $res = app(SuriApiService::class)->listarContatos(
             $this->continuationToken !== '' ? $this->continuationToken : null,
             $this->limit
         );
@@ -290,7 +242,6 @@ class SuriTestDashboard extends Component
                 ?? [];
 
             $this->contatosListadosSuri = is_array($dados) && isset($dados[0]) ? $dados : [];
-
             $this->proximoContinuationToken = data_get($res, 'resposta.data.continuationToken')
                 ?? data_get($res, 'resposta.continuationToken');
         }
@@ -305,7 +256,7 @@ class SuriTestDashboard extends Component
         if ($telefone !== '') $this->phone = $telefone;
         if ($canalId !== '') $this->channelId = $canalId;
 
-        $this->dispatch('sucesso', msg: "Contato '{$id}' selecionado e carregado para os testes de envio!");
+        $this->dispatch('sucesso', msg: "Contato '{$id}' selecionado para testes!");
     }
 
     public function dispararImportarContato(): void
@@ -316,16 +267,7 @@ class SuriTestDashboard extends Component
             'channelId'   => 'required|string',
             'channelType' => 'required|integer',
         ]);
-
-        $service = app(SuriApiService::class);
-        $res = $service->importarContato(
-            $this->name,
-            $this->phone,
-            $this->gender,
-            $this->channelId,
-            $this->channelType
-        );
-
+        $res = app(SuriApiService::class)->importarContato($this->name, $this->phone, $this->gender, $this->channelId, $this->channelType);
         $this->registrarResultado('Importar Contato', $res);
     }
 
@@ -335,16 +277,7 @@ class SuriTestDashboard extends Component
             'userId'     => 'required|string',
             'templateId' => 'required|string',
         ]);
-
-        $service = app(SuriApiService::class);
-        $res = $service->enviarTemplateSimples(
-            $this->userId,
-            $this->templateId,
-            $this->flowId ?: null,
-            $this->ignorePortfolio,
-            $this->responseActionType
-        );
-
+        $res = app(SuriApiService::class)->enviarTemplateSimples($this->userId, $this->templateId, $this->flowId ?: null, $this->ignorePortfolio, $this->responseActionType);
         $this->registrarResultado('Template Simples', $res);
     }
 
@@ -356,19 +289,7 @@ class SuriTestDashboard extends Component
             'templateId' => 'required|string',
             'channelId'  => 'required|string',
         ]);
-
-        $service = app(SuriApiService::class);
-        $res = $service->enviarTemplateComBotoes(
-            $this->name,
-            $this->phone,
-            $this->templateId,
-            $this->email ?: null,
-            $this->gender,
-            $this->channelId,
-            $this->channelType,
-            $this->defaultDepartmentId ?: null
-        );
-
+        $res = app(SuriApiService::class)->enviarTemplateComBotoes($this->name, $this->phone, $this->templateId, $this->email ?: null, $this->gender, $this->channelId, $this->channelType, $this->defaultDepartmentId ?: null);
         $this->registrarResultado('Template com Botões', $res);
     }
 
@@ -380,25 +301,8 @@ class SuriTestDashboard extends Component
             'templateId' => 'required|string',
             'channelId'  => 'required|string',
         ]);
-
         $paramsLimpos = array_values(array_filter(array_map('trim', $this->bodyParameters), fn($v) => $v !== ''));
-
-        $service = app(SuriApiService::class);
-        $res = $service->enviarTemplateComVariaveis(
-            $this->name,
-            $this->phone,
-            $this->templateId,
-            $paramsLimpos,
-            $this->flowId ?: null,
-            $this->ignorePortfolio,
-            $this->responseActionType,
-            $this->email ?: null,
-            $this->gender,
-            $this->channelId,
-            $this->channelType,
-            $this->defaultDepartmentId ?: null
-        );
-
+        $res = app(SuriApiService::class)->enviarTemplateComVariaveis($this->name, $this->phone, $this->templateId, $paramsLimpos, $this->flowId ?: null, $this->ignorePortfolio, $this->responseActionType, $this->email ?: null, $this->gender, $this->channelId, $this->channelType, $this->defaultDepartmentId ?: null);
         $this->registrarResultado('Template com Variáveis', $res);
     }
 
@@ -408,64 +312,15 @@ class SuriTestDashboard extends Component
             'userId'        => 'required|string',
             'textoMensagem' => 'required|string|min:1',
         ]);
-
-        $service = app(SuriApiService::class);
-        $res = $service->enviarMensagemSimples(
-            $this->userId,
-            $this->textoMensagem,
-            $this->contextMsgId ?: null
-        );
-
+        $res = app(SuriApiService::class)->enviarMensagemSimples($this->userId, $this->textoMensagem, $this->contextMsgId ?: null);
         $this->registrarResultado('Mensagem Simples (Texto Livre)', $res);
-    }
-
-    public function sincronizarTemplateLocal(int $id): void
-    {
-        $tpl = EmailTemplate::findOrFail($id);
-        $service = app(SuriApiService::class);
-
-        $cleanBody = strip_tags(html_entity_decode((string) $tpl->corpo, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        $payloadPreview = [
-            'template_local_id' => $tpl->id,
-            'nome'              => $tpl->nome,
-            'corpo_limpo'       => $cleanBody,
-        ];
-
-        $suriId = $service->syncTemplate($tpl);
-
-        $this->registrarResultado('Sincronizar Template Local', [
-            'sucesso'     => !empty($suriId),
-            'metodo'      => 'POST',
-            'http_status' => !empty($suriId) ? 200 : 400,
-            'url'         => rtrim((string) env('SURI_API_URL', ''), '/') . '/api/templates',
-            'payload'     => $payloadPreview,
-            'resposta'    => !empty($suriId)
-                ? ['success' => true, 'suri_template_id' => $suriId]
-                : ['success' => false, 'error' => 'Falha ao sincronizar template com a Suri.'],
-        ]);
-
-        if ($suriId) {
-            $tpl->update(['suri_template_id' => $suriId]);
-            $this->templateId = $suriId;
-            $this->dispatch('sucesso', msg: "Template sincronizado! ID Suri: {$suriId}");
-        } else {
-            $this->dispatch('erro', msg: 'Falha ao sincronizar template com a Suri.');
-        }
     }
 
     public function render()
     {
         $configSuri = app(SuriApiService::class)->getConfigResumo();
-
-        $templatesLocais = EmailTemplate::whereIn('canal', ['whatsapp', 'ambos'])
-            ->orderBy('id', 'desc')
-            ->get();
-
-        $inscricoesRecentes = Inscricao::select('id', 'nome', 'celular', 'email')
-            ->whereNotNull('celular')
-            ->latest('id')
-            ->limit(30)
-            ->get();
+        $templatesLocais = EmailTemplate::whereIn('canal', ['whatsapp', 'ambos'])->orderBy('id', 'desc')->get();
+        $inscricoesRecentes = Inscricao::select('id', 'nome', 'celular', 'email')->whereNotNull('celular')->latest('id')->limit(30)->get();
 
         $queryLogs = SuriTestLog::query()
             ->when($this->filtroAcaoLog !== '', fn($q) => $q->where('acao', $this->filtroAcaoLog))
