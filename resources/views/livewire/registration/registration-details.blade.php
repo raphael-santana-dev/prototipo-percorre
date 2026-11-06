@@ -1,6 +1,6 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans"
      x-data="{ emailModal: @entangle('modalEmailAberto') }" 
-     x-effect="document.body.classList.toggle('overflow-hidden', emailModal)">
+     x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva'))">
 
     @php
         $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
@@ -803,12 +803,6 @@
                         <button type="button" wire:click="abrirFormularioEmbed" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 w-full sm:w-auto">
                             <i class="ph-bold ph-play"></i> Carregar Formulário
                         </button>
-
-                        @if($urlEmbedAtiva)
-                            <button type="button" wire:click="fecharFormularioEmbed" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 w-full sm:w-auto">
-                                <i class="ph-bold ph-x"></i> Fechar 
-                            </button>
-                        @endif
                     </div>
                 </div>
 
@@ -824,26 +818,11 @@
                     </div>
                 @endif
 
-                @if($urlEmbedAtiva)
-                    <div class="w-full rounded-2xl border-2 border-indigo-200 overflow-hidden shadow-inner bg-gray-50">
-                        <div class="px-4 py-2.5 bg-indigo-600 text-white text-xs font-bold flex items-center justify-between">
-                            <span class="flex items-center gap-2 truncate">
-                                <i class="ph-fill ph-user-switch text-base shrink-0"></i>
-                                <span class="truncate">Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }} (Participante: {{ auth()->user()->name }})</span>
-                            </span>
-                            <a href="{{ $urlEmbedAtiva }}" target="_blank" class="text-[11px] underline hover:text-indigo-200 flex items-center gap-1 shrink-0 ml-2">
-                                Abrir em nova guia <i class="ph-bold ph-arrow-square-out"></i>
-                            </a>
-                        </div>
-                        <iframe src="{{ $urlEmbedAtiva }}" class="w-full h-[780px] border-0 bg-white block"></iframe>
-                    </div>
-                @else
-                    <div class="w-full py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-gray-400 block">
-                        <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-purpura-400"></i>
-                        <p class="text-sm font-bold text-gray-700">Nenhum formulário carregado no momento</p>
-                        <p class="text-xs text-gray-500 mt-1">Selecione o formulário acima e clique em <b>"Carregar Formulário"</b> para preenchê-lo em nome do candidato.</p>
-                    </div>
-                @endif
+                <div class="w-full py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-gray-400 block">
+                    <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-purpura-400"></i>
+                    <p class="text-sm font-bold text-gray-700">Selecione o formulário acima e clique em "Carregar Formulário"</p>
+                    <p class="text-xs text-gray-500 mt-1">O formulário será aberto em <b>tela cheia</b> para o preenchimento assistido.</p>
+                </div>
             </div>
         </div>
 
@@ -1050,6 +1029,38 @@
                         {!! $emailVisualizacao->corpo !!}
                     </div>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL EM TELA CHEIA PARA PREENCHIMENTO DE FORMULÁRIO (EMBED) --}}
+    @if($urlEmbedAtiva)
+        <div class="fixed inset-0 z-[200] flex flex-col bg-white dark:bg-gray-900 animate-fade-in-up">
+            <!-- Cabeçalho do Modal -->
+            <div class="px-6 py-4 bg-indigo-600 dark:bg-indigo-700 text-white flex justify-between items-center shrink-0 shadow-md z-10">
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-base font-extrabold flex items-center gap-2 truncate">
+                        <i class="ph-fill ph-user-switch text-xl"></i>
+                        Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }}
+                    </h3>
+                    <p class="text-[11px] text-indigo-200 mt-0.5 font-medium">
+                        Preenchendo em nome de <b class="text-white">{{ $inscricao->nome }}</b> (Participante Logado: {{ auth()->user()->name }})
+                    </p>
+                </div>
+                
+                <div class="flex items-center gap-4 shrink-0 pl-4">
+                    <a href="{{ $urlEmbedAtiva }}" target="_blank" class="hidden sm:flex text-xs text-indigo-100 hover:text-white transition items-center gap-1.5 font-bold bg-indigo-800/50 hover:bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-500/30">
+                        Abrir em nova guia <i class="ph-bold ph-arrow-square-out text-sm"></i>
+                    </a>
+                    <button type="button" wire:click="fecharFormularioEmbed" class="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition shadow-sm border border-red-400/50">
+                        <i class="ph-bold ph-x text-sm"></i> Fechar e Sincronizar Ficha
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Corpo do Modal (Iframe) -->
+            <div class="flex-1 w-full bg-gray-50 dark:bg-gray-950 relative">
+                <iframe src="{{ $urlEmbedAtiva }}" class="absolute inset-0 w-full h-full border-0"></iframe>
             </div>
         </div>
     @endif
