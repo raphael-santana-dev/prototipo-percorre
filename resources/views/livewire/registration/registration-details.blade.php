@@ -1,6 +1,6 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans"
      x-data="{ emailModal: @entangle('modalEmailAberto') }" 
-     x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva'))">
+     x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva') || @entangle('modalHistoricoFormularioAberto'))">
 
     @php
         $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
@@ -764,7 +764,7 @@
         </div>
 
     {{-- ===================================================================== --}}
-    {{-- ABA 3: FORMULÁRIOS INCORPORADOS (EMBED) PARA PREENCHIMENTO ASSISTIDO  --}}
+    {{-- ABA 3: FORMULÁRIOS E PREENCHIMENTO ASSISTIDO (EMBED EM TABELA)        --}}
     {{-- ===================================================================== --}}
     @elseif($abaAtiva === 'formularios')
         <div class="mt-6 space-y-6 animate-fade-in-down w-full block">
@@ -772,57 +772,85 @@
                 <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-gray-100 pb-5 w-full">
                     <div class="flex-1 min-w-0">
                         <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
-                            <i class="ph-fill ph-browsers text-purpura-600 text-xl"></i> Preencher Formulário em Nome do Candidato (Embed)
+                            <i class="ph-fill ph-browsers text-purpura-600 text-xl"></i> Formulários e Preenchimento Assistido
                         </h3>
                         <p class="text-xs text-gray-500 mt-1">
-                            Escolha o formulário de inscrição do candidato ou qualquer formulário ativo do sistema para preenchê-lo diretamente nesta tela.
+                            Selecione o formulário na lista abaixo para iniciar um preenchimento em nome do candidato ou consultar o histórico de edições passadas.
                         </p>
                     </div>
-
-                    <div class="flex flex-wrap items-end gap-3 shrink-0">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Tipo de Formulário</label>
-                            <select wire:model.live="tipoFormularioEmbed" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3 w-full sm:w-auto">
-                                <option value="inscricao">Formulário da Própria Inscrição (Retomada)</option>
-                                <option value="formulario_sistema">Outro Formulário do Sistema (Avaliação / Geral)</option>
-                            </select>
-                        </div>
-
-                        @if($tipoFormularioEmbed === 'formulario_sistema')
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Selecione o Formulário</label>
-                                <select wire:model="formularioEmbedId" class="rounded-lg border-gray-300 text-xs font-bold py-2 px-3 min-w-[240px] w-full sm:w-auto">
-                                    <option value="">-- Escolha um formulário --</option>
-                                    @foreach($this->formulariosDisponiveisEmbed as $fDisp)
-                                        <option value="{{ $fDisp->id }}">{{ $fDisp->titulo }} ({{ strtoupper($fDisp->tipo) }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endif
-
-                        <button type="button" wire:click="abrirFormularioEmbed" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 w-full sm:w-auto">
-                            <i class="ph-bold ph-play"></i> Carregar Formulário
-                        </button>
+                    <div class="relative w-full sm:w-72 shrink-0">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input wire:model.live.debounce.300ms="searchFormulario" type="text" placeholder="Buscar formulário..." class="pl-9 w-full rounded-lg border-gray-300 text-xs shadow-sm focus:border-purpura-500 focus:ring-purpura-500 h-10">
                     </div>
                 </div>
 
-                @if(!empty($formulariosAssistidos))
-                    <div class="flex flex-wrap items-center gap-2 w-full">
-                        <span class="text-[11px] font-bold text-gray-500 uppercase">Formulários preenchidos por Participante:</span>
-                        @foreach($formulariosAssistidos as $fa)
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                <i class="ph-fill ph-user-switch"></i>
-                                {{ $fa['titulo'] ?? 'Formulário' }} — por {{ $fa['participante_nome'] ?? 'Participante' }} ({{ $fa['data'] ?? '' }})
-                            </span>
-                        @endforeach
+                {{-- Tabela de Formulários Disponíveis --}}
+                <div class="overflow-x-auto w-full border border-gray-200 rounded-xl shadow-sm">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-wider">
+                            <tr>
+                                <th class="px-4 py-3">Formulário / Nome</th>
+                                <th class="px-4 py-3 text-center">Preenchimentos</th>
+                                <th class="px-4 py-3">Última Edição</th>
+                                <th class="px-4 py-3 text-right">Ações de Preenchimento</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            @forelse($this->formulariosPaginados as $form)
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3">
+                                        <span class="font-bold text-gray-900 block truncate max-w-sm">{{ $form['titulo'] }}</span>
+                                        <span class="block text-[10px] font-bold text-gray-500 mt-0.5 tracking-wider">{{ $form['tipo'] }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($form['total_preenchimentos'] > 0)
+                                            <span class="px-2 py-0.5 rounded-full bg-purpura-100 text-purpura-700 font-bold text-[10px]">
+                                                {{ $form['total_preenchimentos'] }}x
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400 text-xs font-medium">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if($form['ultimo_preenchimento'])
+                                            <div class="text-xs font-bold text-gray-800 flex items-center gap-1.5 truncate max-w-[200px]">
+                                                <i class="ph-fill ph-user-switch text-indigo-500"></i> {{ $form['ultimo_preenchimento']['participante_nome'] ?? 'Participante' }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $form['ultimo_preenchimento']['data'] ?? '-' }}</div>
+                                        @else
+                                            <span class="text-gray-400 text-xs italic">Nunca preenchido</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <div class="inline-flex items-center gap-2 justify-end">
+                                            @if($form['total_preenchimentos'] > 0)
+                                                <button type="button" wire:click="verHistoricoFormulario('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3 py-1.5 text-[11px] font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition inline-flex items-center gap-1 shadow-sm" title="Ver histórico completo de edições">
+                                                    <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
+                                                </button>
+                                            @endif
+                                            <button type="button" wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3.5 py-1.5 text-[11px] font-bold text-white bg-purpura-600 rounded-lg hover:bg-purpura-700 transition shadow-sm inline-flex items-center gap-1.5">
+                                                <i class="ph-bold ph-play"></i> Iniciar Preenchimento
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-4 py-12 text-center text-gray-500">
+                                        <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-gray-300"></i>
+                                        <p class="text-sm font-bold text-gray-700">Nenhum formulário localizado.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($this->formulariosPaginados->hasPages())
+                    <div class="mt-4">
+                        {{ $this->formulariosPaginados->links() }}
                     </div>
                 @endif
-
-                <div class="w-full py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-gray-400 block">
-                    <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-purpura-400"></i>
-                    <p class="text-sm font-bold text-gray-700">Selecione o formulário acima e clique em "Carregar Formulário"</p>
-                    <p class="text-xs text-gray-500 mt-1">O formulário será aberto em <b>tela cheia</b> para o preenchimento assistido.</p>
-                </div>
             </div>
         </div>
 
@@ -1061,6 +1089,59 @@
             <!-- Corpo do Modal (Iframe) -->
             <div class="flex-1 w-full bg-gray-50 dark:bg-gray-950 relative">
                 <iframe src="{{ $urlEmbedAtiva }}" class="absolute inset-0 w-full h-full border-0"></iframe>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE HISTÓRICO DE PREENCHIMENTOS DO FORMULÁRIO --}}
+    @if($modalHistoricoFormularioAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col my-8 border border-gray-200">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                        <i class="ph-fill ph-clock-counter-clockwise text-purpura-600 text-xl"></i> 
+                        Histórico de Acessos ao Formulário
+                    </h3>
+                    <button wire:click="$set('modalHistoricoFormularioAberto', false)" class="text-gray-400 hover:text-red-500 transition"><i class="ph-bold ph-x text-xl"></i></button>
+                </div>
+                
+                <div class="p-4 border-b border-gray-100 bg-white">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Formulário:</p>
+                    <p class="text-sm font-bold text-gray-900">{{ $tituloHistoricoFormulario }}</p>
+                </div>
+
+                <div class="p-0 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-gray-50 border-b border-gray-100 text-[10px] font-bold uppercase text-gray-500 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3">Data e Hora do Atendimento</th>
+                                <th class="px-4 py-3">Participante (Autor)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse($historicoFormularioSelecionado as $hist)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-xs font-mono font-bold text-gray-600">{{ $hist['data'] ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-xs font-bold text-gray-900 flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
+                                            <i class="ph-fill ph-user-switch text-xs"></i>
+                                        </div>
+                                        {{ $hist['participante_nome'] ?? 'Desconhecido' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="p-6 text-center text-gray-500">
+                                        Nenhum registro de preenchimento assistido para este formulário.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button wire:click="$set('modalHistoricoFormularioAberto', false)" class="btn btn--secondary btn--medium">Fechar Histórico</button>
+                </div>
             </div>
         </div>
     @endif

@@ -7,6 +7,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Computed;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Inscricao;
 use App\Models\StatusInscricao;
 use App\Models\Curso;
@@ -21,19 +23,21 @@ use App\Modules\Matricula\Services\AiValidationService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 #[Title('Detalhes da Inscrição')]
 class RegistrationDetails extends Component
 {
     use WithFileUploads;
+    use WithPagination;
     use \App\Traits\WithFichaPdfDownload;
 
     public Inscricao $inscricao;
     public $status_selecionado;
     public bool $modalAntiSpamAberto = false;
 
-    public string $abaAtiva = 'geral'; // geral, documentacao, formularios, movimentacao, comunicacao
+    public string $abaAtiva = 'geral'; 
     public bool $modalEmailAberto = false;
     public $emailVisualizacao = null;
 
@@ -52,12 +56,17 @@ class RegistrationDetails extends Component
     public array $arquivosEnviados = [];
 
     // =========================================================================
-    // PREENCHIMENTO DE FORMULÁRIOS VIA EMBED PELO PARTICIPANTE
+    // PREENCHIMENTO DE FORMULÁRIOS VIA EMBED (NOVA TABELA)
     // =========================================================================
-    public string $tipoFormularioEmbed = 'inscricao'; // 'inscricao' ou 'formulario_sistema'
+    public string $searchFormulario = '';
+    public string $tipoFormularioEmbed = ''; 
     public $formularioEmbedId = '';
     public ?string $urlEmbedAtiva = null;
     public string $tituloEmbedAtivo = '';
+
+    public bool $modalHistoricoFormularioAberto = false;
+    public array $historicoFormularioSelecionado = [];
+    public string $tituloHistoricoFormulario = '';
 
     public function mount($id)
     {
@@ -65,6 +74,11 @@ class RegistrationDetails extends Component
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
         $this->carregarDadosEdicao();
         $this->carregarStatusArquivos();
+    }
+
+    public function updatingSearchFormulario()
+    {
+        $this->resetPage('formsPage');
     }
 
     public function setAba(string $aba): void
@@ -171,7 +185,6 @@ class RegistrationDetails extends Component
         $mapaParticipante = $dinamicosAntigos['_preenchido_por_participante'] ?? [];
         $camposAlteradosLog = [];
 
-        // Verifica quais campos fixos foram preenchidos/alterados pelo participante
         foreach ($this->formFixo as $campoKey => $novoVal) {
             $valAntigo = $campoKey === 'data_nascimento'
                 ? ($this->inscricao->data_nascimento ? \Carbon\Carbon::parse($this->inscricao->data_nascimento)->format('Y-m-d') : '')
@@ -187,7 +200,6 @@ class RegistrationDetails extends Component
             }
         }
 
-        // Verifica quais campos dinâmicos foram preenchidos/alterados pelo participante
         foreach ($this->formDinamico as $chaveDin => $novoValorDin) {
             if (str_starts_with($chaveDin, '_')) continue;
 
@@ -202,7 +214,6 @@ class RegistrationDetails extends Component
             }
         }
 
-        // Sempre marca o selo geral de atendimento assistido se houve edição
         if (!empty($camposAlteradosLog)) {
             $mapaParticipante['_ultimo_atendimento'] = [
                 'user_id'   => $participante->id,
@@ -344,7 +355,6 @@ class RegistrationDetails extends Component
             Storage::disk('local')->delete($docMatricula->arquivo_caminho);
         }
 
-        // Salva também no disco public para permitir visualização rápida pela equipe
         $caminho = $file->store("matriculas/{$this->inscricao->id}");
         try {
             Storage::disk('public')->put($caminho, file_get_contents($file->getRealPath()));
@@ -378,7 +388,6 @@ class RegistrationDetails extends Component
                 ], $metaParticipante);
             }
         } else {
-            // Validação por IA Desativada pelo Participante: aprova diretamente
             $docMatricula->status_analise = 'aprovado_manual';
             $docMatricula->log_ia = array_merge([
                 'observacao' => 'Documento enviado por Participante com validação por IA desativada.',
@@ -387,7 +396,6 @@ class RegistrationDetails extends Component
 
         $docMatricula->save();
 
-        // Registra na Auditoria (Timeline de Movimentação)
         AuditoriaLog::create([
             'tabela_alterada' => 'inscricoes',
             'registro_id'     => $this->inscricao->id,
@@ -437,15 +445,99 @@ class RegistrationDetails extends Component
     }
 
     // =========================================================================
-    // 3. PREENCHIMENTO DE FORMULÁRIOS VIA EMBED PELO PARTICIPANTE
+    // 3. PREENCHIMENTO DE FORMULÁRIOS VIA EMBED (NOVA LISTAGEM E MODAL TELA CHEIA)
     // =========================================================================
 
     #[Computed]
-    public function formulariosDisponiveisEmbed()
+    public function formulariosPaginados()
     {
-        return Formulario::where('status', true)
-            ->orderBy('id', 'desc')
+        $formulariosDb = Formulario::where('status', true)
+            ->when($this->searchFormulario, function($q) {
+                $q->where('titulo', 'ilike', '%' . $this->searchFormulario . '%');
+            })
             ->get();
+
+        $itens = collect();
+
+        if (empty($this->searchFormulario) || stripos('Formulário da Própria Inscrição (Retomada)', $this->searchFormulario) !== false) {
+            $itens->push([
+                'id'     => null,
+                'ref'    => 'inscricao',
+                'titulo' => 'Formulário da Própria Inscrição (Retomada)',
+                'tipo'   => 'Inscrição',
+            ]);
+        }
+
+        foreach ($formulariosDb as $f) {
+            $itens->push([
+                'id'     => $f->id,
+                'ref'    => 'formulario_sistema',
+                'titulo' => $f->titulo,
+                'tipo'   => strtoupper($f->tipo),
+            ]);
+        }
+
+        $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);
+        $historico = $dinamicos['_formularios_assistidos'] ?? [];
+
+        $itens = $itens->map(function($item) use ($historico) {
+            $preenchimentos = collect($historico)->filter(function($h) use ($item) {
+                if ($item['ref'] === 'inscricao') return ($h['tipo'] ?? '') === 'inscricao';
+                return ($h['tipo'] ?? '') === 'formulario_sistema' && ($h['formulario_id'] ?? null) == $item['id'];
+            });
+
+            $item['total_preenchimentos'] = $preenchimentos->count();
+            $item['ultimo_preenchimento'] = $preenchimentos->last(); 
+            $item['historico'] = $preenchimentos->values()->toArray();
+
+            return $item;
+        });
+
+        // Ordena para que os que já possuem preenchimento fiquem no topo
+        $itens = $itens->sortByDesc('total_preenchimentos')->values();
+
+        $page = $this->getPage('formsPage');
+        $perPage = 10;
+        
+        return new LengthAwarePaginator(
+            $itens->forPage($page, $perPage),
+            $itens->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'pageName' => 'formsPage']
+        );
+    }
+
+    public function abrirFormularioEmbedTable(string $ref, $id = null): void
+    {
+        $this->tipoFormularioEmbed = $ref;
+        $this->formularioEmbedId = $id;
+        $this->abrirFormularioEmbed();
+    }
+
+    public function verHistoricoFormulario(string $ref, $id = null): void
+    {
+        $this->historicoFormularioSelecionado = [];
+        $this->tituloHistoricoFormulario = '';
+
+        $dinamicos = is_string($this->inscricao->dados_dinamicos) ? json_decode($this->inscricao->dados_dinamicos, true) : ($this->inscricao->dados_dinamicos ?? []);
+        $historico = $dinamicos['_formularios_assistidos'] ?? [];
+
+        $preenchimentos = collect($historico)->filter(function($h) use ($ref, $id) {
+            if ($ref === 'inscricao') return ($h['tipo'] ?? '') === 'inscricao';
+            return ($h['tipo'] ?? '') === 'formulario_sistema' && ($h['formulario_id'] ?? null) == $id;
+        });
+
+        $this->historicoFormularioSelecionado = $preenchimentos->reverse()->values()->toArray();
+        
+        if ($ref === 'inscricao') {
+            $this->tituloHistoricoFormulario = 'Formulário da Própria Inscrição';
+        } else {
+            $form = Formulario::find($id);
+            $this->tituloHistoricoFormulario = $form ? $form->titulo : 'Formulário do Sistema';
+        }
+
+        $this->modalHistoricoFormularioAberto = true;
     }
 
     public function abrirFormularioEmbed(): void
@@ -480,7 +572,6 @@ class RegistrationDetails extends Component
             $this->tituloEmbedAtivo = $form->titulo . ' (' . strtoupper($form->tipo) . ')';
         }
 
-        // Registra no JSON da inscrição e na Auditoria que o formulário foi aberto via Atendimento Assistido
         $dinamicos = is_string($this->inscricao->dados_dinamicos)
             ? json_decode($this->inscricao->dados_dinamicos, true)
             : ($this->inscricao->dados_dinamicos ?? []);
