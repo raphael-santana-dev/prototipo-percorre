@@ -22,12 +22,13 @@ use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
 use App\Traits\ComFiltroAvancado;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
 class RegistrationManager extends Component
 {
-    use WithPagination, ComPadraoListagem, ComFiltroAvancado;
+    use WithPagination, ComPadraoListagem, ComFiltroAvancado, ValidaAcesso;
 
     public $filtroNome = '';
     public $filtroStatus = '';
