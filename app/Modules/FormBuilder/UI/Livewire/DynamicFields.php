@@ -36,6 +36,13 @@ class DynamicFields extends Component
     public $depende_de = '';
     public $depende_operador = '=';
     public $depende_valor = '';
+    public $depende_valor_max = '';
+
+    // Controle de Condições de Visibilidade (Simples vs Avançado com Grupos E/OU)
+    public string $modoCondicional = 'nenhum'; // 'nenhum', 'simples', 'avancado'
+    public bool $modalCondicoesAvancadasAberto = false;
+    public array $gruposCondicionais = [];
+    public array $valoresSimulacaoCondicional = [];
 
     public array $configuracoes = [];
     public $matriz_linhas = '';
@@ -750,6 +757,350 @@ class DynamicFields extends Component
         $this->atualizarProximaOrdem();
     }
 
+    // =========================================================================
+    // MOTOR DE CONDIÇÕES DE VISIBILIDADE (SIMPLES, AVANÇADO E SIMULADOR)
+    // =========================================================================
+
+    public function getOperadoresCondicionaisProperty(): array
+    {
+        return [
+            '='            => 'Igual a (=)',
+            '!='           => 'Diferente de (!=)',
+            'contains'     => 'Contém o texto',
+            'not_contains' => 'Não contém o texto',
+            'starts_with'  => 'Começa com',
+            'ends_with'    => 'Termina com',
+            'in'           => 'Está entre as opções (sep. por vírgula)',
+            'not_in'       => 'Não está entre as opções (sep. por vírgula)',
+            '>'            => 'Maior que (>)',
+            '>='           => 'Maior ou igual a (>=)',
+            '<'            => 'Menor que (<)',
+            '<='           => 'Menor ou igual a (<=)',
+            'between'      => 'Entre dois valores (Mín e Máx)',
+            'not_empty'    => 'Está preenchido (Não vazio)',
+            'empty'        => 'Está vazio (Não preenchido)',
+        ];
+    }
+
+    public function getCamposDisponiveisParaCondicaoProperty(): array
+    {
+        $lista = [];
+
+        // Se for Ciclo, inclui também os campos fixos nativos da 1ª etapa
+        if ($this->contextoTipo === 'ciclo') {
+            $fixosCiclo = [
+                'possui_nome_social'   => '[Fixo] Possui Nome Social? (sim/nao)',
+                'possui_deficiencia'   => '[Fixo] Pessoa com Deficiência PcD? (sim/nao)',
+                'natureza_deficiencia' => '[Fixo] Natureza da Deficiência',
+                'estado'               => '[Fixo] Estado (UF)',
+                'cidade'               => '[Fixo] Cidade',
+                'regiao'               => '[Fixo] Região (centro, norte, sul, leste, oeste)',
+                'unidade'              => '[Fixo] Unidade Selecionada (ID)',
+                'curso'                => '[Fixo] Curso Selecionado (ID)',
+                'turno'                => '[Fixo] Turno Selecionado (ID)',
+            ];
+            foreach ($fixosCiclo as $k => $label) {
+                $lista[$k] = $label;
+            }
+        }
+
+        $campos = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
+        foreach ($campos as $c) {
+            if ($this->campoId && (int) $c->id === (int) $this->campoId) {
+                continue; // Um campo não deve depender dele mesmo
+            }
+            if (in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link'], true)) {
+                continue;
+            }
+            $limpo = trim(strip_tags((string) $c->label)) ?: $c->name;
+            $lista[$c->name] = "Pág. #{$c->etapa} — " . Str::limit($limpo, 40) . " ({$c->name})";
+        }
+
+        return $lista;
+    }
+
+    public function updatedModoCondicional(string $modo): void
+    {
+        if ($modo === 'nenhum') {
+            $this->depende_de = '';
+            $this->depende_operador = '=';
+            $this->depende_valor = '';
+            $this->depende_valor_max = '';
+            $this->gruposCondicionais = [];
+        } elseif ($modo === 'avancado') {
+            if (empty($this->gruposCondicionais)) {
+                // Se já tinha uma condição simples preenchida, migra-a como ponto de partida
+                $this->gruposCondicionais = [
+                    [
+                        'id'       => 'grp_' . uniqid(),
+                        'conector' => 'AND',
+                        'regras'   => [
+                            [
+                                'id'        => 'rule_' . uniqid(),
+                                'conector'  => 'AND',
+                                'campo'     => $this->depende_de ?: '',
+                                'operador'  => $this->depende_operador ?: '=',
+                                'valor'     => $this->depende_valor ?: '',
+                                'valor_max' => $this->depende_valor_max ?: '',
+                            ],
+                        ],
+                    ],
+                ];
+            }
+            $this->abrirModalCondicoesAvancadas();
+        }
+    }
+
+    public function abrirModalCondicoesAvancadas(): void
+    {
+        $this->modoCondicional = 'avancado';
+
+        if (empty($this->gruposCondicionais)) {
+            $this->adicionarGrupoCondicional();
+        }
+
+        $this->modalCondicoesAvancadasAberto = true;
+    }
+
+    public function adicionarGrupoCondicional(string $conector = 'AND'): void
+    {
+        $this->gruposCondicionais[] = [
+            'id'       => 'grp_' . uniqid(),
+            'conector' => in_array($conector, ['AND', 'OR'], true) ? $conector : 'AND',
+            'regras'   => [
+                [
+                    'id'        => 'rule_' . uniqid(),
+                    'conector'  => 'AND',
+                    'campo'     => '',
+                    'operador'  => '=',
+                    'valor'     => '',
+                    'valor_max' => '',
+                ],
+            ],
+        ];
+    }
+
+    public function removerGrupoCondicional(int $gIndex): void
+    {
+        unset($this->gruposCondicionais[$gIndex]);
+        $this->gruposCondicionais = array_values($this->gruposCondicionais);
+
+        if (empty($this->gruposCondicionais)) {
+            $this->adicionarGrupoCondicional();
+        }
+    }
+
+    public function adicionarRegraNoGrupo(int $gIndex, string $conector = 'AND'): void
+    {
+        if (!isset($this->gruposCondicionais[$gIndex])) return;
+
+        $this->gruposCondicionais[$gIndex]['regras'][] = [
+            'id'        => 'rule_' . uniqid(),
+            'conector'  => in_array($conector, ['AND', 'OR'], true) ? $conector : 'AND',
+            'campo'     => '',
+            'operador'  => '=',
+            'valor'     => '',
+            'valor_max' => '',
+        ];
+    }
+
+    public function removerRegraDoGrupo(int $gIndex, int $rIndex): void
+    {
+        if (!isset($this->gruposCondicionais[$gIndex]['regras'][$rIndex])) return;
+
+        unset($this->gruposCondicionais[$gIndex]['regras'][$rIndex]);
+        $this->gruposCondicionais[$gIndex]['regras'] = array_values($this->gruposCondicionais[$gIndex]['regras']);
+
+        if (empty($this->gruposCondicionais[$gIndex]['regras'])) {
+            $this->removerGrupoCondicional($gIndex);
+        }
+    }
+
+    /**
+     * Avalia individualmente uma regra de visibilidade para o Simulador em Tempo Real.
+     */
+    public function avaliarRegraIndividual(array $regra): bool
+    {
+        $campo = trim((string) ($regra['campo'] ?? ''));
+        $op    = (string) ($regra['operador'] ?? '=');
+        $alvo  = (string) ($regra['valor'] ?? '');
+        $max   = (string) ($regra['valor_max'] ?? '');
+
+        if ($campo === '') {
+            return false;
+        }
+
+        $valorSimulado = $this->valoresSimulacaoCondicional[$campo] ?? '';
+
+        $norm = function ($v): string {
+            $s = mb_strtolower(trim((string) $v), 'UTF-8');
+            $unaccent = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+            return $unaccent !== false ? $unaccent : $s;
+        };
+
+        $valNorm  = $norm($valorSimulado);
+        $alvoNorm = $norm($alvo);
+        $maxNorm  = $norm($max);
+
+        if ($op === 'empty') {
+            return $valNorm === '';
+        }
+        if ($op === 'not_empty') {
+            return $valNorm !== '';
+        }
+
+        // Para qualquer outro operador, se o campo de origem ainda estiver vazio, retorna false
+        if ($valNorm === '') {
+            return false;
+        }
+
+        // Suporte a múltiplas respostas simuladas separadas por vírgula
+        $listaValoresAtuais = array_values(array_filter(array_map($norm, explode(',', (string) $valorSimulado)), fn($i) => $i !== ''));
+        $listaAlvos = array_values(array_filter(array_map($norm, explode(',', $alvo)), fn($i) => $i !== ''));
+
+        $numVal  = is_numeric(str_replace(',', '.', $valNorm)) ? (float) str_replace(',', '.', $valNorm) : null;
+        $numAlvo = is_numeric(str_replace(',', '.', $alvoNorm)) ? (float) str_replace(',', '.', $alvoNorm) : null;
+        $numMax  = is_numeric(str_replace(',', '.', $maxNorm)) ? (float) str_replace(',', '.', $maxNorm) : null;
+
+        return match ($op) {
+            '='            => $valNorm === $alvoNorm || in_array($alvoNorm, $listaValoresAtuais, true),
+            '!='           => $valNorm !== $alvoNorm && !in_array($alvoNorm, $listaValoresAtuais, true),
+            'contains'     => $alvoNorm !== '' && str_contains($valNorm, $alvoNorm),
+            'not_contains' => $alvoNorm !== '' && !str_contains($valNorm, $alvoNorm),
+            'starts_with'  => $alvoNorm !== '' && str_starts_with($valNorm, $alvoNorm),
+            'ends_with'    => $alvoNorm !== '' && str_ends_with($valNorm, $alvoNorm),
+            'in'           => !empty(array_intersect($listaValoresAtuais, $listaAlvos)) || in_array($valNorm, $listaAlvos, true),
+            'not_in'       => empty(array_intersect($listaValoresAtuais, $listaAlvos)) && !in_array($valNorm, $listaAlvos, true),
+            '>'            => $numVal !== null && $numAlvo !== null && $numVal > $numAlvo,
+            '>='           => $numVal !== null && $numAlvo !== null && $numVal >= $numAlvo,
+            '<'            => $numVal !== null && $numAlvo !== null && $numVal < $numAlvo,
+            '<='           => $numVal !== null && $numAlvo !== null && $numVal <= $numAlvo,
+            'between'      => $numVal !== null && $numAlvo !== null && $numMax !== null && $numVal >= min($numAlvo, $numMax) && $numVal <= max($numAlvo, $numMax),
+            default        => false,
+        };
+    }
+
+    /**
+     * Calcula em tempo real o resultado de cada regra, de cada grupo e a visibilidade final do input.
+     */
+    #[Computed]
+    public function diagnosticoSimulacaoCondicional(): array
+    {
+        $grupos = $this->modoCondicional === 'avancado'
+            ? $this->gruposCondicionais
+            : ($this->modoCondicional === 'simples' && !empty($this->depende_de) ? [[
+                'id'       => 'grp_simples',
+                'conector' => 'AND',
+                'regras'   => [[
+                    'id'        => 'rule_simples',
+                    'conector'  => 'AND',
+                    'campo'     => $this->depende_de,
+                    'operador'  => $this->depende_operador ?: '=',
+                    'valor'     => $this->depende_valor,
+                    'valor_max' => $this->depende_valor_max,
+                ]],
+            ]] : []);
+
+        if (empty($grupos)) {
+            return [
+                'visivel'          => true,
+                'expressao_humana' => 'Sempre visível (sem restrições condicionais).',
+                'grupos_status'    => [],
+                'regras_status'    => [],
+                'campos_usados'    => [],
+            ];
+        }
+
+        $gruposStatus = [];
+        $regrasStatus = [];
+        $camposUsados = [];
+        $partesExpressaoGrupos = [];
+        $resultadoFinal = null;
+
+        $opLabels = $this->operadoresCondicionais;
+
+        foreach ($grupos as $gIdx => $grupo) {
+            $regras = $grupo['regras'] ?? [];
+            $resultadoGrupo = null;
+            $partesRegrasTexto = [];
+
+            foreach ($regras as $rIdx => $regra) {
+                $campoNome = trim((string) ($regra['campo'] ?? ''));
+                if ($campoNome !== '') {
+                    $camposUsados[$campoNome] = $this->camposDisponiveisParaCondicao[$campoNome] ?? $campoNome;
+                }
+
+                $passou = $this->avaliarRegraIndividual($regra);
+                $regrasStatus["{$gIdx}_{$rIdx}"] = $passou;
+
+                $conectorRegra = strtoupper((string) ($regra['conector'] ?? 'AND')) === 'OR' ? 'OR' : 'AND';
+
+                if ($resultadoGrupo === null) {
+                    $resultadoGrupo = $passou;
+                } else {
+                    $resultadoGrupo = ($conectorRegra === 'OR')
+                        ? ($resultadoGrupo || $passou)
+                        : ($resultadoGrupo && $passou);
+                }
+
+                $opSimbolo = $opLabels[$regra['operador'] ?? '='] ?? ($regra['operador'] ?? '=');
+                $valTexto = in_array($regra['operador'] ?? '=', ['empty', 'not_empty'], true)
+                    ? ''
+                    : (($regra['operador'] ?? '=') === 'between'
+                        ? " [{$regra['valor']} até {$regra['valor_max']}]"
+                        : " \"{$regra['valor']}\"");
+
+                $prefixoRegra = $rIdx > 0 ? ($conectorRegra === 'OR' ? ' OU ' : ' E ') : '';
+                $partesRegrasTexto[] = $prefixoRegra . '[' . ($campoNome ?: '?') . ' ' . $opSimbolo . $valTexto . ']';
+            }
+
+            $resultadoGrupo = $resultadoGrupo ?? false;
+            $gruposStatus[$gIdx] = $resultadoGrupo;
+
+            $conectorGrupo = strtoupper((string) ($grupo['conector'] ?? 'AND')) === 'OR' ? 'OR' : 'AND';
+            if ($resultadoFinal === null) {
+                $resultadoFinal = $resultadoGrupo;
+            } else {
+                $resultadoFinal = ($conectorGrupo === 'OR')
+                    ? ($resultadoFinal || $resultadoGrupo)
+                    : ($resultadoFinal && $resultadoGrupo);
+            }
+
+            $prefixoGrupo = $gIdx > 0 ? ($conectorGrupo === 'OR' ? ' OU ' : ' E ') : '';
+            $partesExpressaoGrupos[] = $prefixoGrupo . '(' . implode('', $partesRegrasTexto) . ')';
+        }
+
+        return [
+            'visivel'          => $resultadoFinal ?? true,
+            'expressao_humana' => implode('', $partesExpressaoGrupos),
+            'grupos_status'    => $gruposStatus,
+            'regras_status'    => $regrasStatus,
+            'campos_usados'    => $camposUsados,
+        ];
+    }
+
+    public function confirmarCondicoesAvancadas(): void
+    {
+        // Valida se há pelo menos uma regra com campo selecionado
+        foreach ($this->gruposCondicionais as $gIdx => $grupo) {
+            foreach ($grupo['regras'] ?? [] as $rIdx => $regra) {
+                if (empty($regra['campo'])) {
+                    $this->dispatch('erro', msg: 'Selecione o campo de referência em todas as condições do Grupo #' . ($gIdx + 1) . '.');
+                    return;
+                }
+            }
+        }
+
+        $this->modoCondicional = 'avancado';
+        $this->modalCondicoesAvancadasAberto = false;
+        $this->dispatch('sucesso', msg: ' Árvore de condições avançadas aplicada ao input! Clique em Guardar/Atualizar Bloco para persistir.');
+    }
+
     public function editar($id)
     {
         $campo = CampoFormulario::findOrFail($id);
@@ -785,6 +1136,20 @@ class DynamicFields extends Component
         $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
         $this->configuracoes = $config;
         $this->inicializarDefaultsDicas();
+
+        $condSalvas = $config['condicoes_visibilidade'] ?? null;
+        if (is_array($condSalvas) && ($condSalvas['modo'] ?? '') === 'avancado' && !empty($condSalvas['grupos'])) {
+            $this->modoCondicional = 'avancado';
+            $this->gruposCondicionais = $condSalvas['grupos'];
+        } elseif (!empty($campo->depende_de)) {
+            $this->modoCondicional = 'simples';
+            $this->depende_valor_max = $config['depende_valor_max'] ?? '';
+            $this->gruposCondicionais = [];
+        } else {
+            $this->modoCondicional = 'nenhum';
+            $this->depende_valor_max = '';
+            $this->gruposCondicionais = [];
+        }
 
         if ($campo->tipo === 'text' && $campo->subtipo === 'cep') {
             $this->configuracoes['viacep'] = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -876,9 +1241,10 @@ class DynamicFields extends Component
             'campoId', 'label', 'name', 'tipo', 'largura', 'subtipo', 
             'tamanho_min', 'tamanho_max', 'regex_mascara', 'opcoes', 'obrigatorio', 
             'regras_validacao', 'depende_de', 'depende_operador', 'depende_valor', 
-            'configuracoes', 'matriz_linhas', 'matriz_colunas', 'link_file_upload'
+            'configuracoes', 'matriz_linhas', 'matriz_colunas', 'link_file_upload',
+            'depende_valor_max', 'modoCondicional', 'gruposCondicionais', 'valoresSimulacaoCondicional'
         ]);
-        
+        $this->modoCondicional = 'nenhum';
         $this->painelCampoAtivo = false;
         $this->configuracoes = [];
         $this->inicializarDefaultsDicas();
@@ -1200,6 +1566,40 @@ class DynamicFields extends Component
                 'cidade'      => $nameSalvo . '_cidade',
                 'uf'          => $nameSalvo . '_uf',
             ];
+        }
+
+        if ($this->modoCondicional === 'nenhum') {
+            $this->depende_de = null;
+            $this->depende_operador = '=';
+            $this->depende_valor = null;
+            unset($configToSave['condicoes_visibilidade'], $configToSave['depende_valor_max']);
+        } elseif ($this->modoCondicional === 'simples') {
+            $configToSave['depende_valor_max'] = $this->depende_valor_max;
+            $configToSave['condicoes_visibilidade'] = [
+                'modo'   => 'simples',
+                'grupos' => !empty($this->depende_de) ? [[
+                    'id'       => 'grp_simples',
+                    'conector' => 'AND',
+                    'regras'   => [[
+                        'id'        => 'rule_simples',
+                        'conector'  => 'AND',
+                        'campo'     => $this->depende_de,
+                        'operador'  => $this->depende_operador ?: '=',
+                        'valor'     => (string) $this->depende_valor,
+                        'valor_max' => (string) $this->depende_valor_max,
+                    ]],
+                ]] : [],
+            ];
+        } elseif ($this->modoCondicional === 'avancado') {
+            $configToSave['condicoes_visibilidade'] = [
+                'modo'   => 'avancado',
+                'grupos' => array_values($this->gruposCondicionais),
+            ];
+            // Preenche depende_de com o 1º campo da árvore para manter o badge "Condicional" e retrocompatibilidade
+            $primeiraRegra = $this->gruposCondicionais[0]['regras'][0] ?? null;
+            $this->depende_de       = $primeiraRegra['campo'] ?? null;
+            $this->depende_operador = $primeiraRegra['operador'] ?? '=';
+            $this->depende_valor    = $primeiraRegra['valor'] ?? null;
         }
 
         $dadosGerais = [

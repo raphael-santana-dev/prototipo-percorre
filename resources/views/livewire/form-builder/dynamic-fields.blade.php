@@ -1646,33 +1646,98 @@
                                 </label>
                             @endif
 
-                            <!-- CONDICIONAL -->
-                            <div x-data="{ openCond: {{ !empty($depende_de) ? 'true' : 'false' }} }" class="border border-yellow-200 rounded-lg overflow-hidden">
-                                <button type="button" @click="openCond = !openCond" class="w-full flex items-center justify-between p-2.5 bg-yellow-50 hover:bg-yellow-100 transition text-xs font-bold text-yellow-800">
-                                    <span class="flex items-center gap-1.5"><i class="ph-fill ph-git-branch text-yellow-600 text-base"></i> Exibição Condicional</span>
-                                    <i class="ph ph-caret-down transition-transform" :class="openCond ? 'rotate-180' : ''"></i>
-                                </button>
-                                <div x-show="openCond" x-collapse x-cloak class="p-3 bg-white border-t border-yellow-200 space-y-2.5">
+                            <!-- CONDICIONAL DE VISIBILIDADE (SIMPLES + AVANÇADO MULTI-GRUPOS) -->
+                            @php
+                                $diagPreviewPainel = $this->diagnosticoSimulacaoCondicional;
+                            @endphp
+                            <div class="border border-amber-200 dark:border-amber-800/70 rounded-xl overflow-hidden bg-amber-50/30 dark:bg-amber-950/20">
+                                <div class="p-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800/70 flex items-center justify-between">
+                                    <span class="flex items-center gap-1.5 text-xs font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+                                        <i class="ph-fill ph-git-branch text-amber-600 text-base"></i> Condição de Visibilidade
+                                    </span>
+                                    @if($modoCondicional !== 'nenhum')
+                                        <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full {{ $modoCondicional === 'avancado' ? 'bg-purpura-600 text-white' : 'bg-amber-200 text-amber-900' }}">
+                                            {{ $modoCondicional === 'avancado' ? 'Avançado (E/OU)' : 'Simples' }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <div class="p-3.5 space-y-3 bg-white dark:bg-gray-900">
                                     <div>
-                                        <label class="block text-[10px] font-bold text-yellow-700 mb-1">Mostrar SOMENTE SE:</label>
-                                        <select wire:model.live="depende_de" class="w-full text-xs rounded-lg border-yellow-300">
-                                            <option value="">-- Sempre Visível --</option>
-                                            @foreach($camposCadastrados as $c)
-                                                @if($c->id !== $campoId && !in_array($c->tipo, ['html', 'divider', 'media', 'social', 'spacer', 'link']))
-                                                    <option value="{{ $c->name }}">{{ Str::limit(strip_tags($c->label), 28) }} ({{ $c->name }})</option>
-                                                @endif
-                                            @endforeach
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Modo de Exibição do Input</label>
+                                        <select wire:model.live="modoCondicional" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                            <option value="nenhum">Sempre Visível (Sem condição)</option>
+                                            <option value="simples">Condição Simples (1 Campo)</option>
+                                            <option value="avancado">Condição Avançada (Múltiplos Grupos E / OU)</option>
                                         </select>
                                     </div>
-                                    @if(!empty($depende_de))
-                                        <div class="grid grid-cols-3 gap-1.5">
-                                            <select wire:model="depende_operador" class="col-span-1 text-xs rounded-lg border-gray-300">
-                                                <option value="=">Igual</option>
-                                                <option value="!=">Dif.</option>
-                                                <option value=">">Maior</option>
-                                                <option value="<">Menor</option>
-                                            </select>
-                                            <input type="text" wire:model="depende_valor" placeholder="Valor esperado" class="col-span-2 text-xs rounded-lg border-gray-300">
+
+                                    @if($modoCondicional === 'simples')
+                                        <div class="space-y-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-1">Mostrar somente se o campo:</label>
+                                                <select wire:model.live="depende_de" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                                    <option value="">-- Selecione o campo gatilho --</option>
+                                                    @foreach($this->camposDisponiveisParaCondicao as $cKey => $cLabel)
+                                                        <option value="{{ $cKey }}">{{ $cLabel }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            @if(!empty($depende_de))
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-1">Operador de Comparação:</label>
+                                                    <select wire:model.live="depende_operador" class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                                        @foreach($this->operadoresCondicionais as $opKey => $opNome)
+                                                            <option value="{{ $opKey }}">{{ $opNome }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                @if(!in_array($depende_operador, ['empty', 'not_empty']))
+                                                    @if($depende_operador === 'between')
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Valor Mínimo</label>
+                                                                <input type="text" wire:model.live="depende_valor" placeholder="Ex: 18" class="w-full text-xs rounded-lg border-gray-300">
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-[10px] font-bold text-gray-600 mb-1">Valor Máximo</label>
+                                                                <input type="text" wire:model.live="depende_valor_max" placeholder="Ex: 65" class="w-full text-xs rounded-lg border-gray-300">
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <div>
+                                                            <label class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-1">
+                                                                {{ in_array($depende_operador, ['in', 'not_in']) ? 'Opções separadas por vírgula:' : 'Valor esperado:' }}
+                                                            </label>
+                                                            <input type="text" wire:model.live="depende_valor" placeholder="{{ in_array($depende_operador, ['in', 'not_in']) ? 'Ex: SP, RJ, MG' : 'Ex: sim' }}" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                                        </div>
+                                                    @endif
+                                                @endif
+                                            @endif
+                                        </div>
+
+                                    @elseif($modoCondicional === 'avancado')
+                                        <div class="p-3 rounded-xl bg-purpura-50/60 dark:bg-purpura-950/30 border border-purpura-200 dark:border-purpura-800 space-y-2.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[11px] font-extrabold text-purpura-900 dark:text-purpura-300">
+                                                    {{ count($gruposCondicionais) }} Grupo(s) Configurado(s)
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold {{ $diagPreviewPainel['visivel'] ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
+                                                    Simulação: {{ $diagPreviewPainel['visivel'] ? 'VISÍVEL' : 'OCULTO' }}
+                                                </span>
+                                            </div>
+
+                                            <div class="p-2 bg-white dark:bg-gray-900 rounded-lg border border-purpura-100 dark:border-gray-800 font-mono text-[10px] text-gray-700 dark:text-gray-300 break-words leading-relaxed">
+                                                {{ $diagPreviewPainel['expressao_humana'] }}
+                                            </div>
+
+                                            <button type="button"
+                                                    wire:click="abrirModalCondicoesAvancadas"
+                                                    class="w-full py-2 px-3 bg-purpura-600 hover:bg-purpura-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-1.5">
+                                                <i class="ph-bold ph-git-Merge text-sm"></i> Abrir Construtor de Condições (E / OU)
+                                            </button>
                                         </div>
                                     @endif
                                 </div>
@@ -2124,6 +2189,280 @@
                             <i class="ph-bold ph-check"></i> Aplicar Opções ao Conjunto
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ===================================================================== --}}
+    {{-- MODAL DE CONDIÇÕES AVANÇADAS DE VISIBILIDADE (GRUPOS E/OU + SIMULADOR) --}}
+    {{-- ===================================================================== --}}
+    @if($modalCondicoesAvancadasAberto)
+        @php
+            $diagModal = $this->diagnosticoSimulacaoCondicional;
+            $camposParaCond = $this->camposDisponiveisParaCondicao;
+            $operadoresLista = $this->operadoresCondicionais;
+        @endphp
+        <div class="fixed inset-0 z-[280] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-6xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[92vh]">
+                
+                <!-- CABEÇALHO DO MODAL -->
+                <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-purpura-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="ph-bold ph-git-branch text-xl"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-base font-extrabold tracking-tight flex items-center gap-2">
+                                Construtor Avançado de Condições de Visibilidade
+                            </h3>
+                            <p class="text-xs text-gray-400">
+                                Configure múltiplos grupos e regras com operadores <b class="text-white">E (AND)</b> e <b class="text-white">OU (OR)</b> para o campo: <strong class="text-purpura-300">{{ strip_tags($label) ?: ($name ?: 'Novo Input') }}</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="button" wire:click="$set('modalCondicoesAvancadasAberto', false)" class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- CORPO EM 2 COLUNAS: ÁRVORE DE GRUPOS (ESQUERDA) + SIMULADOR EM TEMPO REAL (DIREITA) -->
+                <div class="flex-1 overflow-hidden flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-800">
+                    
+                    <!-- COLUNA ESQUERDA: GRUPOS E CONDIÇÕES -->
+                    <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar bg-gray-50/60 dark:bg-gray-950">
+                        
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                Árvore de Grupos Lógicos
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" wire:click="adicionarGrupoCondicional('AND')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-extrabold transition flex items-center gap-1">
+                                    <i class="ph-bold ph-plus"></i> Novo Grupo (E)
+                                </button>
+                                <button type="button" wire:click="adicionarGrupoCondicional('OR')" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-extrabold transition flex items-center gap-1">
+                                    <i class="ph-bold ph-plus"></i> Novo Grupo (OU)
+                                </button>
+                            </div>
+                        </div>
+
+                        @foreach($gruposCondicionais as $gIndex => $grupo)
+                            @php
+                                $grupoPassou = $diagModal['grupos_status'][$gIndex] ?? false;
+                            @endphp
+
+                            {{-- SELETOR DE CONECTOR ENTRE GRUPOS (A PARTIR DO 2º GRUPO) --}}
+                            @if($gIndex > 0)
+                                <div class="flex items-center justify-center my-2 relative">
+                                    <div class="absolute inset-x-0 h-px bg-gray-300 dark:bg-gray-700"></div>
+                                    <div class="relative z-10 inline-flex items-center bg-white dark:bg-gray-800 p-1 rounded-xl border-2 border-gray-300 dark:border-gray-600 shadow-xs">
+                                        <button type="button"
+                                                wire:click="$set('gruposCondicionais.{{ $gIndex }}.conector', 'AND')"
+                                                class="px-3 py-1 rounded-lg text-xs font-black transition {{ ($grupo['conector'] ?? 'AND') === 'AND' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-800' }}">
+                                            E (AND)
+                                        </button>
+                                        <button type="button"
+                                                wire:click="$set('gruposCondicionais.{{ $gIndex }}.conector', 'OR')"
+                                                class="px-3 py-1 rounded-lg text-xs font-black transition {{ ($grupo['conector'] ?? 'AND') === 'OR' ? 'bg-amber-500 text-white' : 'text-gray-500 hover:text-gray-800' }}">
+                                            OU (OR)
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- CARD DO GRUPO -->
+                            <div wire:key="modal-grp-{{ $grupo['id'] ?? $gIndex }}"
+                                 class="rounded-2xl border-2 bg-white dark:bg-gray-900 shadow-xs overflow-hidden transition-colors {{ $grupoPassou ? 'border-emerald-300 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700' }}">
+                                
+                                <div class="px-4 py-2.5 bg-gray-100/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-md bg-gray-900 text-white text-[11px] font-extrabold uppercase">
+                                            Grupo #{{ $gIndex + 1 }}
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border {{ $grupoPassou ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200' }}">
+                                            Resultado do Grupo: {{ $grupoPassou ? 'TRUE (Atendido)' : 'FALSE (Não Atendido)' }}
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" wire:click="adicionarRegraNoGrupo({{ $gIndex }}, 'AND')" class="px-2.5 py-1 bg-white dark:bg-gray-900 hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition">
+                                            + Condição (E)
+                                        </button>
+                                        <button type="button" wire:click="adicionarRegraNoGrupo({{ $gIndex }}, 'OR')" class="px-2.5 py-1 bg-white dark:bg-gray-900 hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold transition">
+                                            + Condição (OU)
+                                        </button>
+                                        @if(count($gruposCondicionais) > 1)
+                                            <button type="button" wire:click="removerGrupoCondicional({{ $gIndex }})" class="p-1 text-gray-400 hover:text-red-600 transition" title="Excluir Grupo">
+                                                <i class="ph-bold ph-trash text-base"></i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="p-4 space-y-3">
+                                    @foreach($grupo['regras'] ?? [] as $rIndex => $regra)
+                                        @php
+                                            $regraPassou = $diagModal['regras_status']["{$gIndex}_{$rIndex}"] ?? false;
+                                            $opAtual = $regra['operador'] ?? '=';
+                                            $ocultarValor = in_array($opAtual, ['empty', 'not_empty'], true);
+                                        @endphp
+
+                                        <div wire:key="modal-rule-{{ $regra['id'] ?? $rIndex }}"
+                                             class="p-3 rounded-xl border bg-gray-50/70 dark:bg-gray-800/50 space-y-2.5 {{ $regraPassou ? 'border-emerald-200 dark:border-emerald-800/60' : 'border-gray-200 dark:border-gray-700' }}">
+                                            
+                                            <div class="grid grid-cols-1 xl:grid-cols-12 gap-2.5 items-center">
+                                                
+                                                {{-- Conector Interno da Regra (SE / E / OU) --}}
+                                                <div class="xl:col-span-2">
+                                                    @if($rIndex === 0)
+                                                        <span class="inline-flex items-center justify-center w-full py-1.5 px-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-black uppercase">
+                                                            SE (IF)
+                                                        </span>
+                                                    @else
+                                                        <select wire:model.live="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.conector"
+                                                                class="w-full text-xs font-black rounded-lg py-1.5 {{ ($regra['conector'] ?? 'AND') === 'OR' ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-indigo-50 border-indigo-300 text-indigo-800' }}">
+                                                            <option value="AND">E (AND)</option>
+                                                            <option value="OR">OU (OR)</option>
+                                                        </select>
+                                                    @endif
+                                                </div>
+
+                                                {{-- Seleção do Campo Alvo --}}
+                                                <div class="xl:col-span-4">
+                                                    <select wire:model.live="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.campo"
+                                                            class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                                        <option value="">Selecione o campo...</option>
+                                                        @foreach($camposParaCond as $cKey => $cNome)
+                                                            <option value="{{ $cKey }}">{{ $cNome }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                {{-- Seleção do Operador --}}
+                                                <div class="{{ $ocultarValor ? 'xl:col-span-5' : 'xl:col-span-3' }}">
+                                                    <select wire:model.live="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.operador"
+                                                            class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                                        @foreach($operadoresLista as $opK => $opLabel)
+                                                            <option value="{{ $opK }}">{{ $opLabel }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                {{-- Valor(es) de Comparação --}}
+                                                @if(!$ocultarValor)
+                                                    <div class="xl:col-span-2">
+                                                        @if($opAtual === 'between')
+                                                            <div class="grid grid-cols-2 gap-1">
+                                                                <input type="text" wire:model.live.debounce.200ms="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.valor" placeholder="Mín" class="w-full text-xs rounded-lg border-gray-300 py-1.5 px-2">
+                                                                <input type="text" wire:model.live.debounce.200ms="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.valor_max" placeholder="Máx" class="w-full text-xs rounded-lg border-gray-300 py-1.5 px-2">
+                                                            </div>
+                                                        @else
+                                                            <input type="text"
+                                                                   wire:model.live.debounce.200ms="gruposCondicionais.{{ $gIndex }}.regras.{{ $rIndex }}.valor"
+                                                                   placeholder="{{ in_array($opAtual, ['in', 'not_in']) ? 'Op1, Op2...' : 'Valor...' }}"
+                                                                   class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                                        @endif
+                                                    </div>
+                                                @endif
+
+                                                {{-- Status Individual + Remover --}}
+                                                <div class="xl:col-span-1 flex items-center justify-end gap-1.5">
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase {{ $regraPassou ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600' }}"
+                                                          title="Avaliação atual desta linha no simulador">
+                                                        {{ $regraPassou ? 'TRUE' : 'FALSE' }}
+                                                    </span>
+                                                    <button type="button" wire:click="removerRegraDoGrupo({{ $gIndex }}, {{ $rIndex }})" class="text-gray-400 hover:text-red-500 p-1">
+                                                        <i class="ph-bold ph-x text-sm"></i>
+                                                    </button>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <!-- COLUNA DIREITA: SIMULADOR E VERIFICADOR EM TEMPO REAL -->
+                    <div class="w-full lg:w-96 xl:w-[420px] bg-white dark:bg-gray-900 p-6 flex flex-col justify-between overflow-y-auto custom-scrollbar shrink-0">
+                        <div class="space-y-5">
+                            <div>
+                                <span class="text-[11px] font-extrabold uppercase tracking-wider text-purpura-600 flex items-center gap-1.5">
+                                    <i class="ph-fill ph-lightning text-base"></i> Verificador em Tempo Real
+                                </span>
+                                <h4 class="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                                    Simulador de Visibilidade do Input
+                                </h4>
+                                <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                                    Preencha abaixo valores de teste para os campos usados nas condições e veja imediatamente se o input ficará visível ou oculto.
+                                </p>
+                            </div>
+
+                            <!-- VEREDITO EM TEMPO REAL -->
+                            <div class="p-4 rounded-2xl border-2 transition-all {{ $diagModal['visivel'] ? 'bg-emerald-50/70 border-emerald-400 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-200' : 'bg-red-50/70 border-red-300 text-red-900 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200' }}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 {{ $diagModal['visivel'] ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white' }}">
+                                        <i class="ph-bold {{ $diagModal['visivel'] ? 'ph-eye' : 'ph-eye-slash' }} text-2xl"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-black uppercase tracking-wider opacity-75 block">Status Atual do Input</span>
+                                        <span class="text-base font-black block">
+                                            {{ $diagModal['visivel'] ? 'O INPUT FICARÁ VISÍVEL' : 'O INPUT FICARÁ OCULTO' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- VALORES DE TESTE DOS CAMPOS ENVOLVIDOS -->
+                            <div class="space-y-3">
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 block border-b border-gray-100 dark:border-gray-800 pb-1.5">
+                                    Simular Respostas do Candidato
+                                </span>
+
+                                @forelse($diagModal['campos_usados'] as $campoKey => $campoRotulo)
+                                    <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-1">
+                                        <label class="block text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate" title="{{ $campoRotulo }}">
+                                            {{ $campoRotulo }}
+                                        </label>
+                                        <input type="text"
+                                               wire:model.live.debounce.150ms="valoresSimulacaoCondicional.{{ $campoKey }}"
+                                               placeholder="Digite um valor para testar (ex: sim, 20, SP)..."
+                                               class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5 px-2.5">
+                                    </div>
+                                @empty
+                                    <div class="p-4 rounded-xl border border-dashed border-gray-200 text-center text-xs text-gray-400">
+                                        Selecione pelo menos um campo nas condições ao lado para liberar os inputs de simulação.
+                                    </div>
+                                @endforelse
+                            </div>
+
+                            <!-- FÓRMULA BOOLEANA GERADA -->
+                            <div class="space-y-1.5">
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 block">
+                                    Fórmula Lógica Configurada:
+                                </span>
+                                <div class="p-3 rounded-xl bg-gray-900 text-emerald-300 font-mono text-[11px] leading-relaxed break-words border border-gray-800">
+                                    {{ $diagModal['expressao_humana'] }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-5 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-2 mt-6">
+                            <button type="button"
+                                    wire:click="$set('modalCondicoesAvancadasAberto', false)"
+                                    class="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition">
+                                Fechar
+                            </button>
+                            <button type="button"
+                                    wire:click="confirmarCondicoesAvancadas"
+                                    class="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-purpura-600 hover:bg-purpura-700 shadow-md transition flex items-center gap-1.5">
+                                <i class="ph-bold ph-check-circle text-sm"></i> Aplicar Condições ao Input
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
