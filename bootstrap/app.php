@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            \App\Http\Middleware\CheckSessionInactivity::class,
             \App\Http\Middleware\ForcePasswordChange::class,
         ]);
     })

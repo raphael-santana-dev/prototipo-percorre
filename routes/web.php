@@ -21,6 +21,41 @@ use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraForm;
 use App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraDetails;
 use App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+
+Route::middleware(['web'])->group(function () {
+    // Rota acionada pelo botão "Continuar Conectado" do Modal
+    Route::post('/session/keep-alive', function (Request $request) {
+        $request->session()->put('last_human_activity', now()->timestamp);
+        return response()->json([
+            'status'    => 'ok',
+            'timestamp' => now()->timestamp,
+        ]);
+    })->name('session.keep-alive');
+
+    // Rota acionada quando o cronômetro de inatividade chega a 00:00
+    Route::post('/session/timeout-logout', function (Request $request) {
+        $isPortal = Auth::guard('student')->check() || Auth::guard('company')->check();
+
+        foreach (['web', 'student', 'company'] as $guard) {
+            if (Auth::guard($guard)->check()) {
+                Auth::guard($guard)->logout();
+            }
+        }
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        $redirectUrl = ($isPortal && Route::has('portal.login'))
+            ? route('portal.login', ['expired' => 1])
+            : (Route::has('login') ? route('login', ['expired' => 1]) : '/login?expired=1');
+
+        return redirect()->to($redirectUrl);
+    })->name('session.timeout-logout');
+});
+
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');
 
 // Retomada de Inscrição (deve vir antes de /inscricao/{slug_projeto?})

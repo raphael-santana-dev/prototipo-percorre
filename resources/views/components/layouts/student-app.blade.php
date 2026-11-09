@@ -287,5 +287,6 @@
     <livewire:components.quick-view-drawer />
     @livewireScripts
     <x-toast />
+    <x-session-timeout />
 </body>
 </html>
