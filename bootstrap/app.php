@@ -66,26 +66,23 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        // 2. PROTEÇÃO DE DADOS: Intercepta erros graves para não vazar a infraestrutura em produção
         $exceptions->render(function (\Throwable $e, Request $request) {
             if (app()->environment('production')) {
                 
-                // Retorno seguro para requisições assíncronas (Livewire e API)
-                if ($request->wantsJson() || $request->header('X-Livewire')) {
-                    $statusCode = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
-                    return response()->json([
-                        'message' => 'Ocorreu um erro no processamento da requisição. A nossa equipa técnica já foi notificada.'
-                    ], $statusCode);
-                }
-
-                // Permite que o Laravel lide nativamente com QUALQUER erro HTTP (403, 404, 419, etc.)
-                // Isso resolve o problema de mascarar o erro 403 (Acesso Restrito) do formulário como se fosse um 500.
+                // 1. Permite que o Laravel renderize nativamente as views amigáveis (401, 403, 404, 419, 429, 503)
                 if ($e instanceof HttpExceptionInterface) {
                     return null; 
                 }
 
-                // Se chegou aqui, é um erro de servidor (500). Renderizamos a view segura e PASSAMOS a variável.
-                return response()->view('errors.500', ['exception' => $e], 500);
+                // 2. Retorno seguro para erros 500 reais em chamadas assíncronas (Livewire e API)
+                if ($request->wantsJson() || $request->header('X-Livewire')) {
+                    return response()->json([
+                        'message' => 'Encontramos uma instabilidade temporária ao processar sua solicitação.'
+                    ], 500);
+                }
+
+                // 3. Renderiza a nova view errors/500.blade.php sem expor dados técnicos
+                return response()->view('errors.500', [], 500);
             }
         });
         

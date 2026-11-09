@@ -1,15 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Erro Interno</title>
-</head>
-<body style="padding: 20px; font-family: sans-serif;">
-    <h2>Ops! Ocorreu um erro interno.</h2>
-    
-    <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
-        <p><strong>Mensagem do Erro:</strong> {{ isset($exception) && method_exists($exception, 'getMessage') ? $exception->getMessage() : 'Ocorreu um erro interno no servidor.' }}</p>
-        <p><strong>Arquivo:</strong> {{ isset($exception) && method_exists($exception, 'getFile') ? $exception->getFile() : 'Arquivo não disponível' }}</p>
-        <p><strong>Linha:</strong> {{ isset($exception) && method_exists($exception, 'getLine') ? $exception->getLine() : 'Linha não disponível' }}</p>
+@extends('errors.layout')
+
+@section('title', 'Instabilidade Temporária')
+@section('accent_bar', 'bg-red-500')
+@section('icon_wrapper', 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800')
+@section('icon', 'ph-fill ph-cloud-warning')
+@section('badge_classes', 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800')
+@section('badge_label', 'Instabilidade Interna')
+
+@section('heading', 'Ops! Algo não saiu como esperado')
+
+@section('message')
+    Encontramos uma instabilidade inesperada ao processar a sua solicitação. Não se preocupe: seus dados estão seguros e a nossa equipe técnica já recebeu o registro automático desta ocorrência.
+@endsection
+
+@section('extra_content')
+    <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+        <span class="flex items-center gap-2 font-medium">
+            <i class="ph-fill ph-check-circle text-emerald-500 text-base"></i>
+            Registro automático enviado ao suporte
+        </span>
+        <span class="font-mono text-[11px] text-gray-400">
+            {{ now()->format('d/m H:i') }}
+        </span>
     </div>
-</body>
-</html>
+@endsection
