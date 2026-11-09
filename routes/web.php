@@ -24,6 +24,16 @@ use App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+use App\Http\Controllers\Webhook\SuriWebhookController;
+
+use App\Modules\Comunicacao\UI\Livewire\SuriWebhookMonitor;
+
+Route::post('/webhooks/suri/{token?}', [SuriWebhookController::class, 'handle'])
+    ->withoutMiddleware([
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfTokens::class,
+        \App\Http\Middleware\ForcePasswordChange::class,
+    ])
+    ->name('webhooks.suri');
 
 Route::middleware(['web'])->group(function () {
     // Rota acionada pelo botão "Continuar Conectado" do Modal
@@ -127,6 +137,7 @@ Route::middleware('auth:web,student,company')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/comunicacao/suri/laboratorio', SuriTestDashboard::class)->name('suri.dashboard');
 
+    Route::get('/comunicacao/suri-monitor', SuriWebhookMonitor::class)->name('monitor.suri');
     
     Route::get('/conteudo/categorias', \App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::class)->name('conteudo.categorias');
     Route::get('/conteudo', \App\Modules\Conteudo\UI\Livewire\ConteudoManager::class)->name('conteudo.index');

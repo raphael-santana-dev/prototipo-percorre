@@ -18,6 +18,11 @@ return [
     'meta'    => ['pixel_id' => env('META_PIXEL_ID')],
     'google'  => ['gtag_id' => env('GOOGLE_GTAG_ID')],
 
+    'suri' => [
+        'webhook_token' => env('SURI_WEBHOOK_TOKEN'),
+        'webhook_async' => env('SURI_WEBHOOK_ASYNC', true),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

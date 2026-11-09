@@ -343,6 +343,9 @@
                             @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) 
                                 <a href="{{ route('configuracoes.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Configurações Base</a>
                             @endif
+                            
+                            <a href="{{ route('monitor.suri') }}" class="block py-1.5 px-4 text-xs text-white/70 hover:text-white">Monitor Suri Webhook</a> 
+                            
                             @can('usuario.listar') <a href="{{ route('users.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Gestão de Usuários</a> @endcan
                             @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Perfis (Roles)</a> @endcan
                             @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block py-1.5 text-xs text-white/70 hover:text-white">Permissões</a> @endcan
@@ -358,6 +361,7 @@
                         <div x-ref="pop" x-show="sidebarMinimized && hover" x-transition.opacity.duration.200ms x-cloak class="fixed z-[999] pl-2">
                             <div class="w-52 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
                                 <div class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 mb-1">Administração</div>
+                                <a href="{{ route('monitor.suri') }}" class="block py-1.5 px-4 text-xs text-white/70 hover:text-white">Monitor Suri Webhook</a> 
                                 @if (auth()->user()->hasRole('dev') || auth()->user()->can('configuracoes.editar')) <a href="{{ route('configuracoes.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Configurações</a> @endif
                                 @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Usuários</a> @endcan
                                 @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-gray-700">Perfis (Roles)</a> @endcan
@@ -564,6 +568,7 @@
                                         <a href="{{ route('configuracoes.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Configurações Base</a>
                                         <div class="h-px my-1 bg-gray-100 dark:bg-gray-700"></div>
                                     @endif    
+                                    <a href="{{ route('monitor.suri') }}" class="block py-1.5 px-4 text-xs text-gray-700 hover:text-white">Monitor Suri Webhook</a> 
                                     @can('usuario.listar') <a href="{{ route('users.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Usuários</a> @endcan
                                     @can('acl.role.listar') <a href="{{ route('roles.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Perfis (Roles)</a> @endcan
                                     @can('acl.permission.listar') <a href="{{ route('permissions.index') }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-purpura-50 hover:text-purpura-600 dark:text-gray-300 dark:hover:bg-gray-700">Permissões</a> @endcan

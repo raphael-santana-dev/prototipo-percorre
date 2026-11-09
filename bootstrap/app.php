@@ -31,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckSessionInactivity::class,
             \App\Http\Middleware\ForcePasswordChange::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/suri',
+            'webhooks/suri/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         
