@@ -503,6 +503,7 @@ class PeriodManager extends Component
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'nome', 'label' => 'Nome / Período / Fase', 'sortable' => true],
+            ['key' => 'em_edicao', 'label' => 'Em Edição', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'data_inicio', 'label' => 'Abertura', 'sortable' => true],
             ['key' => 'data_fim', 'label' => 'Encerramento', 'sortable' => true],
             ['key' => 'meta', 'label' => 'Captação (Meta)', 'sortable' => false, 'class' => 'text-center'],

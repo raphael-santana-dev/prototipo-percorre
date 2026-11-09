@@ -1,437 +1,452 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }">
-    <x-page-header 
+<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
+
+    <x-editing-lock-overlay
+       :isLockedByOther="$isLockedByOther"
+       :lockOwnerName="$lockOwnerName"
+       :transferRejected="$transferRejected"
+       :hasTransferRequest="$hasTransferRequest"
+       :requesterName="$requesterName"
+       :transferKey="$this->getTransferKey()"
+       :backUrl="route('ciclos.index')"
+       backLabel="Voltar para Ciclos"
+       contextoDescricao="as configurações deste ciclo" />
+    
+    <fieldset @if($isLockedByOther) disabled class="pointer-events-none opacity-60 blur-[2px] transition-all duration-300" @endif>
+        <x-page-header 
         title="Edição do Ciclo" 
         icon="ph ph-calendar-check"
         badge="Administrativo">
         
-        <x-slot name="actions">
-            <div class="flex items-center gap-2 flex-wrap justify-end">
-                <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
-                    <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
-                </a>
+            <x-slot name="actions">
+                <div class="flex items-center gap-2 flex-wrap justify-end">
+                    <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
+                        <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
+                    </a>
 
-                <a href="{{ route('ciclos.regras', $cicloId) }}" class="btn btn--secondary btn--small !bg-ponkan-50 !border-ponkan-200 !text-ponkan-700">
-                    <i class="ph-bold ph-star text-sm"></i> Editar Regras
-                </a>
+                    <a href="{{ route('ciclos.regras', $cicloId) }}" class="btn btn--secondary btn--small !bg-ponkan-50 !border-ponkan-200 !text-ponkan-700">
+                        <i class="ph-bold ph-star text-sm"></i> Editar Regras
+                    </a>
 
-                <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="btn btn--secondary btn--small">
-                    <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
-                </a>
-                
-                <a href="{{ route('ciclos.index') }}" wire:navigate class="btn btn--secondary btn--small ml-2">
-                    <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
-                </a>
-            </div>
-        </x-slot>
-    </x-page-header>
-
-    <div class="relative z-10 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm border border-b-0 border-gray-200 dark:border-gray-700">
-        <nav class="flex flex-wrap gap-2 -mb-px" aria-label="Abas">
-            <button type="button" @click="abaAtiva = 'geral'" :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-sliders text-base"></i><span>Config. Geral</span>
-            </button>
-            <button type="button" @click="abaAtiva = 'estrutura'" :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-tree-structure text-base"></i><span>Unidades/Curso/Turno</span>
-                @if(count($cursosSelecionados) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($cursosSelecionados) }}</span>@endif
-            </button>
-            <button type="button" @click="abaAtiva = 'vagas'" :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-users-three text-base"></i><span>Distribuição de Vagas</span>
-                @if(count($ofertasVagas) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($ofertasVagas) }}</span>@endif
-            </button>
-            <button type="button" @click="abaAtiva = 'crm'" :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-funnel text-base"></i><span>Etapas do Ciclo</span>
-                @if(count($statusSelecionados) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($statusSelecionados) }}</span>@endif
-            </button>
-            <button type="button" @click="abaAtiva = 'documentos'" :class="abaAtiva === 'documentos' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
-                <i class="ph-bold ph-files text-base"></i><span>Documentos Exigidos</span>
-                @if(count($documentosExigidos) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($documentosExigidos) }}</span>@endif
-            </button>
-        </nav>
-    </div>
-
-    <form id="formCicloPrincipal" wire:submit.prevent="salvar">
-        <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
-            <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
-                <h3 class="t-body-16-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais</h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, a modalidade do ciclo, os semestres e a janela de tempo.</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="md:col-span-2">
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Nome de Exibição</label>
-                    <input type="text" wire:model="nome" placeholder="Ex: 2º Semestre 2026" class="w-full">
-                    @error('nome') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                    <a href="{{ route('construtor.campos', ['tipo' => 'ciclo', 'id' => $cicloId]) }}" class="btn btn--secondary btn--small">
+                        <i class="ph-bold ph-list-dashes text-sm"></i> Construtor (Campos)
+                    </a>
+                    
+                    <a href="{{ route('ciclos.index') }}" wire:navigate class="btn btn--secondary btn--small ml-2">
+                        <i class="ph-bold ph-arrow-left text-sm"></i> Voltar
+                    </a>
                 </div>
-                <div>
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Ano *</label>
-                    <input type="number" wire:model="ano" class="w-full">
-                    @error('ano') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
-                </div>
-                <div>
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Semestre *</label>
-                    <select wire:model="semestre" class="w-full">
-                        <option value="1">1º Semestre</option>
-                        <option value="2">2º Semestre</option>
-                    </select>
-                    @error('semestre') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
-                </div>
-            </div>
+            </x-slot>
+        </x-page-header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div>
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Modalidade do Ciclo *</label>
-                    <select wire:model.live="tipo_ciclo" class="w-full">
-                        <option value="regular">Regular (URL padrão /inscricao)</option>
-                        <option value="customizado">Projeto Customizado (URL própria /inscricao/{slug})</option>
-                    </select>
-                </div>
+        <div class="relative z-10 bg-white dark:bg-gray-800 rounded-t-xl px-4 pt-2 shadow-sm border border-b-0 border-gray-200 dark:border-gray-700">
+            <nav class="flex flex-wrap gap-2 -mb-px" aria-label="Abas">
+                <button type="button" @click="abaAtiva = 'geral'" :class="abaAtiva === 'geral' ? 'border-purpura-600 text-purpura-600 dark:text-purpura-400 dark:border-purpura-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                    <i class="ph-bold ph-sliders text-base"></i><span>Config. Geral</span>
+                </button>
+                <button type="button" @click="abaAtiva = 'estrutura'" :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                    <i class="ph-bold ph-tree-structure text-base"></i><span>Unidades/Curso/Turno</span>
+                    @if(count($cursosSelecionados) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($cursosSelecionados) }}</span>@endif
+                </button>
+                <button type="button" @click="abaAtiva = 'vagas'" :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                    <i class="ph-bold ph-users-three text-base"></i><span>Distribuição de Vagas</span>
+                    @if(count($ofertasVagas) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($ofertasVagas) }}</span>@endif
+                </button>
+                <button type="button" @click="abaAtiva = 'crm'" :class="abaAtiva === 'crm' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                    <i class="ph-bold ph-funnel text-base"></i><span>Etapas do Ciclo</span>
+                    @if(count($statusSelecionados) > 0)<span class="tag tag--small tag--filled tag--neutral !px-1.5 !py-0.5 !text-[9px]">{{ count($statusSelecionados) }}</span>@endif
+                </button>
+                <button type="button" @click="abaAtiva = 'documentos'" :class="abaAtiva === 'documentos' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
+                    <i class="ph-bold ph-files text-base"></i><span>Documentos Exigidos</span>
+                    @if(count($documentosExigidos) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($documentosExigidos) }}</span>@endif
+                </button>
+            </nav>
+        </div>
 
-                @if($tipo_ciclo === 'customizado')
+        <form id="formCicloPrincipal" wire:submit.prevent="salvar">
+            <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
+                <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
+                    <h3 class="t-body-16-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Defina o nome de exibição, a modalidade do ciclo, os semestres e a janela de tempo.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Nome de Exibição</label>
+                        <input type="text" wire:model="nome" placeholder="Ex: 2º Semestre 2026" class="w-full">
+                        @error('nome') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                    </div>
                     <div>
-                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Slug da URL do Projeto *</label>
-                        <div class="flex items-center">
-                            <span class="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-xs font-mono text-gray-500">/inscricao/</span>
-                            <input type="text" wire:model="slug_projeto" placeholder="projeto-verao-2026" class="w-full !rounded-l-none font-mono text-sm">
-                        </div>
-                        @error('slug_projeto') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Ano *</label>
+                        <input type="number" wire:model="ano" class="w-full">
+                        @error('ano') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                     </div>
-                @endif
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div>
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Abertura *</label>
-                    <input type="datetime-local" wire:model="data_inicio" class="w-full">
-                </div>
-                <div>
-                    <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Encerramento *</label>
-                    <input type="datetime-local" wire:model="data_fim" class="w-full">
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Início do Período de Matrícula</label>
-                    <input type="datetime-local" wire:model="data_inicio_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
-                    @error('data_inicio_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Fim do Período de Matrícula</label>
-                    <input type="datetime-local" wire:model="data_fim_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
-                    @error('data_fim_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
-                </div>
-            </div>
-            
-            <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
-                <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                    Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
-                </label>
-            </div>
-        </div>
-
-        <div x-show="abaAtiva === 'estrutura'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                    <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <i class="ph-fill ph-tree-structure text-purpura-500"></i> Unidade/Curso/Turno
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Selecione as Unidades, Cursos e Turnos disponíveis no ciclo.</p>
-                </div>
-            </div>
-            
-            <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border-t-0 border-gray-200 dark:border-gray-700">
-                <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                    <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        1. Unidades Ofertadas
+                    <div>
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Semestre *</label>
+                        <select wire:model="semestre" class="w-full">
+                            <option value="1">1º Semestre</option>
+                            <option value="2">2º Semestre</option>
+                        </select>
+                        @error('semestre') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                     </div>
-                    <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
-                        @foreach($unidadesDb as $u)
-                            <div wire:click="setActiveUnidade({{ $u->id }})" 
-                                 class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
-                                <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                    <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                    <span class="text-sm font-bold {{ $activeUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
-                                </label>
-                                <i class="ph ph-caret-right text-lg {{ $activeUnidadeId == $u->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div>
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Modalidade do Ciclo *</label>
+                        <select wire:model.live="tipo_ciclo" class="w-full">
+                            <option value="regular">Regular (URL padrão /inscricao)</option>
+                            <option value="customizado">Projeto Customizado (URL própria /inscricao/{slug})</option>
+                        </select>
+                    </div>
+
+                    @if($tipo_ciclo === 'customizado')
+                        <div>
+                            <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Slug da URL do Projeto *</label>
+                            <div class="flex items-center">
+                                <span class="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-xs font-mono text-gray-500">/inscricao/</span>
+                                <input type="text" wire:model="slug_projeto" placeholder="projeto-verao-2026" class="w-full !rounded-l-none font-mono text-sm">
                             </div>
-                        @endforeach
-                    </div>
+                            @error('slug_projeto') <span class="text-pitaya-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
                 </div>
 
-                <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
-                    <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        2. Cursos da Unidade
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div>
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Abertura *</label>
+                        <input type="datetime-local" wire:model="data_inicio" class="w-full">
                     </div>
-                    <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
-                        @if($activeUnidadeId)
-                            @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $activeUnidadeId)) as $c)
-                                <div wire:click="setActiveCurso({{ $c->id }})" 
-                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                    <div>
+                        <label class="t-label-12-semibold text-gray-500 uppercase mb-1 block">Data e Hora de Encerramento *</label>
+                        <input type="datetime-local" wire:model="data_fim" class="w-full">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Início do Período de Matrícula</label>
+                        <input type="datetime-local" wire:model="data_inicio_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
+                        @error('data_inicio_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Fim do Período de Matrícula</label>
+                        <input type="datetime-local" wire:model="data_fim_matricula" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:border-gray-700 text-sm">
+                        @error('data_fim_matricula') <span class="text-xs text-red-500 font-bold">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+                
+                <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                    <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
+                        Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
+                    </label>
+                </div>
+            </div>
+
+            <div x-show="abaAtiva === 'estrutura'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                            <i class="ph-fill ph-tree-structure text-purpura-500"></i> Unidade/Curso/Turno
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Selecione as Unidades, Cursos e Turnos disponíveis no ciclo.</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border-t-0 border-gray-200 dark:border-gray-700">
+                    <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                            1. Unidades Ofertadas
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @foreach($unidadesDb as $u)
+                                <div wire:click="setActiveUnidade({{ $u->id }})" 
+                                    class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                                     <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                        <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                        <span class="text-sm font-bold {{ $activeCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                        <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                        <span class="text-sm font-bold {{ $activeUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
                                     </label>
-                                    <i class="ph ph-caret-right text-lg {{ $activeCursoId == $c->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                                    <i class="ph ph-caret-right text-lg {{ $activeUnidadeId == $u->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
                                 </div>
                             @endforeach
-                        @else
-                            <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
-                                <i class="ph ph-buildings text-3xl mb-2"></i>
-                                <span class="text-xs font-bold uppercase tracking-wider">Selecione uma Unidade</span>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
-                    <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        3. Turnos Vinculados
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
-                        @if($activeCursoId)
-                            @foreach($cursosDb->firstWhere('id', $activeCursoId)->turnosVinculados as $t)
-                                <div class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
-                                    <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                        <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
-                                    </label>
-                                </div>
-                            @endforeach
-                        @else
-                            <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
-                                <i class="ph ph-graduation-cap text-3xl mb-2"></i>
-                                <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso</span>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
-                <div>
-                    <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-users-three text-purpura-500"></i> Vagas
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina a quantidade de vagas por unidade/curso/turno e restrições de idade.
-                    </p>
-                </div>
-                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                    <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-plus text-sm"></i>Adicionar
-                    </button>
-                @endif
-            </div>
-
-            <div class="space-y-3 p-6">
-                @forelse($ofertasVagas as $index => $oferta)
-                    <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
-                        <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
-                            <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
-                                <option value="">Selecione...</option>
-                                @foreach($unidadesDb as $u) 
-                                    @if(in_array((string)$u->id, $unidadesSelecionadas))
-                                        <option value="{{ $u->id }}">{{ $u->nome }}</option> 
-                                    @endif
-                                @endforeach
-                            </select>
                         </div>
-                        
-                        <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
-                            <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
-                                <option value="">Selecione...</option>
-                                @if($oferta['unidade_id'])
-                                    @foreach($cursosDb as $c)
-                                        @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
-                                            <option value="{{ $c->id }}">{{ $c->nome }}</option>
+                    </div>
+
+                    <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                            2. Cursos da Unidade
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($activeUnidadeId)
+                                @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $activeUnidadeId)) as $c)
+                                    <div wire:click="setActiveCurso({{ $c->id }})" 
+                                        class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
+                                            <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                            <span class="text-sm font-bold {{ $activeCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                        </label>
+                                        <i class="ph ph-caret-right text-lg {{ $activeCursoId == $c->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
+                                    <i class="ph ph-buildings text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione uma Unidade</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
+                            3. Turnos Vinculados
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                            @if($activeCursoId)
+                                @foreach($cursosDb->firstWhere('id', $activeCursoId)->turnosVinculados as $t)
+                                    <div class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                            <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
+                                        </label>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
+                                    <i class="ph ph-graduation-cap text-3xl mb-2"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Selecione um Curso</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="ph-fill ph-users-three text-purpura-500"></i> Vagas
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Defina a quantidade de vagas por unidade/curso/turno e restrições de idade.
+                        </p>
+                    </div>
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="ph-bold ph-plus text-sm"></i>Adicionar
+                        </button>
+                    @endif
+                </div>
+
+                <div class="space-y-3 p-6">
+                    @forelse($ofertasVagas as $index => $oferta)
+                        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
+                                <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                                    <option value="">Selecione...</option>
+                                    @foreach($unidadesDb as $u) 
+                                        @if(in_array((string)$u->id, $unidadesSelecionadas))
+                                            <option value="{{ $u->id }}">{{ $u->nome }}</option> 
                                         @endif
                                     @endforeach
-                                @endif
-                            </select>
-                        </div>
-                        
-                        <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
-                            <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
-                                <option value="">Selecione...</option>
-                                @if($oferta['curso_id'])
-                                    @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
-                                    @if($cursoSelecionado)
-                                        @foreach($cursoSelecionado->turnosVinculados as $t)
-                                            @if(in_array((string)$t->id, $turnosSelecionados))
-                                                <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Curso</label>
+                                <select wire:model.live="ofertasVagas.{{ $index }}.curso_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['unidade_id']) disabled @endif>
+                                    <option value="">Selecione...</option>
+                                    @if($oferta['unidade_id'])
+                                        @foreach($cursosDb as $c)
+                                            @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
+                                                <option value="{{ $c->id }}">{{ $c->nome }}</option>
                                             @endif
                                         @endforeach
                                     @endif
-                                @endif
-                            </select>
-                        </div>
-
-                        <div class="w-full xl:w-20 shrink-0">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
-                            <input type="number" wire:model.live="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
-                        </div>
-                        <div class="w-full xl:w-20 shrink-0">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
-                            <input type="number" wire:model="ofertasVagas.{{ $index }}.meta" placeholder="-" class="w-full text-sm rounded-lg border-ponkan-200 dark:border-ponkan-800 dark:bg-gray-700 dark:text-white py-2 focus:ring-ponkan-500 font-bold text-center">
-                        </div>
-                        <div class="w-full xl:w-20 shrink-0">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
-                            <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
-                        </div>
-                        <div class="w-full xl:w-20 shrink-0">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
-                            <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
-                        </div>
-
-                        @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                            <div class="w-full xl:w-auto">
-                                <button type="button" wire:click="removeOferta({{ $index }})" class="w-full xl:w-auto p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
-                                    <i class="ph-bold ph-trash text-base"></i>
-                                </button>
+                                </select>
                             </div>
-                        @endif
-                    </div>
-                @empty
-                    <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
-                        <i class="ph ph-warning-circle text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma oferta de vaga configurada neste ciclo.</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Adicione ofertas para limitar inscrições ou estipular faixas etárias por curso e unidade.</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
+                            
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
+                                <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
+                                    <option value="">Selecione...</option>
+                                    @if($oferta['curso_id'])
+                                        @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
+                                        @if($cursoSelecionado)
+                                            @foreach($cursoSelecionado->turnosVinculados as $t)
+                                                @if(in_array((string)$t->id, $turnosSelecionados))
+                                                    <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                                @endif
+                                            @endforeach
+                                        @endif
+                                    @endif
+                                </select>
+                            </div>
 
-        <div x-show="abaAtiva === 'crm'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
-            <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+                            <div class="w-full xl:w-20 shrink-0">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Vagas *</label>
+                                <input type="number" wire:model.live="ofertasVagas.{{ $index }}.vagas" min="0" class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 text-center font-black text-purpura-600 focus:ring-purpura-500">
+                            </div>
+                            <div class="w-full xl:w-20 shrink-0">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center text-ponkan-600">Meta</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.meta" placeholder="-" class="w-full text-sm rounded-lg border-ponkan-200 dark:border-ponkan-800 dark:bg-gray-700 dark:text-white py-2 focus:ring-ponkan-500 font-bold text-center">
+                            </div>
+                            <div class="w-full xl:w-20 shrink-0">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Mín</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_min" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
+                            </div>
+                            <div class="w-full xl:w-20 shrink-0">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 text-center">Id. Máx</label>
+                                <input type="number" wire:model="ofertasVagas.{{ $index }}.idade_max" min="0" placeholder="Livre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-semibold text-center">
+                            </div>
 
-            <div class="w-full"
-                 x-data="{
-                     initSortable() {
-                         new Sortable(this.$refs.statusList, {
-                             animation: 150,
-                             handle: '.drag-handle',
-                             ghostClass: 'opacity-50',
-                             onEnd: () => {
-                                 let items = Array.from(this.$refs.statusList.children).map(el => el.dataset.id);
-                                 $wire.atualizarOrdemStatus(items);
-                             }
-                         });
-                     }
-                 }" x-init="initSortable()">
-                 
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/20 gap-4">
-                    <div>
-                        <h3 class="text-base font-bold text-gray-900 dark:text-white m-0 flex items-center gap-2">
-                            <i class="ph-fill ph-funnel text-purpura-500"></i> Etapas do Ciclo
-                        </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status de Inscrições disponíveis no Ciclo.</p>
-                    </div>
-                    
-                    <div class="flex items-center gap-2 w-full md:w-auto">
-                        <select wire:model="novoStatusSelecionado" class="flex-1 md:w-56 text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
-                            <option value="">Adicionar etapa ao funil...</option>
-                            @foreach($statusDisponiveis as $st)
-                                @if(!in_array($st->id, $statusSelecionados))
-                                    <option value="{{ $st->id }}">{{ $st->nome }}</option>
-                                @endif
-                            @endforeach
-                        </select>
-                        <button type="button" wire:click="adicionarStatusPipeline" class="bg-purpura-600 text-white hover:bg-purpura-700 px-3.5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1 shadow-sm">
-                            <i class="ph-bold ph-plus"></i> Inserir
-                        </button>
-                    </div>
-                </div>
-                
-                <div x-ref="statusList" class="flex flex-col gap-2 p-6">
-                    @forelse($statusSelecionados as $index => $statusId)
-                        @php $statusObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
-                        @if($statusObj)
-                            <div data-id="{{ $statusId }}" wire:key="status-pipeline-{{ $statusId }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg group transition-colors hover:border-purpura-300">
-                                <div class="flex items-center gap-3">
-                                    <i class="ph-bold ph-dots-six-vertical text-gray-400 cursor-grab active:cursor-grabbing drag-handle text-xl hover:text-gray-700 dark:hover:text-gray-200"></i>
-                                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] font-black">
-                                        {{ $index + 1 }}
-                                    </span>
-                                    <span class="font-bold text-sm text-gray-800 dark:text-gray-200">{{ $statusObj->nome }}</span>
+                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                <div class="w-full xl:w-auto">
+                                    <button type="button" wire:click="removeOferta({{ $index }})" class="w-full xl:w-auto p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Oferta">
+                                        <i class="ph-bold ph-trash text-base"></i>
+                                    </button>
                                 </div>
-                                <button type="button" wire:click="removerStatusPipeline('{{ $statusId }}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded-lg transition" title="Remover Etapa">
-                                    <i class="ph-bold ph-trash text-base"></i>
-                                </button>
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     @empty
-                        <div class="text-center p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-400">
-                            Nenhum status configurado para a pipeline deste ciclo.
+                        <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
+                            <i class="ph ph-warning-circle text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma oferta de vaga configurada neste ciclo.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Adicione ofertas para limitar inscrições ou estipular faixas etárias por curso e unidade.</p>
                         </div>
                     @endforelse
                 </div>
             </div>
-        </div>
 
-        <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
-                <div>
-                    <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Defina quais documentos serão solicitados aos candidatos aprovados deste ciclo.
-                    </p>
-                </div>
+            <div x-show="abaAtiva === 'crm'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+                <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                    <button type="button" wire:click="addDocumento" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-plus text-sm"></i> Novo Documento
-                    </button>
-                @endif
-            </div>
-
-            <div class="space-y-3 p-6">
-                @forelse($documentosExigidos as $index => $doc)
-                    <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-end transition-colors hover:border-purpura-300">
-                        <div class="flex-1 w-full md:w-1/3">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Documento <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="documentosExigidos.{{ $index }}.nome" placeholder="Ex: RG Frente e Verso" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-bold">
-                            @error("documentosExigidos.$index.nome") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                <div class="w-full"
+                    x-data="{
+                        initSortable() {
+                            new Sortable(this.$refs.statusList, {
+                                animation: 150,
+                                handle: '.drag-handle',
+                                ghostClass: 'opacity-50',
+                                onEnd: () => {
+                                    let items = Array.from(this.$refs.statusList.children).map(el => el.dataset.id);
+                                    $wire.atualizarOrdemStatus(items);
+                                }
+                            });
+                        }
+                    }" x-init="initSortable()">
+                    
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/20 gap-4">
+                        <div>
+                            <h3 class="text-base font-bold text-gray-900 dark:text-white m-0 flex items-center gap-2">
+                                <i class="ph-fill ph-funnel text-purpura-500"></i> Etapas do Ciclo
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Status de Inscrições disponíveis no Ciclo.</p>
                         </div>
                         
-                        <div class="flex-1 w-full md:w-1/2">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Instruções aos Alunos</label>
-                            <input type="text" wire:model="documentosExigidos.{{ $index }}.descricao" placeholder="Ex: Foto nítida e sem reflexos" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <select wire:model="novoStatusSelecionado" class="flex-1 md:w-56 text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                                <option value="">Adicionar etapa ao funil...</option>
+                                @foreach($statusDisponiveis as $st)
+                                    @if(!in_array($st->id, $statusSelecionados))
+                                        <option value="{{ $st->id }}">{{ $st->nome }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <button type="button" wire:click="adicionarStatusPipeline" class="bg-purpura-600 text-white hover:bg-purpura-700 px-3.5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1 shadow-sm">
+                                <i class="ph-bold ph-plus"></i> Inserir
+                            </button>
                         </div>
-
-                        <div class="w-full md:w-auto flex items-center justify-between gap-4 pb-1.5">
-                            <label class="flex items-center cursor-pointer select-none">
-                                <input type="checkbox" wire:model="documentosExigidos.{{ $index }}.is_obrigatorio" class="w-4 h-4 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
-                                <span class="ml-2 text-xs font-bold text-gray-700 dark:text-gray-300">Obrigatório</span>
-                            </label>
-
-                            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                                <button type="button" wire:click="removeDocumento({{ $index }})" class="p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Documento">
-                                    <i class="ph-bold ph-trash text-base"></i>
-                                </button>
+                    </div>
+                    
+                    <div x-ref="statusList" class="flex flex-col gap-2 p-6">
+                        @forelse($statusSelecionados as $index => $statusId)
+                            @php $statusObj = $statusDisponiveis->firstWhere('id', $statusId); @endphp
+                            @if($statusObj)
+                                <div data-id="{{ $statusId }}" wire:key="status-pipeline-{{ $statusId }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg group transition-colors hover:border-purpura-300">
+                                    <div class="flex items-center gap-3">
+                                        <i class="ph-bold ph-dots-six-vertical text-gray-400 cursor-grab active:cursor-grabbing drag-handle text-xl hover:text-gray-700 dark:hover:text-gray-200"></i>
+                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] font-black">
+                                            {{ $index + 1 }}
+                                        </span>
+                                        <span class="font-bold text-sm text-gray-800 dark:text-gray-200">{{ $statusObj->nome }}</span>
+                                    </div>
+                                    <button type="button" wire:click="removerStatusPipeline('{{ $statusId }}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded-lg transition" title="Remover Etapa">
+                                        <i class="ph-bold ph-trash text-base"></i>
+                                    </button>
+                                </div>
                             @endif
-                        </div>
+                        @empty
+                            <div class="text-center p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-400">
+                                Nenhum status configurado para a pipeline deste ciclo.
+                            </div>
+                        @endforelse
                     </div>
-                @empty
-                    <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
-                        <i class="ph ph-files text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum documento exigido neste ciclo.</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Adicione exigências documentais para ativar o portal de validação automática por IA.</p>
-                    </div>
-                @endforelse
+                </div>
             </div>
-        </div>
 
-        <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
-            <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
-            <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">
-                <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
-            </button>
-        </div>
-    </form>
+            <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Defina quais documentos serão solicitados aos candidatos aprovados deste ciclo.
+                        </p>
+                    </div>
+
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="addDocumento" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="ph-bold ph-plus text-sm"></i> Novo Documento
+                        </button>
+                    @endif
+                </div>
+
+                <div class="space-y-3 p-6">
+                    @forelse($documentosExigidos as $index => $doc)
+                        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 items-end transition-colors hover:border-purpura-300">
+                            <div class="flex-1 w-full md:w-1/3">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome do Documento <span class="text-red-500">*</span></label>
+                                <input type="text" wire:model="documentosExigidos.{{ $index }}.nome" placeholder="Ex: RG Frente e Verso" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500 font-bold">
+                                @error("documentosExigidos.$index.nome") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                            </div>
+                            
+                            <div class="flex-1 w-full md:w-1/2">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Instruções aos Alunos</label>
+                                <input type="text" wire:model="documentosExigidos.{{ $index }}.descricao" placeholder="Ex: Foto nítida e sem reflexos" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
+                            </div>
+
+                            <div class="w-full md:w-auto flex items-center justify-between gap-4 pb-1.5">
+                                <label class="flex items-center cursor-pointer select-none">
+                                    <input type="checkbox" wire:model="documentosExigidos.{{ $index }}.is_obrigatorio" class="w-4 h-4 rounded text-purpura-600 border-gray-300 focus:ring-purpura-500">
+                                    <span class="ml-2 text-xs font-bold text-gray-700 dark:text-gray-300">Obrigatório</span>
+                                </label>
+
+                                @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                                    <button type="button" wire:click="removeDocumento({{ $index }})" class="p-2 bg-white dark:bg-gray-800 text-red-500 border border-red-200 dark:border-red-800 rounded-lg shadow-sm hover:bg-red-500 hover:text-white transition" title="Remover Documento">
+                                        <i class="ph-bold ph-trash text-base"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
+                            <i class="ph ph-files text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhum documento exigido neste ciclo.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Adicione exigências documentais para ativar o portal de validação automática por IA.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
+                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
+                <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">
+                    <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
+                </button>
+            </div>
+        </form>
+    </fieldset>
+    
 </div>

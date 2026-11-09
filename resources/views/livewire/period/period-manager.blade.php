@@ -1,4 +1,4 @@
-<div class="w-full font-sans relative" x-data="{ modalAberto: @entangle('modalAberto') }" x-effect="document.body.classList.toggle('overflow-hidden', modalAberto)">
+<div class="w-full font-sans relative" wire:poll.8s x-data="{ modalAberto: @entangle('modalAberto') }" x-effect="document.body.classList.toggle('overflow-hidden', modalAberto)">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <x-page-header 
         title="Ciclos de Inscrições" 
@@ -224,6 +224,7 @@
                 <td class="px-4 py-1.5 whitespace-nowrap text-[13px] text-gray-600 dark:text-gray-300">
                     <i class="ph-fill ph-calendar text-gray-400"></i> {{ $ciclo->data_inicio->format('d/m/Y H:i') }}
                 </td>
+
                 <td class="px-4 py-1.5 whitespace-nowrap text-[13px] text-gray-600 dark:text-gray-300">
                     <i class="ph-fill ph-calendar text-gray-400"></i> {{ $ciclo->data_fim->format('d/m/Y H:i') }}
                 </td>
@@ -263,6 +264,16 @@
                             {{ $ciclo->bloqueado ? 'Bloqueado' : 'Aberto' }}
                         </span>
                     @endif
+                </td>
+
+                <td class="px-4 py-1.5 whitespace-nowrap text-center">
+                    <x-editing-lock-badge
+                        :id="$ciclo->id"
+                        :tipos="[
+                            'ciclo_dados'  => 'Ciclo',
+                            'ciclo'        => 'Formulário',
+                            'ciclo_regras' => 'Regras',
+                        ]" />
                 </td>
 
                 <td class="px-4 py-1.5 whitespace-nowrap">
@@ -322,7 +333,7 @@
         <x-slot name="gridSlot">
             @foreach($registros as $ciclo)
                 <div wire:key="card-ciclo-{{ $ciclo->id }}" class="card !p-4 !gap-0 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
-                    
+                    <x-editing-lock-badge :id="$ciclo->id" :tipos="['ciclo_dados' => 'Ciclo', 'ciclo' => 'Formulário', 'ciclo_regras' => 'Regras']" />
                     <div class="flex items-center justify-between mb-4 w-full">
                         <div class="flex items-center gap-1.5">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border {{ $ciclo->status ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200' }}">
