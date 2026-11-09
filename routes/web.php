@@ -54,6 +54,28 @@ Route::middleware(['web'])->group(function () {
 
         return redirect()->to($redirectUrl);
     })->name('session.timeout-logout');
+
+    Route::post('/session/release-edit-lock', function (Request $request) {
+        if(!auth()->check()) {
+            return response()->noContent();
+        }
+
+        $type = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $request->input('type', ''));
+        $id = (int) $request->input('id', 0);
+
+        if ($type !== '' && $id > 0) {
+
+            $lockKey = "edit_lock_{$type}_{$id}";
+            $current = \Illuminate\Support\Facades\Cache::get($lockKey);
+
+            if ($current && (int) ($current['user_id'] ?? 0) === (int) auth()->id()) {
+                \Illuminate\Support\Facades\Cache::forget($lockKey);
+                \Illuminate\Support\Facades\Cache::forget("edit_transfer_{$type}_{$id}");
+            }
+        }
+
+        return response()->noContent();
+    })->name('session.release-edit-lock');    
 });
 
 Route::get('/', \App\Modules\Website\UI\Livewire\Home::class)->name('home');

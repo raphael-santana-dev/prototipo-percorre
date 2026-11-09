@@ -477,8 +477,10 @@
                 @endif
 
                 <!-- CANVAS DE PREVIEW (SCROLLÁVEL) -->
-                <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center z-10">
-                    <div class="relative z-10 w-full {{ $formWidth }} {{ $cardClass }} p-6 md:p-10 rounded-xl border-t-4 border-purpura-600 transition-all duration-300">
+                <div class="relative flex-1 w-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center z-10"
+                   @click="if ($event.target === $el && ($wire.campoId || $wire.painelCampoAtivo)) { $wire.cancelarEdicao(); }">
+                    <div class="relative z-10 w-full {{ $formWidth }} {{ $cardClass }} p-6 md:p-10 rounded-xl border-t-4 border-purpura-600 transition-all duration-300"
+                       @click="if (!$event.target.closest('[data-campo-builder-item]') && !$event.target.closest('button, a, input, select, textarea, label') && ($wire.campoId || $wire.painelCampoAtivo)) { $wire.cancelarEdicao(); }">
                         
                         <div class="mb-8 border-b border-gray-200 pb-4 flex items-center justify-between">
                             <div>
@@ -687,7 +689,7 @@
                                                     }
                                                 @endphp
 
-                                                <div wire:key="campo-{{ $c->id }}" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : ($isSelecionadoLote ? 'ring-2 ring-indigo-500 bg-indigo-50/30 p-3' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60') }}" wire:click="editar({{ $c->id }})">
+                                                <div wire:key="campo-{{ $c->id }}" data-campo-builder-item="true" class="{{ $colSpan }} relative group rounded-lg transition-all duration-200 {{ $isActive ? 'ring-2 ring-purpura-500 shadow-md p-3.5 bg-purpura-50/20' : ($isSelecionadoLote ? 'ring-2 ring-indigo-500 bg-indigo-50/30 p-3' : 'border border-transparent hover:border-gray-200 p-2 -mx-2 cursor-pointer hover:bg-gray-50/60') }}" wire:click.stop="editar({{ $c->id }})">
                                                     
                                                     <div class="absolute right-2 -top-3 {{ $isActive ? 'flex' : 'hidden group-hover:flex' }} gap-1 bg-white border border-gray-200 shadow-md rounded-md overflow-hidden z-20 text-gray-600">
                                                         <button type="button" wire:click.stop="editar({{ $c->id }})" class="p-1.5 hover:bg-purpura-50 hover:text-purpura-600 transition" title="Editar Campo"><i class="ph ph-pencil-simple text-sm"></i></button>

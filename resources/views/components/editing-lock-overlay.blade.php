@@ -11,7 +11,33 @@
     'contextoDescricao' => 'este registo',
 ])
 
-<div>
+<div x-data="{
+        released: false,
+        releaseLockOnLeave() {
+            if (this.released || @js($isLockedByOther)) return;
+            const type = $wire.resourceLockType;
+            const id = $wire.resourceLockId;
+            if (!type || !id || Number(id) <= 0) return;
+
+            this.released = true;
+            const data = new FormData();
+            data.append('_token', document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}');
+            data.append('type', type);
+            data.append('id', id);
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('{{ route('session.release-edit-lock') }}', data);
+            } else {
+                fetch('{{ route('session.release-edit-lock') }}', { method: 'POST', body: data, keepalive: true });
+            }
+        }
+     }"
+     x-init="
+        window.addEventListener('beforeunload', () => releaseLockOnLeave());
+        window.addEventListener('pagehide', () => releaseLockOnLeave());
+        document.addEventListener('livewire:navigating', () => releaseLockOnLeave());
+     ">
+
     {{-- CORTINA DE BLOQUEIO QUANDO OUTRO USUÁRIO ESTÁ EDITANDO --}}
     @if($isLockedByOther)
         <div class="{{ $isModal ? 'absolute' : 'fixed' }} inset-0 z-[220] bg-white/70 dark:bg-gray-900/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -57,7 +83,7 @@
                                 Fechar Janela
                             </button>
                         @elseif($backUrl)
-                            <a href="{{ $backUrl }}" class="py-2.5 px-4 rounded-xl font-bold text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 w-full block transition">
+                            <a href="{{ $backUrl }}" @click="releaseLockOnLeave()" class="py-2.5 px-4 rounded-xl font-bold text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 w-full block transition">
                                 {{ $backLabel }}
                             </a>
                         @endif

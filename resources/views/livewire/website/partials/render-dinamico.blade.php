@@ -122,6 +122,24 @@
                         .toLowerCase()
                         .trim();
                 },
+                parseDateTs(v) {
+                    let s = String(v ?? '').trim();
+                    if (!s) return null;
+
+                    // Formato ISO: YYYY-MM-DD ou YYYY-MM-DDTHH:MM
+                    let iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
+                    if (iso) {
+                        return Date.UTC(+iso[1], +iso[2] - 1, +iso[3], +(iso[4] || 0), +(iso[5] || 0));
+                    }
+
+                    // Formato Brasileiro: DD/MM/YYYY ou DD/MM/YYYY HH:MM
+                    let br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+                    if (br) {
+                        return Date.UTC(+br[3], +br[2] - 1, +br[1], +(br[4] || 0), +(br[5] || 0));
+                    }
+
+                    return null;
+                },
                 obterValorCampo(nomeCampo) {
                     if (!nomeCampo) return '';
                     let respostas = $wire.respostas || {};
@@ -167,6 +185,24 @@
                     if (op === 'not_empty') return val !== '';
                     if (val === '') return false;
 
+                    // 1. Verifica se os valores são Datas (ISO YYYY-MM-DD ou BR DD/MM/YYYY)
+                    let dtVal = this.parseDateTs(val);
+                    let dtTarget = this.parseDateTs(target);
+                    let dtMax = this.parseDateTs(targetMax);
+
+                    if (dtVal !== null && dtTarget !== null) {
+                        if (op === '=') return dtVal === dtTarget;
+                        if (op === '!=') return dtVal !== dtTarget;
+                        if (op === '>') return dtVal > dtTarget;
+                        if (op === '>=') return dtVal >= dtTarget;
+                        if (op === '<') return dtVal < dtTarget;
+                        if (op === '<=') return dtVal <= dtTarget;
+                        if (op === 'between' && dtMax !== null) {
+                            return dtVal >= Math.min(dtTarget, dtMax) && dtVal <= Math.max(dtTarget, dtMax);
+                        }
+                    }
+
+                    // 2. Comparação Numérica e de Texto padrão
                     let numVal = Number(val.replace(',', '.'));
                     let numTarget = Number(target.replace(',', '.'));
                     let numMax = Number(targetMax.replace(',', '.'));
@@ -178,8 +214,18 @@
                     if (op === 'not_contains') return target !== '' && !val.includes(target);
                     if (op === 'starts_with') return target !== '' && val.startsWith(target);
                     if (op === 'ends_with') return target !== '' && val.endsWith(target);
-                    if (op === 'in') return targetArray.includes(val);
-                    if (op === 'not_in') return !targetArray.includes(val);
+                    if (op === 'in') {
+                        if (dtVal !== null) {
+                            return targetArray.some(t => this.parseDateTs(t) === dtVal);
+                        }
+                        return targetArray.includes(val);
+                    }
+                    if (op === 'not_in') {
+                        if (dtVal !== null) {
+                            return targetArray.every(t => this.parseDateTs(t) !== dtVal);
+                        }
+                        return !targetArray.includes(val);
+                    }
                     if (op === '>') return !isNaN(numVal) && !isNaN(numTarget) && numVal > numTarget;
                     if (op === '>=') return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
                     if (op === '<') return !isNaN(numVal) && !isNaN(numTarget) && numVal < numTarget;

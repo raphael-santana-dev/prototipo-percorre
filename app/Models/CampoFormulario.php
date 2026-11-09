@@ -26,6 +26,28 @@ class CampoFormulario extends Model
     }
 
     /**
+     * Converte strings de data (YYYY-MM-DD ou DD/MM/YYYY, com ou sem hora) em Timestamp UTC.
+     * Retorna null se a string não for uma data válida.
+     */
+    protected function converterParaTimestampSeData($valor): ?int
+    {
+        $s = trim((string) $valor);
+        if ($s === '') return null;
+
+        // ISO: YYYY-MM-DD ou YYYY-MM-DDTHH:MM
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/', $s, $m)) {
+            return gmmktime((int) ($m[4] ?? 0), (int) ($m[5] ?? 0), 0, (int) $m[2], (int) $m[3], (int) $m[1]);
+        }
+
+        // BR: DD/MM/YYYY ou DD/MM/YYYY HH:MM
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/', $s, $m)) {
+            return gmmktime((int) ($m[4] ?? 0), (int) ($m[5] ?? 0), 0, (int) $m[2], (int) $m[1], (int) $m[3]);
+        }
+
+        return null;
+    }
+
+    /**
      * Verifica no Backend se o campo está visível diante das respostas enviadas pelo candidato.
      */
     public function estaVisivelParaRespostas(array $respostas, array $dadosFixos = []): bool
@@ -77,6 +99,24 @@ class CampoFormulario extends Model
             if ($op === 'empty') return $valNorm === '';
             if ($op === 'not_empty') return $valNorm !== '';
             if ($valNorm === '') return false;
+
+            // Comparação inteligente de Datas (aceita YYYY-MM-DD e DD/MM/YYYY indiferentemente)
+            $dtVal = $this->converterParaTimestampSeData($val);
+            $dtTgt = $this->converterParaTimestampSeData($tgt);
+            $dtMax = $this->converterParaTimestampSeData($tgtMax);
+
+            if ($dtVal !== null && $dtTgt !== null) {
+                return match ($op) {
+                    '='       => $dtVal === $dtTgt,
+                    '!='      => $dtVal !== $dtTgt,
+                    '>'       => $dtVal > $dtTgt,
+                    '>='      => $dtVal >= $dtTgt,
+                    '<'       => $dtVal < $dtTgt,
+                    '<='      => $dtVal <= $dtTgt,
+                    'between' => $dtMax !== null && $dtVal >= min($dtTgt, $dtMax) && $dtVal <= max($dtTgt, $dtMax),
+                    default   => false,
+                };
+            }
 
             $atuaisArr = array_filter(array_map($norm, explode(',', (string) $atual)), fn($i) => $i !== '');
             $alvosArr  = array_filter(array_map($norm, explode(',', (string) ($r['valor'] ?? ''))), fn($i) => $i !== '');
