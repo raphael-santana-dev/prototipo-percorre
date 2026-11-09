@@ -20,6 +20,7 @@ use App\Modules\Turno\Domain\Models\Turno;
 use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use App\Modules\Matricula\Services\AiValidationService;
+use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
@@ -31,6 +32,7 @@ class RegistrationDetails extends Component
 {
     use WithFileUploads;
     use WithPagination;
+    use ComPadraoListagem;
     use \App\Traits\WithFichaPdfDownload;
 
     public Inscricao $inscricao;
@@ -68,29 +70,20 @@ class RegistrationDetails extends Component
     public array $historicoFormularioSelecionado = [];
     public string $tituloHistoricoFormulario = '';
 
-    // Utilizado pelo x-table para a listagem
-    public $ordenacaoCampo = 'total_preenchimentos';
-    public $ordenacaoDirecao = 'desc';
-    public $porPagina = 10;
-    public $permiteGrid = false;
-    public $modoExibicao = 'lista';
-
     public function mount($id)
     {
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
+        
         $this->carregarDadosEdicao();
         $this->carregarStatusArquivos();
-    }
 
-    public function sortBy($campo)
-    {
-        if ($this->ordenacaoCampo === $campo) {
-            $this->ordenacaoDirecao = $this->ordenacaoDirecao === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->ordenacaoCampo = $campo;
-            $this->ordenacaoDirecao = 'asc';
-        }
+        // Inicialização das variáveis herdadas da trait ComPadraoListagem para a Tabela de Formulários
+        $this->ordenacaoCampo = 'total_preenchimentos';
+        $this->ordenacaoDirecao = 'desc';
+        $this->porPagina = 10;
+        $this->permiteGrid = false;
+        $this->modoExibicao = 'lista';
     }
 
     public function updatingSearchFormulario()
