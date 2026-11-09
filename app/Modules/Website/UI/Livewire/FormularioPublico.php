@@ -18,6 +18,7 @@ class FormularioPublico extends Component
 {
     use WithFileUploads;
     use \App\Traits\WithFichaPdfDownload;
+    use \App\Traits\AvaliaCondicoesVisibilidade;
 
     public Formulario $formulario;
     public $respostaId = null;
@@ -292,85 +293,6 @@ class FormularioPublico extends Component
     }
 
     public function rules() { return []; }
-
-    private function normalizarTextoComparacao($valor): string
-    {
-        $str = mb_strtolower(trim((string) $valor), 'UTF-8');
-        return \Illuminate\Support\Str::ascii($str);
-    }
-
-    public function campoEstaVisivel($campo, array $visitados = []): bool
-    {
-        if (empty($campo->depende_de) || $campo->depende_valor === null || $campo->depende_valor === '') {
-            return true;
-        }
-
-        if (in_array($campo->name, $visitados, true)) {
-            return true;
-        }
-        $visitados[] = $campo->name;
-
-        if ($this->camposDinamicos) {
-            $campoPai = collect($this->camposDinamicos)->firstWhere('name', $campo->depende_de);
-            if ($campoPai && !$this->campoEstaVisivel($campoPai, $visitados)) {
-                return false;
-            }
-        }
-
-        $valorGatilho = $this->respostas[$campo->depende_de] ?? null;
-        $op = $campo->depende_operador ?: '=';
-        $tgt = $this->normalizarTextoComparacao($campo->depende_valor);
-
-        if (is_array($valorGatilho)) {
-            $arrayValores = array_values(array_filter(array_map(fn($v) => $this->normalizarTextoComparacao($v), $valorGatilho), fn($v) => $v !== ''));
-            if (empty($arrayValores)) {
-                return false;
-            }
-            $arrayAlvos = array_map(fn($v) => $this->normalizarTextoComparacao($v), explode(',', (string) $campo->depende_valor));
-            return match ($op) {
-                '='  => in_array($tgt, $arrayValores, true),
-                '!=' => !in_array($tgt, $arrayValores, true),
-                'in' => !empty(array_intersect($arrayValores, $arrayAlvos)),
-                default => false,
-            };
-        }
-
-        $val = $this->normalizarTextoComparacao($valorGatilho);
-        if ($val === '') {
-            return false;
-        }
-
-        $numVal = is_numeric(str_replace(',', '.', $val)) ? (float) str_replace(',', '.', $val) : null;
-        $numTgt = is_numeric(str_replace(',', '.', $tgt)) ? (float) str_replace(',', '.', $tgt) : null;
-
-        return match ($op) {
-            '='  => $val === $tgt,
-            '!=' => $val !== $tgt,
-            '>'  => $numVal !== null && $numTgt !== null && $numVal > $numTgt,
-            '<'  => $numVal !== null && $numTgt !== null && $numVal < $numTgt,
-            '>=' => $numVal !== null && $numTgt !== null && $numVal >= $numTgt,
-            '<=' => $numVal !== null && $numTgt !== null && $numVal <= $numTgt,
-            'in' => in_array($val, array_map(fn($v) => $this->normalizarTextoComparacao($v), explode(',', (string) $campo->depende_valor)), true),
-            default => false,
-        };
-    }
-
-    private function limparRespostasCondicionaisInativas(): void
-    {
-        if (!$this->camposDinamicos) return;
-
-        foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
-            if (!empty($campo->depende_de) && !$this->campoEstaVisivel($campo)) {
-                $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-                $valorVazio = (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) ? [] : '';
-
-                if (isset($this->respostas[$campo->name]) && $this->respostas[$campo->name] !== $valorVazio) {
-                    $this->respostas[$campo->name] = $valorVazio;
-                    $this->resetErrorBag('respostas.' . $campo->name);
-                }
-            }
-        }
-    }
 
     protected function regrasPorEtapa($etapa)
     {

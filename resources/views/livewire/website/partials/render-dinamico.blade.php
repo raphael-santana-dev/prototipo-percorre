@@ -24,15 +24,41 @@
 @php $colunasUsadasLinha = 0; @endphp
 @foreach($camposVigentes as $campo)
     @php
-        $isCondicional = !empty($campo->depende_de) && !empty($campo->depende_valor);
-        
+        $config = [];
+        if (!empty($campo->configuracoes)) {
+            $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : $campo->configuracoes;
+        }
+
+        $condicoesAvancadas = $config['condicoes_visibilidade'] ?? null;
+        $gruposRegrasJs = [];
+
+        if (is_array($condicoesAvancadas) && !empty($condicoesAvancadas['grupos'])) {
+            $gruposRegrasJs = $condicoesAvancadas['grupos'];
+        } elseif (!empty($campo->depende_de) && ($campo->depende_valor !== null && $campo->depende_valor !== '' || in_array($campo->depende_operador, ['empty', 'not_empty'], true))) {
+            $gruposRegrasJs = [
+                [
+                    'conector' => 'AND',
+                    'regras'   => [
+                        [
+                            'conector'  => 'AND',
+                            'campo'     => (string) $campo->depende_de,
+                            'operador'  => (string) ($campo->depende_operador ?: '='),
+                            'valor'     => (string) ($campo->depende_valor ?? ''),
+                            'valor_max' => (string) ($config['depende_valor_max'] ?? ''),
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        $isCondicional = !empty($gruposRegrasJs);    
+    
         $listaOpcoes = [];
         if (!empty($campo->opcoes)) {
             $decodificado = is_string($campo->opcoes) ? json_decode($campo->opcoes, true) : $campo->opcoes;
             $listaOpcoes = is_array($decodificado) ? $decodificado : explode(',', $campo->opcoes);
         }
 
-        $config = [];
         if (!empty($campo->configuracoes)) {
             $config = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : $campo->configuracoes;
         }
@@ -88,9 +114,7 @@
         class="{{ $colSpan }} relative rounded-lg overflow-hidden transition-all duration-300 {{ isset($config['bg_image']) ? 'p-6 shadow-sm' : '' }}"
         @if($isCondicional)
             x-data="{
-                depField: @js((string) $campo->depende_de),
-                depTarget: @js((string) $campo->depende_valor),
-                depOp: @js((string) ($campo->depende_operador ?: '=')),
+                grupos: @js($gruposRegrasJs),
                 norm(v) {
                     return String(v ?? '')
                         .normalize('NFD')
@@ -98,43 +122,113 @@
                         .toLowerCase()
                         .trim();
                 },
-                get isVisivel() {
+                obterValorCampo(nomeCampo) {
+                    if (!nomeCampo) return '';
                     let respostas = $wire.respostas || {};
-                    let atual = (this.depField in respostas)
-                        ? respostas[this.depField]
-                        : ($wire[this.depField] !== undefined ? $wire[this.depField] : '');
+                    if (nomeCampo in respostas) {
+                        return respostas[nomeCampo];
+                    }
+                    if ($wire[nomeCampo] !== undefined) {
+                        return $wire[nomeCampo];
+                    }
+                    return '';
+                },
+                avaliarRegra(regra) {
+                    let campo = regra.campo || '';
+                    if (!campo) return false;
+
+                    let op = regra.operador || '=';
+                    let target = this.norm(regra.valor ?? '');
+                    let targetMax = this.norm(regra.valor_max ?? '');
+                    let atual = this.obterValorCampo(campo);
 
                     if (atual === null || atual === undefined) atual = '';
-
-                    let target = this.norm(this.depTarget);
-                    let op = this.depOp || '=';
 
                     if (Array.isArray(atual)) {
                         let atualArray = atual.map(s => this.norm(s)).filter(s => s !== '');
                         let targetArray = target.split(',').map(s => s.trim()).filter(s => s !== '');
+
+                        if (op === 'empty') return atualArray.length === 0;
+                        if (op === 'not_empty') return atualArray.length > 0;
+                        if (atualArray.length === 0) return false;
+
                         if (op === '=') return atualArray.includes(target);
-                        if (op === '!=') return atualArray.length > 0 && !atualArray.includes(target);
+                        if (op === '!=') return !atualArray.includes(target);
+                        if (op === 'contains') return atualArray.some(r => r.includes(target));
+                        if (op === 'not_contains') return atualArray.every(r => !r.includes(target));
                         if (op === 'in') return atualArray.some(r => targetArray.includes(r));
+                        if (op === 'not_in') return atualArray.every(r => !targetArray.includes(r));
                         return false;
                     }
 
                     let val = this.norm(atual);
 
-                    // Se o campo pai ainda não foi respondido, não exibe campos dependentes
+                    if (op === 'empty') return val === '';
+                    if (op === 'not_empty') return val !== '';
                     if (val === '') return false;
 
                     let numVal = Number(val.replace(',', '.'));
                     let numTarget = Number(target.replace(',', '.'));
+                    let numMax = Number(targetMax.replace(',', '.'));
+                    let targetArray = target.split(',').map(s => s.trim()).filter(s => s !== '');
 
                     if (op === '=') return val === target;
                     if (op === '!=') return val !== target;
+                    if (op === 'contains') return target !== '' && val.includes(target);
+                    if (op === 'not_contains') return target !== '' && !val.includes(target);
+                    if (op === 'starts_with') return target !== '' && val.startsWith(target);
+                    if (op === 'ends_with') return target !== '' && val.endsWith(target);
+                    if (op === 'in') return targetArray.includes(val);
+                    if (op === 'not_in') return !targetArray.includes(val);
                     if (op === '>') return !isNaN(numVal) && !isNaN(numTarget) && numVal > numTarget;
-                    if (op === '<') return !isNaN(numVal) && !isNaN(numTarget) && numVal < numTarget;
                     if (op === '>=') return !isNaN(numVal) && !isNaN(numTarget) && numVal >= numTarget;
+                    if (op === '<') return !isNaN(numVal) && !isNaN(numTarget) && numVal < numTarget;
                     if (op === '<=') return !isNaN(numVal) && !isNaN(numTarget) && numVal <= numTarget;
-                    if (op === 'in') return target.split(',').map(s => s.trim()).includes(val);
+                    if (op === 'between') {
+                        return !isNaN(numVal) && !isNaN(numTarget) && !isNaN(numMax)
+                            && numVal >= Math.min(numTarget, numMax)
+                            && numVal <= Math.max(numTarget, numMax);
+                    }
 
                     return false;
+                },
+                get isVisivel() {
+                    if (!Array.isArray(this.grupos) || this.grupos.length === 0) return true;
+
+                    let resultadoFinal = null;
+
+                    for (let g = 0; g < this.grupos.length; g++) {
+                        let grupo = this.grupos[g];
+                        let regras = Array.isArray(grupo.regras) ? grupo.regras : [];
+                        let resultadoGrupo = null;
+
+                        for (let r = 0; r < regras.length; r++) {
+                            let regra = regras[r];
+                            let passou = this.avaliarRegra(regra);
+                            let conectorRegra = String(regra.conector || 'AND').toUpperCase();
+
+                            if (resultadoGrupo === null) {
+                                resultadoGrupo = passou;
+                            } else {
+                                resultadoGrupo = (conectorRegra === 'OR')
+                                    ? (resultadoGrupo || passou)
+                                    : (resultadoGrupo && passou);
+                            }
+                        }
+
+                        resultadoGrupo = resultadoGrupo ?? false;
+                        let conectorGrupo = String(grupo.conector || 'AND').toUpperCase();
+
+                        if (resultadoFinal === null) {
+                            resultadoFinal = resultadoGrupo;
+                        } else {
+                            resultadoFinal = (conectorGrupo === 'OR')
+                                ? (resultadoFinal || resultadoGrupo)
+                                : (resultadoFinal && resultadoGrupo);
+                        }
+                    }
+
+                    return resultadoFinal ?? true;
                 }
             }"
             x-show="isVisivel"
@@ -142,6 +236,7 @@
         @endif
         style="{{ $bgStyle }}"
     >
+
         @if(isset($config['bg_image']))
             <div class="absolute inset-0 z-0 pointer-events-none" style="{{ $overlayStyle }}"></div>
         @endif
