@@ -13,11 +13,13 @@ use App\Modules\Matricula\Domain\Models\DocumentoExigido;
 use App\Modules\Matricula\Domain\Models\DocumentoMatricula;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Traits\WithEditingLock;
 
 #[Layout('components.layouts.app')]
 #[Title('Editar Ciclo - Administrativo')]
 class PeriodEdit extends Component
 {
+    use WithEditingLock;
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
     public $data_inicio_matricula = '';
     public $data_fim_matricula = '';
@@ -86,6 +88,9 @@ class PeriodEdit extends Component
                 'is_obrigatorio' => (bool) $doc->is_obrigatorio
             ];
         }
+
+        // Registra trava de concorrência para os Dados do Ciclo
+        $this->iniciarLockEdicao('ciclo_dados', (int) $this->cicloId, 'Dados do Ciclo', 'ciclos.index');
     }
 
     public function setActiveUnidade($id) { $this->activeUnidadeId = $id; $this->activeCursoId = null; }
@@ -173,6 +178,11 @@ class PeriodEdit extends Component
 
     public function salvar()
     {
+        if ($this->isLockedByOther) {
+            $this->dispatch('erro', msg: "Este ciclo está sendo editado por {$this->lockOwnerName}.");
+            return;
+        }
+
         //abort_if(!feature('ciclo.editar'), 403);
         //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('ciclo.editar'), 403);
         
@@ -257,6 +267,7 @@ class PeriodEdit extends Component
             }
         }
 
+        $this->liberarLockEdicao();
         session()->flash('sucesso', 'Ciclo, funil e documentos exigidos foram atualizados!');
         return redirect()->route('ciclos.index');
     }
