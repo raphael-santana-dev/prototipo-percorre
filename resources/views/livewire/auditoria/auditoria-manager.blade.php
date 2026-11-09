@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+2<div class="p-6 max-w-7xl mx-auto font-sans relative">
     <x-page-header 
         title="Auditoria de Sistema" 
         icon="ph ph-magnifying-glass"
@@ -125,6 +125,7 @@
                         @elseif($log->acao === 'atualizacao') bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800
                         @elseif($log->acao === 'exclusao') bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
                         @elseif($log->acao === 'login') bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800
+                        @elseif($log->acao === 'acesso_negado') bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
                         @else bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 @endif">
                         {{ $log->acao }}
                     </span>

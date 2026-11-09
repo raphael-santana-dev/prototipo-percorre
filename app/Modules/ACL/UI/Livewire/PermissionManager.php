@@ -12,12 +12,13 @@ use Livewire\WithPagination;
 use App\Helpers\BreadcrumbHelper;
 use App\Traits\ComPadraoListagem;
 use Illuminate\Support\Facades\Cache;
+use App\Traits\ValidaAcesso;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Permissões - Administrativo')]
 class PermissionManager extends Component
 {
-    use WithPagination, ComPadraoListagem;
+    use WithPagination, ComPadraoListagem, ValidaAcesso;
 
     public $modalAberto = false;
     public $modalConfirmacaoAberto = false;
@@ -35,8 +36,7 @@ class PermissionManager extends Component
 
     public function mount()
     {
-        //abort_if(!feature('acl.permissao.listar'), 403, 'Módulo desativado.');
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.listar'), 403);
+        $this->autorizarTela('acl.permissao.listar', 'gerenciamento de permissões');
         $this->breadcrumbs = BreadcrumbHelper::generate();
         $this->permiteGrid = true;
     }
@@ -56,12 +56,9 @@ class PermissionManager extends Component
 
     public function abrirModal($id = null)
     {
-        if ($id) {
-            //abort_if(!feature('acl.permissao.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.editar'), 403);
-        } else {
-            //abort_if(!feature('acl.permissao.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.criar'), 403);
+        $permissaoNecessaria = $id ? 'acl.permissao.editar' : 'acl.permissao.criar';
+        if (!$this->autorizarAcao($permissaoNecessaria, $id ? 'editar permissões' : 'criar permissões')) {
+            return;
         }
 
         $this->resetValidation();
@@ -108,12 +105,9 @@ class PermissionManager extends Component
 
     public function salvar()
     {
-        if ($this->permissionId) {
-            //abort_if(!feature('acl.permissao.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.editar'), 403);
-        } else {
-            //abort_if(!feature('acl.permissao.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.criar'), 403);
+        $permissaoNecessaria = $this->permissionId ? 'acl.permissao.editar' : 'acl.permissao.criar';
+        if (!$this->autorizarAcao($permissaoNecessaria, 'salvar permissões')) {
+            return;
         }
 
         $this->validate([
@@ -248,9 +242,10 @@ class PermissionManager extends Component
 
     public function excluir($id)
     {
-        //abort_if(!feature('acl.permissao.excluir'), 403);
-        //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('acl.permissao.excluir'), 403);
-        
+        if (!$this->autorizarAcao('acl.permissao.excluir', 'excluir permissões')) {
+            return;
+        }
+
         Permission::findOrFail($id)->delete();
         $this->dispatch('sucesso', msg: 'Permissão excluída com sucesso.');
     }
