@@ -68,12 +68,29 @@ class RegistrationDetails extends Component
     public array $historicoFormularioSelecionado = [];
     public string $tituloHistoricoFormulario = '';
 
+    // Utilizado pelo x-table para a listagem
+    public $ordenacaoCampo = 'total_preenchimentos';
+    public $ordenacaoDirecao = 'desc';
+    public $porPagina = 10;
+    public $permiteGrid = false;
+    public $modoExibicao = 'lista';
+
     public function mount($id)
     {
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
         $this->status_selecionado = $this->inscricao->status_inscricao_id;
         $this->carregarDadosEdicao();
         $this->carregarStatusArquivos();
+    }
+
+    public function sortBy($campo)
+    {
+        if ($this->ordenacaoCampo === $campo) {
+            $this->ordenacaoDirecao = $this->ordenacaoDirecao === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->ordenacaoCampo = $campo;
+            $this->ordenacaoDirecao = 'asc';
+        }
     }
 
     public function updatingSearchFormulario()
@@ -445,8 +462,18 @@ class RegistrationDetails extends Component
     }
 
     // =========================================================================
-    // 3. PREENCHIMENTO DE FORMULÁRIOS VIA EMBED (NOVA LISTAGEM E MODAL TELA CHEIA)
+    // 3. PREENCHIMENTO DE FORMULÁRIOS VIA EMBED E LISTAGEM
     // =========================================================================
+
+    public function getHeadersProperty(): array
+    {
+        return [
+            ['key' => 'titulo', 'label' => 'Formulário / Nome', 'sortable' => true],
+            ['key' => 'total_preenchimentos', 'label' => 'Preenchimentos', 'sortable' => true, 'class' => 'text-center w-32'],
+            ['key' => 'ultima_edicao', 'label' => 'Última Edição', 'sortable' => true, 'class' => 'w-48'],
+            ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'w-44 text-right'],
+        ];
+    }
 
     #[Computed]
     public function formulariosPaginados()
@@ -493,11 +520,25 @@ class RegistrationDetails extends Component
             return $item;
         });
 
-        // Ordena para que os que já possuem preenchimento fiquem no topo
-        $itens = $itens->sortByDesc('total_preenchimentos')->values();
+        // Ordenação Dinâmica via $this->ordenacaoCampo e $this->ordenacaoDirecao (Utilizando traits e x-table)
+        $campoOrd = $this->ordenacaoCampo ?: 'total_preenchimentos';
+        $dirOrd = $this->ordenacaoDirecao ?: 'desc';
+
+        if ($campoOrd === 'ultima_edicao') {
+            $itens = $itens->sortBy(function($item) {
+                if (empty($item['ultimo_preenchimento']['data'])) return 0;
+                try {
+                    return \Carbon\Carbon::createFromFormat('d/m/Y H:i', $item['ultimo_preenchimento']['data'])->timestamp;
+                } catch (\Exception $e) {
+                    return 0;
+                }
+            }, SORT_REGULAR, $dirOrd === 'desc')->values();
+        } else {
+            $itens = $itens->sortBy($campoOrd, SORT_REGULAR, $dirOrd === 'desc')->values();
+        }
 
         $page = $this->getPage('formsPage');
-        $perPage = 10;
+        $perPage = $this->porPagina ?? 10;
         
         return new LengthAwarePaginator(
             $itens->forPage($page, $perPage),

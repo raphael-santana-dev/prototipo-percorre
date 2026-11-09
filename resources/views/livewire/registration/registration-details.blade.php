@@ -768,89 +768,83 @@
     {{-- ===================================================================== --}}
     @elseif($abaAtiva === 'formularios')
         <div class="mt-6 space-y-6 animate-fade-in-down w-full block">
-            <div class="card !p-6 md:!p-8 space-y-6 w-full block">
-                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-gray-100 pb-5 w-full">
+            <div class="card !p-0 space-y-0 w-full block overflow-hidden">
+                <div class="p-6 md:p-8 border-b border-gray-100 flex flex-col lg:flex-row lg:items-end justify-between gap-6 w-full">
                     <div class="flex-1 min-w-0">
                         <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
-                            <i class="ph-fill ph-browsers text-purpura-600 text-xl"></i> Formulários e Preenchimento Assistido
+                            <i class="ph-fill ph-browsers text-purpura-600 text-xl"></i> Preencher Formulário em Nome do Candidato (Embed)
                         </h3>
                         <p class="text-xs text-gray-500 mt-1">
-                            Selecione o formulário na lista abaixo para iniciar um preenchimento em nome do candidato ou consultar o histórico de edições passadas.
+                            Escolha o formulário de inscrição do candidato ou qualquer formulário ativo do sistema para preenchê-lo diretamente nesta tela.
                         </p>
                     </div>
-                    <div class="relative w-full sm:w-72 shrink-0">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input wire:model.live.debounce.300ms="searchFormulario" type="text" placeholder="Buscar formulário..." class="pl-9 w-full rounded-lg border-gray-300 text-xs shadow-sm focus:border-purpura-500 focus:ring-purpura-500 h-10">
-                    </div>
                 </div>
 
-                {{-- Tabela de Formulários Disponíveis --}}
-                <div class="overflow-x-auto w-full border border-gray-200 rounded-xl shadow-sm">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-wider">
-                            <tr>
-                                <th class="px-4 py-3">Formulário / Nome</th>
-                                <th class="px-4 py-3 text-center">Preenchimentos</th>
-                                <th class="px-4 py-3">Última Edição</th>
-                                <th class="px-4 py-3 text-right">Ações de Preenchimento</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 bg-white">
-                            @forelse($this->formulariosPaginados as $form)
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3">
-                                        <span class="font-bold text-gray-900 block truncate max-w-sm">{{ $form['titulo'] }}</span>
-                                        <span class="block text-[10px] font-bold text-gray-500 mt-0.5 tracking-wider">{{ $form['tipo'] }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        @if($form['total_preenchimentos'] > 0)
-                                            <span class="px-2 py-0.5 rounded-full bg-purpura-100 text-purpura-700 font-bold text-[10px]">
-                                                {{ $form['total_preenchimentos'] }}x
-                                            </span>
-                                        @else
-                                            <span class="text-gray-400 text-xs font-medium">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        @if($form['ultimo_preenchimento'])
-                                            <div class="text-xs font-bold text-gray-800 flex items-center gap-1.5 truncate max-w-[200px]">
-                                                <i class="ph-fill ph-user-switch text-indigo-500"></i> {{ $form['ultimo_preenchimento']['participante_nome'] ?? 'Participante' }}
-                                            </div>
-                                            <div class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $form['ultimo_preenchimento']['data'] ?? '-' }}</div>
-                                        @else
-                                            <span class="text-gray-400 text-xs italic">Nunca preenchido</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <div class="inline-flex items-center gap-2 justify-end">
-                                            @if($form['total_preenchimentos'] > 0)
-                                                <button type="button" wire:click="verHistoricoFormulario('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3 py-1.5 text-[11px] font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition inline-flex items-center gap-1 shadow-sm" title="Ver histórico completo de edições">
-                                                    <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
-                                                </button>
-                                            @endif
-                                            <button type="button" wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3.5 py-1.5 text-[11px] font-bold text-white bg-purpura-600 rounded-lg hover:bg-purpura-700 transition shadow-sm inline-flex items-center gap-1.5">
-                                                <i class="ph-bold ph-play"></i> Iniciar Preenchimento
-                                            </button>
+                {{-- Tabela de Formulários Disponíveis usando x-table --}}
+                <div class="w-full">
+                    <x-table 
+                        :headers="$this->headers" 
+                        :registros="$this->formulariosPaginados"
+                        :ordenacaoCampo="$ordenacaoCampo"
+                        :ordenacaoDirecao="$ordenacaoDirecao"
+                        :permiteGrid="$permiteGrid"
+                        :modoExibicao="$modoExibicao">
+
+                        <x-slot name="search">
+                            <div class="relative w-full sm:w-72 shrink-0 my-2 mx-4">
+                                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                                <input type="text" wire:model.live.debounce.300ms="searchFormulario" placeholder="Buscar formulário..." class="w-full pl-9 h-9 bg-white border-gray-200 text-sm rounded-lg focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500 shadow-sm transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                            </div>
+                        </x-slot>
+
+                        @forelse($this->formulariosPaginados as $form)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3">
+                                    <span class="font-bold text-gray-900 block truncate max-w-sm">{{ $form['titulo'] }}</span>
+                                    <span class="block text-[10px] font-bold text-gray-500 mt-0.5 tracking-wider">{{ $form['tipo'] }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if($form['total_preenchimentos'] > 0)
+                                        <span class="px-2 py-0.5 rounded-full bg-purpura-100 text-purpura-700 font-bold text-[10px]">
+                                            {{ $form['total_preenchimentos'] }}x
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400 text-xs font-medium">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($form['ultimo_preenchimento'])
+                                        <div class="text-xs font-bold text-gray-800 flex items-center gap-1.5 truncate max-w-[200px]">
+                                            <i class="ph-fill ph-user-switch text-indigo-500"></i> {{ $form['ultimo_preenchimento']['participante_nome'] ?? 'Participante' }}
                                         </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-4 py-12 text-center text-gray-500">
-                                        <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-gray-300"></i>
-                                        <p class="text-sm font-bold text-gray-700">Nenhum formulário localizado.</p>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                                        <div class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $form['ultimo_preenchimento']['data'] ?? '-' }}</div>
+                                    @else
+                                        <span class="text-gray-400 text-xs italic">Nunca preenchido</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="inline-flex items-center gap-2 justify-end">
+                                        @if($form['total_preenchimentos'] > 0)
+                                            <button type="button" wire:click="verHistoricoFormulario('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3 py-1.5 text-[11px] font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition inline-flex items-center gap-1 shadow-sm" title="Ver histórico completo de edições">
+                                                <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
+                                            </button>
+                                        @endif
+                                        <button type="button" wire:click="abrirFormularioEmbedTable('{{ $form['ref'] }}', '{{ $form['id'] }}')" class="px-3.5 py-1.5 text-[11px] font-bold text-white bg-purpura-600 rounded-lg hover:bg-purpura-700 transition shadow-sm inline-flex items-center gap-1.5">
+                                            <i class="ph-bold ph-play"></i> Iniciar Preenchimento
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-4 py-12 text-center text-gray-500">
+                                    <i class="ph-duotone ph-browsers text-4xl mb-2 block mx-auto text-gray-300"></i>
+                                    <p class="text-sm font-bold text-gray-700">Nenhum formulário localizado.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </x-table>
                 </div>
-
-                @if($this->formulariosPaginados->hasPages())
-                    <div class="mt-4">
-                        {{ $this->formulariosPaginados->links() }}
-                    </div>
-                @endif
             </div>
         </div>
 
