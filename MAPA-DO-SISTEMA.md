@@ -1,7 +1,7 @@
 # 🗺️ Mapa do Sistema — prototipo-percorre
 
-> Gerado por **LaraMap** em 05/11/2026 19:52
-> 505 arquivos próprios analisados · 26 arquivos padrão do Laravel/pacotes ignorados
+> Gerado por **LaraMap** em 09/11/2026 17:50
+> 516 arquivos próprios analisados · 26 arquivos padrão do Laravel/pacotes ignorados
 
 ## Sumário
 
@@ -32,20 +32,20 @@
 | ⚡ Componentes Livewire | 103 |
 | 🗃️ Models | 61 |
 | 🌱 Seeders | 28 |
-| 📦 Outras classes | 23 |
+| 📦 Outras classes | 24 |
 | ⚙️ Services | 14 |
 | ⏳ Jobs | 12 |
-| 🧬 Traits | 9 |
+| 🧬 Traits | 11 |
 | ⌨️ Comandos Artisan | 5 |
 | 🔌 Interfaces | 5 |
+| 🚦 Middlewares | 3 |
 | ✉️ Mailables | 3 |
-| 🚦 Middlewares | 2 |
 | 🎮 Controllers | 2 |
 | 🔔 Notifications | 2 |
 | 🧩 Service Providers | 1 |
-| 🖼️ Views Blade | 131 |
-| 🛣️ Rotas declaradas | 108 |
-| 🔧 Métodos mapeados | 1543 |
+| 🖼️ Views Blade | 139 |
+| 🛣️ Rotas declaradas | 112 |
+| 🔧 Métodos mapeados | 1572 |
 
 ---
 
@@ -53,6 +53,10 @@
 
 | Verbo | URI | Destino | Nome | Middleware |
 | --- | --- | --- | --- | --- |
+| POST | `/session/keep-alive` | — | `session.keep-alive` | `web` |
+| POST | `/session/timeout-logout` | — | `session.timeout-logout` | `web` |
+| HAS | `/portal.login` | — | — | `web` |
+| HAS | `/login` | — | — | `web` |
 | GET | `/` | `Home::render()` | `home` | — |
 | GET | `/retomar-inscricao/{token}` | `RetomarInscricao::render()` | `inscricao.retomar` | — |
 | GET | `/inscricao/retomar/{token}` | `RetomarInscricao::render()` | — | — |
@@ -617,10 +621,38 @@ sequenceDiagram
 sequenceDiagram
     participant P1 as Rota
     participant P2 as PermissionManager
-    participant P3 as BreadcrumbHelper
+    participant P3 as Auth
+    participant P4 as AuditoriaLog
+    participant P5 as BreadcrumbHelper
     P1->>+P2: mount()
-    P2->>+P3: generate()
+    P2->>+P2: autorizarTela()
+    P2->>+P2: registrarLogAcessoNegado()
+    P2->>+P3: user()
     P3-->>-P2: 
+    P2->>+P4: create()
+    P4-->>-P2: 
+    P2->>+P3: getRoleNames()
+    P3-->>-P2: 
+    P2-->>-P2: 
+    Note over P2: abort()
+    P2->>+P3: user()
+    P3-->>-P2: 
+    P2->>+P3: hasRole()
+    P3-->>-P2: 
+    P2->>+P3: can()
+    P3-->>-P2: 
+    P2->>+P2: registrarLogAcessoNegado()
+    P2->>+P3: user()
+    P3-->>-P2: 
+    P2->>+P4: create()
+    P4-->>-P2: 
+    P2->>+P3: getRoleNames()
+    P3-->>-P2: 
+    P2-->>-P2: 
+    Note over P2: abort()
+    P2-->>-P2: 
+    P2->>+P5: generate()
+    P5-->>-P2: 
     P2-->>-P1: 
 ```
 
@@ -1546,7 +1578,7 @@ sequenceDiagram
     P2-->>-P1: 
 ```
 
-_...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
+_...e mais 482 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 
 ---
 
@@ -1570,16 +1602,17 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Helpers:** `view()`
 
 #### `App\Modules\ACL\UI\Livewire\PermissionManager`
-`app/Modules/ACL/UI/Livewire/PermissionManager.php` · linha 18
+`app/Modules/ACL/UI/Livewire/PermissionManager.php` · linha 19
 
 - **Estende:** `Component`
-- **Traits:** `WithPagination`, `ComPadraoListagem`
+- **Traits:** `WithPagination`, `ComPadraoListagem`, `ValidaAcesso`
 - **Atributos PHP:** `#[Layout('components.layouts.app')]`, `#[Title('Gerenciar Permissões - Administrativo')]`
 - **Models usados na classe:** `Permission`, `Feature`
 - **Views:** `livewire.acl.permission-manager`, `components.layouts.app (layout)`
 
-##### `mount()` — linha 36
+##### `mount()` — linha 37
 - **Acionado por:** rota `GET /permissions` (name: permissions.index)
+- **Chama nesta classe:** `$this->autorizarTela()`
 - **Chama em outras classes:** `BreadcrumbHelper::generate()`
 
 ##### `updating($nomePropriedade)` — linha 44
@@ -1592,32 +1625,32 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 ##### `abrirModal($id)` — linha 57
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 - **Models:** `Permission` → `findOrFail()`
-- **Chama nesta classe:** `$this->resetValidation()` _(Livewire/framework)_, `$this->reset()` _(Livewire/framework)_
+- **Chama nesta classe:** `$this->autorizarAcao()`, `$this->resetValidation()` _(Livewire/framework)_, `$this->reset()` _(Livewire/framework)_
 
-##### `addItem()` — linha 92
+##### `addItem()` — linha 89
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 
-##### `removeItem(int $index)` — linha 97
+##### `removeItem(int $index)` — linha 94
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 
-##### `fecharModal()` — linha 103
+##### `fecharModal()` — linha 100
 - **Acionado por:** `PermissionManager::efetivarSalvar()`, view `livewire.acl.permission-manager` (wire:click)
 
-##### `salvar()` — linha 109
+##### `salvar()` — linha 106
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:submit.prevent)
 - **Models:** `Permission` → `find()` · `Feature` → `where()` · `Permission` → `getOriginal()`
-- **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->efetivarSalvar()`
+- **Chama nesta classe:** `$this->autorizarAcao()`, `$this->validate()` _(Livewire/framework)_, `$this->efetivarSalvar()`
 - **Validação:** executa `validate()`
 
-##### `confirmarCriacaoAusentes()` — linha 160
+##### `confirmarCriacaoAusentes()` — linha 154
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 - **Chama nesta classe:** `$this->efetivarSalvar()`
 
-##### `ignorarCriacaoAusentes()` — linha 166
+##### `ignorarCriacaoAusentes()` — linha 160
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 - **Chama nesta classe:** `$this->efetivarSalvar()`
 
-##### `private efetivarSalvar(bool $criarAusentes)` — linha 172
+##### `private efetivarSalvar(bool $criarAusentes)` — linha 166
 - **Acionado por:** `PermissionManager::salvar()`, `PermissionManager::confirmarCriacaoAusentes()`, `PermissionManager::ignorarCriacaoAusentes()`
 - **Models:** `Permission` → `where()`, `findOrFail()`, `create()` · `Feature` → `where()` · `Permission` → `getOriginal()`, `update()` · `Feature` → `update()`
 - **Chama nesta classe:** `$this->addError()` _(Livewire/framework)_, `$this->fecharModal()`
@@ -1625,15 +1658,16 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Eventos Livewire emitidos:** `sucesso(msg:$this->permissionId?'Permissão e F…)`
 - **Helpers:** `app()`
 
-##### `excluir($id)` — linha 249
+##### `excluir($id)` — linha 243
 - **Acionado por:** view `livewire.acl.permission-manager` (wire:click)
 - **Models:** `Permission` → `findOrFail()`
+- **Chama nesta classe:** `$this->autorizarAcao()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Permissão excluída com sucesso.')`
 
-##### `getHeadersProperty()` — linha 258
+##### `getHeadersProperty()` — linha 253
 - _Sem dependências externas detectadas._
 
-##### `render()` — linha 269
+##### `render()` — linha 264
 - **Acionado por:** rota `GET /permissions` (name: permissions.index)
 - **Models:** `Permission` → `query()`, `select()` · `Permission` → `orderBy()`, `paginate()`
 - **Views renderizadas:** `livewire.acl.permission-manager` → `resources/views/livewire/acl/permission-manager.blade.php`
@@ -1835,7 +1869,7 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Models:** `AuditoriaLog` → `findOrFail()`
 - **Eventos Livewire emitidos:** `load-quick-view(['title'=>'Log de Registro #'.$log->id,…)`
 
-##### `render()` — linha 165
+##### `render()` — linha 166
 - **Acionado por:** rota `GET /auditoria` (name: auditoria.index)
 - **Models:** `AuditoriaLog` → `query()`, `select()` · `AuditoriaLog` → `where()`, `orderBy()`, `paginate()`
 - **Views renderizadas:** `livewire.auditoria.auditoria-manager` → `resources/views/livewire/auditoria/auditoria-manager.blade.php`
@@ -2524,123 +2558,114 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Models usados na classe:** `SuriTestLog`, `Inscricao`, `EmailTemplate`
 - **Views:** `livewire.comunicacao.suri.suri-test-dashboard`, `components.layouts.app (layout)`
 
-##### `mount()` — linha 59
+##### `mount()` — linha 57
 - **Acionado por:** rota `GET /comunicacao/suri/laboratorio` (name: suri.dashboard)
 - **Models:** `SuriTestLog` → `latest()`
 - **Chama nesta classe:** `$this->carregarLogNoConsole()`
 - **Funções:** `env`
 
-##### `updating($property)` — linha 70
+##### `updating($property)` — linha 67
 - **Chama nesta classe:** `$this->resetPage()` _(Livewire/framework)_
 
-##### `limparFiltrosLog()` — linha 77
+##### `limparFiltrosLog()` — linha 74
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->reset()` _(Livewire/framework)_, `$this->resetPage()` _(Livewire/framework)_
 
-##### `abrirModal(string $tipo)` — linha 83
+##### `abrirModal(string $tipo)` — linha 80
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->resetValidation()` _(Livewire/framework)_, `$this->dispararListarContatos()`
 
-##### `fecharModal()` — linha 93
+##### `fecharModal()` — linha 90
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 
-##### `updatedInscricaoTesteId($id)` — linha 98
+##### `updatedInscricaoTesteId($id)` — linha 95
 - **Models:** `Inscricao` → `find()`
 
-##### `adicionarParametro()` — linha 113
+##### `adicionarParametro()` — linha 110
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 
-##### `removerParametro(int $index)` — linha 118
+##### `removerParametro(int $index)` — linha 115
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 
-##### `private registrarResultado(string $acao, array $resultado)` — linha 131
-- **Acionado por:** `SuriTestDashboard::replayLog()`, `SuriTestDashboard::dispararListarTemplatesSuri()`, `SuriTestDashboard::dispararBuscarTemplateEspecifico()`, `SuriTestDashboard::dispararListarContatos()`, `SuriTestDashboard::dispararImportarContato()`, `SuriTestDashboard::dispararTemplateSimples()`, `SuriTestDashboard::dispararTemplateComBotoes()`, `SuriTestDashboard::dispararTemplateComVariaveis()`, `SuriTestDashboard::dispararMensagemSimples()`, `SuriTestDashboard::sincronizarTemplateLocal()`
-- **Models:** `SuriTestLog` → `create()`
-- **Eventos Livewire emitidos:** `sucesso(msg:"{$acao}: Requisição executada e …)`, `erro(msg:"{$acao}: Falha na requisição (HT…)`
-- **Helpers:** `auth()`, `request()`
+##### `private registrarResultado(string $acao, array $resultado)` — linha 128
+- **Acionado por:** `SuriTestDashboard::replayLog()`, `SuriTestDashboard::dispararListarTemplatesSuri()`, `SuriTestDashboard::dispararBuscarTemplateEspecifico()`, `SuriTestDashboard::dispararListarContatos()`, `SuriTestDashboard::dispararImportarContato()`, `SuriTestDashboard::dispararTemplateSimples()`, `SuriTestDashboard::dispararTemplateComBotoes()`, `SuriTestDashboard::dispararTemplateComVariaveis()`, `SuriTestDashboard::dispararMensagemSimples()`
+- **Chama nesta classe:** `$this->carregarLogNoConsole()`
+- **Eventos Livewire emitidos:** `sucesso(msg:"{$acao}: Executada com sucesso (HT…)`, `erro(msg:"{$acao}: Falha na requisição (HT…)`
 - **Funções:** `data_get`
 
-##### `carregarLogNoConsole(int $logId)` — linha 177
-- **Acionado por:** `SuriTestDashboard::mount()`, `SuriTestDashboard::excluirLog()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
+##### `carregarLogNoConsole(int $logId)` — linha 147
+- **Acionado por:** `SuriTestDashboard::mount()`, `SuriTestDashboard::registrarResultado()`, `SuriTestDashboard::excluirLog()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Models:** `SuriTestLog` → `find()`
 
-##### `replayLog(int $logId)` — linha 200
+##### `replayLog(int $logId)` — linha 167
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Models:** `SuriTestLog` → `findOrFail()`
 - **Chama nesta classe:** `$this->registrarResultado()`
 - **Helpers:** `app()`
 
-##### `dispararListarTemplatesSuri()` — linha 217
+##### `dispararListarTemplatesSuri()` — linha 180
 - **Chama nesta classe:** `$this->registrarResultado()`
 - **Helpers:** `app()`
 
-##### `dispararBuscarTemplateEspecifico()` — linha 226
+##### `dispararBuscarTemplateEspecifico()` — linha 186
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 
-##### `excluirLog(int $logId)` — linha 238
+##### `excluirLog(int $logId)` — linha 198
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Models:** `SuriTestLog` → `where()`, `latest()`
 - **Chama nesta classe:** `$this->carregarLogNoConsole()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Registro de log excluído.')`
 
-##### `limparTodosOsLogs()` — linha 255
+##### `limparTodosOsLogs()` — linha 214
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Models:** `SuriTestLog` → `truncate()`
 - **Chama nesta classe:** `$this->resetPage()` _(Livewire/framework)_
 - **Eventos Livewire emitidos:** `sucesso(msg:'Histórico de logs de testes da Su…)`
 
-##### `dispararListarContatos(bool $usarProximoToken)` — linha 268
+##### `dispararListarContatos(bool $usarProximoToken)` — linha 223
 - **Acionado por:** `SuriTestDashboard::abrirModal()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 - **Funções:** `data_get`
 
-##### `selecionarContatoSuri(string $id, string $nome, string $telefone, string $canalId)` — linha 301
+##### `selecionarContatoSuri(string $id, string $nome, string $telefone, string $canalId)` — linha 252
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
-- **Eventos Livewire emitidos:** `sucesso(msg:"Contato '{$id}' selecionado e carr…)`
+- **Eventos Livewire emitidos:** `sucesso(msg:"Contato '{$id}' selecionado para t…)`
 
-##### `dispararImportarContato()` — linha 311
-- **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
-- **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
-- **Validação:** executa `validate()`
-- **Helpers:** `app()`
-
-##### `dispararTemplateSimples()` — linha 332
+##### `dispararImportarContato()` — linha 262
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 
-##### `dispararTemplateComBotoes()` — linha 351
+##### `dispararTemplateSimples()` — linha 274
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 
-##### `dispararTemplateComVariaveis()` — linha 375
+##### `dispararTemplateComBotoes()` — linha 284
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 
-##### `dispararMensagemSimples()` — linha 405
+##### `dispararTemplateComVariaveis()` — linha 296
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
 - **Validação:** executa `validate()`
 - **Helpers:** `app()`
 
-##### `sincronizarTemplateLocal(int $id)` — linha 422
+##### `dispararMensagemSimples()` — linha 309
 - **Acionado por:** view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click)
-- **Models:** `EmailTemplate` → `findOrFail()` · `EmailTemplate` → `update()`
-- **Chama nesta classe:** `$this->registrarResultado()`
-- **Eventos Livewire emitidos:** `sucesso(msg:"Template sincronizado! ID Suri: {$…)`, `erro(msg:'Falha ao sincronizar template com …)`
+- **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->registrarResultado()`
+- **Validação:** executa `validate()`
 - **Helpers:** `app()`
-- **Funções:** `env`
 
-##### `render()` — linha 456
+##### `render()` — linha 319
 - **Acionado por:** rota `GET /comunicacao/suri/laboratorio` (name: suri.dashboard)
 - **Models:** `EmailTemplate` → `whereIn()` · `Inscricao` → `select()` · `SuriTestLog` → `query()`, `select()`, `count()` · `SuriTestLog` → `paginate()`
 - **Views renderizadas:** `livewire.comunicacao.suri.suri-test-dashboard` → `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php`
@@ -3804,58 +3829,58 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Models usados na classe:** `Ciclo`, `Formulario`, `CampoFormulario`, `FormularioFase`, `EmailTemplate`, `Etapa`, `Unidade`, `Curso`
 - **Views:** `livewire.form-builder.dynamic-fields`
 
-##### `mount($tipo, $id)` — linha 90
+##### `mount($tipo, $id)` — linha 97
 - **Acionado por:** rota `GET /construtor/{tipo}/{id}/{slug?}` (name: construtor.campos)
 - **Models:** `Ciclo` → `findOrFail()` · `Formulario` → `with()`
 - **Chama nesta classe:** `$this->checkAndAcquireLock()`, `$this->carregarEtapas()`, `$this->loadFormSettings()`, `$this->inicializarDefaultsDicas()`, `$this->atualizarProximaOrdem()`
 
-##### `updatedCamposSelecionados()` — linha 143
+##### `updatedCamposSelecionados()` — linha 150
 - **Chama nesta classe:** `$this->editar()`
 
-##### `toggleSelecionarCampo(int $id)` — linha 166
+##### `toggleSelecionarCampo(int $id)` — linha 173
 - _Sem dependências externas detectadas._
 
-##### `selecionarTodosDaEtapa(?int $numEtapa)` — linha 189
+##### `selecionarTodosDaEtapa(?int $numEtapa)` — linha 196
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `CampoFormulario` → `where()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `limparSelecaoCampos()` — linha 214
+##### `limparSelecaoCampos()` — linha 221
 - **Acionado por:** `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::excluirCamposSelecionados()`, view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `moverCamposSelecionadosParaEtapa()` — linha 220
+##### `moverCamposSelecionadosParaEtapa()` — linha 227
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `CampoFormulario` → `where()` · `CampoFormulario` → `isEmpty()`, `pluck()`, `count()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->reindexarOrdensDaEtapa()`, `$this->limparSelecaoCampos()`, `$this->atualizarProximaOrdem()`
 - **Chama em outras classes:** `DB::transaction()` _(framework)_
 - **Eventos Livewire emitidos:** `erro(msg:'Selecione uma página de destino e…)`, `sucesso(msg:"{$qtd} campo(s) movido(s) para a P…)`
 
-##### `moverSelecionadosNaMesmaEtapa(string $posicao)` — linha 273
+##### `moverSelecionadosNaMesmaEtapa(string $posicao)` — linha 280
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `CampoFormulario` → `where()` · `CampoFormulario` → `filter()`, `reject()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->atualizarProximaOrdem()`
 - **Chama em outras classes:** `DB::transaction()` _(framework)_
 - **Eventos Livewire emitidos:** `sucesso(msg:'Posição dos campos selecionados …)`
 
-##### `private reindexarOrdensDaEtapa(int $numeroEtapa)` — linha 316
+##### `private reindexarOrdensDaEtapa(int $numeroEtapa)` — linha 323
 - **Acionado por:** `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::excluirCamposSelecionados()`
 - **Models:** `CampoFormulario` → `where()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `abrirModalFases()` — linha 338
+##### `abrirModalFases()` — linha 345
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `CampoFormulario` → `where()` · `FormularioFase` → `where()` · `EmailTemplate` → `orderBy()`
 - **Chama nesta classe:** `$this->carregarEtapas()`, `$this->getContextColumn()`, `$this->resetErrorBag()` _(Livewire/framework)_
 - **Helpers:** `collect()`
 
-##### `adicionarFase()` — linha 379
+##### `adicionarFase()` — linha 386
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `removerFase($index)` — linha 391
+##### `removerFase($index)` — linha 398
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `FormularioFase` → `where()`
 
-##### `salvarFases()` — linha 401
+##### `salvarFases()` — linha 408
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `FormularioFase` → `find()`, `create()` · `FormularioFase` → `update()`
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_
@@ -3863,82 +3888,122 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Eventos Livewire emitidos:** `sucesso(msg:'Fases, bloqueios de data e gatilho…)`
 - **Validação:** executa `validate()`
 
-##### `private inicializarDefaultsDicas()` — linha 448
+##### `private inicializarDefaultsDicas()` — linha 455
 - **Acionado por:** `DynamicFields::mount()`, `DynamicFields::setTipo()`, `DynamicFields::editar()`, `DynamicFields::cancelarEdicao()`
 
-##### `updatedConfiguracoesDicaModo($valor)` — linha 459
+##### `updatedConfiguracoesDicaModo($valor)` — linha 466
 - _Sem dependências externas detectadas._
 
-##### `updatedConfiguracoesDica1Tipo($valor)` — linha 474
+##### `updatedConfiguracoesDica1Tipo($valor)` — linha 481
 - _Sem dependências externas detectadas._
 
-##### `updatedConfiguracoesDica2Tipo($valor)` — linha 481
+##### `updatedConfiguracoesDica2Tipo($valor)` — linha 488
 - _Sem dependências externas detectadas._
 
-##### `private getContextColumn()` — linha 488
-- **Acionado por:** `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()`
+##### `private getContextColumn()` — linha 495
+- **Acionado por:** `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::getCamposDisponiveisParaCondicaoProperty()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()`
 
-##### `carregarEtapas()` — linha 493
+##### `carregarEtapas()` — linha 500
 - **Acionado por:** `DynamicFields::mount()`, `DynamicFields::abrirModalFases()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::atualizarNomeEtapa()`, `DynamicFields::excluirEtapa()`
 - **Models:** `Etapa` → `query()`, `create()` · `CampoFormulario` → `where()` · `Etapa` → `where()`, `orderBy()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `loadFormSettings()` — linha 525
+##### `loadFormSettings()` — linha 532
 - **Acionado por:** `DynamicFields::mount()`
 - **Models:** `CampoFormulario` → `where()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `iniciarNovoCampo()` — linha 534
+##### `iniciarNovoCampo()` — linha 541
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Chama nesta classe:** `$this->cancelarEdicao()`
 
-##### `setTipo($tipo, $subtipo)` — linha 540
+##### `setTipo($tipo, $subtipo)` — linha 547
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Chama nesta classe:** `$this->inicializarDefaultsDicas()`
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 - **Eventos Livewire emitidos:** `sincronizar-quill-builder`
 
-##### `updatedConfiguracoesTipoAssinante($valor)` — linha 678
+##### `updatedConfiguracoesTipoAssinante($valor)` — linha 685
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 
-##### `updatedConfiguracoesTipoArquivo($valor)` — linha 690
+##### `updatedConfiguracoesTipoArquivo($valor)` — linha 697
 - _Sem dependências externas detectadas._
 
-##### `updatedLabel($valor)` — linha 710
+##### `updatedLabel($valor)` — linha 717
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 
-##### `limiteOrdem()` — linha 723
+##### `limiteOrdem()` — linha 730
 - **Atributos:** `#[Computed]`
 - **Acionado por:** `DynamicFields::atualizarProximaOrdem()`, `DynamicFields::salvar()`
 - **Models:** `CampoFormulario` → `where()`, `find()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `atualizarProximaOrdem()` — linha 742
+##### `atualizarProximaOrdem()` — linha 749
 - **Acionado por:** `DynamicFields::mount()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::updatedEtapa()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::cancelarEdicao()`, `DynamicFields::excluir()`, `DynamicFields::excluirEtapa()`
 - **Chama nesta classe:** `$this->limiteOrdem()`
 
-##### `updatedEtapa()` — linha 748
+##### `updatedEtapa()` — linha 755
 - **Chama nesta classe:** `$this->atualizarProximaOrdem()`
 
-##### `editar($id)` — linha 753
+##### `getOperadoresCondicionaisProperty()` — linha 764
+- _Sem dependências externas detectadas._
+
+##### `getCamposDisponiveisParaCondicaoProperty()` — linha 785
+- **Models:** `CampoFormulario` → `where()`
+- **Chama nesta classe:** `$this->getContextColumn()`
+- **Chama em outras classes:** `Str::limit()` _(framework)_
+
+##### `updatedModoCondicional(string $modo)` — linha 827
+- **Chama nesta classe:** `$this->abrirModalCondicoesAvancadas()`
+
+##### `abrirModalCondicoesAvancadas()` — linha 859
+- **Acionado por:** `DynamicFields::updatedModoCondicional()`, view `livewire.form-builder.dynamic-fields` (wire:click)
+- **Chama nesta classe:** `$this->adicionarGrupoCondicional()`
+
+##### `adicionarGrupoCondicional(string $conector)` — linha 870
+- **Acionado por:** `DynamicFields::abrirModalCondicoesAvancadas()`, `DynamicFields::removerGrupoCondicional()`, view `livewire.form-builder.dynamic-fields` (wire:click)
+
+##### `removerGrupoCondicional(int $gIndex)` — linha 888
+- **Acionado por:** `DynamicFields::removerRegraDoGrupo()`, view `livewire.form-builder.dynamic-fields` (wire:click)
+- **Chama nesta classe:** `$this->adicionarGrupoCondicional()`
+
+##### `adicionarRegraNoGrupo(int $gIndex, string $conector)` — linha 898
+- **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
+
+##### `removerRegraDoGrupo(int $gIndex, int $rIndex)` — linha 912
+- **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
+- **Chama nesta classe:** `$this->removerGrupoCondicional()`
+
+##### `avaliarRegraIndividual(array $regra)` — linha 927
+- **Acionado por:** `DynamicFields::diagnosticoSimulacaoCondicional()`
+
+##### `diagnosticoSimulacaoCondicional()` — linha 992
+- **Atributos:** `#[Computed]`
+- **Chama nesta classe:** `$this->avaliarRegraIndividual()`
+
+##### `confirmarCondicoesAvancadas()` — linha 1087
+- **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
+- **Eventos Livewire emitidos:** `erro(msg:'Selecione o campo de referência e…)`, `sucesso(msg:' Árvore de condições avançadas…)`
+
+##### `editar($id)` — linha 1104
 - **Acionado por:** `DynamicFields::updatedCamposSelecionados()`, view `livewire.form-builder.dynamic-fields` (wire:click), view `livewire.form-builder.dynamic-fields` (wire:click.stop)
 - **Models:** `CampoFormulario` → `findOrFail()`
 - **Chama nesta classe:** `$this->inicializarDefaultsDicas()`
 - **Eventos Livewire emitidos:** `sincronizar-quill-builder`
 
-##### `excluirCamposSelecionados()` — linha 833
+##### `excluirCamposSelecionados()` — linha 1198
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `CampoFormulario` → `where()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->reindexarOrdensDaEtapa()`, `$this->limparSelecaoCampos()`, `$this->cancelarEdicao()`, `$this->atualizarProximaOrdem()`
 - **Chama em outras classes:** `DB::transaction()` _(framework)_
 - **Eventos Livewire emitidos:** `sucesso(msg:"{$qtdRemovida} bloco(s) excluído(…)`
 
-##### `cancelarEdicao()` — linha 872
+##### `cancelarEdicao()` — linha 1237
 - **Acionado por:** `DynamicFields::iniciarNovoCampo()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvar()`, `DynamicFields::excluir()`, view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Chama nesta classe:** `$this->reset()` _(Livewire/framework)_, `$this->inicializarDefaultsDicas()`, `$this->atualizarProximaOrdem()`
 - **Eventos Livewire emitidos:** `sincronizar-quill-builder`
 
-##### `salvarFormSettings()` — linha 889
+##### `salvarFormSettings()` — linha 1255
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:submit.prevent)
 - **Models:** `Ciclo` → `where()` · `Formulario` → `where()` · `CampoFormulario` → `updateOrCreate()`
 - **Chama nesta classe:** `$this->validate()` _(Livewire/framework)_, `$this->getContextColumn()`
@@ -3946,10 +4011,10 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Eventos Livewire emitidos:** `sucesso(msg:'Tema e aparência aplicados com su…)`
 - **Validação:** executa `validate()`
 
-##### `private limparHtmlQuill(?string $html)` — linha 940
+##### `private limparHtmlQuill(?string $html)` — linha 1306
 - **Acionado por:** `DynamicFields::salvar()`
 
-##### `salvar()` — linha 953
+##### `salvar()` — linha 1319
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:submit.prevent)
 - **Models:** `CampoFormulario` → `where()`, `findOrFail()`, `create()`
 - **Chama nesta classe:** `$this->limparHtmlQuill()`, `$this->validate()` _(Livewire/framework)_, `$this->limiteOrdem()`, `$this->getContextColumn()`, `$this->gerarCamposEnderecoViaCep()`, `$this->gerarCamposComboAcademico()`, `$this->cancelarEdicao()`
@@ -3957,66 +4022,66 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Eventos Livewire emitidos:** `sucesso(msg:$deveCriarEnderecoViaCep?'Campo CEP…)`
 - **Validação:** executa `validate()`
 
-##### `private gerarCamposEnderecoViaCep(int $etapa, int $ordemCep, string $cepFieldName, bool $obrigatorio, bool $exibirNoTopo)` — linha 1268
+##### `private gerarCamposEnderecoViaCep(int $etapa, int $ordemCep, string $cepFieldName, bool $obrigatorio, bool $exibirNoTopo)` — linha 1668
 - **Acionado por:** `DynamicFields::salvar()`
 - **Models:** `CampoFormulario` → `where()`, `create()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `private gerarCamposComboAcademico(int $etapa, int $ordemUnidade, string $baseFieldName, bool $obrigatorio, bool $exibirNoTopo, array $cfgBase)` — linha 1320
+##### `private gerarCamposComboAcademico(int $etapa, int $ordemUnidade, string $baseFieldName, bool $obrigatorio, bool $exibirNoTopo, array $cfgBase)` — linha 1720
 - **Acionado por:** `DynamicFields::salvar()`
 - **Models:** `CampoFormulario` → `where()`, `create()`
 - **Chama nesta classe:** `$this->getContextColumn()`
 
-##### `excluir($id)` — linha 1385
+##### `excluir($id)` — linha 1785
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click.stop)
 - **Models:** `CampoFormulario` → `findOrFail()`, `where()` · `CampoFormulario` → `delete()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->cancelarEdicao()`, `$this->atualizarProximaOrdem()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Bloco removido do formulário!')`
 
-##### `adicionarEtapa()` — linha 1410
+##### `adicionarEtapa()` — linha 1810
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `Etapa` → `create()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->carregarEtapas()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Nova página adicionada!')`
 
-##### `atualizarNomeEtapa($id, $novoNome)` — linha 1422
+##### `atualizarNomeEtapa($id, $novoNome)` — linha 1822
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:change)
 - **Models:** `Etapa` → `where()`
 - **Chama nesta classe:** `$this->carregarEtapas()`
 
-##### `excluirEtapa($id)` — linha 1430
+##### `excluirEtapa($id)` — linha 1830
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Models:** `Etapa` → `find()`, `where()` · `CampoFormulario` → `where()` · `FormularioFase` → `where()` · `Etapa` → `delete()`
 - **Chama nesta classe:** `$this->getContextColumn()`, `$this->carregarEtapas()`, `$this->atualizarProximaOrdem()`
 - **Chama em outras classes:** `DB::transaction()` _(framework)_
 - **Eventos Livewire emitidos:** `erro(msg:'A 1º Fase é obrigatória e não …)`, `sucesso(msg:'Página removida e numeração das…)`
 
-##### `abrirModalConfigCombo()` — linha 1511
+##### `abrirModalConfigCombo()` — linha 1911
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `updatedComboUnidadesSelecionadas()` — linha 1528
+##### `updatedComboUnidadesSelecionadas()` — linha 1928
 - _Sem dependências externas detectadas._
 
-##### `updatedComboCursosSelecionados()` — linha 1544
+##### `updatedComboCursosSelecionados()` — linha 1944
 - _Sem dependências externas detectadas._
 
-##### `updatedComboTurnosSelecionados()` — linha 1569
+##### `updatedComboTurnosSelecionados()` — linha 1969
 - _Sem dependências externas detectadas._
 
-##### `setComboActiveUnidade($id)` — linha 1588
+##### `setComboActiveUnidade($id)` — linha 1988
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `setComboActiveCurso($id)` — linha 1594
+##### `setComboActiveCurso($id)` — linha 1994
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `confirmarConfigComboAcademico()` — linha 1599
+##### `confirmarConfigComboAcademico()` — linha 1999
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 - **Eventos Livewire emitidos:** `sucesso(msg:'Opções de Unidades, Cursos e Tur…)`
 
-##### `limparRestricaoComboAcademico()` — linha 1609
+##### `limparRestricaoComboAcademico()` — linha 2009
 - **Acionado por:** view `livewire.form-builder.dynamic-fields` (wire:click)
 
-##### `render()` — linha 1619
+##### `render()` — linha 2019
 - **Acionado por:** rota `GET /construtor/{tipo}/{id}/{slug?}` (name: construtor.campos)
 - **Models:** `CampoFormulario` → `where()` · `Unidade` → `whereIn()` · `Curso` → `with()` · `CampoFormulario` → `groupBy()`
 - **Chama nesta classe:** `$this->getContextColumn()`
@@ -5554,49 +5619,52 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Helpers:** `collect()`, `auth()`, `view()`
 
 #### `App\Modules\Registration\UI\Livewire\RegistrationDetails`
-`app/Modules/Registration/UI/Livewire/RegistrationDetails.php` · linha 27
+`app/Modules/Registration/UI/Livewire/RegistrationDetails.php` · linha 31
 
 - **Estende:** `Component`
-- **Traits:** `WithFileUploads`, `WithFichaPdfDownload`
+- **Traits:** `WithFileUploads`, `WithPagination`, `ComPadraoListagem`, `WithFichaPdfDownload`
 - **Atributos PHP:** `#[Layout('components.layouts.app')]`, `#[Title('Detalhes da Inscrição')]`
 - **Propriedades tipadas:** `$inscricao`: `Inscricao`
 - **Models usados na classe:** `Inscricao`, `CampoFormulario`, `AuditoriaLog`, `DocumentoExigido`, `DocumentoMatricula`, `Formulario`, `InscricaoContato`, `ComunicacaoLog`, `StatusInscricao`, `Automacao`, `Comunicado`, `Unidade`, `Curso`, `Turno`
 - **Views:** `livewire.registration.registration-details`, `components.layouts.app (layout)`
 
-##### `mount($id)` — linha 62
+##### `mount($id)` — linha 73
 - **Acionado por:** rota `GET /inscricoes/{id}/{slug?}` (name: inscricoes.show)
 - **Models:** `Inscricao` → `with()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->carregarDadosEdicao()`, `$this->carregarStatusArquivos()`
 
-##### `setAba(string $aba)` — linha 70
+##### `updatingSearchFormulario()` — linha 89
+- **Chama nesta classe:** `$this->resetPage()` _(Livewire/framework)_
+
+##### `setAba(string $aba)` — linha 94
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Chama nesta classe:** `$this->carregarStatusArquivos()`
 
-##### `usuarioPodeEditarAssistido()` — linha 78
+##### `usuarioPodeEditarAssistido()` — linha 102
 - **Acionado por:** `RegistrationDetails::iniciarEdicaoAssistida()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::aprovarDocumentoManualmente()`, `RegistrationDetails::abrirFormularioEmbed()`
 - **Permissões / feature flags:** `inscricao.editar`, `inscricao.criar`
 - **Helpers:** `auth()`
 
-##### `carregarDadosEdicao()` — linha 92
+##### `carregarDadosEdicao()` — linha 116
 - **Acionado por:** `RegistrationDetails::mount()`, `RegistrationDetails::iniciarEdicaoAssistida()`, `RegistrationDetails::cancelarEdicaoAssistida()`, `RegistrationDetails::fecharFormularioEmbed()`
 - **Models:** `Inscricao` (via `$this->inscricao`)
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_
 
-##### `iniciarEdicaoAssistida()` — linha 124
+##### `iniciarEdicaoAssistida()` — linha 148
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Chama nesta classe:** `$this->usuarioPodeEditarAssistido()`, `$this->carregarDadosEdicao()`
 - **Helpers:** `abort_unless()`
 
-##### `cancelarEdicaoAssistida()` — linha 131
+##### `cancelarEdicaoAssistida()` — linha 155
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Chama nesta classe:** `$this->carregarDadosEdicao()`
 
-##### `camposDinamicosCiclo()` — linha 138
+##### `camposDinamicosCiclo()` — linha 162
 - **Atributos:** `#[Computed]`
 - **Models:** `CampoFormulario` → `where()` · `Inscricao` (via `$this->inscricao`)
 - **Helpers:** `collect()`
 
-##### `salvarEdicaoAssistida()` — linha 149
+##### `salvarEdicaoAssistida()` — linha 173
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click), view `livewire.registration.registration-details` (wire:submit.prevent)
 - **Models:** `AuditoriaLog` → `create()` · `Inscricao` → `update()`, `refresh()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->usuarioPodeEditarAssistido()`, `$this->validate()` _(Livewire/framework)_
@@ -5605,16 +5673,16 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Validação:** executa `validate()`
 - **Helpers:** `abort_unless()`, `auth()`, `now()`, `request()`
 
-##### `documentosExigidos()` — linha 275
+##### `documentosExigidos()` — linha 296
 - **Atributos:** `#[Computed]`
 - **Models:** `DocumentoExigido` → `where()` · `Inscricao` (via `$this->inscricao`)
 - **Helpers:** `collect()`
 
-##### `carregarStatusArquivos()` — linha 281
+##### `carregarStatusArquivos()` — linha 302
 - **Acionado por:** `RegistrationDetails::mount()`, `RegistrationDetails::setAba()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::aprovarDocumentoManualmente()`
 - **Models:** `DocumentoMatricula` → `where()` · `DocumentoMatricula` → `has()`, `get()` · `Inscricao` (via `$this->inscricao`)
 
-##### `updatedUploads($value, $documentoExigidoId)` — linha 323
+##### `updatedUploads($value, $documentoExigidoId)` — linha 344
 - **Models:** `DocumentoExigido` → `findOrFail()` · `DocumentoMatricula` → `firstOrNew()` · `AuditoriaLog` → `create()` · `DocumentoMatricula` → `save()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->usuarioPodeEditarAssistido()`, `$this->validate()` _(Livewire/framework)_, `$this->carregarStatusArquivos()`
 - **Chama em outras classes:** `Storage::disk()` _(framework)_, `AiValidationService::validarDocumento()` _(service)_
@@ -5622,19 +5690,35 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Validação:** executa `validate()`
 - **Helpers:** `abort_unless()`, `auth()`, `now()`, `request()`
 
-##### `aprovarDocumentoManualmente(int $documentoExigidoId)` — linha 418
+##### `aprovarDocumentoManualmente(int $documentoExigidoId)` — linha 436
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `DocumentoMatricula` → `where()` · `DocumentoMatricula` → `update()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->usuarioPodeEditarAssistido()`, `$this->carregarStatusArquivos()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Documento aprovado manualmente pel…)`
 - **Helpers:** `abort_unless()`, `auth()`, `now()`
 
-##### `formulariosDisponiveisEmbed()` — linha 444
-- **Atributos:** `#[Computed]`
-- **Models:** `Formulario` → `where()`
+##### `getHeadersProperty()` — linha 461
+- _Sem dependências externas detectadas._
 
-##### `abrirFormularioEmbed()` — linha 451
+##### `formulariosPaginados()` — linha 472
+- **Atributos:** `#[Computed]`
+- **Models:** `Formulario` → `where()` · `Inscricao` (via `$this->inscricao`)
+- **Chama nesta classe:** `$this->getPage()` _(herdado/trait)_
+- **Chama em outras classes:** `Carbon::createFromFormat()` _(framework)_
+- **Instancia:** `new LengthAwarePaginator` _(framework)_
+- **Helpers:** `collect()`, `request()`
+
+##### `abrirFormularioEmbedTable(string $ref, $id)` — linha 545
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
+- **Chama nesta classe:** `$this->abrirFormularioEmbed()`
+
+##### `verHistoricoFormulario(string $ref, $id)` — linha 552
+- **Acionado por:** view `livewire.registration.registration-details` (wire:click)
+- **Models:** `Formulario` → `find()` · `Inscricao` (via `$this->inscricao`)
+- **Helpers:** `collect()`
+
+##### `abrirFormularioEmbed()` — linha 577
+- **Acionado por:** `RegistrationDetails::abrirFormularioEmbedTable()`
 - **Models:** `Formulario` → `findOrFail()` · `AuditoriaLog` → `create()` · `Inscricao` → `update()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->usuarioPodeEditarAssistido()`
 - **Chama em outras classes:** `Crypt::encrypt()` _(framework)_
@@ -5643,63 +5727,63 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Helpers:** `abort_unless()`, `auth()`, `route()`, `now()`, `request()`
 - **Funções:** `url`
 
-##### `fecharFormularioEmbed()` — linha 530
+##### `fecharFormularioEmbed()` — linha 655
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `Inscricao` → `refresh()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->carregarDadosEdicao()`
 
-##### `contatosRegistrados()` — linha 543
+##### `contatosRegistrados()` — linha 668
 - **Atributos:** `#[Computed]`
 - **Models:** `InscricaoContato` → `where()` · `Inscricao` (via `$this->inscricao`)
 
-##### `verConteudoEmail($logId)` — linha 551
+##### `verConteudoEmail($logId)` — linha 676
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `ComunicacaoLog` → `find()`
 
-##### `fecharModalEmail()` — linha 557
+##### `fecharModalEmail()` — linha 682
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 
-##### `logsMovimentacao()` — linha 564
+##### `logsMovimentacao()` — linha 689
 - **Atributos:** `#[Computed]`
 - **Models:** `AuditoriaLog` → `where()` · `StatusInscricao` → `find()` · `Inscricao` (via `$this->inscricao`)
 
-##### `logsComunicacao()` — linha 636
+##### `logsComunicacao()` — linha 761
 - **Atributos:** `#[Computed]`
 - **Models:** `ComunicacaoLog` → `query()` · `Inscricao` (via `$this->inscricao`)
 - **Chama em outras classes:** `Schema::hasColumn()` _(framework)_
 
-##### `getDataInscricao()` — linha 656
+##### `getDataInscricao()` — linha 781
 - **Models:** `Inscricao` (via `$this->inscricao`)
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_
 
-##### `getDataAtualizacao()` — linha 668
+##### `getDataAtualizacao()` — linha 793
 - **Models:** `Inscricao` (via `$this->inscricao`)
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_
 
-##### `atualizarStatus()` — linha 680
+##### `atualizarStatus()` — linha 805
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `StatusInscricao` → `find()` · `Automacao` → `where()` · `Comunicado` → `where()` · `Inscricao` (via `$this->inscricao`)
 - **Chama nesta classe:** `$this->executarMudancaStatusFinal()`
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 - **Eventos Livewire emitidos:** `erro(msg:'O candidato já se encontra neste …)`
 
-##### `cancelarAntiSpam()` — linha 713
+##### `cancelarAntiSpam()` — linha 838
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `Inscricao` (via `$this->inscricao`)
 
-##### `executarMudancaStatusFinal()` — linha 719
+##### `executarMudancaStatusFinal()` — linha 844
 - **Acionado por:** `RegistrationDetails::atualizarStatus()`, view `livewire.registration.registration-details` (wire:click)
 - **Models:** `StatusInscricao` → `find()` · `Inscricao` → `save()`, `refresh()` · `Inscricao` (via `$this->inscricao`)
 - **Chama em outras classes:** `Str::slug()` _(framework)_, `AutomacaoService::disparar()` _(service)_
 - **Eventos Livewire emitidos:** `sucesso(msg:'Status atualizado com sucesso!')`
 
-##### `abrirRegras()` — linha 736
+##### `abrirRegras()` — linha 861
 - **Acionado por:** view `livewire.registration.registration-details` (wire:click)
 - **Models:** `Inscricao` (via `$this->inscricao`)
 - **Eventos Livewire emitidos:** `load-quick-view(['title'=>'Mapa de Regras do Ciclo','su…)`
 - **Helpers:** `collect()`
 
-##### `render()` — linha 826
+##### `render()` — linha 951
 - **Acionado por:** rota `GET /inscricoes/{id}/{slug?}` (name: inscricoes.show)
 - **Models:** `StatusInscricao` → `orderBy()` · `Unidade` → `whereIn()` · `Curso` → `whereIn()` · `Turno` → `orderBy()` · `Inscricao` (via `$this->inscricao`)
 - **Views renderizadas:** `livewire.registration.registration-details` → `resources/views/livewire/registration/registration-details.blade.php`
@@ -5912,7 +5996,7 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Chama em outras classes:** `Bus::chain()` _(framework)_
 - **Instancia:** `new RecalcularPontuacoesGlobaisJob` _(job)_, `new GerarRankingGlobalJob` _(job)_
 - **Eventos Livewire emitidos:** `erro(msg:'Por favor, selecione um Ciclo espe…)`, `sucesso(msg:"Processamento iniciado para o cicl…)`
-- **Permissões / feature flags:** `feature:inscricao.editar`, `inscricao.editar`, `dev`
+- **Permissões / feature flags:** `feature:inscricao.editar`, `dev`, `inscricao.editar`
 - **Helpers:** `abort_if()`, `feature()`, `auth()`
 
 ##### `gerarRankingGlobal()` — linha 1132
@@ -5920,7 +6004,7 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Chama nesta classe:** `$this->obterCicloPadrao()`
 - **Instancia:** `new GerarRankingGlobalJob` _(job)_
 - **Eventos Livewire emitidos:** `erro(msg:'Por favor, selecione um Ciclo espe…)`, `sucesso(msg:"O motor de Ranking foi iniciado pa…)`
-- **Permissões / feature flags:** `feature:inscricao.editar`, `inscricao.editar`, `dev`
+- **Permissões / feature flags:** `feature:inscricao.editar`, `dev`, `inscricao.editar`
 - **Helpers:** `abort_if()`, `feature()`, `auth()`, `dispatch()`
 
 ##### `getFabActionsProperty()` — linha 1157
@@ -6575,7 +6659,7 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 ##### `render()` — linha 10
 - **Models:** `SystemTask` → `where()` · `SystemTask` → `count()`
 - **Views renderizadas:** `livewire.system-tasks.system-task-progress` → `resources/views/livewire/system-tasks/system-task-progress.blade.php`
-- **Permissões / feature flags:** `feature:tarefas.acessar`, `tarefas.acessar`, `dev`
+- **Permissões / feature flags:** `feature:tarefas.acessar`, `dev`, `tarefas.acessar`
 - **Helpers:** `feature()`, `auth()`, `view()`
 
 #### `App\Modules\Teste\RDCrm\UI\Livewire\DesignSystemViewer`
@@ -6793,68 +6877,55 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 `app/Modules/Website/UI/Livewire/FormularioPublico.php` · linha 17
 
 - **Estende:** `Component`
-- **Traits:** `WithFileUploads`, `WithFichaPdfDownload`
+- **Traits:** `WithFileUploads`, `WithFichaPdfDownload`, `AvaliaCondicoesVisibilidade`
 - **Atributos PHP:** `#[Layout('components.layouts.public')]`
 - **Propriedades tipadas:** `$formulario`: `Formulario`
 - **Models usados na classe:** `Formulario`, `RespostaFormulario`, `Curso`, `Unidade`, `Turno`
 - **Views:** `livewire.website.formulario-publico`, `components.layouts.public (layout)`
 
-##### `mount($slug)` — linha 46
+##### `mount($slug)` — linha 47
 - **Acionado por:** rota `GET /f/{slug}` (name: formularios.publico)
 - **Models:** `Formulario` → `with()` · `Formulario` → `orderBy()`, `where()`, `firstOrFail()` · `Formulario` (via `$this->formulario`)
 - **Chama nesta classe:** `$this->bloquearAcesso()`, `$this->carregarOpcoesSistemaInicial()`
 - **Permissões / feature flags:** `formulario.testar`, `formulario.criar`, `inscricao.criar`, `dev`
 - **Helpers:** `request()`, `auth()`, `abort()`, `abort_unless()`, `now()`
 
-##### `restaurarRascunhoLocal(array $dados)` — linha 187
+##### `restaurarRascunhoLocal(array $dados)` — linha 188
 - **Acionado por:** view `livewire.website.formulario-publico` ($wire)
 - **Models:** `RespostaFormulario` → `where()` · `Curso` → `whereIn()`, `find()` · `Curso` → `turnosVinculados()` · `Formulario` (via `$this->formulario`)
 - **Chama nesta classe:** `$this->salvarRascunhoSilencioso()`
 - **Helpers:** `request()`
 
-##### `salvarRascunhoSilencioso()` — linha 235
+##### `salvarRascunhoSilencioso()` — linha 236
 - **Acionado por:** `FormularioPublico::restaurarRascunhoLocal()`, `FormularioPublico::updated()`, `FormularioPublico::removerArquivo()`, `FormularioPublico::avancarEtapa()`
 - **Models:** `RespostaFormulario` → `updateOrCreate()` · `Formulario` (via `$this->formulario`)
 - **Helpers:** `auth()`
 
-##### `private bloquearAcesso(string $mensagem, string $icone, bool $exibeBotaoLogin)` — linha 262
+##### `private bloquearAcesso(string $mensagem, string $icone, bool $exibeBotaoLogin)` — linha 263
 - **Acionado por:** `FormularioPublico::mount()`
 
-##### `carregarOpcoesSistemaInicial()` — linha 270
+##### `carregarOpcoesSistemaInicial()` — linha 271
 - **Acionado por:** `FormularioPublico::mount()`
 - **Models:** `Unidade` → `whereIn()` · `Curso` → `whereIn()` · `Turno` → `whereIn()`
 
-##### `rules()` — linha 294
+##### `rules()` — linha 295
 - _Sem dependências externas detectadas._
 
-##### `private normalizarTextoComparacao($valor)` — linha 296
-- **Acionado por:** `FormularioPublico::campoEstaVisivel()`
-- **Chama em outras classes:** `Str::ascii()` _(framework)_
-
-##### `campoEstaVisivel($campo, array $visitados)` — linha 302
-- **Acionado por:** `FormularioPublico::campoEstaVisivel()`, `FormularioPublico::limparRespostasCondicionaisInativas()`, `FormularioPublico::regrasPorEtapa()`
-- **Chama nesta classe:** `$this->campoEstaVisivel()`, `$this->normalizarTextoComparacao()`
-- **Helpers:** `collect()`
-
-##### `private limparRespostasCondicionaisInativas()` — linha 358
-- **Acionado por:** `FormularioPublico::updated()`
-- **Chama nesta classe:** `$this->campoEstaVisivel()`, `$this->resetErrorBag()` _(Livewire/framework)_
-
-##### `protected regrasPorEtapa($etapa)` — linha 375
+##### `protected regrasPorEtapa($etapa)` — linha 297
 - **Acionado por:** `FormularioPublico::updated()`, `FormularioPublico::avancarEtapa()`
 - **Models:** `Formulario` (via `$this->formulario`)
 - **Chama nesta classe:** `$this->campoEstaVisivel()`
 - **Chama em outras classes:** `Rule::unique()` _(framework)_
 
-##### `updated($propertyName)` — linha 542
+##### `updated($propertyName)` — linha 464
 - **Models:** `Curso` → `whereIn()`, `find()` · `Curso` → `turnosVinculados()`
 - **Chama nesta classe:** `$this->regrasPorEtapa()`, `$this->validateOnly()` _(Livewire/framework)_, `$this->limparRespostasCondicionaisInativas()`, `$this->salvarRascunhoSilencioso()`
 - **Validação:** executa `validate()`
 
-##### `removerArquivo(string $campoName, $index)` — linha 620
+##### `removerArquivo(string $campoName, $index)` — linha 542
 - **Chama nesta classe:** `$this->salvarRascunhoSilencioso()`
 
-##### `avancarEtapa()` — linha 643
+##### `avancarEtapa()` — linha 565
 - **Acionado por:** view `livewire.website.formulario-publico` (wire:click)
 - **Models:** `RespostaFormulario` → `updateOrCreate()` · `Formulario` (via `$this->formulario`)
 - **Chama nesta classe:** `$this->regrasPorEtapa()`, `$this->validate()` _(Livewire/framework)_, `$this->salvarRascunhoSilencioso()`
@@ -6862,7 +6933,7 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Validação:** executa `validate()`
 - **Helpers:** `auth()`
 
-##### `render()` — linha 711
+##### `render()` — linha 633
 - **Acionado por:** rota `GET /f/{slug}` (name: formularios.publico)
 - **Models:** `Formulario` (via `$this->formulario`)
 - **Views renderizadas:** `livewire.website.formulario-publico` → `resources/views/livewire/website/formulario-publico.blade.php`
@@ -6890,92 +6961,79 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 `app/Modules/Website/UI/Livewire/Inscricao.php` · linha 19
 
 - **Estende:** `Component`
-- **Traits:** `WithCepConsulta`, `WithFileUploads`, `WithFichaPdfDownload`
+- **Traits:** `WithCepConsulta`, `WithFileUploads`, `WithFichaPdfDownload`, `AvaliaCondicoesVisibilidade`
 - **Atributos PHP:** `#[Layout('components.layouts.public')]`, `#[Title('Inscrição - Instituto Percorre')]`
 - **Models usados na classe:** `Ciclo`, `Inscricao`, `FormularioFase`, `StatusInscricao`, `OfertaVaga`, `Unidade`, `Curso`, `Turno`
 - **Views:** `livewire.website.inscricao`, `components.layouts.public (layout)`
 
-##### `mount(?string $slug_projeto)` — linha 68
+##### `mount(?string $slug_projeto)` — linha 69
 - **Acionado por:** rota `GET /inscricao/{slug_projeto?}` (name: publico.inscricao)
 - **Models:** `Ciclo` → `with()`, `latest()` · `Inscricao` → `find()` · `Ciclo` → `find()`, `where()`
 - **Chama nesta classe:** `$this->carregarModeloInscricao()`
 - **Permissões / feature flags:** `formulario.testar`, `inscricao.criar`
 - **Helpers:** `request()`, `auth()`, `abort_unless()`, `now()`, `session()`
 
-##### `hydrate()` — linha 173
+##### `hydrate()` — linha 174
 - _Sem dependências externas detectadas._
 
-##### `bloqueioFaseAtual()` — linha 187
+##### `bloqueioFaseAtual()` — linha 188
 - **Atributos:** `#[Computed]`
 - **Models:** `FormularioFase` → `where()`
 - **Helpers:** `now()`
 
-##### `bloqueioFaseSeguinte()` — linha 206
+##### `bloqueioFaseSeguinte()` — linha 207
 - **Atributos:** `#[Computed]`
 - **Models:** `FormularioFase` → `where()`
 - **Helpers:** `now()`
 
-##### `restaurarRascunhoLocal(array $dados)` — linha 226
+##### `restaurarRascunhoLocal(array $dados)` — linha 227
 - **Acionado por:** view `livewire.website.inscricao` ($wire)
 - **Models:** `Inscricao` → `where()`
 - **Chama nesta classe:** `$this->atualizarDisponibilidade()`, `$this->updatedUnidade()`, `$this->updatedCurso()`, `$this->salvarRascunhoSilencioso()`
 - **Eventos Livewire emitidos:** `limpar-storage-inscricao`
 
-##### `salvarRascunhoSilencioso()` — linha 297
+##### `salvarRascunhoSilencioso()` — linha 298
 - **Acionado por:** `Inscricao::restaurarRascunhoLocal()`, `Inscricao::removerArquivo()`, `Inscricao::updated()`, `Inscricao::avancarEtapa()`
 - **Models:** `StatusInscricao` → `where()` · `Inscricao` → `updateOrCreate()`
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 - **Helpers:** `now()`
 
-##### `tentarRecuperarRascunho()` — linha 354
+##### `tentarRecuperarRascunho()` — linha 355
 - **Acionado por:** `Inscricao::updated()`
 - **Models:** `Inscricao` → `with()`
 - **Chama nesta classe:** `$this->addError()` _(Livewire/framework)_, `$this->carregarModeloInscricao()`
 - **Eventos Livewire emitidos:** `sucesso(msg:'Rascunho recuperado com sucesso! S…)`
 
-##### `private carregarModeloInscricao(Inscricao $inscricaoRetomada)` — linha 383
+##### `private carregarModeloInscricao(Inscricao $inscricaoRetomada)` — linha 384
 - **Acionado por:** `Inscricao::mount()`, `Inscricao::tentarRecuperarRascunho()`
 - **Chama nesta classe:** `$this->ofuscarEmail()`, `$this->ofuscarTelefone()`, `$this->restaurarDeDadosSalvos()`
 
-##### `private getOfertasValidas()` — linha 440
+##### `private getOfertasValidas()` — linha 441
 - **Acionado por:** `Inscricao::avancarEtapa()`, `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()`
 - **Models:** `OfertaVaga` → `where()` · `Inscricao` → `selectRaw()`
 
-##### `private ofuscarEmail(?string $email)` — linha 469
+##### `private ofuscarEmail(?string $email)` — linha 470
 - **Acionado por:** `Inscricao::carregarModeloInscricao()`
 
-##### `private ofuscarTelefone(?string $telefone)` — linha 480
+##### `private ofuscarTelefone(?string $telefone)` — linha 481
 - **Acionado por:** `Inscricao::carregarModeloInscricao()`
 
-##### `removerArquivo(string $campoName, $index)` — linha 489
+##### `removerArquivo(string $campoName, $index)` — linha 490
 - **Chama nesta classe:** `$this->salvarRascunhoSilencioso()`
 
-##### `private normalizarTextoComparacao($valor)` — linha 512
-- **Acionado por:** `Inscricao::campoEstaVisivel()`, `Inscricao::calcularPontuacaoAutomatica()`
-- **Chama em outras classes:** `Str::ascii()` _(framework)_
-
-##### `campoEstaVisivel($campo, array $visitados)` — linha 518
-- **Acionado por:** `Inscricao::campoEstaVisivel()`, `Inscricao::limparRespostasCondicionaisInativas()`, `Inscricao::regrasPorEtapa()`
-- **Chama nesta classe:** `$this->campoEstaVisivel()`, `$this->normalizarTextoComparacao()`
-- **Helpers:** `collect()`
-
-##### `private limparRespostasCondicionaisInativas()` — linha 578
-- **Acionado por:** `Inscricao::updated()`, `Inscricao::avancarEtapa()`
-- **Chama nesta classe:** `$this->campoEstaVisivel()`, `$this->resetErrorBag()` _(Livewire/framework)_
-
-##### `protected mensagensValidacao()` — linha 595
+##### `protected mensagensValidacao()` — linha 513
 - **Acionado por:** `Inscricao::updated()`, `Inscricao::avancarEtapa()`
 
-##### `protected regrasPorEtapa($etapa)` — linha 630
+##### `protected regrasPorEtapa($etapa)` — linha 548
 - **Acionado por:** `Inscricao::updated()`, `Inscricao::avancarEtapa()`
 - **Chama nesta classe:** `$this->campoEstaVisivel()`
 - **Chama em outras classes:** `Rule::unique()` _(framework)_
 
-##### `updated($propertyName)` — linha 806
+##### `updated($propertyName)` — linha 724
 - **Chama nesta classe:** `$this->tentarRecuperarRascunho()`, `$this->regrasPorEtapa()`, `$this->validateOnly()` _(Livewire/framework)_, `$this->mensagensValidacao()`, `$this->limparRespostasCondicionaisInativas()`, `$this->salvarRascunhoSilencioso()`, `$this->rules()`
 - **Validação:** executa `validate()`
 
-##### `avancarEtapa()` — linha 844
+##### `avancarEtapa()` — linha 763
 - **Acionado por:** view `livewire.website.inscricao` (wire:click)
 - **Models:** `Inscricao` → `find()` · `Inscricao` → `update()`
 - **Chama nesta classe:** `$this->salvarRascunhoSilencioso()`, `$this->limparRespostasCondicionaisInativas()`, `$this->rules()`, `$this->regrasPorEtapa()`, `$this->validate()` _(Livewire/framework)_, `$this->mensagensValidacao()`, `$this->getOfertasValidas()`, `$this->addError()` _(Livewire/framework)_, `$this->atualizarDisponibilidade()`, `$this->salvarProgresso()`, `$this->atualizarRankingInstantaneo()`
@@ -6984,68 +7042,68 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 - **Validação:** executa `validate()`
 - **Helpers:** `now()`
 
-##### `protected rules()` — linha 940
+##### `protected rules()` — linha 859
 - **Acionado por:** `Inscricao::updated()`, `Inscricao::avancarEtapa()`
 - **Chama em outras classes:** `Rule::unique()` _(framework)_
 
-##### `private atualizarRankingInstantaneo()` — linha 1012
+##### `private atualizarRankingInstantaneo()` — linha 931
 - **Acionado por:** `Inscricao::avancarEtapa()`
 - **Chama em outras classes:** `DB::table/statement()` _(framework)_
 
-##### `private salvarProgresso($statusForcado)` — linha 1051
+##### `private salvarProgresso($statusForcado)` — linha 970
 - **Acionado por:** `Inscricao::avancarEtapa()`
 - **Models:** `StatusInscricao` → `where()` · `Ciclo` → `find()` · `Inscricao` → `updateOrCreate()` · `Ciclo` → `getStatusInicialId()`
 - **Chama nesta classe:** `$this->calcularPontuacaoAutomatica()`
 - **Chama em outras classes:** `Str::slug()` _(framework)_
 - **Helpers:** `now()`
 
-##### `restaurarDeDadosSalvos()` — linha 1112
+##### `restaurarDeDadosSalvos()` — linha 1031
 - **Acionado por:** `Inscricao::carregarModeloInscricao()`
 - **Chama nesta classe:** `$this->atualizarDisponibilidade()`, `$this->updatedUnidade()`, `$this->updatedCurso()`
 
-##### `voltarEtapa()` — linha 1133
+##### `voltarEtapa()` — linha 1052
 - **Acionado por:** view `livewire.website.inscricao` (wire:click)
 
-##### `updatedDataNascimento()` — linha 1140
+##### `updatedDataNascimento()` — linha 1059
 - **Chama nesta classe:** `$this->atualizarDisponibilidade()`
 - **Eventos Livewire emitidos:** `erro(msg:'A data de nascimento precisa ser m…)`
 
-##### `private obterIdadesParaValidacao()` — linha 1154
+##### `private obterIdadesParaValidacao()` — linha 1073
 - **Acionado por:** `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()`
 - **Models:** `Ciclo` → `find()`
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_, `Carbon->gt/diffInYears()` _(framework)_
 - **Helpers:** `now()`
 
-##### `private ofertaCompativelComIdade($oferta, int $idadeHoje, int $idadeFimPeriodo, ?string $motivoBloqueio)` — linha 1186
+##### `private ofertaCompativelComIdade($oferta, int $idadeHoje, int $idadeFimPeriodo, ?string $motivoBloqueio)` — linha 1105
 - **Acionado por:** `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()`
 
-##### `atualizarDisponibilidade()` — linha 1209
+##### `atualizarDisponibilidade()` — linha 1128
 - **Acionado por:** `Inscricao::restaurarRascunhoLocal()`, `Inscricao::avancarEtapa()`, `Inscricao::restaurarDeDadosSalvos()`, `Inscricao::updatedDataNascimento()`
 - **Models:** `OfertaVaga` → `with()`
 - **Chama nesta classe:** `$this->obterIdadesParaValidacao()`, `$this->getOfertasValidas()`, `$this->ofertaCompativelComIdade()`, `$this->updatedUnidade()`
 - **Helpers:** `collect()`
 
-##### `selecionarSugestaoCurso(int $unidadeId, int $cursoId)` — linha 1298
+##### `selecionarSugestaoCurso(int $unidadeId, int $cursoId)` — linha 1217
 - **Acionado por:** view `livewire.website.inscricao` (wire:click)
 - **Chama nesta classe:** `$this->updatedUnidade()`, `$this->updatedCurso()`
 
-##### `updatedUnidade($unidadeId)` — linha 1310
+##### `updatedUnidade($unidadeId)` — linha 1229
 - **Acionado por:** `Inscricao::restaurarRascunhoLocal()`, `Inscricao::restaurarDeDadosSalvos()`, `Inscricao::atualizarDisponibilidade()`, `Inscricao::selecionarSugestaoCurso()`
 - **Models:** `Unidade` → `find()` · `OfertaVaga` → `with()`
 - **Chama nesta classe:** `$this->obterIdadesParaValidacao()`, `$this->getOfertasValidas()`, `$this->ofertaCompativelComIdade()`, `$this->updatedCurso()`
 
-##### `updatedCurso($cursoId)` — linha 1358
+##### `updatedCurso($cursoId)` — linha 1277
 - **Acionado por:** `Inscricao::restaurarRascunhoLocal()`, `Inscricao::restaurarDeDadosSalvos()`, `Inscricao::selecionarSugestaoCurso()`, `Inscricao::updatedUnidade()`
 - **Models:** `OfertaVaga` → `with()`
 - **Chama nesta classe:** `$this->obterIdadesParaValidacao()`, `$this->getOfertasValidas()`, `$this->ofertaCompativelComIdade()`
 
-##### `private calcularPontuacaoAutomatica()` — linha 1391
+##### `private calcularPontuacaoAutomatica()` — linha 1310
 - **Acionado por:** `Inscricao::salvarProgresso()`
 - **Models:** `Ciclo` → `find()` · `Curso` → `find()` · `Turno` → `find()` · `Unidade` → `find()`
 - **Chama nesta classe:** `$this->normalizarTextoComparacao()`
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_
 
-##### `render()` — linha 1546
+##### `render()` — linha 1465
 - **Acionado por:** rota `GET /inscricao/{slug_projeto?}` (name: publico.inscricao)
 - **Models:** `Unidade` → `whereIn()` · `Curso` → `whereIn()` · `Turno` → `all()`
 - **Views renderizadas:** `livewire.website.inscricao` → `resources/views/livewire/website/inscricao.blade.php`
@@ -7125,6 +7183,9 @@ _...e mais 476 ponto(s) de entrada não mostrados (limite de 80 diagramas)._
 ##### `ciclo()` — linha 23
 - **Chama nesta classe:** `$this->belongsTo()` _(herdado/trait)_
 - **Relacionamento:** `belongsTo` → `Ciclo`
+
+##### `estaVisivelParaRespostas(array $respostas, array $dadosFixos)` — linha 31
+- _Sem dependências externas detectadas._
 
 #### `App\Models\Ciclo`
 `app/Models/Ciclo.php` · linha 8
@@ -8367,20 +8428,20 @@ _Sem métodos._
 - **Helpers:** `now()`, `app()`
 
 #### `App\Modules\Comunicacao\Jobs\DispararAutomacaoJob`
-`app/Modules/Comunicacao/Jobs/DispararAutomacaoJob.php` · linha 19
+`app/Modules/Comunicacao/Jobs/DispararAutomacaoJob.php` · linha 20
 
 - **Implementa:** `ShouldQueue`
 - **Traits:** `Dispatchable`, `InteractsWithQueue`, `Queueable`, `SerializesModels`
 - **Models usados na classe:** `Comunicado`, `ComunicacaoLog`, `AuditoriaLog`
 
-##### `__construct(EmailTemplate $template, string $emailDestino, $inscricao, array $dadosExtras, string $gatilho)` — linha 29
+##### `__construct(EmailTemplate $template, string $emailDestino, $inscricao, array $dadosExtras, string $gatilho)` — linha 30
 - **Acionado por:** `ProcessarFasesFormulario::handle()`
 
-##### `handle()` — linha 38
+##### `handle()` — linha 39
 - **Acionado por:** `AutomacaoService::disparar()`, `EsteiraComunicacaoService::executarDisparoEtapa()`, `EsteiraComunicacaoService::reenviarDisparoIndividual()`
 - **Models:** `Comunicado` → `create()` · `ComunicacaoLog` → `create()` · `AuditoriaLog` → `create()` · `ComunicacaoLog` → `update()` · `Comunicado` → `update()`
 - **Chama em outras classes:** `EmailParserService::parseTexto()` _(service)_, `Str::uuid()` _(framework)_, `EmailTrackingService::empacotarEmail()` _(service)_, `Mail::html()` _(framework)_
-- **Helpers:** `now()`
+- **Helpers:** `now()`, `app()`
 
 #### `App\Modules\Comunicacao\Jobs\ProcessarComunicadoJob`
 `app/Modules/Comunicacao/Jobs/ProcessarComunicadoJob.php` · linha 17
@@ -8486,6 +8547,28 @@ _Sem métodos._
 - **Chama em outras classes:** `Attachment::fromStorageDisk()` _(framework)_
 
 ### 🚦 Middlewares
+
+#### `App\Http\Middleware\CheckSessionInactivity`
+`app/Http/Middleware/CheckSessionInactivity.php` · linha 10
+
+##### `handle(Request $request, Closure $next)` — linha 26
+- **Chama nesta classe:** `$this->getAuthenticatedGuard()`, `$this->forceLogout()`, `$this->isPassiveBackgroundRequest()`
+- **Chama em outras classes:** `Request->routeIs/session()` _(framework)_
+- **Helpers:** `config()`, `now()`
+
+##### `protected getAuthenticatedGuard()` — linha 60
+- **Acionado por:** `CheckSessionInactivity::handle()`
+- **Chama em outras classes:** `Auth::guard()` _(framework)_
+
+##### `protected isPassiveBackgroundRequest(Request $request)` — linha 74
+- **Acionado por:** `CheckSessionInactivity::handle()`
+- **Chama em outras classes:** `Request->hasHeader/is/input()` _(framework)_
+
+##### `protected forceLogout(Request $request, string $guard)` — linha 110
+- **Acionado por:** `CheckSessionInactivity::handle()`
+- **Chama em outras classes:** `Auth::guard()` _(framework)_, `Route::has()` _(framework)_, `Request->session/expectsJson/hasHeader()` _(framework)_
+- **Rotas referenciadas:** `portal.login`, `login`
+- **Helpers:** `route()`, `response()`, `redirect()`
 
 #### `App\Http\Middleware\ForcePasswordChange`
 `app/Http/Middleware/ForcePasswordChange.php` · linha 10
@@ -8806,66 +8889,72 @@ _Sem métodos._
 - **Chama em outras classes:** `Carbon::parse()` _(framework)_, `Http::timeout()` _(framework)_, `Log::error()` _(framework)_, `Http->successful/json/status/body()` _(framework)_
 
 #### `App\Modules\Teste\Suri\Services\SuriApiService`
-`app/Modules/Teste/Suri/Services/SuriApiService.php` · linha 9
+`app/Modules/Teste/Suri/Services/SuriApiService.php` · linha 10
 
-##### `__construct()` — linha 15
+- **Models usados na classe:** `SuriTestLog`
+
+##### `__construct()` — linha 16
 - **Funções:** `env`
 
-##### `getConfigResumo()` — linha 22
+##### `getConfigResumo()` — linha 23
 - _Sem dependências externas detectadas._
 
-##### `montarPayloadTemplate(EmailTemplate $template)` — linha 38
+##### `montarPayloadTemplate(EmailTemplate $template)` — linha 36
 - **Acionado por:** `SuriApiService::syncTemplateComDetalhes()`
 - **Chama nesta classe:** `$this->gerarExemploPadraoVariavel()`
 
-##### `private gerarExemploPadraoVariavel(string $varNome)` — linha 177
+##### `private gerarExemploPadraoVariavel(string $varNome)` — linha 148
 - **Acionado por:** `SuriApiService::montarPayloadTemplate()`
 
-##### `syncTemplateComDetalhes(EmailTemplate $template)` — linha 192
+##### `syncTemplateComDetalhes(EmailTemplate $template)` — linha 160
 - **Acionado por:** `SuriApiService::syncTemplate()`
 - **Chama nesta classe:** `$this->montarPayloadTemplate()`, `$this->postEndpoint()`
 - **Funções:** `data_get`
 
-##### `syncTemplate(EmailTemplate $template)` — linha 207
+##### `syncTemplate(EmailTemplate $template)` — linha 174
 - **Chama nesta classe:** `$this->syncTemplateComDetalhes()`
 
-##### `listarTemplates(array $queryParams)` — linha 217
+##### `listarTemplates(array $queryParams)` — linha 180
 - **Chama nesta classe:** `$this->getEndpoint()`
 
-##### `obterTemplate(string $templateId)` — linha 222
+##### `obterTemplate(string $templateId)` — linha 185
 - **Chama nesta classe:** `$this->getEndpoint()`
 
-##### `criarTemplateDireto(array $payload)` — linha 228
+##### `criarTemplateDireto(array $payload)` — linha 191
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `listarContatos(?string $continuationToken, string $limit)` — linha 237
+##### `listarContatos(?string $continuationToken, string $limit)` — linha 200
 - **Chama nesta classe:** `$this->getEndpoint()`
 
-##### `importarContato(string $name, string $phone, int $gender, ?string $channelId, int $channelType)` — linha 246
+##### `importarContato(string $name, string $phone, int $gender, ?string $channelId, int $channelType)` — linha 209
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `enviarTemplateSimples(string $userId, string $templateId, ?string $flowId, bool $ignorePortfolio, int $responseActionType)` — linha 263
+##### `enviarTemplateSimples(string $userId, string $templateId, ?string $flowId, bool $ignorePortfolio, int $responseActionType)` — linha 226
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `enviarTemplateComBotoes(string $userName, string $userPhone, string $templateId, ?string $email, int $gender, ?string $channelId, int $channelType, ?string $defaultDepartmentId)` — linha 288
+##### `enviarTemplateComBotoes(string $userName, string $userPhone, string $templateId, ?string $email, int $gender, ?string $channelId, int $channelType, ?string $defaultDepartmentId)` — linha 249
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `enviarTemplateComVariaveis(string $userName, string $userPhone, string $templateId, array $bodyParameters, ?string $flowId, bool $ignorePortfolio, int $responseActionType, ?string $email, int $gender, ?string $channelId, int $channelType, ?string $defaultDepartmentId, array $buttonsParameters)` — linha 316
+##### `enviarTemplateComVariaveis(string $userName, string $userPhone, string $templateId, array $bodyParameters, ?string $flowId, bool $ignorePortfolio, int $responseActionType, ?string $email, int $gender, ?string $channelId, int $channelType, ?string $defaultDepartmentId, array $buttonsParameters)` — linha 275
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `enviarMensagemSimples(string $userId, string $texto, ?string $contextMsgId)` — linha 364
+##### `enviarMensagemSimples(string $userId, string $texto, ?string $contextMsgId)` — linha 323
 - **Chama nesta classe:** `$this->postEndpoint()`
 
-##### `reexecutarLog(string $metodo, string $urlCompleta, array $payload)` — linha 386
+##### `reexecutarLog(string $metodo, string $urlCompleta, array $payload, string $acao)` — linha 341
 - **Chama nesta classe:** `$this->getEndpoint()`, `$this->postEndpoint()`
 
-##### `getEndpoint(string $endpoint, array $queryParams)` — linha 398
+##### `getEndpoint(string $endpoint, array $queryParams, string $acao)` — linha 357
 - **Acionado por:** `SuriApiService::listarTemplates()`, `SuriApiService::obterTemplate()`, `SuriApiService::listarContatos()`, `SuriApiService::reexecutarLog()`
+- **Models:** `SuriTestLog` → `create()`
 - **Chama em outras classes:** `Http::withToken()` _(framework)_, `Log::error()` _(framework)_, `Http->json/successful/status/body()` _(framework)_
+- **Helpers:** `auth()`, `request()`
 
-##### `postEndpoint(string $endpoint, array $payload)` — linha 445
+##### `postEndpoint(string $endpoint, array $payload, string $acao)` — linha 433
 - **Acionado por:** `SuriApiService::syncTemplateComDetalhes()`, `SuriApiService::criarTemplateDireto()`, `SuriApiService::importarContato()`, `SuriApiService::enviarTemplateSimples()`, `SuriApiService::enviarTemplateComBotoes()`, `SuriApiService::enviarTemplateComVariaveis()`, `SuriApiService::enviarMensagemSimples()`, `SuriApiService::reexecutarLog()`
+- **Models:** `SuriTestLog` → `create()`
 - **Chama em outras classes:** `Http::withToken()` _(framework)_, `Log::error()` _(framework)_, `Http->json/successful/status/body()` _(framework)_
+- **Helpers:** `auth()`, `request()`
 
 #### `App\Modules\Turno\Application\Services\TurnoService`
 `app/Modules/Turno/Application/Services/TurnoService.php` · linha 8
@@ -8928,6 +9017,28 @@ _Sem métodos._
 - **Chama em outras classes:** `UnidadeRepositoryInterface->findById()` _(interface)_
 
 ### 🧬 Traits
+
+#### `App\Traits\AvaliaCondicoesVisibilidade`
+`app/Traits/AvaliaCondicoesVisibilidade.php` · linha 7
+
+##### `protected normalizarTextoComparacao($valor)` — linha 9
+- **Acionado por:** `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()`
+- **Chama em outras classes:** `Str::ascii()` _(framework)_
+
+##### `protected extrairGruposCondicionaisDoCampo($campo)` — linha 19
+- **Acionado por:** `AvaliaCondicoesVisibilidade::campoEstaVisivel()`, `AvaliaCondicoesVisibilidade::limparRespostasCondicionaisInativas()`
+
+##### `campoEstaVisivel($campo, array $visitados)` — linha 61
+- **Acionado por:** `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()`, `AvaliaCondicoesVisibilidade::limparRespostasCondicionaisInativas()`
+- **Chama nesta classe:** `$this->extrairGruposCondicionaisDoCampo()`, `$this->avaliarRegraVisibilidadeIndividual()`
+
+##### `protected avaliarRegraVisibilidadeIndividual(array $regra, array $visitados)` — linha 112
+- **Acionado por:** `AvaliaCondicoesVisibilidade::campoEstaVisivel()`
+- **Chama nesta classe:** `$this->campoEstaVisivel()`, `$this->normalizarTextoComparacao()`
+- **Helpers:** `collect()`
+
+##### `protected limparRespostasCondicionaisInativas()` — linha 201
+- **Chama nesta classe:** `$this->extrairGruposCondicionaisDoCampo()`, `$this->campoEstaVisivel()`, `$this->resetErrorBag()` _(Livewire/framework)_
 
 #### `App\Traits\ComFiltroAvancado`
 `app/Traits/ComFiltroAvancado.php` · linha 8
@@ -8993,6 +9104,30 @@ _Sem métodos._
 - _Sem dependências externas detectadas._
 
 ##### `protected static salvarLogAuditoria($model, $acao)` — linha 28
+- **Models:** `AuditoriaLog` → `create()`
+- **Chama em outras classes:** `Auth::user()` _(framework)_, `Auth->getRoleNames()` _(framework)_
+- **Helpers:** `request()`
+
+#### `App\Traits\ValidaAcesso`
+`app/Traits/ValidaAcesso.php` · linha 8
+
+- **Models usados na classe:** `AuditoriaLog`
+
+##### `protected autorizarTela(string $chave, ?string $nomeModuloAmigavel)` — linha 14
+- **Chama nesta classe:** `$this->registrarLogAcessoNegado()`
+- **Chama em outras classes:** `Auth::user()` _(framework)_, `Auth->hasRole/can()` _(framework)_
+- **Permissões / feature flags:** `dev`
+- **Helpers:** `feature()`, `abort()`
+
+##### `protected autorizarAcao(string $chave, ?string $acaoAmigavel)` — linha 36
+- **Chama nesta classe:** `$this->registrarLogAcessoNegado()`
+- **Chama em outras classes:** `Auth::user()` _(framework)_, `Auth->hasRole/can()` _(framework)_
+- **Eventos Livewire emitidos:** `erro(msg:$msg)`
+- **Permissões / feature flags:** `dev`
+- **Helpers:** `feature()`
+
+##### `private registrarLogAcessoNegado(string $permissao, string $motivo, string $contexto)` — linha 67
+- **Acionado por:** `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()`
 - **Models:** `AuditoriaLog` → `create()`
 - **Chama em outras classes:** `Auth::user()` _(framework)_, `Auth->getRoleNames()` _(framework)_
 - **Helpers:** `request()`
@@ -9621,7 +9756,7 @@ _Sem métodos._
 - _Sem dependências externas detectadas._
 
 ##### `static viewName(string $rel)` — linha 1413
-- _Sem dependências externas detectadas._
+- **Acionado por:** `MarkdownWriter::tabelaFeatures()`
 
 ##### `private static all(string $pattern, string $subject)` — linha 1421
 - _Sem dependências externas detectadas._
@@ -9710,10 +9845,10 @@ _Sem métodos._
 - **Chama em outras classes:** `Textos::normalizar/pareceTexto()`
 
 ##### `static fechar(string $s, int $abre)` — linha 3189
-- **Acionado por:** `ExtratorDark::diretivas()`
+- **Acionado por:** `ExtratorDark::diretivas()`, `FeatureScanner::extrair()`, `FeatureScanner::chamada()`
 
 ##### `static apagar(string $re, string $work)` — linha 3219
-- **Acionado por:** `ExtratorDark::tags()`, `ExtratorDark::citacoes()`
+- **Acionado por:** `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `FeatureScanner::extrair()`
 
 ##### `static blocos(string $re, string $work, Closure $cb)` — linha 3225
 - **Acionado por:** `ExtratorDark::tags()`
@@ -9750,284 +9885,314 @@ _Sem métodos._
 ##### `private static interpolada(array $tokens, int $i, int $n)` — linha 3377
 - _Sem dependências externas detectadas._
 
+#### `FeatureScanner`
+`laramap.php` · linha 4401
+
+##### `static extrair(string $rel, string $code)` — linha 4408
+- **Acionado por:** `Main::run()`
+- **Chama em outras classes:** `Textos::utf8()`, `ExtratorHtml::apagar/fechar()`
+
+##### `private static chamada(string $src, int $inicio, int $abre, string $forma, array $achados)` — linha 4498
+- **Chama em outras classes:** `ExtratorHtml::fechar()`
+
+##### `private static nomes(string $args)` — linha 4513
+- _Sem dependências externas detectadas._
+
+##### `private static dinamico(string $expr)` — linha 4541
+- **Chama em outras classes:** `Textos::cortar/normalizar()`
+
+##### `private static primeiroArgumento(string $args)` — linha 4547
+- _Sem dependências externas detectadas._
+
+##### `private static semComentarios(string $src)` — linha 4577
+- **Chama em outras classes:** `PhpToken::tokenize()`
+
 #### `Indexer`
-`laramap.php` · linha 4395
+`laramap.php` · linha 4590
 
-##### `addPhpFile(array $file)` — linha 4441
+##### `addPhpFile(array $file)` — linha 4637
 - **Acionado por:** `Main::run()`
 
-##### `addBlade(array $blade)` — linha 4451
+##### `addBlade(array $blade)` — linha 4647
 - **Acionado por:** `Main::run()`
 
-##### `addRoutes(array $rotas)` — linha 4458
+##### `addRoutes(array $rotas)` — linha 4654
 - **Acionado por:** `Main::run()`
 
-##### `addVoltComponent(string $view, array $class)` — linha 4466
+##### `addVoltComponent(string $view, array $class)` — linha 4662
 - **Acionado por:** `Main::run()`
 
-##### `addDark(string $rel, array $d)` — linha 4473
+##### `addFeatures(string $rel, array $lista)` — linha 4669
 - **Acionado por:** `Main::run()`
 
-##### `addTextos(string $rel, array $lista)` — linha 4488
+##### `addDark(string $rel, array $d)` — linha 4678
 - **Acionado por:** `Main::run()`
 
-##### `mergeMigration(array $operacoes)` — linha 4510
+##### `addTextos(string $rel, array $lista)` — linha 4693
 - **Acionado por:** `Main::run()`
 
-##### `build()` — linha 4550
+##### `mergeMigration(array $operacoes)` — linha 4715
+- **Acionado por:** `Main::run()`
+
+##### `build()` — linha 4755
 - **Acionado por:** `Main::run()`
 - **Chama nesta classe:** `$this->classify()`, `$this->linkViews()`, `$this->buildCallGraph()`, `$this->linkBlades()`, `$this->linkRoutes()`
 
-##### `private linkViews()` — linha 4562
+##### `private linkViews()` — linha 4767
 - **Acionado por:** `Indexer::build()`
 - **Chama nesta classe:** `$this->conventionalView()`
 
-##### `private buildCallGraph()` — linha 4584
+##### `private buildCallGraph()` — linha 4789
 - **Acionado por:** `Indexer::build()`
 - **Chama nesta classe:** `$this->methodExists()`, `$this->addCaller()`, `$this->isModel()`
 
-##### `private linkBlades()` — linha 4686
+##### `private linkBlades()` — linha 4891
 - **Acionado por:** `Indexer::build()`
 - **Chama nesta classe:** `$this->methodExists()`, `$this->addCaller()`, `$this->componentFromAlias()`
 
-##### `private linkRoutes()` — linha 4717
+##### `private linkRoutes()` — linha 4922
 - **Acionado por:** `Indexer::build()`
 - **Chama nesta classe:** `$this->methodExists()`, `$this->addCaller()`
 
-##### `methodExists(string $fqcn, string $metodo)` — linha 4745
+##### `methodExists(string $fqcn, string $metodo)` — linha 4950
 - **Acionado por:** `Indexer::buildCallGraph()`, `Indexer::linkBlades()`, `Indexer::linkRoutes()`, `Indexer::methodExists()`
 - **Chama nesta classe:** `$this->methodExists()`
 
-##### `isModel(string $fqcn)` — linha 4765
+##### `isModel(string $fqcn)` — linha 4970
 - **Acionado por:** `Indexer::buildCallGraph()`
 - **Chama nesta classe:** `$this->classify()`
 
-##### `classify(string $fqcn, array $class)` — linha 4777
+##### `classify(string $fqcn, array $class)` — linha 4982
 - **Acionado por:** `Indexer::build()`, `Indexer::isModel()`
 
-##### `isOrphan(string $fqcn, array $metodo)` — linha 4878
+##### `isOrphan(string $fqcn, array $metodo)` — linha 5083
 - _Sem dependências externas detectadas._
 
-##### `callersOf(string $fqcn, string $metodo)` — linha 4900
+##### `callersOf(string $fqcn, string $metodo)` — linha 5105
 - _Sem dependências externas detectadas._
 
-##### `private addCaller(string $alvo, string $origem)` — linha 4905
+##### `private addCaller(string $alvo, string $origem)` — linha 5110
 - **Acionado por:** `Indexer::buildCallGraph()`, `Indexer::linkBlades()`, `Indexer::linkRoutes()`
 
-##### `private conventionalView(string $fqcn)` — linha 4910
+##### `private conventionalView(string $fqcn)` — linha 5115
 - **Acionado por:** `Indexer::linkViews()`, `Indexer::componentFromAlias()`
 
-##### `componentFromAlias(string $alias)` — linha 4925
+##### `componentFromAlias(string $alias)` — linha 5130
 - **Acionado por:** `Indexer::linkBlades()`
 - **Chama nesta classe:** `$this->conventionalView()`
 
 #### `Main`
-`laramap.php` · linha 6834
+`laramap.php` · linha 7123
 
-##### `static run(array $argv)` — linha 6838
-- **Chama em outras classes:** `TemaClasses::$padraoExtra()`, `ExtratorDark::extrair()`, `Extrator::extrair()`, `BladeAnalyzer::analyze()`, `VoltAnalyzer::isVolt/analyze()`, `PhpAnalyzer::analyze()`, `RouteAnalyzer::analyze()`, `MigrationAnalyzer::analyze()`, `Scanner->scan()`, `Indexer->addDark/addTextos/addBlade/addVoltComponent/addPhpFile/addRoutes/mergeMigration/build()`, `MarkdownWriter->render/renderDarkAvulso/renderTextosAvulso()`
+##### `static run(array $argv)` — linha 7127
+- **Chama em outras classes:** `TemaClasses::$padraoExtra()`, `FeatureScanner::extrair()`, `ExtratorDark::extrair()`, `Extrator::extrair()`, `BladeAnalyzer::analyze()`, `VoltAnalyzer::isVolt/analyze()`, `PhpAnalyzer::analyze()`, `RouteAnalyzer::analyze()`, `MigrationAnalyzer::analyze()`, `Scanner->scan()`, `Indexer->addFeatures/addDark/addTextos/addBlade/addVoltComponent/addPhpFile/addRoutes/mergeMigration/build()`, `MarkdownWriter->render/renderDarkAvulso/renderTextosAvulso()`
 - **Instancia:** `new Scanner`, `new Indexer`, `new MarkdownWriter`
 
-##### `private static help()` — linha 7074
+##### `private static help()` — linha 7373
 - _Sem dependências externas detectadas._
 
 #### `MarkdownWriter`
-`laramap.php` · linha 4974
+`laramap.php` · linha 5179
 
-##### `__construct(Indexer $index, array $scan, string $projeto, bool $mermaid, bool $sequencia, bool $erd, bool $textos, bool $palavras, ?string $textosArquivo, bool $dark, ?string $darkArquivo)` — linha 5010
+##### `__construct(Indexer $index, array $scan, string $projeto, bool $mermaid, bool $sequencia, bool $erd, bool $textos, bool $palavras, ?string $textosArquivo, bool $dark, ?string $darkArquivo)` — linha 5215
 - **Acionado por:** `Main::run()`
 
-##### `render()` — linha 5025
+##### `render()` — linha 5230
 - **Acionado por:** `Main::run()`
 - **Chama nesta classe:** `$this->cabecalho()`, `$this->visaoGeral()`, `$this->pontosDeEntrada()`, `$this->diagramasSequencia()`, `$this->fluxoPorArquivo()`, `$this->viewsBlade()`, `$this->indiceReverso()`, `$this->modelsUsados()`, `$this->diagramaBanco()`, `$this->eventosLivewire()`, `$this->gatilhos()`, `$this->orfaos()`, `$this->grafo()`, `$this->arvoreArquitetura()`, `$this->permissoesFeatures()`, `$this->indiceFuncoes()`, `$this->textosDoSistema()`, `$this->temaEscuro()`, `$this->arquivosIgnorados()`
 
-##### `private cabecalho()` — linha 5063
+##### `private cabecalho()` — linha 5268
 - **Acionado por:** `MarkdownWriter::render()`
 
-##### `private visaoGeral()` — linha 5100
+##### `private visaoGeral()` — linha 5305
 - **Acionado por:** `MarkdownWriter::render()`
 
-##### `private pontosDeEntrada()` — linha 5132
+##### `private pontosDeEntrada()` — linha 5337
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private diagramasSequencia()` — linha 5162
+##### `private diagramasSequencia()` — linha 5367
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->pontosDeEntradaParaSequencia()`, `$this->umDiagramaSequencia()`
 
-##### `private pontosDeEntradaParaSequencia()` — linha 5185
+##### `private pontosDeEntradaParaSequencia()` — linha 5390
 - **Acionado por:** `MarkdownWriter::diagramasSequencia()`
 
-##### `private umDiagramaSequencia(string $fqcn, string $metodo, string $atorLabel, string $titulo)` — linha 5245
+##### `private umDiagramaSequencia(string $fqcn, string $metodo, string $atorLabel, string $titulo)` — linha 5450
 - **Acionado por:** `MarkdownWriter::diagramasSequencia()`
 - **Chama nesta classe:** `$this->idParticipante()`, `$this->curto()`, `$this->passosSequencia()`
 
-##### `private passosSequencia(string $fqcn, string $metodo, string $idAtual, int $profundidade, array $visitados, array $linhas, array $participantes, array $ids)` — linha 5271
+##### `private passosSequencia(string $fqcn, string $metodo, string $idAtual, int $profundidade, array $visitados, array $linhas, array $participantes, array $ids)` — linha 5476
 - **Acionado por:** `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`
 - **Chama nesta classe:** `$this->buscarMetodo()`, `$this->passosSequencia()`, `$this->idParticipante()`, `$this->curto()`, `$this->escaparMermaid()`
 
-##### `private buscarMetodo(string $fqcn, string $metodo)` — linha 5334
+##### `private buscarMetodo(string $fqcn, string $metodo)` — linha 5539
 - **Acionado por:** `MarkdownWriter::passosSequencia()`, `MarkdownWriter::buscarMetodo()`
 - **Chama nesta classe:** `$this->buscarMetodo()`
 
-##### `private idParticipante(string $label, array $participantes, array $ids)` — linha 5357
+##### `private idParticipante(string $label, array $participantes, array $ids)` — linha 5562
 - **Acionado por:** `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`
 - **Chama nesta classe:** `$this->escaparMermaid()`
 
-##### `private escaparMermaid(string $s)` — linha 5369
+##### `private escaparMermaid(string $s)` — linha 5574
 - **Acionado por:** `MarkdownWriter::passosSequencia()`, `MarkdownWriter::idParticipante()`
 
-##### `private fluxoPorArquivo()` — linha 5374
+##### `private fluxoPorArquivo()` — linha 5579
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->renderClasse()`
 
-##### `private renderClasse(string $fqcn, array $class)` — linha 5402
+##### `private renderClasse(string $fqcn, array $class)` — linha 5607
 - **Acionado por:** `MarkdownWriter::fluxoPorArquivo()`
 - **Chama nesta classe:** `$this->listaCodigo()`, `$this->curto()`, `$this->modelsDaClasse()`, `$this->renderMetodo()`
 
-##### `private renderMetodo(string $fqcn, array $metodo)` — linha 5471
+##### `private renderMetodo(string $fqcn, array $metodo)` — linha 5676
 - **Acionado por:** `MarkdownWriter::renderClasse()`
 - **Chama nesta classe:** `$this->curto()`, `$this->tagClasse()`, `$this->paramsDoGatilho()`, `$this->parenteses()`, `$this->listaCodigo()`
 
-##### `private viewsBlade()` — linha 5616
+##### `private viewsBlade()` — linha 5821
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->listaCodigo()`, `$this->curto()`, `$this->tabelaElementos()`
 
-##### `private tabelaElementos(array $elementos, ?string $owner)` — linha 5705
+##### `private tabelaElementos(array $elementos, ?string $owner)` — linha 5910
 - **Acionado por:** `MarkdownWriter::viewsBlade()`
 - **Chama nesta classe:** `$this->curto()`, `$this->truncar()`
 
-##### `private indiceReverso()` — linha 5734
+##### `private indiceReverso()` — linha 5939
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private modelsUsados()` — linha 5754
+##### `private modelsUsados()` — linha 5959
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private diagramaBanco()` — linha 5774
+##### `private diagramaBanco()` — linha 5979
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->idMermaid()`
 
-##### `private idMermaid(string $nome)` — linha 5843
+##### `private idMermaid(string $nome)` — linha 6048
 - **Acionado por:** `MarkdownWriter::diagramaBanco()`
 
-##### `private eventosLivewire()` — linha 5848
+##### `private eventosLivewire()` — linha 6053
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private gatilhos()` — linha 5874
+##### `private gatilhos()` — linha 6079
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->truncar()`, `$this->curto()`
 
-##### `private orfaos()` — linha 5904
+##### `private orfaos()` — linha 6109
 - **Acionado por:** `MarkdownWriter::render()`
 
-##### `private grafo()` — linha 5923
+##### `private grafo()` — linha 6128
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private arvoreArquitetura()` — linha 5975
+##### `private arvoreArquitetura()` — linha 6180
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->renderArvore()`
 
-##### `private renderArvore(array $nivel, string $prefixo)` — linha 6000
+##### `private renderArvore(array $nivel, string $prefixo)` — linha 6205
 - **Acionado por:** `MarkdownWriter::arvoreArquitetura()`, `MarkdownWriter::renderArvore()`
 - **Chama nesta classe:** `$this->renderArvore()`
 
-##### `private permissoesFeatures()` — linha 6029
+##### `private permissoesFeatures()` — linha 6234
 - **Acionado por:** `MarkdownWriter::render()`
-- **Chama nesta classe:** `$this->tabelaPermissoes()`
+- **Chama nesta classe:** `$this->tabelaPermissoes()`, `$this->tabelaFeatures()`
 
-##### `private tabelaPermissoes(string $titulo, array $mapa)` — linha 6062
+##### `private tabelaFeatures()` — linha 6265
+- **Acionado por:** `MarkdownWriter::permissoesFeatures()`
+- **Chama nesta classe:** `$this->curto()`
+- **Chama em outras classes:** `BladeAnalyzer::viewName()`
+
+##### `private tabelaPermissoes(string $titulo, array $mapa)` — linha 6351
 - **Acionado por:** `MarkdownWriter::permissoesFeatures()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private indiceFuncoes()` — linha 6083
+##### `private indiceFuncoes()` — linha 6372
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private textosDoSistema()` — linha 6119
+##### `private textosDoSistema()` — linha 6408
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->corpoTextos()`
 
-##### `renderTextosAvulso()` — linha 6129
+##### `renderTextosAvulso()` — linha 6418
 - **Acionado por:** `Main::run()`
 - **Chama nesta classe:** `$this->corpoTextos()`
 
-##### `private corpoTextos()` — linha 6136
+##### `private corpoTextos()` — linha 6425
 - **Acionado por:** `MarkdownWriter::textosDoSistema()`, `MarkdownWriter::renderTextosAvulso()`
 - **Chama nesta classe:** `$this->diretorioDe()`, `$this->celulaTexto()`, `$this->tiposTexto()`, `$this->ondeAparece()`, `$this->tabelaPalavras()`
 
-##### `private tabelaPalavras()` — linha 6223
+##### `private tabelaPalavras()` — linha 6512
 - **Acionado por:** `MarkdownWriter::corpoTextos()`
 - **Chama nesta classe:** `$this->diretorioDe()`, `$this->celulaTexto()`
 - **Chama em outras classes:** `Textos::semPlaceholders/minusculas()`
 
-##### `private diretorioDe(string $rel)` — linha 6269
+##### `private diretorioDe(string $rel)` — linha 6558
 - **Acionado por:** `MarkdownWriter::corpoTextos()`, `MarkdownWriter::tabelaPalavras()`, `MarkdownWriter::ondeAparece()`
 
-##### `private celulaTexto(string $texto)` — linha 6276
+##### `private celulaTexto(string $texto)` — linha 6565
 - **Acionado por:** `MarkdownWriter::corpoTextos()`, `MarkdownWriter::tabelaPalavras()`, `MarkdownWriter::corpoDark()`
 - **Chama em outras classes:** `Textos::cortar()`
 
-##### `private tiposTexto(array $tipos, array $rotulos)` — linha 6286
+##### `private tiposTexto(array $tipos, array $rotulos)` — linha 6575
 - **Acionado por:** `MarkdownWriter::corpoTextos()`
 
-##### `private ondeAparece(array $arquivos)` — linha 6294
+##### `private ondeAparece(array $arquivos)` — linha 6583
 - **Acionado por:** `MarkdownWriter::corpoTextos()`
 - **Chama nesta classe:** `$this->diretorioDe()`
 
-##### `private temaEscuro()` — linha 6327
+##### `private temaEscuro()` — linha 6616
 - **Acionado por:** `MarkdownWriter::render()`
 - **Chama nesta classe:** `$this->corpoDark()`
 
-##### `renderDarkAvulso()` — linha 6337
+##### `renderDarkAvulso()` — linha 6626
 - **Acionado por:** `Main::run()`
 - **Chama nesta classe:** `$this->corpoDark()`
 
-##### `private corpoDark()` — linha 6344
+##### `private corpoDark()` — linha 6633
 - **Acionado por:** `MarkdownWriter::temaEscuro()`, `MarkdownWriter::renderDarkAvulso()`
 - **Chama nesta classe:** `$this->analisarDark()`, `$this->celulaTexto()`, `$this->somarMapa()`, `$this->exemplos()`, `$this->chaveComponente()`
 
-##### `private analisarDark(array $t)` — linha 6647
+##### `private analisarDark(array $t)` — linha 6936
 - **Acionado por:** `MarkdownWriter::corpoDark()`
 - **Chama em outras classes:** `TemaClasses::analisar()`
 
-##### `private somarMapa(array $mapa, string $prop, string $luz, string $dark, string $loc)` — linha 6697
+##### `private somarMapa(array $mapa, string $prop, string $luz, string $dark, string $loc)` — linha 6986
 - **Acionado por:** `MarkdownWriter::corpoDark()`
 
-##### `private exemplos(array $ex)` — linha 6710
+##### `private exemplos(array $ex)` — linha 6999
 - **Acionado por:** `MarkdownWriter::corpoDark()`
 
-##### `private chaveComponente(array $t)` — linha 6716
+##### `private chaveComponente(array $t)` — linha 7005
 - **Acionado por:** `MarkdownWriter::corpoDark()`
 
-##### `private arquivosIgnorados()` — linha 6732
+##### `private arquivosIgnorados()` — linha 7021
 - **Acionado por:** `MarkdownWriter::render()`
 
-##### `private modelsDaClasse(array $class)` — linha 6744
+##### `private modelsDaClasse(array $class)` — linha 7033
 - **Acionado por:** `MarkdownWriter::renderClasse()`
 
-##### `private tagClasse(string $fqcn)` — linha 6775
+##### `private tagClasse(string $fqcn)` — linha 7064
 - **Acionado por:** `MarkdownWriter::renderMetodo()`
 
-##### `private curto(string $fqcn)` — linha 6792
-- **Acionado por:** `MarkdownWriter::pontosDeEntrada()`, `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`, `MarkdownWriter::renderClasse()`, `MarkdownWriter::renderMetodo()`, `MarkdownWriter::viewsBlade()`, `MarkdownWriter::tabelaElementos()`, `MarkdownWriter::indiceReverso()`, `MarkdownWriter::modelsUsados()`, `MarkdownWriter::eventosLivewire()`, `MarkdownWriter::gatilhos()`, `MarkdownWriter::grafo()`, `MarkdownWriter::tabelaPermissoes()`, `MarkdownWriter::indiceFuncoes()`, `MarkdownWriter::curto()`, `MarkdownWriter::listaCodigo()`
+##### `private curto(string $fqcn)` — linha 7081
+- **Acionado por:** `MarkdownWriter::pontosDeEntrada()`, `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`, `MarkdownWriter::renderClasse()`, `MarkdownWriter::renderMetodo()`, `MarkdownWriter::viewsBlade()`, `MarkdownWriter::tabelaElementos()`, `MarkdownWriter::indiceReverso()`, `MarkdownWriter::modelsUsados()`, `MarkdownWriter::eventosLivewire()`, `MarkdownWriter::gatilhos()`, `MarkdownWriter::grafo()`, `MarkdownWriter::tabelaFeatures()`, `MarkdownWriter::tabelaPermissoes()`, `MarkdownWriter::indiceFuncoes()`, `MarkdownWriter::curto()`, `MarkdownWriter::listaCodigo()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private listaCodigo(array $itens)` — linha 6804
+##### `private listaCodigo(array $itens)` — linha 7093
 - **Acionado por:** `MarkdownWriter::renderClasse()`, `MarkdownWriter::renderMetodo()`, `MarkdownWriter::viewsBlade()`
 - **Chama nesta classe:** `$this->curto()`
 
-##### `private paramsDoGatilho(array $gatilhos, string $tipo, string $alvo)` — linha 6810
+##### `private paramsDoGatilho(array $gatilhos, string $tipo, string $alvo)` — linha 7099
 - **Acionado por:** `MarkdownWriter::renderMetodo()`
 - **Chama nesta classe:** `$this->truncar()`
 
-##### `private parenteses(string $conteudo)` — linha 6821
+##### `private parenteses(string $conteudo)` — linha 7110
 - **Acionado por:** `MarkdownWriter::renderMetodo()`
 
-##### `private truncar(string $texto, int $tamanho)` — linha 6826
+##### `private truncar(string $texto, int $tamanho)` — linha 7115
 - **Acionado por:** `MarkdownWriter::tabelaElementos()`, `MarkdownWriter::gatilhos()`, `MarkdownWriter::paramsDoGatilho()`
 
 #### `MigrationAnalyzer`
@@ -10238,10 +10403,10 @@ _Sem métodos._
 `laramap.php` · linha 2612
 
 ##### `static utf8(string $s)` — linha 2628
-- **Acionado por:** `ExtratorHtml::extrair()`, `ExtratorPhp::extrair()`, `ExtratorJs::extrair()`, `ExtratorCss::extrair()`, `ExtratorDark::extrair()`
+- **Acionado por:** `ExtratorHtml::extrair()`, `ExtratorPhp::extrair()`, `ExtratorJs::extrair()`, `ExtratorCss::extrair()`, `ExtratorDark::extrair()`, `FeatureScanner::extrair()`
 
 ##### `static normalizar(string $s)` — linha 2643
-- **Acionado por:** `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()`, `ExtratorDark::tags()`
+- **Acionado por:** `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()`, `ExtratorDark::tags()`, `FeatureScanner::dinamico()`
 
 ##### `static semPlaceholders(string $s)` — linha 2651
 - **Acionado por:** `ExtratorHtml::descarregar()`, `MarkdownWriter::tabelaPalavras()`
@@ -10259,7 +10424,7 @@ _Sem métodos._
 - **Acionado por:** `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorDark::tags()`, `ExtratorDark::classesDaTag()`
 
 ##### `static cortar(string $s, int $max)` — linha 2688
-- **Acionado por:** `ExtratorCss::regraDark()`, `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `MarkdownWriter::celulaTexto()`
+- **Acionado por:** `ExtratorCss::regraDark()`, `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `FeatureScanner::dinamico()`, `MarkdownWriter::celulaTexto()`
 
 ##### `static pareceTexto(string $s, bool $forcado, bool $todas)` — linha 2705
 - **Acionado por:** `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()`
@@ -10404,7 +10569,7 @@ _View estática._
 `resources/views/components/layouts/app.blade.php`
 
 - **Inclui:** `components.partials.analytics-heatmap`
-- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`
+- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`, `<x-session-timeout>` → `resources/views/components/session-timeout.blade.php`
 - **Componentes Livewire:** `auth.logout-button` → `LogoutButton`, `components.quick-view-drawer` → `QuickViewDrawer`
 - **Rotas usadas:** `dashboard`, `financeiro.orcamentos`, `financeiro.aprovacoes`, `financeiro.centro_custo`, `financeiro.naturezas`, `ciclos.index`, `inscricoes.index`, `ciclos.crm`, `students.index`, `status-inscricoes.index`, `empresas.index`, `solicitacoes.index`, `cursos.index`, `turnos.index`, `unidades.index`, `formularios.index`, `conteudo.index`, `conteudo.categorias`, `portal.index`, `comunicados.index`, `templates.index`, `automacoes.index`, `monitor.emails`, `avaliacoes.relatorios`, `avaliacoes.periodos.index`, `avaliacoes.gerador`, `avaliacoes.gerador-aprendizagem`, `matriculas.index`, `turmas.index`, `matriculas.acompanhamento`, `aprendizagem.index`, `configuracoes.index`, `users.index`, `roles.index`, `permissions.index`, `features.index`, `auditoria.index`, `system_tasks.index`, `system_tasks.hub`, `formbuilder.hub`, `system.errors.index`, `profile.show`
 - **Permissões checadas:** `ciclo.listar`, `inscricao.listar`, `estudante.listar`, `status.listar`, `dev`, `curso.listar`, `turno.listar`, `unidade.listar`, `formulario.listar`, `comunicado.listar`, `template.listar`, `automacao.listar`, `email_log.listar`, `relatorio.acessar`, `periodo_avaliacao.listar`, `ferramenta.mock`, `matricula.listar`, `turma.listar`, `aprendizagem.listar`, `usuario.listar`, `acl.role.listar`, `acl.permission.listar`, `feature.listar`, `auditoria.listar`, `tarefas.acessar`, `form.builder`
@@ -10614,7 +10779,7 @@ _View estática._
 ### `components.layouts.company`
 `resources/views/components/layouts/company.blade.php`
 
-- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`
+- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`, `<x-session-timeout>` → `resources/views/components/session-timeout.blade.php`
 - **Componentes Livewire:** `portal.auth.logout-button` → `LogoutButton`, `components.quick-view-drawer` → `QuickViewDrawer`
 - **Rotas usadas:** `company.dashboard`, `company.aprendizes`, `portal.index`, `company.gestores`
 - **Classes referenciadas:** `Vite`
@@ -10673,7 +10838,7 @@ _View estática._
 ### `components.layouts.student-app`
 `resources/views/components/layouts/student-app.blade.php`
 
-- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`
+- **Componentes Blade:** `<x-toast>` → `resources/views/components/toast.blade.php`, `<x-session-timeout>` → `resources/views/components/session-timeout.blade.php`
 - **Componentes Livewire:** `portal.auth.logout-button` → `LogoutButton`, `components.quick-view-drawer` → `QuickViewDrawer`
 - **Rotas usadas:** `dashboard`, `student.dashboard`, `student.solicitacoes`, `avaliacoes.index`, `portal.index`, `student.profile`
 - **Classes referenciadas:** `Vite`
@@ -10742,6 +10907,18 @@ _View estática._
 
 _View estática._
 
+### `components.session-timeout`
+`resources/views/components/session-timeout.blade.php`
+
+- **Rotas usadas:** `session.keep-alive`, `session.timeout-logout`
+
+**Botões e links:**
+
+| Tipo | Texto | Aciona | Linha |
+| --- | --- | --- | --- |
+| button | Sair Agora | JS: `triggerLogout()` | 183 |
+| button | Continuar Conectado | JS: `keepAlive()` | 188 |
+
 ### `components.summary-cards`
 `resources/views/components/summary-cards.blade.php`
 
@@ -10806,10 +10983,83 @@ _View estática._
 | --- | --- | --- | --- |
 | link | {{ parse_url(config('app.url'), PHP_URL… | `{{ config('app.url') }}` | 52 |
 
+### `errors.401`
+`resources/views/errors/401.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Rotas usadas:** `login`
+- **Classes referenciadas:** `Route`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`, `@section custom_actions`
+
+**Botões e links:**
+
+| Tipo | Texto | Aciona | Linha |
+| --- | --- | --- | --- |
+| link | Acessar Minha Conta | rota `login` | 17 |
+
+### `errors.403`
+`resources/views/errors/403.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`, `@section extra_content`
+
+### `errors.404`
+`resources/views/errors/404.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`
+
+### `errors.419`
+`resources/views/errors/419.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`, `@section custom_actions`
+
+**Botões e links:**
+
+| Tipo | Texto | Aciona | Linha |
+| --- | --- | --- | --- |
+| button | Atualizar e Continuar | _sem acao identificada_ | 17 |
+| link | Ir para o Login | `{{ url('/login') }}` | 24 |
+
+### `errors.429`
+`resources/views/errors/429.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`
+
 ### `errors.500`
 `resources/views/errors/500.blade.php`
 
-_View estática._
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`, `@section extra_content`
+
+### `errors.503`
+`resources/views/errors/503.blade.php`
+
+- **Estende layout:** `errors.layout`
+- **Seções:** `@section title`, `@section accent_bar`, `@section icon_wrapper`, `@section icon`, `@section badge_classes`, `@section badge_label`, `@section heading`, `@section message`, `@section custom_actions`
+
+**Botões e links:**
+
+| Tipo | Texto | Aciona | Linha |
+| --- | --- | --- | --- |
+| button | Verificar Disponibilidade | _sem acao identificada_ | 17 |
+
+### `errors.layout`
+`resources/views/errors/layout.blade.php`
+
+- **Rotas usadas:** `student.dashboard`, `company.dashboard`, `dashboard`
+- **Classes referenciadas:** `Route`
+- **Seções:** `@yield title`, `@yield accent_bar`, `@yield icon_wrapper`, `@yield icon`, `@yield badge_classes`, `@yield badge_label`, `@yield heading`, `@yield message`, `@yield extra_content`, `@yield custom_actions`
+
+**Botões e links:**
+
+| Tipo | Texto | Aciona | Linha |
+| --- | --- | --- | --- |
+| link | Instituto Percorre | `{{ $homeUrl }}` | 48 |
+| button | 1) { window.history.back(); } else { wi… | _sem acao identificada_ | 102 |
+| link | {{ $homeLabel }} | `{{ $homeUrl }}` | 109 |
 
 ### `livewire.acl.permission-manager`
 `resources/views/livewire/acl/permission-manager.blade.php`
@@ -10972,8 +11222,8 @@ _View estática._
 | Tipo | Texto | Aciona | Linha |
 | --- | --- | --- | --- |
 | button | Limpar Filtros | `AuditoriaManager::limparFiltros()` | 87 |
-| button | id }})" class="p-1.5 text-gray-400 tran… | _sem acao identificada_ | 139 |
-| button | id }})" class="p-1.5 text-gray-400 hove… | _sem acao identificada_ | 178 |
+| button | id }})" class="p-1.5 text-gray-400 tran… | _sem acao identificada_ | 140 |
+| button | id }})" class="p-1.5 text-gray-400 hove… | _sem acao identificada_ | 179 |
 
 ### `livewire.auditoria.error-log-manager`
 `resources/views/livewire/auditoria/error-log-manager.blade.php`
@@ -11405,7 +11655,7 @@ _View estática._
 - **Ações que aciona:**
   - `wire:click` → `SuriTestDashboard::abrirModal()`
   - `wire:click` → `set()` ⚠️ _não localizado no componente_
-  - `wire:click` → `SuriTestDashboard::sincronizarTemplateLocal()`
+  - `wire:click` → `sincronizarTemplateLocal()` ⚠️ _não localizado no componente_
   - `wire:click` → `SuriTestDashboard::limparFiltrosLog()`
   - `wire:click` → `SuriTestDashboard::limparTodosOsLogs()`
   - `wire:click` → `SuriTestDashboard::replayLog()`
@@ -12077,6 +12327,7 @@ _View estática._
   - `wire:submit.prevent` → `DynamicFields::salvar()`
   - `wire:click` → `DynamicFields::limparRestricaoComboAcademico()`
   - `wire:click` → `DynamicFields::abrirModalConfigCombo()`
+  - `wire:click` → `DynamicFields::abrirModalCondicoesAvancadas()`
   - `wire:submit.prevent` → `DynamicFields::salvarFormSettings()`
   - `wire:click` → `DynamicFields::adicionarFase()`
   - `wire:click` → `DynamicFields::salvarFases()`
@@ -12086,10 +12337,15 @@ _View estática._
   - `wire:click` → `DynamicFields::setComboActiveUnidade()`
   - `wire:click` → `DynamicFields::setComboActiveCurso()`
   - `wire:click` → `DynamicFields::confirmarConfigComboAcademico()`
+  - `wire:click` → `DynamicFields::adicionarGrupoCondicional()`
+  - `wire:click` → `DynamicFields::adicionarRegraNoGrupo()`
+  - `wire:click` → `DynamicFields::removerGrupoCondicional()`
+  - `wire:click` → `DynamicFields::removerRegraDoGrupo()`
+  - `wire:click` → `DynamicFields::confirmarCondicoesAvancadas()`
 - **Chamadas via `$wire`:** `set`
 - **Propriedades ligadas (`wire:model`):** `etapaDestinoLote`, `camposSelecionados`, `etapa`, `ordem`, `configuracoes.exibir_no_topo`, `name`, `largura`, `configuracoes.calcular_idade`, `configuracoes.dica_modo`, `configuracoes.dica_1_tipo`, `configuracoes.dica_1_trigger`, `configuracoes.dica_2_tipo`, `configuracoes.dica_2_trigger`, `configuracoes.tipo_assinante`, `configuracoes.tipo_destino`, `link_file_upload`, `configuracoes.abrir_preview`, `configuracoes.permitir_download`, `configuracoes.url`, `configuracoes.viacep`, `configuracoes.criar_campos_endereco`, `tamanho_min`, `tamanho_max`, `regex_mascara`, `configuracoes.validar_cpf`
 - **Rotas usadas:** `dashboard`, `formbuilder.hub`
-- **Classes referenciadas:** `Cache`, `Str`, `Str`
+- **Classes referenciadas:** `Cache`, `Str`
 
 **Botões e links:**
 
@@ -12153,20 +12409,31 @@ _View estática._
 | button | _(sem texto — ícone?)_ | `DynamicFields::cancelarEdicao()` | 945 |
 | button | Usar Todas | `DynamicFields::limparRestricaoComboAcademico()` | 1480 |
 | button | Configurar Unidades / Cursos / Turnos | `DynamicFields::abrirModalConfigCombo()` | 1498 |
-| button | Exibição Condicional | JS: `openCond = !openCond` | 1651 |
-| button | Cancelar | `DynamicFields::cancelarEdicao()` | 1685 |
-| button | {{ $campoId ? 'Atualizar Bloco' : 'Inse… | _envia o formulario (wire:submit do <form> pai)_ | 1688 |
-| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 1729 |
-| button | Guardar Aparência do Formulário | _envia o formulario (wire:submit do <form> pai)_ | 1862 |
-| button | Nova Fase | `DynamicFields::adicionarFase()` | 1884 |
-| button | Salvar Tudo | `DynamicFields::salvarFases()` | 1887 |
-| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 1890 |
-| button | _(sem texto — ícone?)_ | `DynamicFields::removerFase()` | 1970 |
-| button | Recusar e Continuar | `DynamicFields::rejectTransfer()` | 2006 |
-| button | Aceitar e Sair | `DynamicFields::acceptTransfer()` | 2009 |
-| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 2029 |
-| button | Cancelar | `set()` ⚠️ _não localizado no componente_ | 2120 |
-| button | Aplicar Opções ao Conjunto | `DynamicFields::confirmarConfigComboAcademico()` | 2123 |
+| button | Abrir Construtor de Condições (E / OU) | `DynamicFields::abrirModalCondicoesAvancadas()` | 1736 |
+| button | Cancelar | `DynamicFields::cancelarEdicao()` | 1750 |
+| button | {{ $campoId ? 'Atualizar Bloco' : 'Inse… | _envia o formulario (wire:submit do <form> pai)_ | 1753 |
+| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 1794 |
+| button | Guardar Aparência do Formulário | _envia o formulario (wire:submit do <form> pai)_ | 1927 |
+| button | Nova Fase | `DynamicFields::adicionarFase()` | 1949 |
+| button | Salvar Tudo | `DynamicFields::salvarFases()` | 1952 |
+| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 1955 |
+| button | _(sem texto — ícone?)_ | `DynamicFields::removerFase()` | 2035 |
+| button | Recusar e Continuar | `DynamicFields::rejectTransfer()` | 2071 |
+| button | Aceitar e Sair | `DynamicFields::acceptTransfer()` | 2074 |
+| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 2094 |
+| button | Cancelar | `set()` ⚠️ _não localizado no componente_ | 2185 |
+| button | Aplicar Opções ao Conjunto | `DynamicFields::confirmarConfigComboAcademico()` | 2188 |
+| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 2225 |
+| button | Novo Grupo (E) | `DynamicFields::adicionarGrupoCondicional()` | 2241 |
+| button | Novo Grupo (OU) | `DynamicFields::adicionarGrupoCondicional()` | 2244 |
+| button | E (AND) | `set()` ⚠️ _não localizado no componente_ | 2260 |
+| button | OU (OR) | `set()` ⚠️ _não localizado no componente_ | 2265 |
+| button | + Condição (E) | `DynamicFields::adicionarRegraNoGrupo()` | 2289 |
+| button | + Condição (OU) | `DynamicFields::adicionarRegraNoGrupo()` | 2292 |
+| button | _(sem texto — ícone?)_ | `DynamicFields::removerGrupoCondicional()` | 2296 |
+| button | _(sem texto — ícone?)_ | `DynamicFields::removerRegraDoGrupo()` | 2375 |
+| button | Fechar | `set()` ⚠️ _não localizado no componente_ | 2453 |
+| button | Aplicar Condições ao Input | `DynamicFields::confirmarCondicoesAvancadas()` | 2458 |
 
 ### `livewire.form-builder.hub`
 `resources/views/livewire/form-builder/hub.blade.php`
@@ -13119,7 +13386,7 @@ _View estática._
 `resources/views/livewire/registration/registration-details.blade.php`
 
 - **Renderizada por:** `App\Modules\Registration\UI\Livewire\RegistrationDetails`
-- **Componentes Blade:** `<x-breadcrumb>` → `resources/views/components/breadcrumb.blade.php`, `<x-details-card>` → `resources/views/components/details-card.blade.php`, `<x-slot>`
+- **Componentes Blade:** `<x-breadcrumb>` → `resources/views/components/breadcrumb.blade.php`, `<x-details-card>` → `resources/views/components/details-card.blade.php`, `<x-slot>`, `<x-table>` → `resources/views/components/table.blade.php`
 - **Ações que aciona:**
   - `wire:click` → `RegistrationDetails::baixarFichaInscricaoPdf()`
   - `wire:click` → `RegistrationDetails::atualizarStatus()`
@@ -13130,13 +13397,15 @@ _View estática._
   - `wire:submit.prevent` → `RegistrationDetails::salvarEdicaoAssistida()`
   - `wire:click` → `RegistrationDetails::abrirRegras()`
   - `wire:click` → `RegistrationDetails::aprovarDocumentoManualmente()`
-  - `wire:click` → `RegistrationDetails::abrirFormularioEmbed()`
-  - `wire:click` → `RegistrationDetails::fecharFormularioEmbed()`
+  - `wire:click` → `RegistrationDetails::verHistoricoFormulario()`
+  - `wire:click` → `RegistrationDetails::abrirFormularioEmbedTable()`
   - `wire:click` → `RegistrationDetails::verConteudoEmail()`
   - `wire:click` → `RegistrationDetails::cancelarAntiSpam()`
   - `wire:click` → `RegistrationDetails::executarMudancaStatusFinal()`
   - `wire:click` → `RegistrationDetails::fecharModalEmail()`
-- **Propriedades ligadas (`wire:model`):** `status_selecionado`, `formFixo.nome`, `formFixo.cpf`, `formFixo.data_nascimento`, `formFixo.celular`, `formFixo.email`, `formFixo.unidade_id`, `formFixo.curso_id`, `formFixo.turno_id`, `formFixo.possui_deficiencia`, `formFixo.natureza_deficiencia`, `formFixo.cep`, `formFixo.logradouro`, `formFixo.numero`, `formFixo.complemento`, `formFixo.bairro`, `formFixo.cidade`, `formFixo.estado`, `formFixo.regiao`, `formDinamico.{{ $cDin->name }}`, `validarComIa`, `uploads.{{ $doc->id }}`, `tipoFormularioEmbed`, `formularioEmbedId`
+  - `wire:click` → `RegistrationDetails::fecharFormularioEmbed()`
+  - `wire:click` → `set()` ⚠️ _não localizado no componente_
+- **Propriedades ligadas (`wire:model`):** `status_selecionado`, `formFixo.nome`, `formFixo.cpf`, `formFixo.data_nascimento`, `formFixo.celular`, `formFixo.email`, `formFixo.unidade_id`, `formFixo.curso_id`, `formFixo.turno_id`, `formFixo.possui_deficiencia`, `formFixo.natureza_deficiencia`, `formFixo.cep`, `formFixo.logradouro`, `formFixo.numero`, `formFixo.complemento`, `formFixo.bairro`, `formFixo.cidade`, `formFixo.estado`, `formFixo.regiao`, `formDinamico.{{ $cDin->name }}`, `validarComIa`, `uploads.{{ $doc->id }}`, `searchFormulario`
 - **Rotas usadas:** `inscricoes.index`
 - **Classes referenciadas:** `StatusInscricao`, `Carbon`, `Unidade`, `Curso`, `Turno`, `Str`
 
@@ -13160,13 +13429,16 @@ _View estática._
 | button | Ver mapa completo | `RegistrationDetails::abrirRegras()` | 590 |
 | link | Ver Arquivo | `{{ asset('storage/' . $infoDoc['arquivo_caminho']) }}` | 731 |
 | button | id }})" class="px-3 py-1.5 text-xs font… | _sem acao identificada_ | 737 |
-| button | Carregar Formulário | `RegistrationDetails::abrirFormularioEmbed()` | 803 |
-| button | Fechar | `RegistrationDetails::fecharFormularioEmbed()` | 808 |
-| link | Abrir em nova guia | `{{ $urlEmbedAtiva }}` | 834 |
-| button | id }})" class="p-2 bg-gray-100 hover:bg… | _sem acao identificada_ | 996 |
-| button | Cancelar | `RegistrationDetails::cancelarAntiSpam()` | 1029 |
-| button | Sim, Reenviar E-mail | `RegistrationDetails::executarMudancaStatusFinal()` | 1030 |
-| button | _(sem texto — ícone?)_ | `RegistrationDetails::fecharModalEmail()` | 1046 |
+| button | Histórico | `RegistrationDetails::verHistoricoFormulario()` | 828 |
+| button | Iniciar Preenchimento | `RegistrationDetails::abrirFormularioEmbedTable()` | 832 |
+| button | id }})" class="p-2 bg-gray-100 hover:bg… | _sem acao identificada_ | 997 |
+| button | Cancelar | `RegistrationDetails::cancelarAntiSpam()` | 1030 |
+| button | Sim, Reenviar E-mail | `RegistrationDetails::executarMudancaStatusFinal()` | 1031 |
+| button | _(sem texto — ícone?)_ | `RegistrationDetails::fecharModalEmail()` | 1047 |
+| link | Abrir em nova guia | `{{ $urlEmbedAtiva }}` | 1074 |
+| button | Fechar e Sincronizar Ficha | `RegistrationDetails::fecharFormularioEmbed()` | 1077 |
+| button | _(sem texto — ícone?)_ | `set()` ⚠️ _não localizado no componente_ | 1099 |
+| button | Fechar Histórico | `set()` ⚠️ _não localizado no componente_ | 1137 |
 
 ### `livewire.registration.registration-manager`
 `resources/views/livewire/registration/registration-manager.blade.php`
@@ -13766,16 +14038,16 @@ _View estática._
 | Tipo | Texto | Aciona | Linha |
 | --- | --- | --- | --- |
 | link | '); } $text = htmlspecialchars($text ??… | _sem acao identificada_ | 6 |
-| button | calculatePos());" @mouseleave="openTip … | _sem acao identificada_ | 179 |
-| button | Visualizar | JS: `abrirVisualizador()` | 391 |
-| link | Baixar | `{{ $fileFullUrl }}` | 399 |
-| link | Download | `{{ $fileFullUrl }}` | 426 |
-| button | _(sem texto — ícone?)_ | JS: `previewOpen = false` | 434 |
-| link | {!! formatWppText($campo->label ?: $url… | `{{ $hrefFinal }}` | 470 |
-| button | Limpar assinatura | JS: `clearPad()` | 619 |
-| button | name }}'{{ $aceitaMultiplos ? ', ' . $p… | _sem acao identificada_ | 791 |
-| link | Ver ↗ | `{{ asset('storage/' . $path) }}` | 825 |
-| button | name }}'{{ $aceitaMultiplos ? ', ' . $s… | _sem acao identificada_ | 829 |
+| button | calculatePos());" @mouseleave="openTip … | _sem acao identificada_ | 274 |
+| button | Visualizar | JS: `abrirVisualizador()` | 486 |
+| link | Baixar | `{{ $fileFullUrl }}` | 494 |
+| link | Download | `{{ $fileFullUrl }}` | 521 |
+| button | _(sem texto — ícone?)_ | JS: `previewOpen = false` | 529 |
+| link | {!! formatWppText($campo->label ?: $url… | `{{ $hrefFinal }}` | 565 |
+| button | Limpar assinatura | JS: `clearPad()` | 714 |
+| button | name }}'{{ $aceitaMultiplos ? ', ' . $p… | _sem acao identificada_ | 886 |
+| link | Ver ↗ | `{{ asset('storage/' . $path) }}` | 920 |
+| button | name }}'{{ $aceitaMultiplos ? ', ' . $s… | _sem acao identificada_ | 924 |
 
 ### `pdf.ficha-respostas`
 `resources/views/pdf/ficha-respostas.blade.php`
@@ -13796,6 +14068,9 @@ _View estática._
 | `ProcessarLiberacaoFasesCommand::processarDisparoCiclo()` | `ProcessarLiberacaoFasesCommand::handle()` |
 | `ProcessarLiberacaoFasesCommand::processarDisparoFormularioPublico()` | `ProcessarLiberacaoFasesCommand::handle()` |
 | `BreadcrumbHelper::generate()` | `PermissionManager::mount()`, `RoleManager::mount()`, `AuditoriaManager::mount()`, `AutomacaoDetails::mount()`, `AutomacaoForm::mount()`, `AutomacaoManager::mount()`, `ComunicadoForm::mount()`, `ComunicadoManager::mount()`, `EmailLogManager::mount()`, `TemplateForm::mount()`, `TemplateManager::mount()`, `UserManager::mount()`, `CursoManager::mount()`, `FeatureManager::mount()`, `FormManager::mount()`, `PeriodDetails::mount()`, `PeriodManager::mount()`, `StatusManager::mount()`, `StudentManager::mount()`, `SystemTaskManager::mount()`, `TurnoManager::mount()`, `UnidadeManager::mount()` |
+| `CheckSessionInactivity::forceLogout()` | `CheckSessionInactivity::handle()` |
+| `CheckSessionInactivity::getAuthenticatedGuard()` | `CheckSessionInactivity::handle()` |
+| `CheckSessionInactivity::isPassiveBackgroundRequest()` | `CheckSessionInactivity::handle()` |
 | `AvancarStatusNoFunilJob::__construct()` | `RegistrationManager::avancarSelecionadas()` |
 | `ExportarInscricoesFiltradasJob::__construct()` | `RegistrationManager::solicitarExportacao()`, `SystemTaskManager::solicitarExportacao()`, `SystemTaskManager::reentrarNaFila()` |
 | `ExportarInscricoesFiltradasJob::formatarValorParaExportacao()` | `ExportarInscricoesFiltradasJob::handle()`, `ExportarInscricoesFiltradasJob::formatarValorParaExportacao()` |
@@ -13822,7 +14097,7 @@ _View estática._
 | `AlunoCicloAprendizagem::where()` | `GerarAvaliacoesAprendizagem::handle()`, `ProcessarFechamentoCiclos::handle()`, `Acompanhamento::render()`, `FormularioAprendizagem::mount()` |
 | `AlunoCicloAprendizagem::whereHas()` | `Acompanhamento::render()` |
 | `AlunoCicloAprendizagem::with()` | `AprendizesManager::render()`, `Dashboard::render()`, `Acompanhamento::render()`, `Dashboard::render()` |
-| `AuditoriaLog::create()` | `DispararAutomacaoJob::handle()`, `ProtheusOrcamentoService::registrarLogIntegracao()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::abrirFormularioEmbed()`, `AppServiceProvider::boot()`, `RegistraAuditoria::salvarLogAuditoria()` |
+| `AuditoriaLog::create()` | `DispararAutomacaoJob::handle()`, `ProtheusOrcamentoService::registrarLogIntegracao()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::abrirFormularioEmbed()`, `AppServiceProvider::boot()`, `RegistraAuditoria::salvarLogAuditoria()`, `ValidaAcesso::registrarLogAcessoNegado()` |
 | `AuditoriaLog::findOrFail()` | `AuditoriaManager::showQuickView()` |
 | `AuditoriaLog::orderBy()` | `AuditoriaManager::render()` |
 | `AuditoriaLog::paginate()` | `AuditoriaManager::render()` |
@@ -13842,7 +14117,7 @@ _View estática._
 | `CampoFormulario::query()` | `ProcessarExportacaoUniversalJob::handle()` |
 | `CampoFormulario::reject()` | `DynamicFields::moverSelecionadosNaMesmaEtapa()` |
 | `CampoFormulario::updateOrCreate()` | `DynamicFields::salvarFormSettings()`, `Hub::salvarVinculoFormulario()` |
-| `CampoFormulario::where()` | `ProcessarLiberacaoFasesCommand::processarDisparoFormularioPublico()`, `ExportarRespostasFormularioJob::handle()`, `EsteiraComunicacaoService::obterUniversoBase()`, `EsteiraForm::camposDinamicosDisponiveis()`, `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()`, `Hub::salvarVinculoFormulario()`, `FormDetails::getCamposFiltraveisProperty()`, `FormDetails::getCamposDinamicos()`, `FormDetails::obterQueryFiltrada()`, `FormSpreadsheet::getCamposProperty()`, `ResponseDetails::render()`, `PeriodDetails::render()`, `PeriodManager::duplicar()`, `RegrasManager::carregarCampos()`, `KanbanBoard::getEsquemaFiltrosProperty()`, `RegistrationDetails::camposDinamicosCiclo()`, `RegistrationManager::getEsquemaFiltrosProperty()`, `Dashboard::carregarDados()`, `SystemTaskManager::carregarCamposDinamicos()`, `WithFichaPdfDownload::baixarFichaRespostaPdf()`, `WithFichaPdfDownload::baixarFichaInscricaoPdf()` |
+| `CampoFormulario::where()` | `ProcessarLiberacaoFasesCommand::processarDisparoFormularioPublico()`, `ExportarRespostasFormularioJob::handle()`, `EsteiraComunicacaoService::obterUniversoBase()`, `EsteiraForm::camposDinamicosDisponiveis()`, `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::getCamposDisponiveisParaCondicaoProperty()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()`, `Hub::salvarVinculoFormulario()`, `FormDetails::getCamposFiltraveisProperty()`, `FormDetails::getCamposDinamicos()`, `FormDetails::obterQueryFiltrada()`, `FormSpreadsheet::getCamposProperty()`, `ResponseDetails::render()`, `PeriodDetails::render()`, `PeriodManager::duplicar()`, `RegrasManager::carregarCampos()`, `KanbanBoard::getEsquemaFiltrosProperty()`, `RegistrationDetails::camposDinamicosCiclo()`, `RegistrationManager::getEsquemaFiltrosProperty()`, `Dashboard::carregarDados()`, `SystemTaskManager::carregarCamposDinamicos()`, `WithFichaPdfDownload::baixarFichaRespostaPdf()`, `WithFichaPdfDownload::baixarFichaInscricaoPdf()` |
 | `CampoFormulario::whereIn()` | `ExportarInscricoesFiltradasJob::handle()` |
 | `Ciclo::addSelect()` | `PeriodManager::obterQueryFiltrada()` |
 | `Ciclo::all()` | `MaisStatusInscricaoSeeder::run()` |
@@ -13929,6 +14204,7 @@ _View estática._
 | `Etapa::query()` | `DynamicFields::carregarEtapas()` |
 | `Etapa::where()` | `DynamicFields::carregarEtapas()`, `DynamicFields::atualizarNomeEtapa()`, `DynamicFields::excluirEtapa()`, `Hub::salvarVinculoFormulario()`, `RegistrationManager::getEsquemaFiltrosProperty()`, `RegistrationManager::render()` |
 | `Formulario::create()` | `Hub::criarFormularioAprendizagem()`, `Hub::criarFormularioAvulsoRascunho()` |
+| `Formulario::find()` | `RegistrationDetails::verHistoricoFormulario()` |
 | `Formulario::findOrFail()` | `ExportarRespostasFormularioJob::handle()`, `Hub::alternarStatusRascunho()`, `FormDetails::mount()`, `FormEdit::mount()`, `FormManager::solicitarExportacao()`, `FormManager::abrirModal()`, `FormManager::excluir()`, `FormSpreadsheet::mount()`, `ResponseDetails::mount()`, `RegistrationDetails::abrirFormularioEmbed()`, `SystemTaskManager::solicitarExportacao()`, `WithFichaPdfDownload::baixarFichaRespostaPdf()` |
 | `Formulario::firstOrFail()` | `FormularioPublico::mount()` |
 | `Formulario::orderBy()` | `EsteiraForm::render()`, `FormManager::render()`, `FormularioPublico::mount()` |
@@ -13937,7 +14213,7 @@ _View estática._
 | `Formulario::replicate()` | `FormManager::duplicar()` |
 | `Formulario::update()` | `Hub::salvarVinculoFormulario()`, `Hub::alternarStatusRascunho()` |
 | `Formulario::updateOrCreate()` | `FormEdit::salvar()`, `FormManager::salvar()` |
-| `Formulario::where()` | `DynamicFields::salvarFormSettings()`, `RegistrationDetails::formulariosDisponiveisEmbed()`, `FormularioPublico::mount()` |
+| `Formulario::where()` | `DynamicFields::salvarFormSettings()`, `RegistrationDetails::formulariosPaginados()`, `FormularioPublico::mount()` |
 | `Formulario::whereIn()` | `Acompanhamento::verRespostas()` |
 | `Formulario::with()` | `DynamicFields::mount()`, `Hub::abrirModalVincular()`, `Hub::salvarVinculoFormulario()`, `Hub::render()`, `FormManager::duplicar()`, `FormularioAprendizagem::mount()`, `FormularioPublico::mount()` |
 | `Formulario::withCount()` | `SystemTaskManager::mount()` |
@@ -14096,6 +14372,8 @@ _View estática._
 | `Permission::where()` | `PermissionManager::efetivarSalvar()`, `UserManager::render()`, `FeatureManager::salvar()`, `FeatureManager::efetivarSalvar()` |
 | `PermissionManager::abrirModal()` | view `livewire.acl.permission-manager` (wire:click) |
 | `PermissionManager::addItem()` | view `livewire.acl.permission-manager` (wire:click) |
+| `PermissionManager::autorizarAcao()` | `PermissionManager::abrirModal()`, `PermissionManager::salvar()`, `PermissionManager::excluir()` |
+| `PermissionManager::autorizarTela()` | `PermissionManager::mount()` |
 | `PermissionManager::confirmarCriacaoAusentes()` | view `livewire.acl.permission-manager` (wire:click) |
 | `PermissionManager::efetivarSalvar()` | `PermissionManager::salvar()`, `PermissionManager::confirmarCriacaoAusentes()`, `PermissionManager::ignorarCriacaoAusentes()` |
 | `PermissionManager::excluir()` | view `livewire.acl.permission-manager` (wire:click) |
@@ -14206,12 +14484,12 @@ _View estática._
 | `EmailTemplate::__construct()` | `TemplateForm::getPayloadSuriPreviewProperty()` |
 | `EmailTemplate::create()` | `TemplateForm::salvar()`, `TemplateManager::importarTemplateDaSuriParaLocal()` |
 | `EmailTemplate::find()` | `AutomacaoForm::templateSelecionado()`, `AutomacaoManager::previewTemplate()`, `ComunicadoForm::templateSelecionado()`, `ComunicadoForm::salvar()` |
-| `EmailTemplate::findOrFail()` | `SuriTestDashboard::sincronizarTemplateLocal()`, `TemplateForm::mount()`, `TemplateForm::salvar()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::preVisualizar()`, `TemplateManager::excluir()` |
+| `EmailTemplate::findOrFail()` | `TemplateForm::mount()`, `TemplateForm::salvar()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::preVisualizar()`, `TemplateManager::excluir()` |
 | `EmailTemplate::firstOrCreate()` | `AutomacaoMatriculaSeeder::run()`, `ComunicacaoTemplatesSeeder::run()`, `HelpdeskTemplatesSeeder::run()`, `InscricaoRecebidaTemplateSeeder::run()`, `TemplatesMatriculaSeeder::run()` |
 | `EmailTemplate::orderBy()` | `AutomacaoForm::render()`, `EsteiraForm::render()`, `ComunicadoForm::render()`, `ComunicadoManager::render()`, `TemplateManager::render()`, `DynamicFields::abrirModalFases()` |
 | `EmailTemplate::paginate()` | `TemplateManager::render()` |
 | `EmailTemplate::query()` | `TemplateManager::render()` |
-| `EmailTemplate::update()` | `SuriTestDashboard::sincronizarTemplateLocal()`, `TemplateForm::salvar()`, `TemplateManager::sincronizarSuri()` |
+| `EmailTemplate::update()` | `TemplateForm::salvar()`, `TemplateManager::sincronizarSuri()` |
 | `EmailTemplate::when()` | `TemplateManager::render()` |
 | `EmailTemplate::where()` | `TemplateManager::importarTemplateDaSuriParaLocal()` |
 | `EmailTemplate::whereIn()` | `SuriTestDashboard::render()` |
@@ -14315,7 +14593,7 @@ _View estática._
 | `EmailLogManager::verPreview()` | view `livewire.comunicacao.email-log.email-log-manager` (wire:click) |
 | `SuriTestDashboard::abrirModal()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::adicionarParametro()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
-| `SuriTestDashboard::carregarLogNoConsole()` | `SuriTestDashboard::mount()`, `SuriTestDashboard::excluirLog()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
+| `SuriTestDashboard::carregarLogNoConsole()` | `SuriTestDashboard::mount()`, `SuriTestDashboard::registrarResultado()`, `SuriTestDashboard::excluirLog()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::dispararImportarContato()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::dispararListarContatos()` | `SuriTestDashboard::abrirModal()`, view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::dispararMensagemSimples()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
@@ -14327,12 +14605,11 @@ _View estática._
 | `SuriTestDashboard::limparFiltrosLog()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::limparTodosOsLogs()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::mount()` | rota `GET /comunicacao/suri/laboratorio` (name: suri.dashboard) |
-| `SuriTestDashboard::registrarResultado()` | `SuriTestDashboard::replayLog()`, `SuriTestDashboard::dispararListarTemplatesSuri()`, `SuriTestDashboard::dispararBuscarTemplateEspecifico()`, `SuriTestDashboard::dispararListarContatos()`, `SuriTestDashboard::dispararImportarContato()`, `SuriTestDashboard::dispararTemplateSimples()`, `SuriTestDashboard::dispararTemplateComBotoes()`, `SuriTestDashboard::dispararTemplateComVariaveis()`, `SuriTestDashboard::dispararMensagemSimples()`, `SuriTestDashboard::sincronizarTemplateLocal()` |
+| `SuriTestDashboard::registrarResultado()` | `SuriTestDashboard::replayLog()`, `SuriTestDashboard::dispararListarTemplatesSuri()`, `SuriTestDashboard::dispararBuscarTemplateEspecifico()`, `SuriTestDashboard::dispararListarContatos()`, `SuriTestDashboard::dispararImportarContato()`, `SuriTestDashboard::dispararTemplateSimples()`, `SuriTestDashboard::dispararTemplateComBotoes()`, `SuriTestDashboard::dispararTemplateComVariaveis()`, `SuriTestDashboard::dispararMensagemSimples()` |
 | `SuriTestDashboard::removerParametro()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::render()` | rota `GET /comunicacao/suri/laboratorio` (name: suri.dashboard) |
 | `SuriTestDashboard::replayLog()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `SuriTestDashboard::selecionarContatoSuri()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
-| `SuriTestDashboard::sincronizarTemplateLocal()` | view `livewire.comunicacao.suri.suri-test-dashboard` (wire:click) |
 | `TemplateForm::acceptTransfer()` | view `livewire.comunicacao.template.template-form` (wire:click) |
 | `TemplateForm::adicionarBotao()` | view `livewire.comunicacao.template.template-form` (wire:click) |
 | `TemplateForm::cancelTransferRequest()` | view `livewire.comunicacao.template.template-form` (wire:click) |
@@ -14568,17 +14845,22 @@ _View estática._
 | `OrcamentoManager::sincronizarCadastrosProtheus()` | view `livewire.financeiro.orcamento-manager` (wire:click) |
 | `OrcamentoManager::sincronizarProtheus()` | view `livewire.financeiro.orcamento-manager` (wire:click) |
 | `OrcamentoManager::verJsonConsolidado()` | view `livewire.financeiro.orcamento-manager` (wire:click) |
+| `DynamicFields::abrirModalCondicoesAvancadas()` | `DynamicFields::updatedModoCondicional()`, view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::abrirModalConfigCombo()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::abrirModalFases()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::acceptTransfer()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::adicionarEtapa()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::adicionarFase()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
+| `DynamicFields::adicionarGrupoCondicional()` | `DynamicFields::abrirModalCondicoesAvancadas()`, `DynamicFields::removerGrupoCondicional()`, view `livewire.form-builder.dynamic-fields` (wire:click) |
+| `DynamicFields::adicionarRegraNoGrupo()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::atualizarNomeEtapa()` | view `livewire.form-builder.dynamic-fields` (wire:change) |
 | `DynamicFields::atualizarProximaOrdem()` | `DynamicFields::mount()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::updatedEtapa()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::cancelarEdicao()`, `DynamicFields::excluir()`, `DynamicFields::excluirEtapa()` |
+| `DynamicFields::avaliarRegraIndividual()` | `DynamicFields::diagnosticoSimulacaoCondicional()` |
 | `DynamicFields::cancelTransferRequest()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::cancelarEdicao()` | `DynamicFields::iniciarNovoCampo()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvar()`, `DynamicFields::excluir()`, view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::carregarEtapas()` | `DynamicFields::mount()`, `DynamicFields::abrirModalFases()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::atualizarNomeEtapa()`, `DynamicFields::excluirEtapa()` |
 | `DynamicFields::checkAndAcquireLock()` | `DynamicFields::mount()` |
+| `DynamicFields::confirmarCondicoesAvancadas()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::confirmarConfigComboAcademico()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::editar()` | `DynamicFields::updatedCamposSelecionados()`, view `livewire.form-builder.dynamic-fields` (wire:click), view `livewire.form-builder.dynamic-fields` (wire:click.stop) |
 | `DynamicFields::excluir()` | view `livewire.form-builder.dynamic-fields` (wire:click.stop) |
@@ -14586,7 +14868,7 @@ _View estática._
 | `DynamicFields::excluirEtapa()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::gerarCamposComboAcademico()` | `DynamicFields::salvar()` |
 | `DynamicFields::gerarCamposEnderecoViaCep()` | `DynamicFields::salvar()` |
-| `DynamicFields::getContextColumn()` | `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()` |
+| `DynamicFields::getContextColumn()` | `DynamicFields::selecionarTodosDaEtapa()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::reindexarOrdensDaEtapa()`, `DynamicFields::abrirModalFases()`, `DynamicFields::carregarEtapas()`, `DynamicFields::loadFormSettings()`, `DynamicFields::limiteOrdem()`, `DynamicFields::getCamposDisponiveisParaCondicaoProperty()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::gerarCamposEnderecoViaCep()`, `DynamicFields::gerarCamposComboAcademico()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::render()` |
 | `DynamicFields::inicializarDefaultsDicas()` | `DynamicFields::mount()`, `DynamicFields::setTipo()`, `DynamicFields::editar()`, `DynamicFields::cancelarEdicao()` |
 | `DynamicFields::iniciarNovoCampo()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::limiteOrdem()` | `DynamicFields::atualizarProximaOrdem()`, `DynamicFields::salvar()` |
@@ -14601,6 +14883,8 @@ _View estática._
 | `DynamicFields::reindexarOrdensDaEtapa()` | `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::excluirCamposSelecionados()` |
 | `DynamicFields::rejectTransfer()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::removerFase()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
+| `DynamicFields::removerGrupoCondicional()` | `DynamicFields::removerRegraDoGrupo()`, view `livewire.form-builder.dynamic-fields` (wire:click) |
+| `DynamicFields::removerRegraDoGrupo()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::render()` | rota `GET /construtor/{tipo}/{id}/{slug?}` (name: construtor.campos) |
 | `DynamicFields::requestControl()` | view `livewire.form-builder.dynamic-fields` (wire:click) |
 | `DynamicFields::salvar()` | view `livewire.form-builder.dynamic-fields` (wire:submit.prevent) |
@@ -14883,7 +15167,8 @@ _View estática._
 | `KanbanBoard::showQuickView()` | view `livewire.registration.kanban-board` (wire:click) |
 | `KanbanBoard::validarVagasDisponiveisParaAprovacao()` | `KanbanBoard::atualizarStatus()`, `KanbanBoard::quickChangeStatus()`, `KanbanBoard::moverLote()` |
 | `KanbanBoard::verificarAntiSpam()` | `KanbanBoard::atualizarStatus()`, `KanbanBoard::quickChangeStatus()`, `KanbanBoard::moverLote()` |
-| `RegistrationDetails::abrirFormularioEmbed()` | view `livewire.registration.registration-details` (wire:click) |
+| `RegistrationDetails::abrirFormularioEmbed()` | `RegistrationDetails::abrirFormularioEmbedTable()` |
+| `RegistrationDetails::abrirFormularioEmbedTable()` | view `livewire.registration.registration-details` (wire:click) |
 | `RegistrationDetails::abrirRegras()` | view `livewire.registration.registration-details` (wire:click) |
 | `RegistrationDetails::aprovarDocumentoManualmente()` | view `livewire.registration.registration-details` (wire:click) |
 | `RegistrationDetails::atualizarStatus()` | view `livewire.registration.registration-details` (wire:click) |
@@ -14902,6 +15187,7 @@ _View estática._
 | `RegistrationDetails::setAba()` | view `livewire.registration.registration-details` (wire:click) |
 | `RegistrationDetails::usuarioPodeEditarAssistido()` | `RegistrationDetails::iniciarEdicaoAssistida()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::aprovarDocumentoManualmente()`, `RegistrationDetails::abrirFormularioEmbed()` |
 | `RegistrationDetails::verConteudoEmail()` | view `livewire.registration.registration-details` (wire:click) |
+| `RegistrationDetails::verHistoricoFormulario()` | view `livewire.registration.registration-details` (wire:click) |
 | `RegistrationManager::abrirModal()` | view `livewire.registration.registration-manager` (wire:click) |
 | `RegistrationManager::abrirModalContato()` | view `livewire.registration.registration-manager` (wire:click) |
 | `RegistrationManager::abrirModalLote()` | view `livewire.registration.registration-manager` (wire:click) |
@@ -15064,7 +15350,7 @@ _View estática._
 | `RdCrmManager::removerEtapa()` | view `livewire.teste.rd-crm.rd-crm-manager` (wire:click) |
 | `RdCrmManager::render()` | rota `GET /teste/rd-crm` (name: teste.rdcrm) |
 | `SuriTestLog::count()` | `SuriTestDashboard::render()` |
-| `SuriTestLog::create()` | `SuriTestDashboard::registrarResultado()` |
+| `SuriTestLog::create()` | `SuriApiService::getEndpoint()`, `SuriApiService::postEndpoint()` |
 | `SuriTestLog::find()` | `SuriTestDashboard::carregarLogNoConsole()` |
 | `SuriTestLog::findOrFail()` | `SuriTestDashboard::replayLog()` |
 | `SuriTestLog::latest()` | `SuriTestDashboard::mount()`, `SuriTestDashboard::excluirLog()` |
@@ -15140,11 +15426,10 @@ _View estática._
 | `FormularioPublico::avancarEtapa()` | view `livewire.website.formulario-publico` (wire:click) |
 | `FormularioPublico::baixarFichaPdf()` | view `livewire.website.formulario-publico` (wire:click) |
 | `FormularioPublico::bloquearAcesso()` | `FormularioPublico::mount()` |
-| `FormularioPublico::campoEstaVisivel()` | `FormularioPublico::campoEstaVisivel()`, `FormularioPublico::limparRespostasCondicionaisInativas()`, `FormularioPublico::regrasPorEtapa()` |
+| `FormularioPublico::campoEstaVisivel()` | `FormularioPublico::regrasPorEtapa()` |
 | `FormularioPublico::carregarOpcoesSistemaInicial()` | `FormularioPublico::mount()` |
 | `FormularioPublico::limparRespostasCondicionaisInativas()` | `FormularioPublico::updated()` |
 | `FormularioPublico::mount()` | rota `GET /f/{slug}` (name: formularios.publico) |
-| `FormularioPublico::normalizarTextoComparacao()` | `FormularioPublico::campoEstaVisivel()` |
 | `FormularioPublico::regrasPorEtapa()` | `FormularioPublico::updated()`, `FormularioPublico::avancarEtapa()` |
 | `FormularioPublico::render()` | rota `GET /f/{slug}` (name: formularios.publico) |
 | `FormularioPublico::restaurarRascunhoLocal()` | view `livewire.website.formulario-publico` ($wire) |
@@ -15156,13 +15441,13 @@ _View estática._
 | `Inscricao::avancarEtapa()` | view `livewire.website.inscricao` (wire:click) |
 | `Inscricao::baixarFichaPdf()` | view `livewire.website.inscricao` (wire:click) |
 | `Inscricao::calcularPontuacaoAutomatica()` | `Inscricao::salvarProgresso()` |
-| `Inscricao::campoEstaVisivel()` | `Inscricao::campoEstaVisivel()`, `Inscricao::limparRespostasCondicionaisInativas()`, `Inscricao::regrasPorEtapa()` |
+| `Inscricao::campoEstaVisivel()` | `Inscricao::regrasPorEtapa()` |
 | `Inscricao::carregarModeloInscricao()` | `Inscricao::mount()`, `Inscricao::tentarRecuperarRascunho()` |
 | `Inscricao::getOfertasValidas()` | `Inscricao::avancarEtapa()`, `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()` |
 | `Inscricao::limparRespostasCondicionaisInativas()` | `Inscricao::updated()`, `Inscricao::avancarEtapa()` |
 | `Inscricao::mensagensValidacao()` | `Inscricao::updated()`, `Inscricao::avancarEtapa()` |
 | `Inscricao::mount()` | rota `GET /inscricao/{slug_projeto?}` (name: publico.inscricao) |
-| `Inscricao::normalizarTextoComparacao()` | `Inscricao::campoEstaVisivel()`, `Inscricao::calcularPontuacaoAutomatica()` |
+| `Inscricao::normalizarTextoComparacao()` | `Inscricao::calcularPontuacaoAutomatica()` |
 | `Inscricao::obterIdadesParaValidacao()` | `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()` |
 | `Inscricao::ofertaCompativelComIdade()` | `Inscricao::atualizarDisponibilidade()`, `Inscricao::updatedUnidade()`, `Inscricao::updatedCurso()` |
 | `Inscricao::ofuscarEmail()` | `Inscricao::carregarModeloInscricao()` |
@@ -15181,7 +15466,12 @@ _View estática._
 | `Inscricao::voltarEtapa()` | view `livewire.website.inscricao` (wire:click) |
 | `CustomResetPasswordNotification::__construct()` | `User::sendPasswordResetNotification()`, `CompanyUser::sendPasswordResetNotification()`, `Student::sendPasswordResetNotification()` |
 | `OrcamentoWorkflowNotification::__construct()` | `OrcamentoNotificacaoService::dispararParaUsuarios()` |
+| `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()` | `AvaliaCondicoesVisibilidade::campoEstaVisivel()` |
+| `AvaliaCondicoesVisibilidade::campoEstaVisivel()` | `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()`, `AvaliaCondicoesVisibilidade::limparRespostasCondicionaisInativas()` |
+| `AvaliaCondicoesVisibilidade::extrairGruposCondicionaisDoCampo()` | `AvaliaCondicoesVisibilidade::campoEstaVisivel()`, `AvaliaCondicoesVisibilidade::limparRespostasCondicionaisInativas()` |
+| `AvaliaCondicoesVisibilidade::normalizarTextoComparacao()` | `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()` |
 | `ComFiltroAvancado::updatedFiltrosAvancados()` | `ComFiltroAvancado::toggleFiltroValor()`, `ComFiltroAvancado::adicionarTermoFiltro()`, `ComFiltroAvancado::removerFiltroItem()`, `ComFiltroAvancado::limparTodosFiltrosAvancados()` |
+| `ValidaAcesso::registrarLogAcessoNegado()` | `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()` |
 | `WithCepConsulta::dispararGatilhos()` | `WithCepConsulta::updatedCep()`, `WithCepConsulta::limparEndereco()` |
 | `WithCepConsulta::limparEndereco()` | `WithCepConsulta::updatedCep()` |
 | `WithEditingLock::checkAndAcquireLock()` | `WithEditingLock::pingLock()`, `WithEditingLock::takeOverLock()` |
@@ -15203,6 +15493,8 @@ _View estática._
 | `Pdf::loadView()` | `AvaliacaoPdfController::exportar()`, `WithFichaPdfDownload::gerarStreamPdf()` |
 | `Pdf::output()` | `WithFichaPdfDownload::gerarStreamPdf()` |
 | `BladeAnalyzer::analyze()` | `Main::run()` |
+| `BladeAnalyzer::viewName()` | `MarkdownWriter::tabelaFeatures()` |
+| `Carbon::createFromFormat()` | `RegistrationDetails::formulariosPaginados()` |
 | `Carbon::diffInYears()` | `Inscricao::obterIdadesParaValidacao()` |
 | `Carbon::format()` | `ProcessarImportacaoUniversalJob::processarInscricao()` |
 | `Carbon::gt()` | `Inscricao::obterIdadesParaValidacao()` |
@@ -15219,11 +15511,11 @@ _View estática._
 | `ExtratorDark::extrair()` | `Main::run()` |
 | `ExtratorDark::montar()` | `ExtratorCss::fechar()` |
 | `ExtratorHtml::DIRETIVAS()` | `ExtratorDark::diretivas()` |
-| `ExtratorHtml::apagar()` | `ExtratorDark::tags()`, `ExtratorDark::citacoes()` |
+| `ExtratorHtml::apagar()` | `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `FeatureScanner::extrair()` |
 | `ExtratorHtml::blocos()` | `ExtratorDark::tags()` |
 | `ExtratorHtml::branco()` | `ExtratorDark::diretivas()` |
 | `ExtratorHtml::extrair()` | `ExtratorPhp::extrair()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()` |
-| `ExtratorHtml::fechar()` | `ExtratorDark::diretivas()` |
+| `ExtratorHtml::fechar()` | `ExtratorDark::diretivas()`, `FeatureScanner::extrair()`, `FeatureScanner::chamada()` |
 | `ExtratorJs::extrair()` | `ExtratorHtml::extrair()`, `Extrator::extrair()` |
 | `ExtratorPhp::extrair()` | `ExtratorHtml::extrair()`, `Extrator::extrair()` |
 | `Factory::bothify()` | `GeradorMock::gerarAmbienteCompleto()` |
@@ -15232,6 +15524,7 @@ _View estática._
 | `Factory::randomElement()` | `ConteudoSeeder::run()` |
 | `Factory::sentence()` | `ConteudoSeeder::run()` |
 | `Factory::unique()` | `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()` |
+| `FeatureScanner::extrair()` | `Main::run()` |
 | `FilesystemIterator::SKIP_DOTS()` | `Scanner::scan()`, `Scanner::loadBaseline()` |
 | `Builder::where()` | `ComFiltroAvancado::aplicarFiltrosAvancadosNaQuery()` |
 | `Builder::whereDate()` | `ComFiltroAvancado::aplicarFiltrosAvancadosNaQuery()` |
@@ -15240,18 +15533,25 @@ _View estática._
 | `Model::all()` | `EloquentBaseRepository::getAll()` |
 | `Model::create()` | `EloquentBaseRepository::create()` |
 | `Model::find()` | `EloquentBaseRepository::findById()` |
+| `Request::expectsJson()` | `CheckSessionInactivity::forceLogout()` |
+| `Request::hasHeader()` | `CheckSessionInactivity::isPassiveBackgroundRequest()`, `CheckSessionInactivity::forceLogout()` |
+| `Request::input()` | `CheckSessionInactivity::isPassiveBackgroundRequest()` |
 | `Request::ip()` | `EmailTrackingController::open()`, `EmailTrackingController::click()` |
+| `Request::is()` | `CheckSessionInactivity::isPassiveBackgroundRequest()` |
 | `Request::query()` | `EmailTrackingController::click()` |
-| `Request::routeIs()` | `ForcePasswordChange::handle()` |
+| `Request::routeIs()` | `CheckSessionInactivity::handle()`, `ForcePasswordChange::handle()` |
+| `Request::session()` | `CheckSessionInactivity::handle()`, `CheckSessionInactivity::forceLogout()` |
 | `Request::userAgent()` | `EmailTrackingController::open()`, `EmailTrackingController::click()` |
 | `Attachment::fromStorageDisk()` | `ComunicadoMail::attachments()` |
 | `Collection::filter()` | `OrcamentoNotificacaoService::dispararParaUsuarios()` |
+| `Auth::can()` | `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()` |
 | `Auth::check()` | `Conteudo::scopeAutorizado()` |
-| `Auth::getRoleNames()` | `RegistraAuditoria::salvarLogAuditoria()` |
-| `Auth::guard()` | `ForcePasswordChange::handle()`, `Login::authenticate()`, `AprendizesManager::abrirModalVinculo()`, `AprendizesManager::render()`, `Dashboard::render()`, `GestoresManager::mount()`, `GestoresManager::abrirModal()`, `GestoresManager::salvar()`, `GestoresManager::excluir()`, `GestoresManager::render()`, `ForcePasswordChange::logout()`, `ForcePasswordChange::salvar()`, `LogoutButton::logout()` |
+| `Auth::getRoleNames()` | `RegistraAuditoria::salvarLogAuditoria()`, `ValidaAcesso::registrarLogAcessoNegado()` |
+| `Auth::guard()` | `CheckSessionInactivity::getAuthenticatedGuard()`, `CheckSessionInactivity::forceLogout()`, `ForcePasswordChange::handle()`, `Login::authenticate()`, `AprendizesManager::abrirModalVinculo()`, `AprendizesManager::render()`, `Dashboard::render()`, `GestoresManager::mount()`, `GestoresManager::abrirModal()`, `GestoresManager::salvar()`, `GestoresManager::excluir()`, `GestoresManager::render()`, `ForcePasswordChange::logout()`, `ForcePasswordChange::salvar()`, `LogoutButton::logout()` |
+| `Auth::hasRole()` | `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()` |
 | `Auth::logout()` | `LogoutButton::logout()` |
 | `Auth::update()` | `ForcePasswordChange::salvar()` |
-| `Auth::user()` | `Conteudo::scopeAutorizado()`, `RegistraAuditoria::salvarLogAuditoria()` |
+| `Auth::user()` | `Conteudo::scopeAutorizado()`, `RegistraAuditoria::salvarLogAuditoria()`, `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()`, `ValidaAcesso::registrarLogAcessoNegado()` |
 | `Blade::if()` | `AppServiceProvider::boot()` |
 | `Bus::chain()` | `PeriodDetails::recalcularPontuacoes()`, `RegistrationManager::recalcularScoresGlobais()` |
 | `Cache::forget()` | `PermissionManager::efetivarSalvar()`, `FeatureService::toggle()`, `FeatureService::create()`, `FeatureManager::efetivarSalvar()`, `FeatureManager::excluir()`, `Dashboard::atualizarManualmente()`, `WithEditingLock::cancelTransferRequest()`, `WithEditingLock::acceptTransfer()`, `WithEditingLock::takeOverLock()` |
@@ -15304,7 +15604,7 @@ _View estática._
 | `RateLimiter::remaining()` | `PortalMatricula::verificarIdentidade()` |
 | `RateLimiter::tooManyAttempts()` | `Login::authenticate()`, `PortalMatricula::verificarIdentidade()` |
 | `Route::currentRouteName()` | `BreadcrumbHelper::generate()` |
-| `Route::has()` | `BreadcrumbHelper::generate()` |
+| `Route::has()` | `BreadcrumbHelper::generate()`, `CheckSessionInactivity::forceLogout()` |
 | `Route::post()` | `AppServiceProvider::boot()` |
 | `Schema::hasColumn()` | `Formulario::booted()`, `TemplateForm::salvar()`, `RegistrationDetails::logsComunicacao()`, `FiltraPorVinculo::scopeApenasVinculosPermitidos()`, `WithToggleStatus::toggleStatus()`, `FinanceiroPermissionsSeeder::run()` |
 | `Schema::hasTable()` | `ConfiguracoesGeraisManager::mount()`, `Responder::mount()`, `FinanceiroPermissionsSeeder::run()` |
@@ -15315,8 +15615,8 @@ _View estática._
 | `Storage::exists()` | `PortalMatricula::updatedUploadsLote()`, `DocumentManager::updatedUploadsLote()`, `ProfileManager::updatedUploadsLote()` |
 | `Storage::move()` | `PortalMatricula::updatedUploadsLote()`, `DocumentManager::updatedUploadsLote()`, `ProfileManager::updatedUploadsLote()` |
 | `URL::forceScheme()` | `AppServiceProvider::boot()` |
-| `Str::ascii()` | `FormularioPublico::normalizarTextoComparacao()`, `Inscricao::normalizarTextoComparacao()`, `FuzzyMatchingTrait::calcularCompatibilidade()` |
-| `Str::limit()` | `ProtheusOrcamentoService::integrarOrcamentoComProtheus()`, `ProtheusOrcamentoService::resetarStatusOrcamentoProtheus()`, `FormDetails::solicitarExportacao()`, `FormDetails::getHeadersProperty()`, `FormManager::solicitarExportacao()`, `FormSpreadsheet::solicitarExportacao()`, `Dashboard::carregarDados()`, `SystemTaskManager::solicitarExportacao()` |
+| `Str::ascii()` | `AvaliaCondicoesVisibilidade::normalizarTextoComparacao()`, `FuzzyMatchingTrait::calcularCompatibilidade()` |
+| `Str::limit()` | `ProtheusOrcamentoService::integrarOrcamentoComProtheus()`, `ProtheusOrcamentoService::resetarStatusOrcamentoProtheus()`, `DynamicFields::getCamposDisponiveisParaCondicaoProperty()`, `FormDetails::solicitarExportacao()`, `FormDetails::getHeadersProperty()`, `FormManager::solicitarExportacao()`, `FormSpreadsheet::solicitarExportacao()`, `Dashboard::carregarDados()`, `SystemTaskManager::solicitarExportacao()` |
 | `Str::lower()` | `Login::authenticate()` |
 | `Str::random()` | `AutomacaoService::disparar()`, `EmailParserService::parseTexto()`, `EsteiraComunicacaoService::executarDisparoEtapa()`, `EsteiraComunicacaoService::reenviarDisparoIndividual()`, `FormEdit::salvar()`, `FormManager::duplicar()`, `FormManager::salvar()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `PeriodDetails::aplicarMudancaDeStatus()`, `ConteudoSeeder::run()` |
 | `Str::slug()` | `AvancarStatusNoFunilJob::handle()`, `ExportarRespostasFormularioJob::handle()`, `ProcessarImportacaoUniversalJob::processarInscricao()`, `ProcessarStatusEmLoteJob::handle()`, `FormularioFase::obterGatilhosDisparo()`, `AutomacaoForm::mount()`, `AutomacaoForm::listarGatilhosDeFasesDisponiveis()`, `ConteudoCategoriaManager::salvar()`, `ConteudoForm::salvar()`, `UserManager::save()`, `CursoManager::save()`, `FeatureService::create()`, `DynamicFields::setTipo()`, `DynamicFields::updatedConfiguracoesTipoAssinante()`, `DynamicFields::updatedLabel()`, `DynamicFields::salvarFormSettings()`, `Hub::criarFormularioAprendizagem()`, `FormEdit::salvar()`, `FormManager::duplicar()`, `FormManager::salvar()`, `AvaliacaoPdfController::exportar()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `PeriodEdit::salvar()`, `PeriodManager::proximoPasso()`, `PeriodManager::salvarPasso1Parcial()`, `PeriodManager::duplicar()`, `KanbanBoard::verificarAntiSpam()`, `KanbanBoard::executarMudancaStatusFinal()`, `RegistrationDetails::atualizarStatus()`, `RegistrationDetails::executarMudancaStatusFinal()`, `RegistrationManager::verificarAntiSpam()`, `RegistrationManager::executarMudancaStatusFinal()`, `StatusManager::save()`, `StudentManager::save()`, `RdCrmService::cadastrarFunilVendas()`, `TurnoManager::save()`, `UnidadeManager::save()`, `Inscricao::salvarRascunhoSilencioso()`, `Inscricao::salvarProgresso()`, `WithFichaPdfDownload::gerarStreamPdf()`, `Ciclo2026Seeder::run()`, `CompanyUsersSeeder::run()`, `ConteudoSeeder::run()` |
@@ -15328,6 +15628,7 @@ _View estática._
 | `Indexer::addBlade()` | `Main::run()` |
 | `Indexer::addCaller()` | `Indexer::buildCallGraph()`, `Indexer::linkBlades()`, `Indexer::linkRoutes()` |
 | `Indexer::addDark()` | `Main::run()` |
+| `Indexer::addFeatures()` | `Main::run()` |
 | `Indexer::addPhpFile()` | `Main::run()` |
 | `Indexer::addRoutes()` | `Main::run()` |
 | `Indexer::addTextos()` | `Main::run()` |
@@ -15355,7 +15656,7 @@ _View estática._
 | `MarkdownWriter::chaveComponente()` | `MarkdownWriter::corpoDark()` |
 | `MarkdownWriter::corpoDark()` | `MarkdownWriter::temaEscuro()`, `MarkdownWriter::renderDarkAvulso()` |
 | `MarkdownWriter::corpoTextos()` | `MarkdownWriter::textosDoSistema()`, `MarkdownWriter::renderTextosAvulso()` |
-| `MarkdownWriter::curto()` | `MarkdownWriter::pontosDeEntrada()`, `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`, `MarkdownWriter::renderClasse()`, `MarkdownWriter::renderMetodo()`, `MarkdownWriter::viewsBlade()`, `MarkdownWriter::tabelaElementos()`, `MarkdownWriter::indiceReverso()`, `MarkdownWriter::modelsUsados()`, `MarkdownWriter::eventosLivewire()`, `MarkdownWriter::gatilhos()`, `MarkdownWriter::grafo()`, `MarkdownWriter::tabelaPermissoes()`, `MarkdownWriter::indiceFuncoes()`, `MarkdownWriter::curto()`, `MarkdownWriter::listaCodigo()` |
+| `MarkdownWriter::curto()` | `MarkdownWriter::pontosDeEntrada()`, `MarkdownWriter::umDiagramaSequencia()`, `MarkdownWriter::passosSequencia()`, `MarkdownWriter::renderClasse()`, `MarkdownWriter::renderMetodo()`, `MarkdownWriter::viewsBlade()`, `MarkdownWriter::tabelaElementos()`, `MarkdownWriter::indiceReverso()`, `MarkdownWriter::modelsUsados()`, `MarkdownWriter::eventosLivewire()`, `MarkdownWriter::gatilhos()`, `MarkdownWriter::grafo()`, `MarkdownWriter::tabelaFeatures()`, `MarkdownWriter::tabelaPermissoes()`, `MarkdownWriter::indiceFuncoes()`, `MarkdownWriter::curto()`, `MarkdownWriter::listaCodigo()` |
 | `MarkdownWriter::diagramaBanco()` | `MarkdownWriter::render()` |
 | `MarkdownWriter::diagramasSequencia()` | `MarkdownWriter::render()` |
 | `MarkdownWriter::diretorioDe()` | `MarkdownWriter::corpoTextos()`, `MarkdownWriter::tabelaPalavras()`, `MarkdownWriter::ondeAparece()` |
@@ -15388,6 +15689,7 @@ _View estática._
 | `MarkdownWriter::renderTextosAvulso()` | `Main::run()` |
 | `MarkdownWriter::somarMapa()` | `MarkdownWriter::corpoDark()` |
 | `MarkdownWriter::tabelaElementos()` | `MarkdownWriter::viewsBlade()` |
+| `MarkdownWriter::tabelaFeatures()` | `MarkdownWriter::permissoesFeatures()` |
 | `MarkdownWriter::tabelaPalavras()` | `MarkdownWriter::corpoTextos()` |
 | `MarkdownWriter::tabelaPermissoes()` | `MarkdownWriter::permissoesFeatures()` |
 | `MarkdownWriter::tagClasse()` | `MarkdownWriter::renderMetodo()` |
@@ -15411,7 +15713,7 @@ _View estática._
 | `PhpAnalyzer::readName()` | `VoltAnalyzer::analyze()`, `VoltAnalyzer::classesDoArray()` |
 | `PhpAnalyzer::readUses()` | `VoltAnalyzer::analyze()` |
 | `PhpAnalyzer::resolve()` | `RouteAnalyzer::analyze()`, `VoltAnalyzer::parseArrow()`, `VoltAnalyzer::classesDoArray()` |
-| `PhpToken::tokenize()` | `PhpAnalyzer::analyze()`, `VoltAnalyzer::analyze()`, `MigrationAnalyzer::analyze()`, `ExtratorPhp::extrair()` |
+| `PhpToken::tokenize()` | `PhpAnalyzer::analyze()`, `VoltAnalyzer::analyze()`, `MigrationAnalyzer::analyze()`, `ExtratorPhp::extrair()`, `FeatureScanner::semComentarios()` |
 | `RecursiveIteratorIterator::LEAVES_ONLY()` | `Scanner::scan()`, `Scanner::loadBaseline()` |
 | `RouteAnalyzer::analyze()` | `Main::run()` |
 | `Scanner::__construct()` | `Main::run()` |
@@ -15451,15 +15753,15 @@ _View estática._
 | `TemaClasses::classificar()` | `ExtratorDark::montar()` |
 | `TemaClasses::ehMarcadorDark()` | `ExtratorCss::classesDe()`, `ExtratorDark::tags()` |
 | `TemaClasses::tomCss()` | `ExtratorCss::fechar()` |
-| `Textos::cortar()` | `ExtratorCss::regraDark()`, `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `MarkdownWriter::celulaTexto()` |
+| `Textos::cortar()` | `ExtratorCss::regraDark()`, `ExtratorDark::tags()`, `ExtratorDark::citacoes()`, `FeatureScanner::dinamico()`, `MarkdownWriter::celulaTexto()` |
 | `Textos::decodificarEcos()` | `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorDark::tags()`, `ExtratorDark::classesDaTag()` |
 | `Textos::minusculas()` | `ExtratorPhp::contextoTexto()`, `MarkdownWriter::tabelaPalavras()` |
-| `Textos::normalizar()` | `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()`, `ExtratorDark::tags()` |
+| `Textos::normalizar()` | `ExtratorHtml::descarregar()`, `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()`, `ExtratorDark::tags()`, `FeatureScanner::dinamico()` |
 | `Textos::pareceTexto()` | `ExtratorHtml::atributos()`, `ExtratorHtml::literais()`, `ExtratorHtml::literaisGenericos()`, `ExtratorHtml::diretivas()`, `ExtratorPhp::tratar()`, `ExtratorJs::extrair()`, `Extrator::extrair()` |
 | `Textos::semPlaceholders()` | `ExtratorHtml::descarregar()`, `MarkdownWriter::tabelaPalavras()` |
 | `Textos::temHtml()` | `ExtratorPhp::tratar()`, `ExtratorJs::extrair()` |
 | `Textos::temLetra()` | `ExtratorHtml::descarregar()` |
-| `Textos::utf8()` | `ExtratorHtml::extrair()`, `ExtratorPhp::extrair()`, `ExtratorJs::extrair()`, `ExtratorCss::extrair()`, `ExtratorDark::extrair()` |
+| `Textos::utf8()` | `ExtratorHtml::extrair()`, `ExtratorPhp::extrair()`, `ExtratorJs::extrair()`, `ExtratorCss::extrair()`, `ExtratorDark::extrair()`, `FeatureScanner::extrair()` |
 | `VoltAnalyzer::analyze()` | `Main::run()` |
 | `VoltAnalyzer::isVolt()` | `Main::run()` |
 | `parent::__construct()` | `EloquentCursoRepository::__construct()`, `EloquentTurnoRepository::__construct()`, `EloquentUnidadeRepository::__construct()` |
@@ -15498,6 +15800,7 @@ _View estática._
 - `RegistrationDetails::logsMovimentacao`
 - `AppServiceProvider::boot`
 - `RegistraAuditoria::salvarLogAuditoria`
+- `ValidaAcesso::registrarLogAcessoNegado`
 
 ### `App\Models\CampoFormulario`
 - `ProcessarLiberacaoFasesCommand::processarDisparoFormularioPublico`
@@ -15516,6 +15819,7 @@ _View estática._
 - `DynamicFields::carregarEtapas`
 - `DynamicFields::loadFormSettings`
 - `DynamicFields::limiteOrdem`
+- `DynamicFields::getCamposDisponiveisParaCondicaoProperty`
 - `DynamicFields::editar`
 - `DynamicFields::excluirCamposSelecionados`
 - `DynamicFields::salvarFormSettings`
@@ -15776,7 +16080,8 @@ _View estática._
 - `FormularioAprendizagem::regrasPorEtapa`
 - `FormularioAprendizagem::salvarEAvancar`
 - `FormularioAprendizagem::$formulario`
-- `RegistrationDetails::formulariosDisponiveisEmbed`
+- `RegistrationDetails::formulariosPaginados`
+- `RegistrationDetails::verHistoricoFormulario`
 - `RegistrationDetails::abrirFormularioEmbed`
 - `SystemTaskManager::mount`
 - `SystemTaskManager::solicitarExportacao`
@@ -15866,6 +16171,8 @@ _View estática._
 - `RegistrationDetails::carregarStatusArquivos`
 - `RegistrationDetails::updatedUploads`
 - `RegistrationDetails::aprovarDocumentoManualmente`
+- `RegistrationDetails::formulariosPaginados`
+- `RegistrationDetails::verHistoricoFormulario`
 - `RegistrationDetails::abrirFormularioEmbed`
 - `RegistrationDetails::fecharFormularioEmbed`
 - `RegistrationDetails::contatosRegistrados`
@@ -16242,7 +16549,6 @@ _View estática._
 - `ComunicadoForm::salvar`
 - `ComunicadoForm::render`
 - `ComunicadoManager::render`
-- `SuriTestDashboard::sincronizarTemplateLocal`
 - `SuriTestDashboard::render`
 - `TemplateForm::mount`
 - `TemplateForm::getPayloadSuriPreviewProperty`
@@ -16587,12 +16893,13 @@ _View estática._
 
 ### `App\Modules\Teste\Suri\Models\SuriTestLog`
 - `SuriTestDashboard::mount`
-- `SuriTestDashboard::registrarResultado`
 - `SuriTestDashboard::carregarLogNoConsole`
 - `SuriTestDashboard::replayLog`
 - `SuriTestDashboard::excluirLog`
 - `SuriTestDashboard::limparTodosOsLogs`
 - `SuriTestDashboard::render`
+- `SuriApiService::getEndpoint`
+- `SuriApiService::postEndpoint`
 
 ### `App\Modules\Turno\Domain\Models\Turno`
 - `ExportarRespostasFormularioJob::handle`
@@ -19050,7 +19357,7 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | `chart-click` | — | `Dashboard::processarCliqueGrafico()` |
 | `comentario-adicionado` | `OrcamentoEditor::adicionarComentarioGlobal()`, `OrcamentoEditor::adicionarComentarioPorItem()` | ⚠️ _nenhum ouvinte encontrado_ |
 | `copiar-para-clipboard` | `PeriodDetails::gerarLinkRetomada()`, `RegistrationManager::gerarLinkRetomada()` | ⚠️ _nenhum ouvinte encontrado_ |
-| `erro` | `RoleManager::edit()`, `RoleManager::delete()`, `Login::authenticate()`, `AutomacaoManager::previewTemplate()`, `EsteiraDetails::reenviarEtapa()`, `EsteiraForm::removerEtapa()`, `ComunicadoManager::excluir()`, `SuriTestDashboard::registrarResultado()`, `SuriTestDashboard::sincronizarTemplateLocal()`, `TemplateForm::adicionarBotao()`, `TemplateForm::salvar()`, `TemplateManager::inspecionarTemplateSuriEspecifico()`, `TemplateManager::importarTemplateDaSuriParaLocal()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::excluir()`, `ConteudoCategoriaManager::excluir()`, `ConteudoForm::salvar()`, `ConteudoManager::salvarDestaque()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::edit()`, `UserManager::delete()`, `CentroCustoManager::sincronizarProtheus()`, `NaturezaManager::sincronizarProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoAprovacaoEditor::definirStatusItem()`, `OrcamentoAprovacaoEditor::aplicarDecisaoLote()`, `OrcamentoAprovacaoEditor::adicionarMotivoRevisaoNoDrawer()`, `OrcamentoAprovacaoEditor::adicionarComentarioGlobal()`, `OrcamentoAprovacaoEditor::adicionarComentarioPorItem()`, `OrcamentoAprovacaoManager::resetarStatusOrcamento()`, `OrcamentoEditor::liberarItemParaAprovacao()`, `OrcamentoEditor::liberarSelecionadosParaAprovacao()`, `OrcamentoEditor::removerItem()`, `OrcamentoEditor::salvarOrcamento()`, `OrcamentoEditor::finalizarOrcamento()`, `OrcamentoEditor::integrarComProtheus()`, `OrcamentoEditor::adicionarComentarioGlobal()`, `OrcamentoEditor::adicionarComentarioPorItem()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::sincronizarCadastrosProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `OrcamentoManager::sincronizarProtheus()`, `OrcamentoManager::verJsonConsolidado()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::excluirEtapa()`, `FormDetails::solicitarExportacao()`, `FormManager::solicitarExportacao()`, `FormSpreadsheet::solicitarExportacao()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `Detalhes::adicionarFase()`, `Detalhes::removerFase()`, `Detalhes::salvar()`, `Listagem::excluir()`, `Listagem::excluir()`, `PortalMatricula::finalizarMatricula()`, `PeriodEdit::removerStatusPipeline()`, `PeriodEdit::removeDocumento()`, `PeriodManager::removerStatusPipeline()`, `PeriodManager::delete()`, `RegrasManager::salvar()`, `KanbanBoard::atualizarStatus()`, `KanbanBoard::validarVagasDisponiveisParaAprovacao()`, `KanbanBoard::quickChangeStatus()`, `KanbanBoard::moverLote()`, `KanbanBoard::removerConflitoAntiSpam()`, `RegistrationDetails::abrirFormularioEmbed()`, `RegistrationDetails::atualizarStatus()`, `RegistrationManager::validarVagasDisponiveisParaAprovacao()`, `RegistrationManager::alterarStatusQuickView()`, `RegistrationManager::abrirModalSolicitacao()`, `RegistrationManager::executarSelecaoAvancada()`, `RegistrationManager::solicitarExportacao()`, `RegistrationManager::alterarStatusLoteRapido()`, `RegistrationManager::removerConflitoAntiSpam()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `RegistrationManager::avancarSelecionadas()`, `StatusManager::delete()`, `DocumentManager::finalizarMatricula()`, `ProfileManager::finalizarMatricula()`, `SystemTaskManager::reprocessar()`, `SystemTaskManager::baixarErros()`, `SystemTaskManager::baixarArquivoOriginal()`, `SystemTaskManager::solicitarExportacao()`, `RdCrmManager::atualizarFunis()`, `RdCrmManager::forcarEnvioPendentes()`, `RdCrmManager::processarInput()`, `Inscricao::avancarEtapa()`, `Inscricao::updatedDataNascimento()` | ⚠️ _nenhum ouvinte encontrado_ |
+| `erro` | `RoleManager::edit()`, `RoleManager::delete()`, `Login::authenticate()`, `AutomacaoManager::previewTemplate()`, `EsteiraDetails::reenviarEtapa()`, `EsteiraForm::removerEtapa()`, `ComunicadoManager::excluir()`, `SuriTestDashboard::registrarResultado()`, `TemplateForm::adicionarBotao()`, `TemplateForm::salvar()`, `TemplateManager::inspecionarTemplateSuriEspecifico()`, `TemplateManager::importarTemplateDaSuriParaLocal()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::excluir()`, `ConteudoCategoriaManager::excluir()`, `ConteudoForm::salvar()`, `ConteudoManager::salvarDestaque()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::edit()`, `UserManager::delete()`, `CentroCustoManager::sincronizarProtheus()`, `NaturezaManager::sincronizarProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoAprovacaoEditor::definirStatusItem()`, `OrcamentoAprovacaoEditor::aplicarDecisaoLote()`, `OrcamentoAprovacaoEditor::adicionarMotivoRevisaoNoDrawer()`, `OrcamentoAprovacaoEditor::adicionarComentarioGlobal()`, `OrcamentoAprovacaoEditor::adicionarComentarioPorItem()`, `OrcamentoAprovacaoManager::resetarStatusOrcamento()`, `OrcamentoEditor::liberarItemParaAprovacao()`, `OrcamentoEditor::liberarSelecionadosParaAprovacao()`, `OrcamentoEditor::removerItem()`, `OrcamentoEditor::salvarOrcamento()`, `OrcamentoEditor::finalizarOrcamento()`, `OrcamentoEditor::integrarComProtheus()`, `OrcamentoEditor::adicionarComentarioGlobal()`, `OrcamentoEditor::adicionarComentarioPorItem()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::sincronizarCadastrosProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `OrcamentoManager::sincronizarProtheus()`, `OrcamentoManager::verJsonConsolidado()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::confirmarCondicoesAvancadas()`, `DynamicFields::excluirEtapa()`, `FormDetails::solicitarExportacao()`, `FormManager::solicitarExportacao()`, `FormSpreadsheet::solicitarExportacao()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `Detalhes::adicionarFase()`, `Detalhes::removerFase()`, `Detalhes::salvar()`, `Listagem::excluir()`, `Listagem::excluir()`, `PortalMatricula::finalizarMatricula()`, `PeriodEdit::removerStatusPipeline()`, `PeriodEdit::removeDocumento()`, `PeriodManager::removerStatusPipeline()`, `PeriodManager::delete()`, `RegrasManager::salvar()`, `KanbanBoard::atualizarStatus()`, `KanbanBoard::validarVagasDisponiveisParaAprovacao()`, `KanbanBoard::quickChangeStatus()`, `KanbanBoard::moverLote()`, `KanbanBoard::removerConflitoAntiSpam()`, `RegistrationDetails::abrirFormularioEmbed()`, `RegistrationDetails::atualizarStatus()`, `RegistrationManager::validarVagasDisponiveisParaAprovacao()`, `RegistrationManager::alterarStatusQuickView()`, `RegistrationManager::abrirModalSolicitacao()`, `RegistrationManager::executarSelecaoAvancada()`, `RegistrationManager::solicitarExportacao()`, `RegistrationManager::alterarStatusLoteRapido()`, `RegistrationManager::removerConflitoAntiSpam()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `RegistrationManager::avancarSelecionadas()`, `StatusManager::delete()`, `DocumentManager::finalizarMatricula()`, `ProfileManager::finalizarMatricula()`, `SystemTaskManager::reprocessar()`, `SystemTaskManager::baixarErros()`, `SystemTaskManager::baixarArquivoOriginal()`, `SystemTaskManager::solicitarExportacao()`, `RdCrmManager::atualizarFunis()`, `RdCrmManager::forcarEnvioPendentes()`, `RdCrmManager::processarInput()`, `Inscricao::avancarEtapa()`, `Inscricao::updatedDataNascimento()`, `ValidaAcesso::autorizarAcao()` | ⚠️ _nenhum ouvinte encontrado_ |
 | `inscricao-concluida` | `Inscricao::avancarEtapa()` | ⚠️ _nenhum ouvinte encontrado_ |
 | `item-adicionado` | `OrcamentoEditor::adicionarItem()` | ⚠️ _nenhum ouvinte encontrado_ |
 | `limpar-storage-formulario` | `FormularioPublico::avancarEtapa()` | ⚠️ _nenhum ouvinte encontrado_ |
@@ -19063,7 +19370,7 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | `quick-change-status-crm` | — | `KanbanBoard::quickChangeStatus()` |
 | `show-quick-view-drawer` | `QuickViewDrawer::loadData()` | ⚠️ _nenhum ouvinte encontrado_ |
 | `sincronizar-quill-builder` | `DynamicFields::setTipo()`, `DynamicFields::editar()`, `DynamicFields::cancelarEdicao()` | ⚠️ _nenhum ouvinte encontrado_ |
-| `sucesso` | `PermissionManager::efetivarSalvar()`, `PermissionManager::excluir()`, `RoleManager::save()`, `RoleManager::delete()`, `RolePermissionManager::updatedSelectedPermissions()`, `ConfiguracoesGeraisManager::salvar()`, `SolicitacoesManager::confirmarResposta()`, `ErrorLogManager::alternarResolvido()`, `ErrorLogManager::eliminarErro()`, `ErrorLogManager::limparTodos()`, `ProfileManager::updateProfile()`, `ProfileManager::updatePassword()`, `AutomacaoDetails::alternarStatusRegra()`, `AutomacaoForm::salvar()`, `AutomacaoManager::toggleStatus()`, `AutomacaoManager::excluir()`, `EsteiraDetails::alternarStatusEsteira()`, `EsteiraDetails::processarEsteiraAgora()`, `EsteiraDetails::reenviarEtapa()`, `EsteiraDetails::cancelarEtapasDestinatario()`, `EsteiraDetails::reativarDestinatario()`, `EsteiraForm::confirmarConfigComboAcademico()`, `EsteiraForm::salvar()`, `EsteiraManager::toggleStatus()`, `EsteiraManager::processarAgora()`, `EsteiraManager::excluir()`, `ComunicadoForm::salvar()`, `ComunicadoManager::excluir()`, `SuriTestDashboard::registrarResultado()`, `SuriTestDashboard::excluirLog()`, `SuriTestDashboard::limparTodosOsLogs()`, `SuriTestDashboard::selecionarContatoSuri()`, `SuriTestDashboard::sincronizarTemplateLocal()`, `TemplateForm::salvar()`, `TemplateManager::carregarTemplatesDaSuri()`, `TemplateManager::importarTemplateDaSuriParaLocal()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::excluir()`, `ConteudoCategoriaManager::salvar()`, `ConteudoCategoriaManager::excluir()`, `ConteudoCategoriaManager::toggleStatus()`, `ConteudoForm::salvar()`, `ConteudoManager::toggleStatus()`, `ConteudoManager::excluir()`, `ConteudoManager::salvarDestaque()`, `ConteudoManager::removerDestaque()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::delete()`, `CursoManager::save()`, `CursoManager::delete()`, `FeatureManager::efetivarSalvar()`, `FeatureManager::excluir()`, `FeatureManager::toggleStatus()`, `CentroCustoManager::sincronizarProtheus()`, `NaturezaManager::sincronizarProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoAprovacaoEditor::aplicarDecisaoLote()`, `OrcamentoAprovacaoEditor::aprovarReabertura()`, `OrcamentoAprovacaoEditor::negarReabertura()`, `OrcamentoAprovacaoManager::resetarStatusOrcamento()`, `OrcamentoEditor::liberarItemParaAprovacao()`, `OrcamentoEditor::liberarSelecionadosParaAprovacao()`, `OrcamentoEditor::removerItem()`, `OrcamentoEditor::removerItensSelecionados()`, `OrcamentoEditor::salvarOrcamento()`, `OrcamentoEditor::finalizarOrcamento()`, `OrcamentoEditor::integrarComProtheus()`, `OrcamentoEditor::solicitarReabertura()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::sincronizarCadastrosProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `OrcamentoManager::sincronizarProtheus()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::salvarFases()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::confirmarConfigComboAcademico()`, `Hub::salvarVinculoFormulario()`, `Hub::alternarStatusRascunho()`, `FormDetails::excluirResposta()`, `FormDetails::solicitarExportacao()`, `FormManager::solicitarExportacao()`, `FormManager::duplicar()`, `FormManager::salvar()`, `FormManager::excluir()`, `FormSpreadsheet::solicitarExportacao()`, `Responder::salvarFase()`, `Responder::enviarSolicitacao()`, `Responder::executarSelfUnlock()`, `Responder::enviarSolicitacaoTotal()`, `Listagem::salvar()`, `FormularioAprendizagem::salvarEAvancar()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `Listagem::excluir()`, `Listagem::excluir()`, `Listagem::excluir()`, `IaConfigManager::salvarConfiguracaoIa()`, `IaConfigManager::salvarCombined()`, `IaConfigManager::salvarProvider()`, `IaConfigManager::excluirProvider()`, `IaConfigManager::salvarModel()`, `IaConfigManager::excluirModel()`, `IaConfigManager::adicionarDocumento()`, `IaConfigManager::excluirDocumento()`, `PortalMatricula::verificarIdentidade()`, `PortalMatricula::sair()`, `ProcessoMatriculaManager::aprovarDocumento()`, `ProcessoMatriculaManager::reprovarDocumento()`, `PeriodDetails::toggleStatus()`, `PeriodDetails::alterarStatusQuickView()`, `PeriodDetails::gerarLinkRetomada()`, `PeriodDetails::salvarStatusEmLote()`, `PeriodDetails::alterarStatusLoteRapido()`, `PeriodDetails::recalcularPontuacoes()`, `PeriodDetails::gerarRanking()`, `PeriodManager::toggleStatus()`, `PeriodManager::salvarPasso5Final()`, `PeriodManager::delete()`, `PeriodManager::toggleBloqueio()`, `PeriodManager::duplicar()`, `RegrasManager::salvar()`, `KanbanBoard::executarMudancaStatusFinal()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::aprovarDocumentoManualmente()`, `RegistrationDetails::executarMudancaStatusFinal()`, `RegistrationManager::gerarLinkRetomada()`, `RegistrationManager::moverCicloLote()`, `RegistrationManager::salvarNovaInscricao()`, `RegistrationManager::excluirInscricao()`, `RegistrationManager::enviarSolicitacaoAlteracao()`, `RegistrationManager::selecionarQuantidade()`, `RegistrationManager::executarSelecaoAvancada()`, `RegistrationManager::solicitarExportacao()`, `RegistrationManager::executarMudancaStatusFinal()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `RegistrationManager::salvarContato()`, `RegistrationManager::excluirRegistroContato()`, `RegistrationManager::avancarSelecionadas()`, `StatusManager::toggleVisibilidade()`, `StatusManager::save()`, `StatusManager::delete()`, `Dashboard::salvarSolicitacao()`, `ProfileManager::finalizarMatricula()`, `ProfileManager::updateProfile()`, `ProfileManager::updatePassword()`, `StudentManager::save()`, `StudentManager::delete()`, `StudentManager::toggleMatriculado()`, `SystemTaskConfigManager::salvar()`, `SystemTaskConfigManager::excluir()`, `SystemTaskManager::reprocessar()`, `SystemTaskManager::cancelarImportacao()`, `SystemTaskManager::baixarExportacao()`, `SystemTaskManager::solicitarExportacao()`, `SystemTaskManager::excluirImportacao()`, `SystemTaskManager::reentrarNaFila()`, `RdCrmManager::atualizarFunis()`, `RdCrmManager::forcarEnvioPendentes()`, `RdCrmManager::criarCadastroTeste()`, `RdCrmManager::processarInput()`, `TurnoManager::save()`, `TurnoManager::delete()`, `UnidadeManager::save()`, `UnidadeManager::delete()`, `UnidadeManager::toggleStatus()`, `Inscricao::tentarRecuperarRascunho()`, `WithEditingLock::requestControl()`, `WithEditingLock::takeOverLock()`, `WithToggleStatus::toggleStatus()` | `NotificationBadge::atualizarContador()` |
+| `sucesso` | `PermissionManager::efetivarSalvar()`, `PermissionManager::excluir()`, `RoleManager::save()`, `RoleManager::delete()`, `RolePermissionManager::updatedSelectedPermissions()`, `ConfiguracoesGeraisManager::salvar()`, `SolicitacoesManager::confirmarResposta()`, `ErrorLogManager::alternarResolvido()`, `ErrorLogManager::eliminarErro()`, `ErrorLogManager::limparTodos()`, `ProfileManager::updateProfile()`, `ProfileManager::updatePassword()`, `AutomacaoDetails::alternarStatusRegra()`, `AutomacaoForm::salvar()`, `AutomacaoManager::toggleStatus()`, `AutomacaoManager::excluir()`, `EsteiraDetails::alternarStatusEsteira()`, `EsteiraDetails::processarEsteiraAgora()`, `EsteiraDetails::reenviarEtapa()`, `EsteiraDetails::cancelarEtapasDestinatario()`, `EsteiraDetails::reativarDestinatario()`, `EsteiraForm::confirmarConfigComboAcademico()`, `EsteiraForm::salvar()`, `EsteiraManager::toggleStatus()`, `EsteiraManager::processarAgora()`, `EsteiraManager::excluir()`, `ComunicadoForm::salvar()`, `ComunicadoManager::excluir()`, `SuriTestDashboard::registrarResultado()`, `SuriTestDashboard::excluirLog()`, `SuriTestDashboard::limparTodosOsLogs()`, `SuriTestDashboard::selecionarContatoSuri()`, `TemplateForm::salvar()`, `TemplateManager::carregarTemplatesDaSuri()`, `TemplateManager::importarTemplateDaSuriParaLocal()`, `TemplateManager::sincronizarSuri()`, `TemplateManager::excluir()`, `ConteudoCategoriaManager::salvar()`, `ConteudoCategoriaManager::excluir()`, `ConteudoCategoriaManager::toggleStatus()`, `ConteudoForm::salvar()`, `ConteudoManager::toggleStatus()`, `ConteudoManager::excluir()`, `ConteudoManager::salvarDestaque()`, `ConteudoManager::removerDestaque()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::delete()`, `CursoManager::save()`, `CursoManager::delete()`, `FeatureManager::efetivarSalvar()`, `FeatureManager::excluir()`, `FeatureManager::toggleStatus()`, `CentroCustoManager::sincronizarProtheus()`, `NaturezaManager::sincronizarProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoAprovacaoEditor::aplicarDecisaoLote()`, `OrcamentoAprovacaoEditor::aprovarReabertura()`, `OrcamentoAprovacaoEditor::negarReabertura()`, `OrcamentoAprovacaoManager::resetarStatusOrcamento()`, `OrcamentoEditor::liberarItemParaAprovacao()`, `OrcamentoEditor::liberarSelecionadosParaAprovacao()`, `OrcamentoEditor::removerItem()`, `OrcamentoEditor::removerItensSelecionados()`, `OrcamentoEditor::salvarOrcamento()`, `OrcamentoEditor::finalizarOrcamento()`, `OrcamentoEditor::integrarComProtheus()`, `OrcamentoEditor::solicitarReabertura()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::sincronizarCadastrosProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `OrcamentoManager::sincronizarProtheus()`, `DynamicFields::moverCamposSelecionadosParaEtapa()`, `DynamicFields::moverSelecionadosNaMesmaEtapa()`, `DynamicFields::salvarFases()`, `DynamicFields::confirmarCondicoesAvancadas()`, `DynamicFields::excluirCamposSelecionados()`, `DynamicFields::salvarFormSettings()`, `DynamicFields::salvar()`, `DynamicFields::excluir()`, `DynamicFields::adicionarEtapa()`, `DynamicFields::excluirEtapa()`, `DynamicFields::confirmarConfigComboAcademico()`, `Hub::salvarVinculoFormulario()`, `Hub::alternarStatusRascunho()`, `FormDetails::excluirResposta()`, `FormDetails::solicitarExportacao()`, `FormManager::solicitarExportacao()`, `FormManager::duplicar()`, `FormManager::salvar()`, `FormManager::excluir()`, `FormSpreadsheet::solicitarExportacao()`, `Responder::salvarFase()`, `Responder::enviarSolicitacao()`, `Responder::executarSelfUnlock()`, `Responder::enviarSolicitacaoTotal()`, `Listagem::salvar()`, `FormularioAprendizagem::salvarEAvancar()`, `GeradorMock::gerarAmbienteCompleto()`, `GeradorMockAprendizagem::gerarAmbienteCompleto()`, `Listagem::excluir()`, `Listagem::excluir()`, `Listagem::excluir()`, `IaConfigManager::salvarConfiguracaoIa()`, `IaConfigManager::salvarCombined()`, `IaConfigManager::salvarProvider()`, `IaConfigManager::excluirProvider()`, `IaConfigManager::salvarModel()`, `IaConfigManager::excluirModel()`, `IaConfigManager::adicionarDocumento()`, `IaConfigManager::excluirDocumento()`, `PortalMatricula::verificarIdentidade()`, `PortalMatricula::sair()`, `ProcessoMatriculaManager::aprovarDocumento()`, `ProcessoMatriculaManager::reprovarDocumento()`, `PeriodDetails::toggleStatus()`, `PeriodDetails::alterarStatusQuickView()`, `PeriodDetails::gerarLinkRetomada()`, `PeriodDetails::salvarStatusEmLote()`, `PeriodDetails::alterarStatusLoteRapido()`, `PeriodDetails::recalcularPontuacoes()`, `PeriodDetails::gerarRanking()`, `PeriodManager::toggleStatus()`, `PeriodManager::salvarPasso5Final()`, `PeriodManager::delete()`, `PeriodManager::toggleBloqueio()`, `PeriodManager::duplicar()`, `RegrasManager::salvar()`, `KanbanBoard::executarMudancaStatusFinal()`, `RegistrationDetails::salvarEdicaoAssistida()`, `RegistrationDetails::updatedUploads()`, `RegistrationDetails::aprovarDocumentoManualmente()`, `RegistrationDetails::executarMudancaStatusFinal()`, `RegistrationManager::gerarLinkRetomada()`, `RegistrationManager::moverCicloLote()`, `RegistrationManager::salvarNovaInscricao()`, `RegistrationManager::excluirInscricao()`, `RegistrationManager::enviarSolicitacaoAlteracao()`, `RegistrationManager::selecionarQuantidade()`, `RegistrationManager::executarSelecaoAvancada()`, `RegistrationManager::solicitarExportacao()`, `RegistrationManager::executarMudancaStatusFinal()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `RegistrationManager::salvarContato()`, `RegistrationManager::excluirRegistroContato()`, `RegistrationManager::avancarSelecionadas()`, `StatusManager::toggleVisibilidade()`, `StatusManager::save()`, `StatusManager::delete()`, `Dashboard::salvarSolicitacao()`, `ProfileManager::finalizarMatricula()`, `ProfileManager::updateProfile()`, `ProfileManager::updatePassword()`, `StudentManager::save()`, `StudentManager::delete()`, `StudentManager::toggleMatriculado()`, `SystemTaskConfigManager::salvar()`, `SystemTaskConfigManager::excluir()`, `SystemTaskManager::reprocessar()`, `SystemTaskManager::cancelarImportacao()`, `SystemTaskManager::baixarExportacao()`, `SystemTaskManager::solicitarExportacao()`, `SystemTaskManager::excluirImportacao()`, `SystemTaskManager::reentrarNaFila()`, `RdCrmManager::atualizarFunis()`, `RdCrmManager::forcarEnvioPendentes()`, `RdCrmManager::criarCadastroTeste()`, `RdCrmManager::processarInput()`, `TurnoManager::save()`, `TurnoManager::delete()`, `UnidadeManager::save()`, `UnidadeManager::delete()`, `UnidadeManager::toggleStatus()`, `Inscricao::tentarRecuperarRascunho()`, `WithEditingLock::requestControl()`, `WithEditingLock::takeOverLock()`, `WithToggleStatus::toggleStatus()` | `NotificationBadge::atualizarContador()` |
 
 ---
 
@@ -19072,8 +19379,8 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Tipo | Origem | Alvo | Parâmetros | Local |
 | --- | --- | --- | --- | --- |
 | Livewire dispatch | `QuickViewDrawer::loadData` | `show-quick-view-drawer` | — | `app/Livewire/Components/QuickViewDrawer.php:26` |
-| Livewire dispatch | `PermissionManager::efetivarSalvar` | `sucesso` | `msg:$this->permissionId?'Permissão e Feature atu…` | `app/Modules/ACL/UI/Livewire/PermissionManager.php:246` |
-| Livewire dispatch | `PermissionManager::excluir` | `sucesso` | `msg:'Permissão excluída com sucesso.'` | `app/Modules/ACL/UI/Livewire/PermissionManager.php:255` |
+| Livewire dispatch | `PermissionManager::efetivarSalvar` | `sucesso` | `msg:$this->permissionId?'Permissão e Feature atu…` | `app/Modules/ACL/UI/Livewire/PermissionManager.php:240` |
+| Livewire dispatch | `PermissionManager::excluir` | `sucesso` | `msg:'Permissão excluída com sucesso.'` | `app/Modules/ACL/UI/Livewire/PermissionManager.php:250` |
 | Livewire dispatch | `RoleManager::edit` | `erro` | `msg:'A Role DEV não pode ser alterada.'` | `app/Modules/ACL/UI/Livewire/RoleManager.php:68` |
 | Livewire dispatch | `RoleManager::save` | `sucesso` | `msg:$this->isEditMode?'Grupo atualizado!':'Grupos…` | `app/Modules/ACL/UI/Livewire/RoleManager.php:117` |
 | Livewire dispatch | `RoleManager::delete` | `erro` | `msg:'Grupos base do sistema não podem ser exclu�…` | `app/Modules/ACL/UI/Livewire/RoleManager.php:128` |
@@ -19081,7 +19388,7 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Livewire dispatch | `RolePermissionManager::updatedSelectedPermissions` | `sucesso` | `msg:'Permissões atualizadas e salvas automaticam…` | `app/Modules/ACL/UI/Livewire/RolePermissionManager.php:81` |
 | Livewire dispatch | `ConfiguracoesGeraisManager::salvar` | `sucesso` | `msg:'Configurações do sistema salvas e registra…` | `app/Modules/Admin/UI/Livewire/ConfiguracoesGeraisManager.php:65` |
 | Livewire dispatch | `SolicitacoesManager::confirmarResposta` | `sucesso` | `msg:'Solicitação processada com sucesso!'` | `app/Modules/Admin/UI/Livewire/SolicitacoesManager.php:146` |
-| Livewire dispatch | `AuditoriaManager::showQuickView` | `load-quick-view` | `['title'=>'Log de Registro #'.$log->id,'subtitle'…` | `app/Modules/Auditoria/UI/Livewire/AuditoriaManager.php:152` |
+| Livewire dispatch | `AuditoriaManager::showQuickView` | `load-quick-view` | `['title'=>'Log de Registro #'.$log->id,'subtitle'…` | `app/Modules/Auditoria/UI/Livewire/AuditoriaManager.php:153` |
 | Livewire dispatch | `ErrorLogManager::alternarResolvido` | `sucesso` | `msg:'Estado do erro atualizado com sucesso!'` | `app/Modules/Auditoria/UI/Livewire/ErrorLogManager.php:48` |
 | Livewire dispatch | `ErrorLogManager::eliminarErro` | `sucesso` | `msg:'Registo de erro removido.'` | `app/Modules/Auditoria/UI/Livewire/ErrorLogManager.php:54` |
 | Livewire dispatch | `ErrorLogManager::limparTodos` | `sucesso` | `msg:'Todos os registos de erros foram limpos.'` | `app/Modules/Auditoria/UI/Livewire/ErrorLogManager.php:60` |
@@ -19119,13 +19426,11 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Livewire dispatch | `ComunicadoManager::showQuickView` | `load-quick-view` | `['title'=>'Detalhes do Comunicado #'.$comunicado-…` | `app/Modules/Comunicacao/UI/Livewire/Comunicado/ComunicadoManager.php:80` |
 | Livewire dispatch | `ComunicadoManager::excluir` | `erro` | `msg:'Não é possível excluir um comunicado que …` | `app/Modules/Comunicacao/UI/Livewire/Comunicado/ComunicadoManager.php:102` |
 | Livewire dispatch | `ComunicadoManager::excluir` | `sucesso` | `msg:'Registro de comunicado removido com sucesso!'` | `app/Modules/Comunicacao/UI/Livewire/Comunicado/ComunicadoManager.php:113` |
-| Livewire dispatch | `SuriTestDashboard::registrarResultado` | `sucesso` | `msg:"{$acao}: Requisição executada e gravada no…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:168` |
-| Livewire dispatch | `SuriTestDashboard::registrarResultado` | `erro` | `msg:"{$acao}: Falha na requisição (HTTP {$resul…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:170` |
-| Livewire dispatch | `SuriTestDashboard::excluirLog` | `sucesso` | `msg:'Registro de log excluído.'` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:252` |
-| Livewire dispatch | `SuriTestDashboard::limparTodosOsLogs` | `sucesso` | `msg:'Histórico de logs de testes da Suri limpo c…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:261` |
-| Livewire dispatch | `SuriTestDashboard::selecionarContatoSuri` | `sucesso` | `msg:"Contato '{$id}' selecionado e carregado para…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:308` |
-| Livewire dispatch | `SuriTestDashboard::sincronizarTemplateLocal` | `sucesso` | `msg:"Template sincronizado! ID Suri: {$suriId}"` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:450` |
-| Livewire dispatch | `SuriTestDashboard::sincronizarTemplateLocal` | `erro` | `msg:'Falha ao sincronizar template com a Suri.'` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:452` |
+| Livewire dispatch | `SuriTestDashboard::registrarResultado` | `sucesso` | `msg:"{$acao}: Executada com sucesso (HTTP {$resul…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:141` |
+| Livewire dispatch | `SuriTestDashboard::registrarResultado` | `erro` | `msg:"{$acao}: Falha na requisição (HTTP {$resul…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:143` |
+| Livewire dispatch | `SuriTestDashboard::excluirLog` | `sucesso` | `msg:'Registro de log excluído.'` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:211` |
+| Livewire dispatch | `SuriTestDashboard::limparTodosOsLogs` | `sucesso` | `msg:'Histórico de logs de testes da Suri limpo c…` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:220` |
+| Livewire dispatch | `SuriTestDashboard::selecionarContatoSuri` | `sucesso` | `msg:"Contato '{$id}' selecionado para testes!"` | `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:259` |
 | Livewire dispatch | `TemplateForm::adicionarBotao` | `erro` | `msg:'Limite máximo de 10 botões por template at…` | `app/Modules/Comunicacao/UI/Livewire/Template/TemplateForm.php:148` |
 | Livewire dispatch | `TemplateForm::salvar` | `erro` | `msg:'Este template está sendo editado por outro …` | `app/Modules/Comunicacao/UI/Livewire/Template/TemplateForm.php:197` |
 | Livewire dispatch | `TemplateForm::salvar` | `erro` | `msg:"Template salvo localmente, mas falhou ao sin…` | `app/Modules/Comunicacao/UI/Livewire/Template/TemplateForm.php:331` |
@@ -19227,22 +19532,24 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Livewire dispatch | `OrcamentoManager::sincronizarProtheus` | `sucesso` | `msg:$resultado['mensagem']` | `app/Modules/Financeiro/UI/Livewire/OrcamentoManager.php:127` |
 | Livewire dispatch | `OrcamentoManager::sincronizarProtheus` | `erro` | `msg:$resultado['mensagem']` | `app/Modules/Financeiro/UI/Livewire/OrcamentoManager.php:129` |
 | Livewire dispatch | `OrcamentoManager::verJsonConsolidado` | `erro` | `msg:'Os dados consolidados só ficam disponíveis…` | `app/Modules/Financeiro/UI/Livewire/OrcamentoManager.php:143` |
-| Livewire dispatch | `DynamicFields::moverCamposSelecionadosParaEtapa` | `erro` | `msg:'Selecione uma página de destino e pelo meno…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:226` |
-| Livewire dispatch | `DynamicFields::moverCamposSelecionadosParaEtapa` | `sucesso` | `msg:"{$qtd} campo(s) movido(s) para a Página #{$…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:270` |
-| Livewire dispatch | `DynamicFields::moverSelecionadosNaMesmaEtapa` | `sucesso` | `msg:'Posição dos campos selecionados atualizada…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:313` |
-| Livewire dispatch | `DynamicFields::salvarFases` | `sucesso` | `msg:'Fases, bloqueios de data e gatilhos de autom…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:445` |
-| Livewire dispatch | `DynamicFields::setTipo` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:675` |
-| Livewire dispatch | `DynamicFields::editar` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:827` |
-| Livewire dispatch | `DynamicFields::excluirCamposSelecionados` | `sucesso` | `msg:"{$qtdRemovida} bloco(s) excluído(s) com suc…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:869` |
-| Livewire dispatch | `DynamicFields::cancelarEdicao` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:886` |
-| Livewire dispatch | `DynamicFields::salvarFormSettings` | `sucesso` | `msg:'Tema e aparência aplicados com sucesso!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:937` |
-| Livewire dispatch | `DynamicFields::salvar` | `sucesso` | `msg:$deveCriarEnderecoViaCep?'Campo CEP e todos o…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1263` |
-| Livewire dispatch | `DynamicFields::excluir` | `sucesso` | `msg:'Bloco removido do formulário!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1407` |
-| Livewire dispatch | `DynamicFields::adicionarEtapa` | `sucesso` | `msg:'Nova página adicionada!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1419` |
-| Livewire dispatch | `DynamicFields::excluirEtapa` | `erro` | `msg:'A 1º Fase é obrigatória e não pode ser e…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1439` |
-| Livewire dispatch | `DynamicFields::excluirEtapa` | `erro` | `msg:'Esta página possui campos. Mova-os ou exclu…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1449` |
-| Livewire dispatch | `DynamicFields::excluirEtapa` | `sucesso` | `msg:'Página removida e numeração das páginas …` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1508` |
-| Livewire dispatch | `DynamicFields::confirmarConfigComboAcademico` | `sucesso` | `msg:'Opções de Unidades, Cursos e Turnos aplica…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1606` |
+| Livewire dispatch | `DynamicFields::moverCamposSelecionadosParaEtapa` | `erro` | `msg:'Selecione uma página de destino e pelo meno…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:233` |
+| Livewire dispatch | `DynamicFields::moverCamposSelecionadosParaEtapa` | `sucesso` | `msg:"{$qtd} campo(s) movido(s) para a Página #{$…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:277` |
+| Livewire dispatch | `DynamicFields::moverSelecionadosNaMesmaEtapa` | `sucesso` | `msg:'Posição dos campos selecionados atualizada…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:320` |
+| Livewire dispatch | `DynamicFields::salvarFases` | `sucesso` | `msg:'Fases, bloqueios de data e gatilhos de autom…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:452` |
+| Livewire dispatch | `DynamicFields::setTipo` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:682` |
+| Livewire dispatch | `DynamicFields::confirmarCondicoesAvancadas` | `erro` | `msg:'Selecione o campo de referência em todas as…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1093` |
+| Livewire dispatch | `DynamicFields::confirmarCondicoesAvancadas` | `sucesso` | `msg:' Árvore de condições avançadas aplicada …` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1101` |
+| Livewire dispatch | `DynamicFields::editar` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1192` |
+| Livewire dispatch | `DynamicFields::excluirCamposSelecionados` | `sucesso` | `msg:"{$qtdRemovida} bloco(s) excluído(s) com suc…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1234` |
+| Livewire dispatch | `DynamicFields::cancelarEdicao` | `sincronizar-quill-builder` | — | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1252` |
+| Livewire dispatch | `DynamicFields::salvarFormSettings` | `sucesso` | `msg:'Tema e aparência aplicados com sucesso!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1303` |
+| Livewire dispatch | `DynamicFields::salvar` | `sucesso` | `msg:$deveCriarEnderecoViaCep?'Campo CEP e todos o…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1663` |
+| Livewire dispatch | `DynamicFields::excluir` | `sucesso` | `msg:'Bloco removido do formulário!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1807` |
+| Livewire dispatch | `DynamicFields::adicionarEtapa` | `sucesso` | `msg:'Nova página adicionada!'` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1819` |
+| Livewire dispatch | `DynamicFields::excluirEtapa` | `erro` | `msg:'A 1º Fase é obrigatória e não pode ser e…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1839` |
+| Livewire dispatch | `DynamicFields::excluirEtapa` | `erro` | `msg:'Esta página possui campos. Mova-os ou exclu…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1849` |
+| Livewire dispatch | `DynamicFields::excluirEtapa` | `sucesso` | `msg:'Página removida e numeração das páginas …` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:1908` |
+| Livewire dispatch | `DynamicFields::confirmarConfigComboAcademico` | `sucesso` | `msg:'Opções de Unidades, Cursos e Turnos aplica…` | `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:2006` |
 | Livewire dispatch | `Hub::salvarVinculoFormulario` | `sucesso` | `msg:'Campos e estrutura aplicados ao Ciclo de Ins…` | `app/Modules/FormBuilder/UI/Livewire/Hub.php:214` |
 | Livewire dispatch | `Hub::salvarVinculoFormulario` | `sucesso` | `msg:'Formulário vinculado à Fase de Aprendizage…` | `app/Modules/FormBuilder/UI/Livewire/Hub.php:237` |
 | Livewire dispatch | `Hub::salvarVinculoFormulario` | `sucesso` | `msg:'Formulário Geral (/f/'.$form->slug.') vincu…` | `app/Modules/FormBuilder/UI/Livewire/Hub.php:255` |
@@ -19326,14 +19633,14 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Livewire dispatch | `KanbanBoard::removerConflitoAntiSpam` | `erro` | `msg:'Nenhuma inscrição restou para ser processa…` | `app/Modules/Registration/UI/Livewire/KanbanBoard.php:707` |
 | Livewire dispatch | `KanbanBoard::executarMudancaStatusFinal` | `sucesso` | `msg:'Status atualizado com sucesso!'` | `app/Modules/Registration/UI/Livewire/KanbanBoard.php:745` |
 | Livewire dispatch | `KanbanBoard::executarMudancaStatusFinal` | `sucesso` | `msg:"Ação autorizada! {$qtd} registros enviados…` | `app/Modules/Registration/UI/Livewire/KanbanBoard.php:762` |
-| Livewire dispatch | `RegistrationDetails::salvarEdicaoAssistida` | `sucesso` | `msg:'Dados da inscrição atualizados com sucesso…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:267` |
-| Livewire dispatch | `RegistrationDetails::updatedUploads` | `sucesso` | `msg:$this->validarComIa?"Documento '{$documentoMo…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:413` |
-| Livewire dispatch | `RegistrationDetails::aprovarDocumentoManualmente` | `sucesso` | `msg:'Documento aprovado manualmente pela equipe!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:436` |
-| Livewire dispatch | `RegistrationDetails::abrirFormularioEmbed` | `erro` | `msg:'Selecione qual formulário deseja abrir para…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:469` |
-| Livewire dispatch | `RegistrationDetails::atualizarStatus` | `erro` | `msg:'O candidato já se encontra neste status!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:683` |
-| Livewire dispatch | `RegistrationDetails::atualizarStatus` | `erro` | `msg:'Este status não pertence ao funil deste cic…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:689` |
-| Livewire dispatch | `RegistrationDetails::executarMudancaStatusFinal` | `sucesso` | `msg:'Status atualizado com sucesso!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:733` |
-| Livewire dispatch | `RegistrationDetails::abrirRegras` | `load-quick-view` | `['title'=>'Mapa de Regras do Ciclo','subtitle'=>'…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:814` |
+| Livewire dispatch | `RegistrationDetails::salvarEdicaoAssistida` | `sucesso` | `msg:'Dados da inscrição atualizados com sucesso…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:288` |
+| Livewire dispatch | `RegistrationDetails::updatedUploads` | `sucesso` | `msg:$this->validarComIa?"Documento '{$documentoMo…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:431` |
+| Livewire dispatch | `RegistrationDetails::aprovarDocumentoManualmente` | `sucesso` | `msg:'Documento aprovado manualmente pela equipe!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:454` |
+| Livewire dispatch | `RegistrationDetails::abrirFormularioEmbed` | `erro` | `msg:'Selecione qual formulário deseja abrir para…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:595` |
+| Livewire dispatch | `RegistrationDetails::atualizarStatus` | `erro` | `msg:'O candidato já se encontra neste status!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:808` |
+| Livewire dispatch | `RegistrationDetails::atualizarStatus` | `erro` | `msg:'Este status não pertence ao funil deste cic…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:814` |
+| Livewire dispatch | `RegistrationDetails::executarMudancaStatusFinal` | `sucesso` | `msg:'Status atualizado com sucesso!'` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:858` |
+| Livewire dispatch | `RegistrationDetails::abrirRegras` | `load-quick-view` | `['title'=>'Mapa de Regras do Ciclo','subtitle'=>'…` | `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:939` |
 | Livewire dispatch | `RegistrationManager::gerarLinkRetomada` | `sucesso` | `msg:"Link gerado com sucesso! Copiado para a áre…` | `app/Modules/Registration/UI/Livewire/RegistrationManager.php:113` |
 | Livewire dispatch | `RegistrationManager::gerarLinkRetomada` | `copiar-para-clipboard` | `text:$urlRetomada` | `app/Modules/Registration/UI/Livewire/RegistrationManager.php:114` |
 | Livewire dispatch | `RegistrationManager::moverCicloLote` | `sucesso` | `msg:'As inscrições foram transferidas de ciclo …` | `app/Modules/Registration/UI/Livewire/RegistrationManager.php:252` |
@@ -19417,15 +19724,17 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 | Livewire dispatch | `UnidadeManager::delete` | `sucesso` | `msg:'Unidade movida para a lixeira.'` | `app/Modules/Unidade/UI/Livewire/UnidadeManager.php:181` |
 | Livewire dispatch | `UnidadeManager::showQuickView` | `load-quick-view` | `['title'=>$unidade->nome,'subtitle'=>'Status: '.$…` | `app/Modules/Unidade/UI/Livewire/UnidadeManager.php:199` |
 | Livewire dispatch | `UnidadeManager::toggleStatus` | `sucesso` | `msg:'Status da unidade atualizado!'` | `app/Modules/Unidade/UI/Livewire/UnidadeManager.php:235` |
-| Livewire dispatch | `FormularioPublico::avancarEtapa` | `limpar-storage-formulario` | — | `app/Modules/Website/UI/Livewire/FormularioPublico.php:707` |
-| Livewire dispatch | `Inscricao::restaurarRascunhoLocal` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:238` |
-| Livewire dispatch | `Inscricao::tentarRecuperarRascunho` | `sucesso` | `msg:'Rascunho recuperado com sucesso! Seus dados …` | `app/Modules/Website/UI/Livewire/Inscricao.php:378` |
-| Livewire dispatch | `Inscricao::avancarEtapa` | `erro` | `msg:"A próxima fase ({$this->bloqueioFaseSeguint…` | `app/Modules/Website/UI/Livewire/Inscricao.php:856` |
-| Livewire dispatch | `Inscricao::avancarEtapa` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:914` |
-| Livewire dispatch | `Inscricao::avancarEtapa` | `inscricao-concluida` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:915` |
-| Livewire dispatch | `Inscricao::avancarEtapa` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:935` |
-| Livewire dispatch | `Inscricao::avancarEtapa` | `inscricao-concluida` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:936` |
-| Livewire dispatch | `Inscricao::updatedDataNascimento` | `erro` | `msg:'A data de nascimento precisa ser menor do qu…` | `app/Modules/Website/UI/Livewire/Inscricao.php:1150` |
+| Livewire dispatch | `FormularioPublico::avancarEtapa` | `limpar-storage-formulario` | — | `app/Modules/Website/UI/Livewire/FormularioPublico.php:629` |
+| Livewire dispatch | `Inscricao::restaurarRascunhoLocal` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:239` |
+| Livewire dispatch | `Inscricao::tentarRecuperarRascunho` | `sucesso` | `msg:'Rascunho recuperado com sucesso! Seus dados …` | `app/Modules/Website/UI/Livewire/Inscricao.php:379` |
+| Livewire dispatch | `Inscricao::avancarEtapa` | `erro` | `msg:"A próxima fase ({$this->bloqueioFaseSeguint…` | `app/Modules/Website/UI/Livewire/Inscricao.php:775` |
+| Livewire dispatch | `Inscricao::avancarEtapa` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:833` |
+| Livewire dispatch | `Inscricao::avancarEtapa` | `inscricao-concluida` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:834` |
+| Livewire dispatch | `Inscricao::avancarEtapa` | `limpar-storage-inscricao` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:854` |
+| Livewire dispatch | `Inscricao::avancarEtapa` | `inscricao-concluida` | — | `app/Modules/Website/UI/Livewire/Inscricao.php:855` |
+| Livewire dispatch | `Inscricao::updatedDataNascimento` | `erro` | `msg:'A data de nascimento precisa ser menor do qu…` | `app/Modules/Website/UI/Livewire/Inscricao.php:1069` |
+| Livewire dispatch | `ValidaAcesso::autorizarAcao` | `erro` | `msg:$msg` | `app/Traits/ValidaAcesso.php:45` |
+| Livewire dispatch | `ValidaAcesso::autorizarAcao` | `erro` | `msg:$msg` | `app/Traits/ValidaAcesso.php:57` |
 | Livewire dispatch | `WithEditingLock::requestControl` | `sucesso` | `msg:'Solicitação enviada! Aguarde a resposta do…` | `app/Traits/WithEditingLock.php:96` |
 | Livewire dispatch | `WithEditingLock::takeOverLock` | `sucesso` | `msg:'Controlo transferido com sucesso! Já pode e…` | `app/Traits/WithEditingLock.php:140` |
 | Livewire dispatch | `WithToggleStatus::toggleStatus` | `sucesso` | `msg:'Status do ciclo atualizado com sucesso!'` | `app/Traits/WithToggleStatus.php:31` |
@@ -19438,7 +19747,7 @@ _Definida em: `database/migrations/2026_07_30_141211_create_user_vinculos_tables
 
 _Candidatos a código morto. Confira antes de remover: podem ser acionados por rotas dinâmicas, Blade gerado em runtime, comandos ou pacotes._
 
-- `App\Modules\ACL\UI\Livewire\PermissionManager::getHeadersProperty()` — `app/Modules/ACL/UI/Livewire/PermissionManager.php:258`
+- `App\Modules\ACL\UI\Livewire\PermissionManager::getHeadersProperty()` — `app/Modules/ACL/UI/Livewire/PermissionManager.php:253`
 - `App\Modules\ACL\UI\Livewire\RoleManager::getHeadersProperty()` — `app/Modules/ACL/UI/Livewire/RoleManager.php:144`
 - `App\Modules\ACL\UI\Livewire\RolePermissionManager::getHeadersProperty()` — `app/Modules/ACL/UI/Livewire/RolePermissionManager.php:50`
 - `App\Modules\Auditoria\UI\Livewire\AuditoriaManager::getHeadersProperty()` — `app/Modules/Auditoria/UI/Livewire/AuditoriaManager.php:45`
@@ -19453,8 +19762,8 @@ _Candidatos a código morto. Confira antes de remover: podem ser acionados por r
 - `App\Modules\Comunicacao\UI\Livewire\Automacao\EsteiraManager::getHeadersProperty()` — `app/Modules/Comunicacao/UI/Livewire/Automacao/EsteiraManager.php:66`
 - `App\Modules\Comunicacao\UI\Livewire\Comunicado\ComunicadoManager::getHeadersProperty()` — `app/Modules/Comunicacao/UI/Livewire/Comunicado/ComunicadoManager.php:44`
 - `App\Modules\Comunicacao\UI\Livewire\EmailLog\EmailLogManager::getHeadersProperty()` — `app/Modules/Comunicacao/UI/Livewire/EmailLog/EmailLogManager.php:48`
-- `App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard::dispararListarTemplatesSuri()` — `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:217`
-- `App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard::dispararBuscarTemplateEspecifico()` — `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:226`
+- `App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard::dispararListarTemplatesSuri()` — `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:180`
+- `App\Modules\Comunicacao\UI\Livewire\Suri\SuriTestDashboard::dispararBuscarTemplateEspecifico()` — `app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php:186`
 - `App\Modules\Comunicacao\UI\Livewire\Template\TemplateForm::getPayloadSuriPreviewProperty()` — `app/Modules/Comunicacao/UI/Livewire/Template/TemplateForm.php:170`
 - `App\Modules\Comunicacao\UI\Livewire\Template\TemplateManager::getHeadersProperty()` — `app/Modules/Comunicacao/UI/Livewire/Template/TemplateManager.php:141`
 - `App\Modules\Conteudo\UI\Livewire\ConteudoCategoriaManager::getHeadersProperty()` — `app/Modules/Conteudo/UI/Livewire/ConteudoCategoriaManager.php:51`
@@ -19475,7 +19784,9 @@ _Candidatos a código morto. Confira antes de remover: podem ser acionados por r
 - `App\Modules\Financeiro\UI\Livewire\NaturezaManager::getHeadersProperty()` — `app/Modules/Financeiro/UI/Livewire/NaturezaManager.php:71`
 - `App\Modules\Financeiro\UI\Livewire\OrcamentoAprovacaoManager::getHeadersProperty()` — `app/Modules/Financeiro/UI/Livewire/OrcamentoAprovacaoManager.php:56`
 - `App\Modules\Financeiro\UI\Livewire\OrcamentoManager::getHeadersProperty()` — `app/Modules/Financeiro/UI/Livewire/OrcamentoManager.php:165`
-- `App\Modules\FormBuilder\UI\Livewire\DynamicFields::toggleSelecionarCampo()` — `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:166`
+- `App\Modules\FormBuilder\UI\Livewire\DynamicFields::toggleSelecionarCampo()` — `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:173`
+- `App\Modules\FormBuilder\UI\Livewire\DynamicFields::getOperadoresCondicionaisProperty()` — `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:764`
+- `App\Modules\FormBuilder\UI\Livewire\DynamicFields::getCamposDisponiveisParaCondicaoProperty()` — `app/Modules/FormBuilder/UI/Livewire/DynamicFields.php:785`
 - `App\Modules\Forms\UI\Livewire\FormDetails::excluirResposta()` — `app/Modules/Forms/UI/Livewire/FormDetails.php:86`
 - `App\Modules\Forms\UI\Livewire\FormDetails::getHeadersProperty()` — `app/Modules/Forms/UI/Livewire/FormDetails.php:144`
 - `App\Modules\Forms\UI\Livewire\FormDetails::getCamposFiltraveisProperty()` — `app/Modules/Forms/UI/Livewire/FormDetails.php:176`
@@ -19501,8 +19812,9 @@ _Candidatos a código morto. Confira antes de remover: podem ser acionados por r
 - `App\Modules\Period\UI\Livewire\PeriodManager::getHeadersProperty()` — `app/Modules/Period/UI/Livewire/PeriodManager.php:500`
 - `App\Modules\Registration\UI\Livewire\KanbanBoard::getEsquemaFiltrosProperty()` — `app/Modules/Registration/UI/Livewire/KanbanBoard.php:62`
 - `App\Modules\Registration\UI\Livewire\KanbanBoard::limparFiltros()` — `app/Modules/Registration/UI/Livewire/KanbanBoard.php:209`
-- `App\Modules\Registration\UI\Livewire\RegistrationDetails::getDataInscricao()` — `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:656`
-- `App\Modules\Registration\UI\Livewire\RegistrationDetails::getDataAtualizacao()` — `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:668`
+- `App\Modules\Registration\UI\Livewire\RegistrationDetails::getHeadersProperty()` — `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:461`
+- `App\Modules\Registration\UI\Livewire\RegistrationDetails::getDataInscricao()` — `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:781`
+- `App\Modules\Registration\UI\Livewire\RegistrationDetails::getDataAtualizacao()` — `app/Modules/Registration/UI/Livewire/RegistrationDetails.php:793`
 - `App\Modules\Registration\UI\Livewire\RegistrationManager::getEsquemaFiltrosProperty()` — `app/Modules/Registration/UI/Livewire/RegistrationManager.php:117`
 - `App\Modules\Registration\UI\Livewire\RegistrationManager::selecionarQuantidade()` — `app/Modules/Registration/UI/Livewire/RegistrationManager.php:751`
 - `App\Modules\Registration\UI\Livewire\RegistrationManager::abrirModalSelecaoAvancada()` — `app/Modules/Registration/UI/Livewire/RegistrationManager.php:777`
@@ -19520,29 +19832,28 @@ _Candidatos a código morto. Confira antes de remover: podem ser acionados por r
 - `App\Modules\Student\UI\Livewire\StudentManager::toggleMatriculado()` — `app/Modules/Student/UI/Livewire/StudentManager.php:173`
 - `App\Modules\Student\UI\Livewire\StudentManager::toggleStatus()` — `app/Modules/Student/UI/Livewire/StudentManager.php:181`
 - `App\Modules\SystemTasks\UI\Livewire\SystemTaskManager::getHeadersProperty()` — `app/Modules/SystemTasks/UI/Livewire/SystemTaskManager.php:122`
-- `App\Modules\Teste\Suri\Services\SuriApiService::getConfigResumo()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:22`
-- `App\Modules\Teste\Suri\Services\SuriApiService::syncTemplate()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:207`
-- `App\Modules\Teste\Suri\Services\SuriApiService::listarTemplates()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:217`
-- `App\Modules\Teste\Suri\Services\SuriApiService::obterTemplate()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:222`
-- `App\Modules\Teste\Suri\Services\SuriApiService::criarTemplateDireto()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:228`
-- `App\Modules\Teste\Suri\Services\SuriApiService::listarContatos()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:237`
-- `App\Modules\Teste\Suri\Services\SuriApiService::importarContato()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:246`
-- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateSimples()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:263`
-- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateComBotoes()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:288`
-- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateComVariaveis()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:316`
-- `App\Modules\Teste\Suri\Services\SuriApiService::enviarMensagemSimples()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:364`
-- `App\Modules\Teste\Suri\Services\SuriApiService::reexecutarLog()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:386`
+- `App\Modules\Teste\Suri\Services\SuriApiService::getConfigResumo()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:23`
+- `App\Modules\Teste\Suri\Services\SuriApiService::syncTemplate()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:174`
+- `App\Modules\Teste\Suri\Services\SuriApiService::listarTemplates()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:180`
+- `App\Modules\Teste\Suri\Services\SuriApiService::obterTemplate()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:185`
+- `App\Modules\Teste\Suri\Services\SuriApiService::criarTemplateDireto()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:191`
+- `App\Modules\Teste\Suri\Services\SuriApiService::listarContatos()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:200`
+- `App\Modules\Teste\Suri\Services\SuriApiService::importarContato()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:209`
+- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateSimples()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:226`
+- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateComBotoes()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:249`
+- `App\Modules\Teste\Suri\Services\SuriApiService::enviarTemplateComVariaveis()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:275`
+- `App\Modules\Teste\Suri\Services\SuriApiService::enviarMensagemSimples()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:323`
+- `App\Modules\Teste\Suri\Services\SuriApiService::reexecutarLog()` — `app/Modules/Teste/Suri/Services/SuriApiService.php:341`
 - `App\Modules\Turno\Application\Services\TurnoService::listarTodos()` — `app/Modules/Turno/Application/Services/TurnoService.php:17`
 - `App\Modules\Turno\UI\Livewire\TurnoManager::getHeadersProperty()` — `app/Modules/Turno/UI/Livewire/TurnoManager.php:128`
 - `App\Modules\Turno\UI\Livewire\TurnoManager::toggleStatus()` — `app/Modules/Turno/UI/Livewire/TurnoManager.php:157`
 - `App\Modules\Unidade\Application\Services\UnidadeService::listarTodos()` — `app/Modules/Unidade/Application/Services/UnidadeService.php:14`
 - `App\Modules\Unidade\UI\Livewire\UnidadeManager::getHeadersProperty()` — `app/Modules/Unidade/UI/Livewire/UnidadeManager.php:213`
 - `App\Modules\Unidade\UI\Livewire\UnidadeManager::toggleStatus()` — `app/Modules/Unidade/UI/Livewire/UnidadeManager.php:224`
-- `App\Modules\Website\UI\Livewire\FormularioPublico::removerArquivo()` — `app/Modules/Website/UI/Livewire/FormularioPublico.php:620`
-- `App\Modules\Website\UI\Livewire\Inscricao::removerArquivo()` — `app/Modules/Website/UI/Livewire/Inscricao.php:489`
+- `App\Modules\Website\UI\Livewire\FormularioPublico::removerArquivo()` — `app/Modules/Website/UI/Livewire/FormularioPublico.php:542`
+- `App\Modules\Website\UI\Livewire\Inscricao::removerArquivo()` — `app/Modules/Website/UI/Livewire/Inscricao.php:490`
 - `PhpAnalyzer::emptyRefs()` — `laramap.php:902`
 - `PhpAnalyzer::readAttribute()` — `laramap.php:1038`
-- `BladeAnalyzer::viewName()` — `laramap.php:1413`
 - `TemaClasses::dividir()` — `laramap.php:3593`
 - `TemaClasses::precisaDark()` — `laramap.php:3714`
 - `TemaClasses::luminanciaHex()` — `laramap.php:3729`
@@ -19551,8 +19862,8 @@ _Candidatos a código morto. Confira antes de remover: podem ser acionados por r
 - `TemaClasses::ehUtilitaria()` — `laramap.php:3788`
 - `ExtratorCss::mencionaDark()` — `laramap.php:3935`
 - `ExtratorCss::classesDe()` — `laramap.php:4027`
-- `Indexer::isOrphan()` — `laramap.php:4878`
-- `Indexer::callersOf()` — `laramap.php:4900`
+- `Indexer::isOrphan()` — `laramap.php:5083`
+- `Indexer::callersOf()` — `laramap.php:5105`
 
 ---
 
@@ -19933,6 +20244,7 @@ prototipo-percorre/
 │   │   └── FeatureHelper.php
 │   ├── Http/
 │   │   └── Middleware/
+│   │       ├── CheckSessionInactivity.php
 │   │       └── ForcePasswordChange.php
 │   ├── Jobs/
 │   │   ├── AtualizarStatusConteudoJob.php
@@ -20305,11 +20617,13 @@ prototipo-percorre/
 │   ├── Providers/
 │   │   └── AppServiceProvider.php
 │   └── Traits/
+│       ├── AvaliaCondicoesVisibilidade.php
 │       ├── ComFiltroAvancado.php
 │       ├── ComPadraoListagem.php
 │       ├── FiltraPorVinculo.php
 │       ├── FuzzyMatchingTrait.php
 │       ├── RegistraAuditoria.php
+│       ├── ValidaAcesso.php
 │       ├── WithCepConsulta.php
 │       ├── WithEditingLock.php
 │       ├── WithFichaPdfDownload.php
@@ -20488,6 +20802,7 @@ prototipo-percorre/
 │       │   ├── modal.blade.php
 │       │   ├── page-header.blade.php
 │       │   ├── paginacao-customizada.blade.php
+│       │   ├── session-timeout.blade.php
 │       │   ├── summary-cards.blade.php
 │       │   ├── table.blade.php
 │       │   ├── toast.blade.php
@@ -20498,7 +20813,14 @@ prototipo-percorre/
 │       │   └── layouts/
 │       │       └── padrao.blade.php
 │       ├── errors/
-│       │   └── 500.blade.php
+│       │   ├── 401.blade.php
+│       │   ├── 403.blade.php
+│       │   ├── 404.blade.php
+│       │   ├── 419.blade.php
+│       │   ├── 429.blade.php
+│       │   ├── 500.blade.php
+│       │   ├── 503.blade.php
+│       │   └── layout.blade.php
 │       ├── livewire/
 │       │   ├── acl/
 │       │   │   ├── permission-manager.blade.php
@@ -20673,7 +20995,7 @@ prototipo-percorre/
 | `ciclo.listar` | view `components.layouts.app` |
 | `comunicado.listar` | view `components.layouts.app` |
 | `curso.listar` | view `components.layouts.app` |
-| `dev` | `User::possuiVisaoGlobalCentrosCusto()`, `RoleManager::edit()`, `UserExtraPermissionManager::mount()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::edit()`, `UserManager::delete()`, `OrcamentoNotificacaoService::obterAprovadores()`, `OrcamentoNotificacaoService::obterResponsaveis()`, `OrcamentoNotificacaoService::notificarIntegracaoProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `Responder::mount()`, `KanbanBoard::getEsquemaFiltrosProperty()`, `KanbanBoard::render()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `SystemTaskManager::verDetalhes()`, `SystemTaskManager::baixarErros()`, `SystemTaskProgress::render()`, `FormularioPublico::mount()`, `AppServiceProvider::boot()`, view `components.layouts.app` |
+| `dev` | `User::possuiVisaoGlobalCentrosCusto()`, `RoleManager::edit()`, `UserExtraPermissionManager::mount()`, `UserExtraPermissionManager::syncExtraPermissions()`, `UserManager::save()`, `UserManager::edit()`, `UserManager::delete()`, `OrcamentoNotificacaoService::obterAprovadores()`, `OrcamentoNotificacaoService::obterResponsaveis()`, `OrcamentoNotificacaoService::notificarIntegracaoProtheus()`, `OrcamentoAprovacaoEditor::salvarAnaliseAprovador()`, `OrcamentoManager::integrarAoProtheus()`, `OrcamentoManager::resetarStatusOrcamento()`, `Responder::mount()`, `KanbanBoard::getEsquemaFiltrosProperty()`, `KanbanBoard::render()`, `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()`, `SystemTaskManager::verDetalhes()`, `SystemTaskManager::baixarErros()`, `SystemTaskProgress::render()`, `FormularioPublico::mount()`, `AppServiceProvider::boot()`, `ValidaAcesso::autorizarTela()`, `ValidaAcesso::autorizarAcao()`, view `components.layouts.app` |
 | `dev|admin` | `User::temVisaoGlobal()`, `NotificationBadge::atualizarContador()`, `SolicitacoesManager::render()`, `Relatorios::getQueryBase()`, `Relatorios::render()`, `RegistrationManager::salvarNovaInscricao()` |
 | `email_log.listar` | view `components.layouts.app` |
 | `estudante.listar` | view `components.layouts.app` |
@@ -20704,12 +21026,92 @@ prototipo-percorre/
 | `unidade.listar` | view `components.layouts.app` |
 | `usuario.listar` | view `components.layouts.app` |
 
-### Feature Flags (`feature()`)
+### Feature Flags (`@feature`, `feature()`, `@if(feature(...))`, `Feature::active()`, middleware)
 
-| Nome | Verificada em |
-| --- | --- |
-| `inscricao.editar` | `RegistrationManager::recalcularScoresGlobais()`, `RegistrationManager::gerarRankingGlobal()` |
-| `tarefas.acessar` | `SystemTaskProgress::render()` |
+_70 features distintas · 138 verificações · 45 arquivos · 3 verificações com nome dinâmico (tabela abaixo). Por forma: `feature()` ×140, `@feature` ×1. Cada verificação conta uma vez, em PHP ou em view._
+
+| Feature | Qtd | Formas | Verificada em |
+| --- | ---: | --- | --- |
+| `acl.permissao.criar` | 1 | `feature()` | view `livewire.acl.permission-manager` — `resources/views/livewire/acl/permission-manager.blade.php:9` |
+| `acl.permissao.editar` | 2 | `feature()` | view `livewire.acl.permission-manager` — `resources/views/livewire/acl/permission-manager.blade.php:99`<br>view `livewire.acl.permission-manager` — `resources/views/livewire/acl/permission-manager.blade.php:132` |
+| `acl.permissao.excluir` | 2 | `feature()` | view `livewire.acl.permission-manager` — `resources/views/livewire/acl/permission-manager.blade.php:104`<br>view `livewire.acl.permission-manager` — `resources/views/livewire/acl/permission-manager.blade.php:135` |
+| `acl.role.criar` | 1 | `feature()` | view `livewire.acl.role-manager` — `resources/views/livewire/acl/role-manager.blade.php:9` |
+| `acl.role.editar` | 1 | `feature()` | view `livewire.acl.role-manager` — `resources/views/livewire/acl/role-manager.blade.php:55` |
+| `acl.role.excluir` | 1 | `feature()` | view `livewire.acl.role-manager` — `resources/views/livewire/acl/role-manager.blade.php:60` |
+| `acl.role.permissoes` | 1 | `feature()` | view `livewire.acl.role-manager` — `resources/views/livewire/acl/role-manager.blade.php:48` |
+| `aprendizagem.listar` | 4 | `feature()` | view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:305`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:321`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:550`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:712` |
+| `auditoria.visualizar` | 2 | `feature()` | view `livewire.auditoria.auditoria-manager` — `resources/views/livewire/auditoria/auditoria-manager.blade.php:139`<br>view `livewire.auditoria.auditoria-manager` — `resources/views/livewire/auditoria/auditoria-manager.blade.php:178` |
+| `automacao.criar` | 2 | `feature()` | view `livewire.comunicacao.automacao.automacao-form` — `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:135`<br>view `livewire.comunicacao.automacao.automacao-manager` — `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:11` |
+| `automacao.editar` | 4 | `feature()` | view `livewire.comunicacao.automacao.automacao-details` — `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:16`<br>view `livewire.comunicacao.automacao.automacao-form` — `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:135`<br>view `livewire.comunicacao.automacao.automacao-manager` — `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:128`<br>view `livewire.comunicacao.automacao.automacao-manager` — `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:149` |
+| `automacao.excluir` | 1 | `feature()` | view `livewire.comunicacao.automacao.automacao-manager` — `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:154` |
+| `automacao.visualizar` | 1 | `feature()` | view `livewire.comunicacao.automacao.automacao-manager` — `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:144` |
+| `avaliacao.responder` | 2 | `feature()` | view `livewire.gestao-educacional.avaliacao.listagem` — `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:54`<br>view `livewire.gestao-educacional.avaliacao.relatorios` — `resources/views/livewire/gestao-educacional/avaliacao/relatorios.blade.php:84` |
+| `ciclo.criar` | 1 | `feature()` | view `livewire.period.period-manager` — `resources/views/livewire/period/period-manager.blade.php:67` |
+| `ciclo.editar` | 11 | `feature()` | view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:29`<br>view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:293`<br>view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:459`<br>view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:526`<br>view `livewire.period.period-edit` — `resources/views/livewire/period/period-edit.blade.php:220`<br>view `livewire.period.period-edit` — `resources/views/livewire/period/period-edit.blade.php:290`<br>view `livewire.period.period-edit` — `resources/views/livewire/period/period-edit.blade.php:386`<br>view `livewire.period.period-edit` — `resources/views/livewire/period/period-edit.blade.php:413`<br>view `livewire.period.period-manager` — `resources/views/livewire/period/period-manager.blade.php:178`<br>view `livewire.period.period-manager` — `resources/views/livewire/period/period-manager.blade.php:256`<br>view `livewire.period.period-manager` — `resources/views/livewire/period/period-manager.blade.php:269` |
+| `ciclo.regras` | 3 | `feature()` | view `livewire.period.regras-manager` — `resources/views/livewire/period/regras-manager.blade.php:60`<br>view `livewire.period.regras-manager` — `resources/views/livewire/period/regras-manager.blade.php:159`<br>view `livewire.period.regras-manager` — `resources/views/livewire/period/regras-manager.blade.php:171` |
+| `comunicado.criar` | 2 | `feature()` | view `livewire.comunicacao.comunicado.comunicado-form` — `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:267`<br>view `livewire.comunicacao.comunicado.comunicado-manager` — `resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:11` |
+| `comunicado.excluir` | 1 | `feature()` | view `livewire.comunicacao.comunicado.comunicado-manager` — `resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:137` |
+| `empresas.listar` | 4 | `feature()` | view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:194`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:204`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:482`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:654` |
+| `estudante.criar` | 1 | `feature()` | view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:11` |
+| `estudante.editar` | 3 | `feature()` | view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:117`<br>view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:162`<br>view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:183` |
+| `estudante.excluir` | 2 | `feature()` | view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:123`<br>view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:189` |
+| `estudante.perfil` | 2 | `feature()` | view `livewire.student.profile-manager` — `resources/views/livewire/student/profile-manager.blade.php:42`<br>view `livewire.student.profile-manager` — `resources/views/livewire/student/profile-manager.blade.php:82` |
+| `estudante.visualizar` | 2 | `feature()` | view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:107`<br>view `livewire.student.student-manager` — `resources/views/livewire/student/student-manager.blade.php:173` |
+| `ferramenta.mock` | 4 | `feature()` | view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:530`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:534`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:537`<br>view `livewire.gestao-educacional.gerador-mock` — `resources/views/livewire/gestao-educacional/gerador-mock.blade.php:28` |
+| `financeiro.centro_custo.sincronizar` | 1 | `feature()` | view `livewire.financeiro.orcamento-manager` — `resources/views/livewire/financeiro/orcamento-manager.blade.php:11` |
+| `financeiro.natureza.sincronizar` | 1 | `feature()` | view `livewire.financeiro.orcamento-manager` — `resources/views/livewire/financeiro/orcamento-manager.blade.php:11` |
+| `financeiro.orcamentos.integrar` | 1 | `feature()` | view `livewire.financeiro.orcamento-manager` — `resources/views/livewire/financeiro/orcamento-manager.blade.php:91` |
+| `financeiro.orcamentos.resetar` | 1 | `feature()` | view `livewire.financeiro.orcamento-manager` — `resources/views/livewire/financeiro/orcamento-manager.blade.php:104` |
+| `financeiro.orcamentos.sincronizar` | 1 | `feature()` | view `livewire.financeiro.orcamento-manager` — `resources/views/livewire/financeiro/orcamento-manager.blade.php:20` |
+| `formulario.criar` | 1 | `feature()` | view `livewire.forms.form-manager` — `resources/views/livewire/forms/form-manager.blade.php:11` |
+| `formulario.editar` | 4 | `feature()` | view `livewire.forms.form-details` — `resources/views/livewire/forms/form-details.blade.php:88`<br>view `livewire.forms.form-manager` — `resources/views/livewire/forms/form-manager.blade.php:55`<br>view `livewire.forms.form-manager` — `resources/views/livewire/forms/form-manager.blade.php:132`<br>view `livewire.forms.form-manager` — `resources/views/livewire/forms/form-manager.blade.php:179` |
+| `formulario.excluir` | 1 | `feature()` | view `livewire.forms.form-manager` — `resources/views/livewire/forms/form-manager.blade.php:142` |
+| `inscricao.criar` | 1 | `feature()` | view `livewire.registration.registration-manager` — `resources/views/livewire/registration/registration-manager.blade.php:93` |
+| `inscricao.editar` | 7 | `feature()` | `RegistrationManager::recalcularScoresGlobais()` — `app/Modules/Registration/UI/Livewire/RegistrationManager.php:1101`<br>`RegistrationManager::gerarRankingGlobal()` — `app/Modules/Registration/UI/Livewire/RegistrationManager.php:1134`<br>view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:308`<br>view `livewire.period.period-details` — `resources/views/livewire/period/period-details.blade.php:372`<br>view `livewire.registration.kanban-board` — `resources/views/livewire/registration/kanban-board.blade.php:139`<br>view `livewire.registration.kanban-board` — `resources/views/livewire/registration/kanban-board.blade.php:151`<br>view `livewire.registration.registration-manager` — `resources/views/livewire/registration/registration-manager.blade.php:168` |
+| `inscricao.excluir` | 1 | `feature()` | view `livewire.registration.registration-manager` — `resources/views/livewire/registration/registration-manager.blade.php:405` |
+| `inscricao.listar` | 1 | `feature()` | view `livewire.curso.curso-detalhes` — `resources/views/livewire/curso/curso-detalhes.blade.php:96` |
+| `inscricao.visualizar` | 1 | `feature()` | view `livewire.registration.registration-manager` — `resources/views/livewire/registration/registration-manager.blade.php:399` |
+| `matricula.criar` | 1 | `feature()` | view `livewire.gestao-educacional.matricula.listagem` — `resources/views/livewire/gestao-educacional/matricula/listagem.blade.php:8` |
+| `matricula.editar` | 2 | `feature()` | view `livewire.gestao-educacional.matricula.detalhes` — `resources/views/livewire/gestao-educacional/matricula/detalhes.blade.php:86`<br>view `livewire.gestao-educacional.matricula.listagem` — `resources/views/livewire/gestao-educacional/matricula/listagem.blade.php:65` |
+| `matricula.excluir` | 1 | `feature()` | view `livewire.gestao-educacional.matricula.listagem` — `resources/views/livewire/gestao-educacional/matricula/listagem.blade.php:70` |
+| `matricula.upload_multiplo` | 9 | `feature()` | view `livewire.matricula.portal-matricula` — `resources/views/livewire/matricula/portal-matricula.blade.php:67`<br>view `livewire.matricula.portal-matricula` — `resources/views/livewire/matricula/portal-matricula.blade.php:69`<br>view `livewire.matricula.portal-matricula` — `resources/views/livewire/matricula/portal-matricula.blade.php:118`<br>view `livewire.student.document-manager` — `resources/views/livewire/student/document-manager.blade.php:30`<br>view `livewire.student.document-manager` — `resources/views/livewire/student/document-manager.blade.php:32`<br>view `livewire.student.document-manager` — `resources/views/livewire/student/document-manager.blade.php:81`<br>view `livewire.student.profile-manager` — `resources/views/livewire/student/profile-manager.blade.php:114`<br>view `livewire.student.profile-manager` — `resources/views/livewire/student/profile-manager.blade.php:116`<br>view `livewire.student.profile-manager` — `resources/views/livewire/student/profile-manager.blade.php:165` |
+| `periodo_avaliacao.criar` | 1 | `feature()` | view `livewire.gestao-educacional.periodo-avaliacao.listagem` — `resources/views/livewire/gestao-educacional/periodo-avaliacao/listagem.blade.php:8` |
+| `periodo_avaliacao.editar` | 2 | `feature()` | view `livewire.gestao-educacional.periodo-avaliacao.detalhes` — `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:143`<br>view `livewire.gestao-educacional.periodo-avaliacao.listagem` — `resources/views/livewire/gestao-educacional/periodo-avaliacao/listagem.blade.php:56` |
+| `periodo_avaliacao.excluir` | 1 | `feature()` | view `livewire.gestao-educacional.periodo-avaliacao.listagem` — `resources/views/livewire/gestao-educacional/periodo-avaliacao/listagem.blade.php:61` |
+| `portal.noticias` | 6 | `feature()` | view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:255`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:402`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:422`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:510`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:682`<br>view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:684` |
+| `relatorio.exportar` | 1 | `feature()` | view `livewire.gestao-educacional.avaliacao.relatorios` — `resources/views/livewire/gestao-educacional/avaliacao/relatorios.blade.php:4` |
+| `sistema.tema` | 1 | `@feature` | view `components.layouts.student-app` — `resources/views/components/layouts/student-app.blade.php:185` |
+| `status.criar` | 1 | `feature()` | view `livewire.registration.status-manager` — `resources/views/livewire/registration/status-manager.blade.php:9` |
+| `status.editar` | 2 | `feature()` | view `livewire.registration.status-manager` — `resources/views/livewire/registration/status-manager.blade.php:46`<br>view `livewire.registration.status-manager` — `resources/views/livewire/registration/status-manager.blade.php:70` |
+| `status.excluir` | 1 | `feature()` | view `livewire.registration.status-manager` — `resources/views/livewire/registration/status-manager.blade.php:75` |
+| `tarefas.acessar` | 3 | `feature()` | `SystemTaskProgress::render()` — `app/Modules/SystemTasks/UI/Livewire/SystemTaskProgress.php:12`<br>view `livewire.importacao.importacao-manager` — `resources/views/livewire/importacao/importacao-manager.blade.php:64`<br>view `livewire.system-tasks.system-task-manager` — `resources/views/livewire/system-tasks/system-task-manager.blade.php:64` |
+| `tarefas.exportar` | 2 | `feature()` | view `livewire.importacao.importacao-manager` — `resources/views/livewire/importacao/importacao-manager.blade.php:58`<br>view `livewire.system-tasks.system-task-manager` — `resources/views/livewire/system-tasks/system-task-manager.blade.php:58` |
+| `template.criar` | 1 | `feature()` | view `livewire.comunicacao.template.template-form` — `resources/views/livewire/comunicacao/template/template-form.blade.php:157` |
+| `template.editar` | 1 | `feature()` | view `livewire.comunicacao.template.template-form` — `resources/views/livewire/comunicacao/template/template-form.blade.php:157` |
+| `turma.criar` | 1 | `feature()` | view `livewire.gestao-educacional.turma.listagem` — `resources/views/livewire/gestao-educacional/turma/listagem.blade.php:8` |
+| `turma.editar` | 2 | `feature()` | view `livewire.gestao-educacional.turma.detalhes` — `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:88`<br>view `livewire.gestao-educacional.turma.listagem` — `resources/views/livewire/gestao-educacional/turma/listagem.blade.php:65` |
+| `turma.excluir` | 1 | `feature()` | view `livewire.gestao-educacional.turma.listagem` — `resources/views/livewire/gestao-educacional/turma/listagem.blade.php:70` |
+| `turma.listar` | 1 | `feature()` | view `components.layouts.app` — `resources/views/components/layouts/app.blade.php:546` |
+| `turno.editar` | 1 | `feature()` | view `livewire.turno.turno-manager` — `resources/views/livewire/turno/turno-manager.blade.php:96` |
+| `turno.excluir` | 1 | `feature()` | view `livewire.turno.turno-manager` — `resources/views/livewire/turno/turno-manager.blade.php:102` |
+| `unidade.editar` | 3 | `feature()` | view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:67`<br>view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:105`<br>view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:123` |
+| `unidade.excluir` | 2 | `feature()` | view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:73`<br>view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:129` |
+| `unidade.visualizacao-rapida` | 1 | `feature()` | view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:54` |
+| `unidade.visualizar` | 2 | `feature()` | view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:60`<br>view `livewire.unidade.unidade-manager` — `resources/views/livewire/unidade/unidade-manager.blade.php:114` |
+| `usuario.criar` | 1 | `feature()` | view `livewire.corporate.user-manager` — `resources/views/livewire/corporate/user-manager.blade.php:10` |
+| `usuario.editar` | 1 | `feature()` | view `livewire.corporate.user-manager` — `resources/views/livewire/corporate/user-manager.blade.php:102` |
+| `usuario.permissoes_extras` | 1 | `feature()` | view `livewire.corporate.user-details` — `resources/views/livewire/corporate/user-details.blade.php:30` |
+| `usuario.visualizar` | 1 | `feature()` | view `livewire.corporate.user-manager` — `resources/views/livewire/corporate/user-manager.blade.php:94` |
+
+#### Verificações com nome dinâmico
+
+_O nome da feature não é um texto fixo (variável ou concatenação), então não dá para saber qual é só lendo o código. Confira cada uma._
+
+| Local | Forma | Expressão |
+| --- | --- | --- |
+| `ValidaAcesso::autorizarTela()` — `app/Traits/ValidaAcesso.php:19` | `feature()` | `⟨dinâmico⟩ $chave` |
+| `ValidaAcesso::autorizarAcao()` — `app/Traits/ValidaAcesso.php:39` | `feature()` | `⟨dinâmico⟩ $chave` |
+| `MarkdownWriter::tabelaFeatures()` — `laramap.php:6267` | `feature()` | `⟨dinâmico⟩ ...` |
 
 ---
 
@@ -20737,6 +21139,12 @@ prototipo-percorre/
 
 **`app/Helpers/FeatureHelper.php`**
 - `feature()` — linha 9
+
+**`app/Http/Middleware/CheckSessionInactivity.php`**
+- `CheckSessionInactivity::handle()` — linha 26
+- `CheckSessionInactivity::getAuthenticatedGuard()` — linha 60
+- `CheckSessionInactivity::isPassiveBackgroundRequest()` — linha 74
+- `CheckSessionInactivity::forceLogout()` — linha 110
 
 **`app/Http/Middleware/ForcePasswordChange.php`**
 - `ForcePasswordChange::handle()` — linha 12
@@ -20814,6 +21222,7 @@ prototipo-percorre/
 
 **`app/Models/CampoFormulario.php`**
 - `CampoFormulario::ciclo()` — linha 23
+- `CampoFormulario::estaVisivelParaRespostas()` — linha 31
 
 **`app/Models/Ciclo.php`**
 - `Ciclo::inscricoes()` — linha 25
@@ -20942,20 +21351,20 @@ prototipo-percorre/
 - `User::obterCodigosCcAprovacao()` — linha 184
 
 **`app/Modules/ACL/UI/Livewire/PermissionManager.php`**
-- `PermissionManager::mount()` — linha 36
+- `PermissionManager::mount()` — linha 37
 - `PermissionManager::updating()` — linha 44
 - `PermissionManager::limparFiltros()` — linha 51
 - `PermissionManager::abrirModal()` — linha 57
-- `PermissionManager::addItem()` — linha 92
-- `PermissionManager::removeItem()` — linha 97
-- `PermissionManager::fecharModal()` — linha 103
-- `PermissionManager::salvar()` — linha 109
-- `PermissionManager::confirmarCriacaoAusentes()` — linha 160
-- `PermissionManager::ignorarCriacaoAusentes()` — linha 166
-- `PermissionManager::efetivarSalvar()` — linha 172
-- `PermissionManager::excluir()` — linha 249
-- `PermissionManager::getHeadersProperty()` — linha 258
-- `PermissionManager::render()` — linha 269
+- `PermissionManager::addItem()` — linha 89
+- `PermissionManager::removeItem()` — linha 94
+- `PermissionManager::fecharModal()` — linha 100
+- `PermissionManager::salvar()` — linha 106
+- `PermissionManager::confirmarCriacaoAusentes()` — linha 154
+- `PermissionManager::ignorarCriacaoAusentes()` — linha 160
+- `PermissionManager::efetivarSalvar()` — linha 166
+- `PermissionManager::excluir()` — linha 243
+- `PermissionManager::getHeadersProperty()` — linha 253
+- `PermissionManager::render()` — linha 264
 
 **`app/Modules/ACL/UI/Livewire/RoleManager.php`**
 - `RoleManager::mount()` — linha 30
@@ -20999,7 +21408,7 @@ prototipo-percorre/
 - `AuditoriaManager::limparFiltros()` — linha 39
 - `AuditoriaManager::getHeadersProperty()` — linha 45
 - `AuditoriaManager::showQuickView()` — linha 57
-- `AuditoriaManager::render()` — linha 165
+- `AuditoriaManager::render()` — linha 166
 
 **`app/Modules/Auditoria/UI/Livewire/ErrorLogManager.php`**
 - `ErrorLogManager::updating()` — linha 25
@@ -21102,8 +21511,8 @@ prototipo-percorre/
 - `EmailTrackingController::click()` — linha 62
 
 **`app/Modules/Comunicacao/Jobs/DispararAutomacaoJob.php`**
-- `DispararAutomacaoJob::__construct()` — linha 29
-- `DispararAutomacaoJob::handle()` — linha 38
+- `DispararAutomacaoJob::__construct()` — linha 30
+- `DispararAutomacaoJob::handle()` — linha 39
 
 **`app/Modules/Comunicacao/Jobs/ProcessarComunicadoJob.php`**
 - `ProcessarComunicadoJob::__construct()` — linha 24
@@ -21233,30 +21642,29 @@ prototipo-percorre/
 - `EmailLogManager::render()` — linha 79
 
 **`app/Modules/Comunicacao/UI/Livewire/Suri/SuriTestDashboard.php`**
-- `SuriTestDashboard::mount()` — linha 59
-- `SuriTestDashboard::updating()` — linha 70
-- `SuriTestDashboard::limparFiltrosLog()` — linha 77
-- `SuriTestDashboard::abrirModal()` — linha 83
-- `SuriTestDashboard::fecharModal()` — linha 93
-- `SuriTestDashboard::updatedInscricaoTesteId()` — linha 98
-- `SuriTestDashboard::adicionarParametro()` — linha 113
-- `SuriTestDashboard::removerParametro()` — linha 118
-- `SuriTestDashboard::registrarResultado()` — linha 131
-- `SuriTestDashboard::carregarLogNoConsole()` — linha 177
-- `SuriTestDashboard::replayLog()` — linha 200
-- `SuriTestDashboard::dispararListarTemplatesSuri()` — linha 217
-- `SuriTestDashboard::dispararBuscarTemplateEspecifico()` — linha 226
-- `SuriTestDashboard::excluirLog()` — linha 238
-- `SuriTestDashboard::limparTodosOsLogs()` — linha 255
-- `SuriTestDashboard::dispararListarContatos()` — linha 268
-- `SuriTestDashboard::selecionarContatoSuri()` — linha 301
-- `SuriTestDashboard::dispararImportarContato()` — linha 311
-- `SuriTestDashboard::dispararTemplateSimples()` — linha 332
-- `SuriTestDashboard::dispararTemplateComBotoes()` — linha 351
-- `SuriTestDashboard::dispararTemplateComVariaveis()` — linha 375
-- `SuriTestDashboard::dispararMensagemSimples()` — linha 405
-- `SuriTestDashboard::sincronizarTemplateLocal()` — linha 422
-- `SuriTestDashboard::render()` — linha 456
+- `SuriTestDashboard::mount()` — linha 57
+- `SuriTestDashboard::updating()` — linha 67
+- `SuriTestDashboard::limparFiltrosLog()` — linha 74
+- `SuriTestDashboard::abrirModal()` — linha 80
+- `SuriTestDashboard::fecharModal()` — linha 90
+- `SuriTestDashboard::updatedInscricaoTesteId()` — linha 95
+- `SuriTestDashboard::adicionarParametro()` — linha 110
+- `SuriTestDashboard::removerParametro()` — linha 115
+- `SuriTestDashboard::registrarResultado()` — linha 128
+- `SuriTestDashboard::carregarLogNoConsole()` — linha 147
+- `SuriTestDashboard::replayLog()` — linha 167
+- `SuriTestDashboard::dispararListarTemplatesSuri()` — linha 180
+- `SuriTestDashboard::dispararBuscarTemplateEspecifico()` — linha 186
+- `SuriTestDashboard::excluirLog()` — linha 198
+- `SuriTestDashboard::limparTodosOsLogs()` — linha 214
+- `SuriTestDashboard::dispararListarContatos()` — linha 223
+- `SuriTestDashboard::selecionarContatoSuri()` — linha 252
+- `SuriTestDashboard::dispararImportarContato()` — linha 262
+- `SuriTestDashboard::dispararTemplateSimples()` — linha 274
+- `SuriTestDashboard::dispararTemplateComBotoes()` — linha 284
+- `SuriTestDashboard::dispararTemplateComVariaveis()` — linha 296
+- `SuriTestDashboard::dispararMensagemSimples()` — linha 309
+- `SuriTestDashboard::render()` — linha 319
 
 **`app/Modules/Comunicacao/UI/Livewire/Template/TemplateForm.php`**
 - `TemplateForm::mount()` — linha 55
@@ -21572,54 +21980,65 @@ prototipo-percorre/
 - `OrcamentoManager::render()` — linha 209
 
 **`app/Modules/FormBuilder/UI/Livewire/DynamicFields.php`**
-- `DynamicFields::mount()` — linha 90
-- `DynamicFields::updatedCamposSelecionados()` — linha 143
-- `DynamicFields::toggleSelecionarCampo()` — linha 166
-- `DynamicFields::selecionarTodosDaEtapa()` — linha 189
-- `DynamicFields::limparSelecaoCampos()` — linha 214
-- `DynamicFields::moverCamposSelecionadosParaEtapa()` — linha 220
-- `DynamicFields::moverSelecionadosNaMesmaEtapa()` — linha 273
-- `DynamicFields::reindexarOrdensDaEtapa()` — linha 316
-- `DynamicFields::abrirModalFases()` — linha 338
-- `DynamicFields::adicionarFase()` — linha 379
-- `DynamicFields::removerFase()` — linha 391
-- `DynamicFields::salvarFases()` — linha 401
-- `DynamicFields::inicializarDefaultsDicas()` — linha 448
-- `DynamicFields::updatedConfiguracoesDicaModo()` — linha 459
-- `DynamicFields::updatedConfiguracoesDica1Tipo()` — linha 474
-- `DynamicFields::updatedConfiguracoesDica2Tipo()` — linha 481
-- `DynamicFields::getContextColumn()` — linha 488
-- `DynamicFields::carregarEtapas()` — linha 493
-- `DynamicFields::loadFormSettings()` — linha 525
-- `DynamicFields::iniciarNovoCampo()` — linha 534
-- `DynamicFields::setTipo()` — linha 540
-- `DynamicFields::updatedConfiguracoesTipoAssinante()` — linha 678
-- `DynamicFields::updatedConfiguracoesTipoArquivo()` — linha 690
-- `DynamicFields::updatedLabel()` — linha 710
-- `DynamicFields::limiteOrdem()` — linha 723
-- `DynamicFields::atualizarProximaOrdem()` — linha 742
-- `DynamicFields::updatedEtapa()` — linha 748
-- `DynamicFields::editar()` — linha 753
-- `DynamicFields::excluirCamposSelecionados()` — linha 833
-- `DynamicFields::cancelarEdicao()` — linha 872
-- `DynamicFields::salvarFormSettings()` — linha 889
-- `DynamicFields::limparHtmlQuill()` — linha 940
-- `DynamicFields::salvar()` — linha 953
-- `DynamicFields::gerarCamposEnderecoViaCep()` — linha 1268
-- `DynamicFields::gerarCamposComboAcademico()` — linha 1320
-- `DynamicFields::excluir()` — linha 1385
-- `DynamicFields::adicionarEtapa()` — linha 1410
-- `DynamicFields::atualizarNomeEtapa()` — linha 1422
-- `DynamicFields::excluirEtapa()` — linha 1430
-- `DynamicFields::abrirModalConfigCombo()` — linha 1511
-- `DynamicFields::updatedComboUnidadesSelecionadas()` — linha 1528
-- `DynamicFields::updatedComboCursosSelecionados()` — linha 1544
-- `DynamicFields::updatedComboTurnosSelecionados()` — linha 1569
-- `DynamicFields::setComboActiveUnidade()` — linha 1588
-- `DynamicFields::setComboActiveCurso()` — linha 1594
-- `DynamicFields::confirmarConfigComboAcademico()` — linha 1599
-- `DynamicFields::limparRestricaoComboAcademico()` — linha 1609
-- `DynamicFields::render()` — linha 1619
+- `DynamicFields::mount()` — linha 97
+- `DynamicFields::updatedCamposSelecionados()` — linha 150
+- `DynamicFields::toggleSelecionarCampo()` — linha 173
+- `DynamicFields::selecionarTodosDaEtapa()` — linha 196
+- `DynamicFields::limparSelecaoCampos()` — linha 221
+- `DynamicFields::moverCamposSelecionadosParaEtapa()` — linha 227
+- `DynamicFields::moverSelecionadosNaMesmaEtapa()` — linha 280
+- `DynamicFields::reindexarOrdensDaEtapa()` — linha 323
+- `DynamicFields::abrirModalFases()` — linha 345
+- `DynamicFields::adicionarFase()` — linha 386
+- `DynamicFields::removerFase()` — linha 398
+- `DynamicFields::salvarFases()` — linha 408
+- `DynamicFields::inicializarDefaultsDicas()` — linha 455
+- `DynamicFields::updatedConfiguracoesDicaModo()` — linha 466
+- `DynamicFields::updatedConfiguracoesDica1Tipo()` — linha 481
+- `DynamicFields::updatedConfiguracoesDica2Tipo()` — linha 488
+- `DynamicFields::getContextColumn()` — linha 495
+- `DynamicFields::carregarEtapas()` — linha 500
+- `DynamicFields::loadFormSettings()` — linha 532
+- `DynamicFields::iniciarNovoCampo()` — linha 541
+- `DynamicFields::setTipo()` — linha 547
+- `DynamicFields::updatedConfiguracoesTipoAssinante()` — linha 685
+- `DynamicFields::updatedConfiguracoesTipoArquivo()` — linha 697
+- `DynamicFields::updatedLabel()` — linha 717
+- `DynamicFields::limiteOrdem()` — linha 730
+- `DynamicFields::atualizarProximaOrdem()` — linha 749
+- `DynamicFields::updatedEtapa()` — linha 755
+- `DynamicFields::getOperadoresCondicionaisProperty()` — linha 764
+- `DynamicFields::getCamposDisponiveisParaCondicaoProperty()` — linha 785
+- `DynamicFields::updatedModoCondicional()` — linha 827
+- `DynamicFields::abrirModalCondicoesAvancadas()` — linha 859
+- `DynamicFields::adicionarGrupoCondicional()` — linha 870
+- `DynamicFields::removerGrupoCondicional()` — linha 888
+- `DynamicFields::adicionarRegraNoGrupo()` — linha 898
+- `DynamicFields::removerRegraDoGrupo()` — linha 912
+- `DynamicFields::avaliarRegraIndividual()` — linha 927
+- `DynamicFields::diagnosticoSimulacaoCondicional()` — linha 992
+- `DynamicFields::confirmarCondicoesAvancadas()` — linha 1087
+- `DynamicFields::editar()` — linha 1104
+- `DynamicFields::excluirCamposSelecionados()` — linha 1198
+- `DynamicFields::cancelarEdicao()` — linha 1237
+- `DynamicFields::salvarFormSettings()` — linha 1255
+- `DynamicFields::limparHtmlQuill()` — linha 1306
+- `DynamicFields::salvar()` — linha 1319
+- `DynamicFields::gerarCamposEnderecoViaCep()` — linha 1668
+- `DynamicFields::gerarCamposComboAcademico()` — linha 1720
+- `DynamicFields::excluir()` — linha 1785
+- `DynamicFields::adicionarEtapa()` — linha 1810
+- `DynamicFields::atualizarNomeEtapa()` — linha 1822
+- `DynamicFields::excluirEtapa()` — linha 1830
+- `DynamicFields::abrirModalConfigCombo()` — linha 1911
+- `DynamicFields::updatedComboUnidadesSelecionadas()` — linha 1928
+- `DynamicFields::updatedComboCursosSelecionados()` — linha 1944
+- `DynamicFields::updatedComboTurnosSelecionados()` — linha 1969
+- `DynamicFields::setComboActiveUnidade()` — linha 1988
+- `DynamicFields::setComboActiveCurso()` — linha 1994
+- `DynamicFields::confirmarConfigComboAcademico()` — linha 1999
+- `DynamicFields::limparRestricaoComboAcademico()` — linha 2009
+- `DynamicFields::render()` — linha 2019
 
 **`app/Modules/FormBuilder/UI/Livewire/Hub.php`**
 - `Hub::mount()` — linha 42
@@ -21984,33 +22403,37 @@ prototipo-percorre/
 - `KanbanBoard::render()` — linha 766
 
 **`app/Modules/Registration/UI/Livewire/RegistrationDetails.php`**
-- `RegistrationDetails::mount()` — linha 62
-- `RegistrationDetails::setAba()` — linha 70
-- `RegistrationDetails::usuarioPodeEditarAssistido()` — linha 78
-- `RegistrationDetails::carregarDadosEdicao()` — linha 92
-- `RegistrationDetails::iniciarEdicaoAssistida()` — linha 124
-- `RegistrationDetails::cancelarEdicaoAssistida()` — linha 131
-- `RegistrationDetails::camposDinamicosCiclo()` — linha 138
-- `RegistrationDetails::salvarEdicaoAssistida()` — linha 149
-- `RegistrationDetails::documentosExigidos()` — linha 275
-- `RegistrationDetails::carregarStatusArquivos()` — linha 281
-- `RegistrationDetails::updatedUploads()` — linha 323
-- `RegistrationDetails::aprovarDocumentoManualmente()` — linha 418
-- `RegistrationDetails::formulariosDisponiveisEmbed()` — linha 444
-- `RegistrationDetails::abrirFormularioEmbed()` — linha 451
-- `RegistrationDetails::fecharFormularioEmbed()` — linha 530
-- `RegistrationDetails::contatosRegistrados()` — linha 543
-- `RegistrationDetails::verConteudoEmail()` — linha 551
-- `RegistrationDetails::fecharModalEmail()` — linha 557
-- `RegistrationDetails::logsMovimentacao()` — linha 564
-- `RegistrationDetails::logsComunicacao()` — linha 636
-- `RegistrationDetails::getDataInscricao()` — linha 656
-- `RegistrationDetails::getDataAtualizacao()` — linha 668
-- `RegistrationDetails::atualizarStatus()` — linha 680
-- `RegistrationDetails::cancelarAntiSpam()` — linha 713
-- `RegistrationDetails::executarMudancaStatusFinal()` — linha 719
-- `RegistrationDetails::abrirRegras()` — linha 736
-- `RegistrationDetails::render()` — linha 826
+- `RegistrationDetails::mount()` — linha 73
+- `RegistrationDetails::updatingSearchFormulario()` — linha 89
+- `RegistrationDetails::setAba()` — linha 94
+- `RegistrationDetails::usuarioPodeEditarAssistido()` — linha 102
+- `RegistrationDetails::carregarDadosEdicao()` — linha 116
+- `RegistrationDetails::iniciarEdicaoAssistida()` — linha 148
+- `RegistrationDetails::cancelarEdicaoAssistida()` — linha 155
+- `RegistrationDetails::camposDinamicosCiclo()` — linha 162
+- `RegistrationDetails::salvarEdicaoAssistida()` — linha 173
+- `RegistrationDetails::documentosExigidos()` — linha 296
+- `RegistrationDetails::carregarStatusArquivos()` — linha 302
+- `RegistrationDetails::updatedUploads()` — linha 344
+- `RegistrationDetails::aprovarDocumentoManualmente()` — linha 436
+- `RegistrationDetails::getHeadersProperty()` — linha 461
+- `RegistrationDetails::formulariosPaginados()` — linha 472
+- `RegistrationDetails::abrirFormularioEmbedTable()` — linha 545
+- `RegistrationDetails::verHistoricoFormulario()` — linha 552
+- `RegistrationDetails::abrirFormularioEmbed()` — linha 577
+- `RegistrationDetails::fecharFormularioEmbed()` — linha 655
+- `RegistrationDetails::contatosRegistrados()` — linha 668
+- `RegistrationDetails::verConteudoEmail()` — linha 676
+- `RegistrationDetails::fecharModalEmail()` — linha 682
+- `RegistrationDetails::logsMovimentacao()` — linha 689
+- `RegistrationDetails::logsComunicacao()` — linha 761
+- `RegistrationDetails::getDataInscricao()` — linha 781
+- `RegistrationDetails::getDataAtualizacao()` — linha 793
+- `RegistrationDetails::atualizarStatus()` — linha 805
+- `RegistrationDetails::cancelarAntiSpam()` — linha 838
+- `RegistrationDetails::executarMudancaStatusFinal()` — linha 844
+- `RegistrationDetails::abrirRegras()` — linha 861
+- `RegistrationDetails::render()` — linha 951
 
 **`app/Modules/Registration/UI/Livewire/RegistrationManager.php`**
 - `RegistrationManager::mount()` — linha 86
@@ -22245,24 +22668,24 @@ prototipo-percorre/
 - `SuriTestLog::usuario()` — linha 32
 
 **`app/Modules/Teste/Suri/Services/SuriApiService.php`**
-- `SuriApiService::__construct()` — linha 15
-- `SuriApiService::getConfigResumo()` — linha 22
-- `SuriApiService::montarPayloadTemplate()` — linha 38
-- `SuriApiService::gerarExemploPadraoVariavel()` — linha 177
-- `SuriApiService::syncTemplateComDetalhes()` — linha 192
-- `SuriApiService::syncTemplate()` — linha 207
-- `SuriApiService::listarTemplates()` — linha 217
-- `SuriApiService::obterTemplate()` — linha 222
-- `SuriApiService::criarTemplateDireto()` — linha 228
-- `SuriApiService::listarContatos()` — linha 237
-- `SuriApiService::importarContato()` — linha 246
-- `SuriApiService::enviarTemplateSimples()` — linha 263
-- `SuriApiService::enviarTemplateComBotoes()` — linha 288
-- `SuriApiService::enviarTemplateComVariaveis()` — linha 316
-- `SuriApiService::enviarMensagemSimples()` — linha 364
-- `SuriApiService::reexecutarLog()` — linha 386
-- `SuriApiService::getEndpoint()` — linha 398
-- `SuriApiService::postEndpoint()` — linha 445
+- `SuriApiService::__construct()` — linha 16
+- `SuriApiService::getConfigResumo()` — linha 23
+- `SuriApiService::montarPayloadTemplate()` — linha 36
+- `SuriApiService::gerarExemploPadraoVariavel()` — linha 148
+- `SuriApiService::syncTemplateComDetalhes()` — linha 160
+- `SuriApiService::syncTemplate()` — linha 174
+- `SuriApiService::listarTemplates()` — linha 180
+- `SuriApiService::obterTemplate()` — linha 185
+- `SuriApiService::criarTemplateDireto()` — linha 191
+- `SuriApiService::listarContatos()` — linha 200
+- `SuriApiService::importarContato()` — linha 209
+- `SuriApiService::enviarTemplateSimples()` — linha 226
+- `SuriApiService::enviarTemplateComBotoes()` — linha 249
+- `SuriApiService::enviarTemplateComVariaveis()` — linha 275
+- `SuriApiService::enviarMensagemSimples()` — linha 323
+- `SuriApiService::reexecutarLog()` — linha 341
+- `SuriApiService::getEndpoint()` — linha 357
+- `SuriApiService::postEndpoint()` — linha 433
 
 **`app/Modules/Turno/Application/Services/TurnoService.php`**
 - `TurnoService::__construct()` — linha 12
@@ -22326,59 +22749,53 @@ prototipo-percorre/
 - `UnidadeManager::render()` — linha 238
 
 **`app/Modules/Website/UI/Livewire/FormularioPublico.php`**
-- `FormularioPublico::mount()` — linha 46
-- `FormularioPublico::restaurarRascunhoLocal()` — linha 187
-- `FormularioPublico::salvarRascunhoSilencioso()` — linha 235
-- `FormularioPublico::bloquearAcesso()` — linha 262
-- `FormularioPublico::carregarOpcoesSistemaInicial()` — linha 270
-- `FormularioPublico::rules()` — linha 294
-- `FormularioPublico::normalizarTextoComparacao()` — linha 296
-- `FormularioPublico::campoEstaVisivel()` — linha 302
-- `FormularioPublico::limparRespostasCondicionaisInativas()` — linha 358
-- `FormularioPublico::regrasPorEtapa()` — linha 375
-- `FormularioPublico::updated()` — linha 542
-- `FormularioPublico::removerArquivo()` — linha 620
-- `FormularioPublico::avancarEtapa()` — linha 643
-- `FormularioPublico::render()` — linha 711
+- `FormularioPublico::mount()` — linha 47
+- `FormularioPublico::restaurarRascunhoLocal()` — linha 188
+- `FormularioPublico::salvarRascunhoSilencioso()` — linha 236
+- `FormularioPublico::bloquearAcesso()` — linha 263
+- `FormularioPublico::carregarOpcoesSistemaInicial()` — linha 271
+- `FormularioPublico::rules()` — linha 295
+- `FormularioPublico::regrasPorEtapa()` — linha 297
+- `FormularioPublico::updated()` — linha 464
+- `FormularioPublico::removerArquivo()` — linha 542
+- `FormularioPublico::avancarEtapa()` — linha 565
+- `FormularioPublico::render()` — linha 633
 
 **`app/Modules/Website/UI/Livewire/Home.php`**
 - `Home::mount()` — linha 16
 - `Home::render()` — linha 28
 
 **`app/Modules/Website/UI/Livewire/Inscricao.php`**
-- `Inscricao::mount()` — linha 68
-- `Inscricao::hydrate()` — linha 173
-- `Inscricao::bloqueioFaseAtual()` — linha 187
-- `Inscricao::bloqueioFaseSeguinte()` — linha 206
-- `Inscricao::restaurarRascunhoLocal()` — linha 226
-- `Inscricao::salvarRascunhoSilencioso()` — linha 297
-- `Inscricao::tentarRecuperarRascunho()` — linha 354
-- `Inscricao::carregarModeloInscricao()` — linha 383
-- `Inscricao::getOfertasValidas()` — linha 440
-- `Inscricao::ofuscarEmail()` — linha 469
-- `Inscricao::ofuscarTelefone()` — linha 480
-- `Inscricao::removerArquivo()` — linha 489
-- `Inscricao::normalizarTextoComparacao()` — linha 512
-- `Inscricao::campoEstaVisivel()` — linha 518
-- `Inscricao::limparRespostasCondicionaisInativas()` — linha 578
-- `Inscricao::mensagensValidacao()` — linha 595
-- `Inscricao::regrasPorEtapa()` — linha 630
-- `Inscricao::updated()` — linha 806
-- `Inscricao::avancarEtapa()` — linha 844
-- `Inscricao::rules()` — linha 940
-- `Inscricao::atualizarRankingInstantaneo()` — linha 1012
-- `Inscricao::salvarProgresso()` — linha 1051
-- `Inscricao::restaurarDeDadosSalvos()` — linha 1112
-- `Inscricao::voltarEtapa()` — linha 1133
-- `Inscricao::updatedDataNascimento()` — linha 1140
-- `Inscricao::obterIdadesParaValidacao()` — linha 1154
-- `Inscricao::ofertaCompativelComIdade()` — linha 1186
-- `Inscricao::atualizarDisponibilidade()` — linha 1209
-- `Inscricao::selecionarSugestaoCurso()` — linha 1298
-- `Inscricao::updatedUnidade()` — linha 1310
-- `Inscricao::updatedCurso()` — linha 1358
-- `Inscricao::calcularPontuacaoAutomatica()` — linha 1391
-- `Inscricao::render()` — linha 1546
+- `Inscricao::mount()` — linha 69
+- `Inscricao::hydrate()` — linha 174
+- `Inscricao::bloqueioFaseAtual()` — linha 188
+- `Inscricao::bloqueioFaseSeguinte()` — linha 207
+- `Inscricao::restaurarRascunhoLocal()` — linha 227
+- `Inscricao::salvarRascunhoSilencioso()` — linha 298
+- `Inscricao::tentarRecuperarRascunho()` — linha 355
+- `Inscricao::carregarModeloInscricao()` — linha 384
+- `Inscricao::getOfertasValidas()` — linha 441
+- `Inscricao::ofuscarEmail()` — linha 470
+- `Inscricao::ofuscarTelefone()` — linha 481
+- `Inscricao::removerArquivo()` — linha 490
+- `Inscricao::mensagensValidacao()` — linha 513
+- `Inscricao::regrasPorEtapa()` — linha 548
+- `Inscricao::updated()` — linha 724
+- `Inscricao::avancarEtapa()` — linha 763
+- `Inscricao::rules()` — linha 859
+- `Inscricao::atualizarRankingInstantaneo()` — linha 931
+- `Inscricao::salvarProgresso()` — linha 970
+- `Inscricao::restaurarDeDadosSalvos()` — linha 1031
+- `Inscricao::voltarEtapa()` — linha 1052
+- `Inscricao::updatedDataNascimento()` — linha 1059
+- `Inscricao::obterIdadesParaValidacao()` — linha 1073
+- `Inscricao::ofertaCompativelComIdade()` — linha 1105
+- `Inscricao::atualizarDisponibilidade()` — linha 1128
+- `Inscricao::selecionarSugestaoCurso()` — linha 1217
+- `Inscricao::updatedUnidade()` — linha 1229
+- `Inscricao::updatedCurso()` — linha 1277
+- `Inscricao::calcularPontuacaoAutomatica()` — linha 1310
+- `Inscricao::render()` — linha 1465
 
 **`app/Notifications/CustomResetPasswordNotification.php`**
 - `CustomResetPasswordNotification::toMail()` — linha 16
@@ -22392,6 +22809,13 @@ prototipo-percorre/
 **`app/Providers/AppServiceProvider.php`**
 - `AppServiceProvider::register()` — linha 46
 - `AppServiceProvider::boot()` — linha 53
+
+**`app/Traits/AvaliaCondicoesVisibilidade.php`**
+- `AvaliaCondicoesVisibilidade::normalizarTextoComparacao()` — linha 9
+- `AvaliaCondicoesVisibilidade::extrairGruposCondicionaisDoCampo()` — linha 19
+- `AvaliaCondicoesVisibilidade::campoEstaVisivel()` — linha 61
+- `AvaliaCondicoesVisibilidade::avaliarRegraVisibilidadeIndividual()` — linha 112
+- `AvaliaCondicoesVisibilidade::limparRespostasCondicionaisInativas()` — linha 201
 
 **`app/Traits/ComFiltroAvancado.php`**
 - `ComFiltroAvancado::updatedFiltrosAvancados()` — linha 27
@@ -22417,6 +22841,11 @@ prototipo-percorre/
 **`app/Traits/RegistraAuditoria.php`**
 - `RegistraAuditoria::bootRegistraAuditoria()` — linha 13
 - `RegistraAuditoria::salvarLogAuditoria()` — linha 28
+
+**`app/Traits/ValidaAcesso.php`**
+- `ValidaAcesso::autorizarTela()` — linha 14
+- `ValidaAcesso::autorizarAcao()` — linha 36
+- `ValidaAcesso::registrarLogAcessoNegado()` — linha 67
 
 **`app/Traits/WithCepConsulta.php`**
 - `WithCepConsulta::updatedCep()` — linha 9
@@ -23117,96 +23546,104 @@ prototipo-percorre/
 - `ExtratorDark::literaisDe()` — linha 4273
 - `ExtratorDark::diretivas()` — linha 4299
 - `ExtratorDark::citacoes()` — linha 4347
-- `Indexer::addPhpFile()` — linha 4441
-- `Indexer::addBlade()` — linha 4451
-- `Indexer::addRoutes()` — linha 4458
-- `Indexer::addVoltComponent()` — linha 4466
-- `Indexer::addDark()` — linha 4473
-- `Indexer::addTextos()` — linha 4488
-- `Indexer::mergeMigration()` — linha 4510
-- `Indexer::build()` — linha 4550
-- `Indexer::linkViews()` — linha 4562
-- `Indexer::buildCallGraph()` — linha 4584
-- `Indexer::linkBlades()` — linha 4686
-- `Indexer::linkRoutes()` — linha 4717
-- `Indexer::methodExists()` — linha 4745
-- `Indexer::isModel()` — linha 4765
-- `Indexer::classify()` — linha 4777
-- `Indexer::isOrphan()` — linha 4878
-- `Indexer::callersOf()` — linha 4900
-- `Indexer::addCaller()` — linha 4905
-- `Indexer::conventionalView()` — linha 4910
-- `Indexer::componentFromAlias()` — linha 4925
-- `MarkdownWriter::__construct()` — linha 5010
-- `MarkdownWriter::render()` — linha 5025
-- `MarkdownWriter::cabecalho()` — linha 5063
-- `MarkdownWriter::visaoGeral()` — linha 5100
-- `MarkdownWriter::pontosDeEntrada()` — linha 5132
-- `MarkdownWriter::diagramasSequencia()` — linha 5162
-- `MarkdownWriter::pontosDeEntradaParaSequencia()` — linha 5185
-- `MarkdownWriter::umDiagramaSequencia()` — linha 5245
-- `MarkdownWriter::passosSequencia()` — linha 5271
-- `MarkdownWriter::buscarMetodo()` — linha 5334
-- `MarkdownWriter::idParticipante()` — linha 5357
-- `MarkdownWriter::escaparMermaid()` — linha 5369
-- `MarkdownWriter::fluxoPorArquivo()` — linha 5374
-- `MarkdownWriter::renderClasse()` — linha 5402
-- `MarkdownWriter::renderMetodo()` — linha 5471
-- `MarkdownWriter::viewsBlade()` — linha 5616
-- `MarkdownWriter::tabelaElementos()` — linha 5705
-- `MarkdownWriter::indiceReverso()` — linha 5734
-- `MarkdownWriter::modelsUsados()` — linha 5754
-- `MarkdownWriter::diagramaBanco()` — linha 5774
-- `MarkdownWriter::idMermaid()` — linha 5843
-- `MarkdownWriter::eventosLivewire()` — linha 5848
-- `MarkdownWriter::gatilhos()` — linha 5874
-- `MarkdownWriter::orfaos()` — linha 5904
-- `MarkdownWriter::grafo()` — linha 5923
-- `MarkdownWriter::arvoreArquitetura()` — linha 5975
-- `MarkdownWriter::renderArvore()` — linha 6000
-- `MarkdownWriter::permissoesFeatures()` — linha 6029
-- `MarkdownWriter::tabelaPermissoes()` — linha 6062
-- `MarkdownWriter::indiceFuncoes()` — linha 6083
-- `MarkdownWriter::textosDoSistema()` — linha 6119
-- `MarkdownWriter::renderTextosAvulso()` — linha 6129
-- `MarkdownWriter::corpoTextos()` — linha 6136
-- `MarkdownWriter::tabelaPalavras()` — linha 6223
-- `MarkdownWriter::diretorioDe()` — linha 6269
-- `MarkdownWriter::celulaTexto()` — linha 6276
-- `MarkdownWriter::tiposTexto()` — linha 6286
-- `MarkdownWriter::ondeAparece()` — linha 6294
-- `MarkdownWriter::temaEscuro()` — linha 6327
-- `MarkdownWriter::renderDarkAvulso()` — linha 6337
-- `MarkdownWriter::corpoDark()` — linha 6344
-- `MarkdownWriter::analisarDark()` — linha 6647
-- `MarkdownWriter::somarMapa()` — linha 6697
-- `MarkdownWriter::exemplos()` — linha 6710
-- `MarkdownWriter::chaveComponente()` — linha 6716
-- `MarkdownWriter::arquivosIgnorados()` — linha 6732
-- `MarkdownWriter::modelsDaClasse()` — linha 6744
-- `MarkdownWriter::tagClasse()` — linha 6775
-- `MarkdownWriter::curto()` — linha 6792
-- `MarkdownWriter::listaCodigo()` — linha 6804
-- `MarkdownWriter::paramsDoGatilho()` — linha 6810
-- `MarkdownWriter::parenteses()` — linha 6821
-- `MarkdownWriter::truncar()` — linha 6826
-- `Main::run()` — linha 6838
-- `Main::help()` — linha 7074
+- `FeatureScanner::extrair()` — linha 4408
+- `FeatureScanner::chamada()` — linha 4498
+- `FeatureScanner::nomes()` — linha 4513
+- `FeatureScanner::dinamico()` — linha 4541
+- `FeatureScanner::primeiroArgumento()` — linha 4547
+- `FeatureScanner::semComentarios()` — linha 4577
+- `Indexer::addPhpFile()` — linha 4637
+- `Indexer::addBlade()` — linha 4647
+- `Indexer::addRoutes()` — linha 4654
+- `Indexer::addVoltComponent()` — linha 4662
+- `Indexer::addFeatures()` — linha 4669
+- `Indexer::addDark()` — linha 4678
+- `Indexer::addTextos()` — linha 4693
+- `Indexer::mergeMigration()` — linha 4715
+- `Indexer::build()` — linha 4755
+- `Indexer::linkViews()` — linha 4767
+- `Indexer::buildCallGraph()` — linha 4789
+- `Indexer::linkBlades()` — linha 4891
+- `Indexer::linkRoutes()` — linha 4922
+- `Indexer::methodExists()` — linha 4950
+- `Indexer::isModel()` — linha 4970
+- `Indexer::classify()` — linha 4982
+- `Indexer::isOrphan()` — linha 5083
+- `Indexer::callersOf()` — linha 5105
+- `Indexer::addCaller()` — linha 5110
+- `Indexer::conventionalView()` — linha 5115
+- `Indexer::componentFromAlias()` — linha 5130
+- `MarkdownWriter::__construct()` — linha 5215
+- `MarkdownWriter::render()` — linha 5230
+- `MarkdownWriter::cabecalho()` — linha 5268
+- `MarkdownWriter::visaoGeral()` — linha 5305
+- `MarkdownWriter::pontosDeEntrada()` — linha 5337
+- `MarkdownWriter::diagramasSequencia()` — linha 5367
+- `MarkdownWriter::pontosDeEntradaParaSequencia()` — linha 5390
+- `MarkdownWriter::umDiagramaSequencia()` — linha 5450
+- `MarkdownWriter::passosSequencia()` — linha 5476
+- `MarkdownWriter::buscarMetodo()` — linha 5539
+- `MarkdownWriter::idParticipante()` — linha 5562
+- `MarkdownWriter::escaparMermaid()` — linha 5574
+- `MarkdownWriter::fluxoPorArquivo()` — linha 5579
+- `MarkdownWriter::renderClasse()` — linha 5607
+- `MarkdownWriter::renderMetodo()` — linha 5676
+- `MarkdownWriter::viewsBlade()` — linha 5821
+- `MarkdownWriter::tabelaElementos()` — linha 5910
+- `MarkdownWriter::indiceReverso()` — linha 5939
+- `MarkdownWriter::modelsUsados()` — linha 5959
+- `MarkdownWriter::diagramaBanco()` — linha 5979
+- `MarkdownWriter::idMermaid()` — linha 6048
+- `MarkdownWriter::eventosLivewire()` — linha 6053
+- `MarkdownWriter::gatilhos()` — linha 6079
+- `MarkdownWriter::orfaos()` — linha 6109
+- `MarkdownWriter::grafo()` — linha 6128
+- `MarkdownWriter::arvoreArquitetura()` — linha 6180
+- `MarkdownWriter::renderArvore()` — linha 6205
+- `MarkdownWriter::permissoesFeatures()` — linha 6234
+- `MarkdownWriter::tabelaFeatures()` — linha 6265
+- `MarkdownWriter::tabelaPermissoes()` — linha 6351
+- `MarkdownWriter::indiceFuncoes()` — linha 6372
+- `MarkdownWriter::textosDoSistema()` — linha 6408
+- `MarkdownWriter::renderTextosAvulso()` — linha 6418
+- `MarkdownWriter::corpoTextos()` — linha 6425
+- `MarkdownWriter::tabelaPalavras()` — linha 6512
+- `MarkdownWriter::diretorioDe()` — linha 6558
+- `MarkdownWriter::celulaTexto()` — linha 6565
+- `MarkdownWriter::tiposTexto()` — linha 6575
+- `MarkdownWriter::ondeAparece()` — linha 6583
+- `MarkdownWriter::temaEscuro()` — linha 6616
+- `MarkdownWriter::renderDarkAvulso()` — linha 6626
+- `MarkdownWriter::corpoDark()` — linha 6633
+- `MarkdownWriter::analisarDark()` — linha 6936
+- `MarkdownWriter::somarMapa()` — linha 6986
+- `MarkdownWriter::exemplos()` — linha 6999
+- `MarkdownWriter::chaveComponente()` — linha 7005
+- `MarkdownWriter::arquivosIgnorados()` — linha 7021
+- `MarkdownWriter::modelsDaClasse()` — linha 7033
+- `MarkdownWriter::tagClasse()` — linha 7064
+- `MarkdownWriter::curto()` — linha 7081
+- `MarkdownWriter::listaCodigo()` — linha 7093
+- `MarkdownWriter::paramsDoGatilho()` — linha 7099
+- `MarkdownWriter::parenteses()` — linha 7110
+- `MarkdownWriter::truncar()` — linha 7115
+- `Main::run()` — linha 7127
+- `Main::help()` — linha 7373
 
 ---
 
 ## Textos e strings do sistema
 
-_20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma string exata — palavra solta ou frase inteira. Tags de personalização ficam no lugar, dentro da frase (`{{ $nome }}`, `{{nome}}`, `{nome}`, `{$nome}`). Em views, `<strong>`/`<b>`/`<em>` não quebram a frase. Por padrão só entram textos de interface (chaves, classes CSS, caminhos, SQL e formatos de data são descartados); use `--strings-todas` para listar tudo._
+_20531 textos únicos · 76623 ocorrências · 327 arquivos. Cada linha é uma string exata — palavra solta ou frase inteira. Tags de personalização ficam no lugar, dentro da frase (`{{ $nome }}`, `{{nome}}`, `{nome}`, `{$nome}`). Em views, `<strong>`/`<b>`/`<em>` não quebram a frase. Por padrão só entram textos de interface (chaves, classes CSS, caminhos, SQL e formatos de data são descartados); use `--strings-todas` para listar tudo._
 
 ### Por tipo de origem
 
 | Tipo | Ocorrências | O que é |
 | --- | ---: | --- |
-| php | 71474 | string em PHP (mensagens, validações, seeders, e-mails em HTML/heredoc) |
-| view | 3654 | texto visível em view Blade/HTML |
-| atributo | 743 | `placeholder`, `title`, `alt`, `aria-label`, `wire:confirm`, props de componentes, expressões Alpine |
-| expressão | 494 | string dentro de `{{ ... }}` ou de diretiva (`@section`, `@include`...) |
+| php | 71592 | string em PHP (mensagens, validações, seeders, e-mails em HTML/heredoc) |
+| view | 3704 | texto visível em view Blade/HTML |
+| atributo | 757 | `placeholder`, `title`, `alt`, `aria-label`, `wire:confirm`, props de componentes, expressões Alpine |
+| expressão | 536 | string dentro de `{{ ... }}` ou de diretiva (`@section`, `@include`...) |
 | js | 29 | string em JavaScript / `<script>` |
 | lang | 5 | arquivos `lang/` |
 
@@ -23215,12 +23652,12 @@ _20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma s
 | Diretório | Textos únicos | Ocorrências |
 | --- | ---: | ---: |
 | `database/seeders/` | 15064 | 68461 |
-| `resources/views/livewire/registration/` | 395 | 493 |
-| `resources/views/livewire/form-builder/` | 410 | 425 |
+| `resources/views/livewire/registration/` | 399 | 497 |
+| `resources/views/livewire/form-builder/` | 458 | 478 |
 | `resources/views/livewire/financeiro/` | 224 | 379 |
 | `resources/views/livewire/period/` | 299 | 363 |
-| `(raiz)/` | 321 | 334 |
-| `app/Modules/Registration/UI/Livewire/` | 217 | 307 |
+| `(raiz)/` | 335 | 349 |
+| `app/Modules/Registration/UI/Livewire/` | 224 | 316 |
 | `resources/views/components/layouts/` | 102 | 293 |
 | `resources/views/livewire/comunicacao/automacao/` | 253 | 285 |
 | `app/Modules/Financeiro/UI/Livewire/` | 120 | 280 |
@@ -23235,15 +23672,15 @@ _20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma s
 | `resources/views/livewire/importacao/` | 136 | 138 |
 | `app/Jobs/` | 115 | 133 |
 | `app/Modules/Website/UI/Livewire/` | 88 | 127 |
+| `app/Modules/FormBuilder/UI/Livewire/` | 109 | 124 |
 | `resources/views/livewire/website/` | 109 | 123 |
 | `app/Modules/Period/UI/Livewire/` | 99 | 120 |
+| `app/Traits/` | 72 | 112 |
 | `resources/views/livewire/corporate/` | 104 | 111 |
 | `resources/views/livewire/teste/rd-crm/` | 105 | 105 |
 | `resources/views/livewire/company/` | 94 | 102 |
 | `app/Modules/Financeiro/Services/` | 83 | 102 |
 | `app/Modules/SystemTasks/UI/Livewire/` | 84 | 95 |
-| `app/Traits/` | 59 | 94 |
-| `app/Modules/FormBuilder/UI/Livewire/` | 78 | 92 |
 | `resources/views/livewire/comunicacao/comunicado/` | 78 | 82 |
 | `app/Modules/Comunicacao/Services/` | 67 | 81 |
 | `resources/views/livewire/unidade/` | 59 | 76 |
@@ -23254,6 +23691,7 @@ _20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma s
 | `resources/views/livewire/curso/` | 54 | 61 |
 | `app/Modules/Corporate/UI/Livewire/` | 51 | 60 |
 | `resources/views/livewire/admin/` | 58 | 60 |
+| `resources/views/errors/` | 54 | 56 |
 | `app/Modules/Comunicacao/UI/Livewire/Template/` | 52 | 56 |
 | `resources/views/livewire/comunicacao/email-log/` | 54 | 56 |
 | `resources/views/livewire/student/dashboard/` | 48 | 54 |
@@ -23267,31 +23705,32 @@ _20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma s
 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/` | 43 | 43 |
 | `app/Modules/Student/UI/Livewire/` | 39 | 42 |
 | `database/migrations/` | 40 | 42 |
+| `app/Modules/ACL/UI/Livewire/` | 38 | 41 |
+| `resources/views/components/` | 34 | 41 |
 | `app/Modules/Report/UI/Livewire/` | 32 | 40 |
 | `resources/views/livewire/website/partials/` | 34 | 40 |
 | `resources/views/pdf/` | 39 | 39 |
 | `resources/views/livewire/auth/` | 37 | 38 |
 | `resources/views/livewire/gestao-educacional/matricula/` | 30 | 37 |
-| `app/Modules/ACL/UI/Livewire/` | 33 | 36 |
-| `app/Modules/Auditoria/UI/Livewire/` | 35 | 35 |
+| `app/Modules/Auditoria/UI/Livewire/` | 36 | 36 |
+| `app/Modules/Teste/Suri/Services/` | 26 | 33 |
 | `resources/views/livewire/gestao-educacional/` | 28 | 33 |
-| `resources/views/components/` | 25 | 31 |
 | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` | 30 | 30 |
 | `app/Modules/Unidade/UI/Livewire/` | 25 | 29 |
-| `app/Modules/Comunicacao/UI/Livewire/Suri/` | 22 | 25 |
 | `app/Modules/Curso/UI/Livewire/` | 21 | 24 |
 | `resources/views/livewire/turno/` | 17 | 23 |
 | `app/Modules/Company/UI/Livewire/` | 17 | 22 |
 | `app/Console/Commands/` | 20 | 21 |
+| `app/Modules/Comunicacao/UI/Livewire/Suri/` | 19 | 21 |
 | `app/Modules/Matricula/Services/` | 21 | 21 |
 | `resources/views/livewire/portal/auth/` | 18 | 20 |
 | `app/Modules/Teste/RDCrm/UI/Livewire/` | 18 | 19 |
 | `resources/views/emails/financeiro/` | 16 | 16 |
-| `app/Modules/Teste/Suri/Services/` | 13 | 16 |
+| `app/Modules/Comunicacao/Jobs/` | 12 | 16 |
+| `app/Models/` | 16 | 16 |
 | `app/Notifications/` | 14 | 16 |
 | `app/Modules/FeatureToggle/UI/Livewire/` | 15 | 15 |
 | `app/Modules/Admin/UI/Livewire/` | 14 | 15 |
-| `app/Models/` | 15 | 15 |
 | `app/Modules/GestaoEducacional/UI/Livewire/PeriodoAvaliacao/` | 13 | 14 |
 | `app/Modules/Portal/UI/Livewire/Auth/` | 12 | 14 |
 | `app/Modules/GestaoEducacional/UI/Livewire/Matricula/` | 12 | 12 |
@@ -23302,18 +23741,17 @@ _20354 textos únicos · 76399 ocorrências · 316 arquivos. Cada linha é uma s
 | `app/Modules/Auth/UI/Livewire/` | 10 | 10 |
 | `app/Modules/Financeiro/Domain/Models/` | 8 | 10 |
 | `app/Modules/Comunicacao/UI/Livewire/EmailLog/` | 8 | 8 |
-| `resources/views/errors/` | 8 | 8 |
 | `app/Modules/GestaoEducacional/UI/Livewire/CicloAprendizagem/` | 8 | 8 |
 | `resources/views/livewire/report/` | 8 | 8 |
 | `app/Mail/` | 7 | 7 |
 | `resources/views/emails/layouts/` | 6 | 7 |
-| `app/Modules/Comunicacao/Jobs/` | 5 | 5 |
 | `lang/pt_BR/` | 5 | 5 |
 | `resources/views/livewire/dashboard/` | 5 | 5 |
 | `app/Helpers/` | 4 | 4 |
+| `app/Http/Middleware/` | 3 | 4 |
+| `bootstrap/` | 4 | 4 |
 | `app/Providers/` | 3 | 4 |
 | `app/Modules/Comunicacao/Http/Controllers/` | 4 | 4 |
-| `bootstrap/` | 4 | 4 |
 | `app/Livewire/Components/` | 1 | 2 |
 | `resources/views/components/partials/` | 1 | 2 |
 | `resources/views/livewire/components/` | 2 | 2 |
@@ -23390,8 +23828,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cancelar` | 44 | view | `resources/views/livewire/acl/` ×2<br>`resources/views/livewire/company/` ×2<br>`resources/views/livewire/comunicacao/automacao/` ×2<br>`resources/views/livewire/comunicacao/comunicado/` ×1<br>`resources/views/livewire/conteudo/` ×3<br>`resources/views/livewire/corporate/` ×1<br>`resources/views/livewire/curso/` ×1<br>`resources/views/livewire/feature-toggle/` ×1<br>`resources/views/livewire/financeiro/` ×2<br>`resources/views/livewire/form-builder/` ×3<br>…+12 diretórios |
 | `Ferraz de Vasconcelos` | 43 | php | `database/seeders/` ×43 (`InscricoesSeeder.php` ×43) |
 | `Santana` | 42 | php | `database/seeders/` ×42 (`InscricoesSeeder.php` ×41, `UnidadesTesteSeeder.php`) |
+| `Ações` | 41 | php, view | `app/Modules/ACL/UI/Livewire/` ×2<br>`app/Modules/Comunicacao/UI/Livewire/Automacao/` ×2<br>`app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1<br>`app/Modules/Comunicacao/UI/Livewire/EmailLog/` ×1<br>`app/Modules/Conteudo/UI/Livewire/` ×2<br>`app/Modules/Corporate/UI/Livewire/` ×1<br>`app/Modules/Curso/UI/Livewire/` ×1<br>`app/Modules/FeatureToggle/UI/Livewire/` ×1<br>`app/Modules/Financeiro/UI/Livewire/` ×2<br>`app/Modules/Forms/UI/Livewire/` ×3<br>…+18 diretórios |
 | `Protheus: Instalação e Configuração` | 41 | php | `database/seeders/` ×41 (`CursosTesteSeeder.php`, `InscricoesSeeder.php` ×40) |
-| `Ações` | 40 | php, view | `app/Modules/ACL/UI/Livewire/` ×2<br>`app/Modules/Comunicacao/UI/Livewire/Automacao/` ×2<br>`app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1<br>`app/Modules/Comunicacao/UI/Livewire/EmailLog/` ×1<br>`app/Modules/Conteudo/UI/Livewire/` ×2<br>`app/Modules/Corporate/UI/Livewire/` ×1<br>`app/Modules/Curso/UI/Livewire/` ×1<br>`app/Modules/FeatureToggle/UI/Livewire/` ×1<br>`app/Modules/Financeiro/UI/Livewire/` ×2<br>`app/Modules/Forms/UI/Livewire/` ×3<br>…+18 diretórios |
 | `Contagem` | 40 | php | `database/seeders/` ×40 (`InscricoesSeeder.php` ×40) |
 | `Vila Medeiros` | 40 | php | `database/seeders/` ×40 (`InscricoesSeeder.php` ×40) |
 | `Lomba do Pinheiro` | 39 | php | `database/seeders/` ×39 (`InscricoesSeeder.php` ×39) |
@@ -23400,12 +23838,12 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `SP-São José do Rio Preto` | 38 | php | `database/seeders/` ×38 (`InscricoesSeeder.php` ×37, `UnidadesTesteSeeder.php`) |
 | `Mauá` | 32 | php | `database/seeders/` ×32 (`InscricoesSeeder.php` ×32) |
 | `Bela Vista` | 31 | php | `database/seeders/` ×31 (`InscricoesSeeder.php` ×31) |
+| `N/A` | 31 | expressão, php | `app/Jobs/` ×1<br>`app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/Auditoria/UI/Livewire/` ×1<br>`app/Modules/Comunicacao/Jobs/` ×1<br>`app/Modules/Financeiro/Services/` ×1<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×5<br>`app/Providers/` ×2<br>`app/Traits/` ×2<br>`resources/views/livewire/auditoria/` ×1<br>`resources/views/livewire/comunicacao/template/` ×1<br>…+7 diretórios |
 | `Santa Luzia` | 31 | php | `database/seeders/` ×31 (`InscricoesSeeder.php` ×31) |
 | `SP` | 31 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`)<br>`database/seeders/` ×30 (`InscricoesSeeder.php` ×22, `UnidadesTesteSeeder.php` ×8) |
 | `Campo Grande` | 30 | php | `database/seeders/` ×30 (`InscricoesSeeder.php` ×30) |
 | `Imirim` | 30 | php | `database/seeders/` ×30 (`InscricoesSeeder.php` ×30) |
 | `Jardim Brasil (Zona Norte)` | 30 | php | `database/seeders/` ×30 (`InscricoesSeeder.php` ×30) |
-| `N/A` | 29 | expressão, php | `app/Jobs/` ×1<br>`app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/Auditoria/UI/Livewire/` ×1<br>`app/Modules/Financeiro/Services/` ×1<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×5<br>`app/Providers/` ×2<br>`app/Traits/` ×1<br>`resources/views/livewire/auditoria/` ×1<br>`resources/views/livewire/comunicacao/template/` ×1<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1<br>…+6 diretórios |
 | `Casa 4` | 28 | php | `database/seeders/` ×28 (`InscricoesSeeder.php` ×28) |
 | `Apartamento` | 27 | php | `database/seeders/` ×27 (`InscricoesSeeder.php` ×27) |
 | `Cidade Ipava` | 27 | php | `database/seeders/` ×27 (`InscricoesSeeder.php` ×27) |
@@ -23457,11 +23895,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Brasilândia` | 18 | php | `database/seeders/` ×18 (`InscricoesSeeder.php` ×18) |
 | `Casa A` | 18 | php | `database/seeders/` ×18 (`InscricoesSeeder.php` ×18) |
 | `Curso` | 18 | php, view | `app/Jobs/` ×2<br>`app/Modules/FormBuilder/UI/Livewire/` ×2<br>`app/Modules/Period/UI/Livewire/` ×1<br>`app/Modules/Registration/UI/Livewire/` ×5<br>`app/Modules/SystemTasks/UI/Livewire/` ×1<br>`resources/views/livewire/gestao-educacional/matricula/` ×1<br>`resources/views/livewire/period/` ×3<br>`resources/views/livewire/registration/` ×2<br>`resources/views/livewire/student/dashboard/` ×1 |
-| `Fechar` | 18 | view | `resources/views/components/layouts/` ×3<br>`resources/views/livewire/admin/` ×1<br>`resources/views/livewire/auditoria/` ×1<br>`resources/views/livewire/comunicacao/email-log/` ×2<br>`resources/views/livewire/comunicacao/suri/` ×6<br>`resources/views/livewire/comunicacao/template/` ×1<br>`resources/views/livewire/financeiro/` ×1<br>`resources/views/livewire/importacao/` ×1<br>`resources/views/livewire/registration/` ×1<br>`resources/views/livewire/student/` ×1 |
+| `Fechar` | 18 | view | `resources/views/components/layouts/` ×3<br>`resources/views/livewire/admin/` ×1<br>`resources/views/livewire/auditoria/` ×1<br>`resources/views/livewire/comunicacao/email-log/` ×2<br>`resources/views/livewire/comunicacao/suri/` ×6<br>`resources/views/livewire/comunicacao/template/` ×1<br>`resources/views/livewire/financeiro/` ×1<br>`resources/views/livewire/form-builder/` ×1<br>`resources/views/livewire/importacao/` ×1<br>`resources/views/livewire/student/` ×1 |
 | `ID` | 18 | php, view | `app/Modules/ACL/UI/Livewire/` ×2<br>`app/Modules/FeatureToggle/UI/Livewire/` ×1<br>`app/Modules/Financeiro/UI/Livewire/` ×4<br>`app/Modules/Forms/UI/Livewire/` ×1<br>`app/Modules/Period/UI/Livewire/` ×2<br>`app/Modules/Registration/UI/Livewire/` ×1<br>`app/Modules/Student/UI/Livewire/` ×1<br>`app/Modules/Turno/UI/Livewire/` ×1<br>`app/Modules/Unidade/UI/Livewire/` ×1<br>`resources/views/livewire/financeiro/` ×4 |
 | `INATIVO` | 18 | expressão, php, view | `app/Modules/Financeiro/Services/` ×2<br>`app/Modules/Period/UI/Livewire/` ×1<br>`resources/views/livewire/conteudo/` ×1<br>`resources/views/livewire/curso/` ×4<br>`resources/views/livewire/feature-toggle/` ×1<br>`resources/views/livewire/forms/` ×2<br>`resources/views/livewire/period/` ×2<br>`resources/views/livewire/student/` ×3<br>`resources/views/livewire/turno/` ×2 |
+| `Instituto Percorre` | 18 | atributo, view, expressão | `resources/views/components/layouts/` ×9<br>`resources/views/emails/layouts/` ×2<br>`resources/views/errors/` ×1<br>`resources/views/livewire/auth/` ×1<br>`resources/views/livewire/comunicacao/template/` ×1<br>`resources/views/livewire/portal/auth/` ×3<br>`resources/views/livewire/website/` ×1 |
 | `Jardim Antártica` | 18 | php | `database/seeders/` ×18 (`InscricoesSeeder.php` ×18) |
-| `Sistema` | 18 | php, expressão, atributo | `app/Jobs/` ×2<br>`app/Modules/Comunicacao/Services/` ×1<br>`app/Modules/Comunicacao/UI/Livewire/Suri/` ×2<br>`app/Modules/Financeiro/Services/` ×2<br>`app/Modules/Registration/UI/Livewire/` ×2<br>`resources/views/livewire/admin/` ×2<br>`resources/views/livewire/auditoria/` ×2<br>`resources/views/livewire/comunicacao/suri/` ×1<br>`resources/views/livewire/feature-toggle/` ×1<br>`resources/views/livewire/importacao/` ×1<br>…+2 diretórios |
 | `Suzano` | 18 | php | `database/seeders/` ×18 (`InscricoesSeeder.php` ×18) |
 | `Vila Constança` | 18 | php | `database/seeders/` ×18 (`InscricoesSeeder.php` ×18) |
 | `Y-m-d` | 18 | php | `app/Console/Commands/` ×1<br>`app/Jobs/` ×1<br>`app/Modules/Corporate/UI/Livewire/` ×3<br>`app/Modules/GestaoEducacional/UI/Livewire/` ×2<br>`app/Modules/Matricula/UI/Livewire/` ×1<br>`app/Modules/Registration/UI/Livewire/` ×3<br>`app/Modules/Report/UI/Livewire/` ×2<br>`app/Modules/Unidade/UI/Livewire/` ×1<br>`app/Modules/Website/UI/Livewire/` ×4 |
@@ -23469,9 +23907,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `CASA` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
 | `Casa Verde Alta` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
 | `Finalizado` | 17 | php, view, expressão | `app/Jobs/` ×2<br>`app/Modules/Financeiro/UI/Livewire/` ×5<br>`app/Modules/Registration/UI/Livewire/` ×2<br>`app/Traits/` ×1<br>`resources/views/livewire/financeiro/` ×4<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1<br>`resources/views/livewire/registration/` ×2 |
-| `Instituto Percorre` | 17 | atributo, view, expressão | `resources/views/components/layouts/` ×9<br>`resources/views/emails/layouts/` ×2<br>`resources/views/livewire/auth/` ×1<br>`resources/views/livewire/comunicacao/template/` ×1<br>`resources/views/livewire/portal/auth/` ×3<br>`resources/views/livewire/website/` ×1 |
 | `Jardim Vista Alegre` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
 | `Rubem Berta` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
+| `Sistema` | 17 | php, expressão, atributo | `app/Jobs/` ×2<br>`app/Modules/Comunicacao/Services/` ×1<br>`app/Modules/Comunicacao/UI/Livewire/Suri/` ×1<br>`app/Modules/Financeiro/Services/` ×2<br>`app/Modules/Registration/UI/Livewire/` ×2<br>`resources/views/livewire/admin/` ×2<br>`resources/views/livewire/auditoria/` ×2<br>`resources/views/livewire/comunicacao/suri/` ×1<br>`resources/views/livewire/feature-toggle/` ×1<br>`resources/views/livewire/importacao/` ×1<br>…+2 diretórios |
 | `Unidade` | 17 | php, view | `app/Jobs/` ×2<br>`app/Modules/FormBuilder/UI/Livewire/` ×2<br>`app/Modules/Period/UI/Livewire/` ×2<br>`app/Modules/Student/UI/Livewire/` ×1<br>`app/Modules/SystemTasks/UI/Livewire/` ×1<br>`app/Modules/Unidade/UI/Livewire/` ×1<br>`app/Traits/` ×2<br>`resources/views/livewire/period/` ×3<br>`resources/views/livewire/registration/` ×2<br>`resources/views/livewire/website/` ×1 |
 | `Vila Bela Vista (Zona Norte)` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
 | `Vila Maria Alta` | 17 | php | `database/seeders/` ×17 (`InscricoesSeeder.php` ×17) |
@@ -23487,6 +23925,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Parque Mandaqui` | 16 | php | `database/seeders/` ×16 (`InscricoesSeeder.php` ×16) |
 | `Turno` | 16 | view, php | `app/Jobs/` ×2<br>`app/Modules/FormBuilder/UI/Livewire/` ×2<br>`app/Modules/SystemTasks/UI/Livewire/` ×1<br>`app/Traits/` ×2<br>`resources/views/livewire/gestao-educacional/matricula/` ×1<br>`resources/views/livewire/gestao-educacional/turma/` ×1<br>`resources/views/livewire/period/` ×3<br>`resources/views/livewire/registration/` ×1<br>`resources/views/livewire/student/dashboard/` ×2<br>`resources/views/livewire/website/` ×1 |
 | `Vila Rica` | 16 | php | `database/seeders/` ×16 (`InscricoesSeeder.php` ×16) |
+| `Candidato` | 15 | php, view | `app/Jobs/` ×1<br>`app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/Comunicacao/Jobs/` ×1<br>`app/Modules/Comunicacao/Services/` ×5<br>`app/Modules/Period/UI/Livewire/` ×1<br>`app/Modules/Registration/UI/Livewire/` ×1<br>`resources/views/livewire/admin/` ×1<br>`resources/views/livewire/registration/` ×4 |
 | `Casa 02` | 15 | php | `database/seeders/` ×15 (`InscricoesSeeder.php` ×15) |
 | `Conjunto Residencial José Bonifácio` | 15 | php | `database/seeders/` ×15 (`InscricoesSeeder.php` ×15) |
 | `d/m/Y às H:i` | 15 | expressão | `resources/views/emails/financeiro/` ×1<br>`resources/views/livewire/conteudo/` ×2<br>`resources/views/livewire/forms/` ×3<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1<br>`resources/views/livewire/registration/` ×5<br>`resources/views/livewire/student/dashboard/` ×1<br>`resources/views/livewire/website/` ×2 |
@@ -23503,7 +23942,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Voltar` | 15 | view, atributo | `resources/views/livewire/comunicacao/automacao/` ×2<br>`resources/views/livewire/conteudo/` ×1<br>`resources/views/livewire/corporate/` ×1<br>`resources/views/livewire/financeiro/` ×1<br>`resources/views/livewire/forms/` ×2<br>`resources/views/livewire/gestao-educacional/` ×1<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1<br>`resources/views/livewire/gestao-educacional/matricula/` ×1<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1<br>`resources/views/livewire/gestao-educacional/turma/` ×1<br>…+2 diretórios |
 | `ATIVO` | 14 | expressão, php | `app/Modules/Period/UI/Livewire/` ×1<br>`resources/views/livewire/conteudo/` ×1<br>`resources/views/livewire/curso/` ×3<br>`resources/views/livewire/feature-toggle/` ×1<br>`resources/views/livewire/forms/` ×2<br>`resources/views/livewire/period/` ×2<br>`resources/views/livewire/student/` ×2<br>`resources/views/livewire/turno/` ×2 |
 | `Bom Jesus` | 14 | php | `database/seeders/` ×14 (`InscricoesSeeder.php` ×14) |
-| `Candidato` | 14 | php, view | `app/Jobs/` ×1<br>`app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/Comunicacao/Services/` ×5<br>`app/Modules/Period/UI/Livewire/` ×1<br>`app/Modules/Registration/UI/Livewire/` ×1<br>`resources/views/livewire/admin/` ×1<br>`resources/views/livewire/registration/` ×4 |
 | `Carandiru` | 14 | php | `database/seeders/` ×14 (`InscricoesSeeder.php` ×14) |
 | `Ceará` | 14 | php | `database/seeders/` ×14 (`InscricoesSeeder.php` ×14) |
 | `Chatuba` | 14 | php | `database/seeders/` ×14 (`InscricoesSeeder.php` ×14) |
@@ -23655,6 +24093,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cordeiro` | 8 | php | `database/seeders/` ×8 (`InscricoesSeeder.php` ×8) |
 | `Coronel Aparício Borges` | 8 | php | `database/seeders/` ×8 (`InscricoesSeeder.php` ×8) |
 | `Em Análise` | 8 | view, php | `database/seeders/` ×1<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1<br>`resources/views/livewire/matricula/` ×1<br>`resources/views/livewire/registration/` ×1<br>`resources/views/livewire/student/` ×3<br>`resources/views/livewire/student/dashboard/` ×1 |
+| `Estudante` | 8 | php, view | `app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×3<br>`app/Modules/GestaoEducacional/UI/Livewire/Matricula/` ×1<br>`app/Modules/Student/UI/Livewire/Dashboard/` ×1<br>`resources/views/components/layouts/` ×1<br>`resources/views/errors/` ×1 |
 | `Eymard` | 8 | php | `database/seeders/` ×8 (`InscricoesSeeder.php` ×8) |
 | `Finalizado - Aprovado` | 8 | php, view | `app/Modules/Financeiro/UI/Livewire/` ×6 (`OrcamentoAprovacaoEditor.php`, `OrcamentoAprovacaoManager.php`, `OrcamentoEditor.php` ×2, `OrcamentoManager.php` ×2)<br>`resources/views/livewire/financeiro/` ×2 (`orcamento-manager.blade.php` ×2) |
 | `Independência (Barreiro)` | 8 | php | `database/seeders/` ×8 (`InscricoesSeeder.php` ×8) |
@@ -23722,7 +24161,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Distrito Federal` | 7 | php | `database/seeders/` ×7 (`InscricoesSeeder.php` ×7) |
 | `Empresas Parceiras` | 7 | view, php, atributo | `app/Modules/Company/UI/Livewire/` ×2 (`EmpresaDetalhes.php`, `EmpresaManager.php`)<br>`resources/views/components/layouts/` ×4 (`app.blade.php` ×4)<br>`resources/views/livewire/company/` ×1 (`empresa-manager.blade.php`) |
 | `Erro` | 7 | php | `app/Modules/SystemTasks/UI/Livewire/` ×7 (`SystemTaskManager.php` ×7) |
-| `Estudante` | 7 | php, view | `app/Modules/Admin/UI/Livewire/` ×1<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×3<br>`app/Modules/GestaoEducacional/UI/Livewire/Matricula/` ×1<br>`app/Modules/Student/UI/Livewire/Dashboard/` ×1<br>`resources/views/components/layouts/` ×1 |
 | `Filtros Principais` | 7 | php | `app/Modules/Registration/UI/Livewire/` ×6 (`RegistrationManager.php` ×6)<br>`resources/views/components/` ×1 (`dynamic-filter.blade.php`) |
 | `Finalizado - Aguardando Aprovação` | 7 | php, view | `app/Modules/Financeiro/UI/Livewire/` ×5 (`OrcamentoAprovacaoManager.php` ×4, `OrcamentoEditor.php`)<br>`resources/views/livewire/financeiro/` ×2 (`orcamento-manager.blade.php` ×2) |
 | `Inscrições` | 7 | view, php, atributo | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`)<br>`app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`)<br>`resources/views/components/layouts/` ×4 (`app.blade.php` ×4)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
@@ -23799,7 +24237,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Colônia (Zona Leste)` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
 | `Condomínio` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
 | `Conjunto Habitacional Juscelino Kubitschek` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
+| `Content-Type` | 6 | php, atributo | `app/Modules/Comunicacao/Http/Controllers/` ×1 (`EmailTrackingController.php`)<br>`app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`)<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Relatorios.php`)<br>`app/Modules/SystemTasks/UI/Livewire/` ×2 (`SystemTaskManager.php` ×2)<br>`resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `Coqueiral` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
+| `Desconhecido` | 6 | php, expressão | `app/Modules/Comunicacao/Services/` ×3 (`EmailTrackingService.php` ×3)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Disponível para Orçamento` | 6 | view, php | `app/Modules/Financeiro/Domain/Models/` ×2 (`CentroCusto.php`, `Natureza.php`)<br>`resources/views/livewire/financeiro/` ×4 (`centro-custo-manager.blade.php` ×2, `natureza-manager.blade.php` ×2) |
 | `Esmeralda` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
 | `Estrada do M'Boi Mirim` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
@@ -23807,7 +24247,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Filial` | 6 | php, atributo, view | `app/Modules/Financeiro/UI/Livewire/` ×2 (`OrcamentoAprovacaoManager.php`, `OrcamentoManager.php`)<br>`resources/views/livewire/financeiro/` ×4 (`orcamento-aprovacao-manager.blade.php` ×2, `orcamento-manager.blade.php` ×2) |
 | `Finalizado - Integrado ao Protheus` | 6 | php, view | `app/Modules/Financeiro/UI/Livewire/` ×4 (`OrcamentoAprovacaoEditor.php`, `OrcamentoAprovacaoManager.php`, `OrcamentoEditor.php`, `OrcamentoManager.php`)<br>`resources/views/livewire/financeiro/` ×2 (`orcamento-manager.blade.php` ×2) |
 | `Financeiro` | 6 | view, php | `app/Modules/Financeiro/UI/Livewire/` ×2 (`OrcamentoAprovacaoManager.php`, `OrcamentoManager.php`)<br>`resources/views/components/layouts/` ×4 (`app.blade.php` ×4) |
-| `Formulário` | 6 | php, atributo, expressão, view | `app/Modules/Comunicacao/Services/` ×1 (`EsteiraComunicacaoService.php`)<br>`app/Modules/Forms/UI/Livewire/` ×1 (`FormManager.php`)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`)<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`)<br>`resources/views/livewire/registration/` ×2 (`registration-details.blade.php`, `registration-manager.blade.php`) |
 | `Franco da Rocha` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
 | `Gardênia Azul` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
 | `Gestão Empresarial com Software ERPProgramação Web` | 6 | php | `database/seeders/` ×6 (`InscricoesSeeder.php` ×6) |
@@ -23932,14 +24371,12 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Comunicação` | 5 | view | `resources/views/components/layouts/` ×4 (`app.blade.php` ×4)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Conjunto Habitacional Jardim Primavera` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
 | `Conjunto Habitacional Padre Manoel da Nóbrega` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
-| `Content-Type` | 5 | php | `app/Modules/Comunicacao/Http/Controllers/` ×1 (`EmailTrackingController.php`)<br>`app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`)<br>`app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Relatorios.php`)<br>`app/Modules/SystemTasks/UI/Livewire/` ×2 (`SystemTaskManager.php` ×2) |
 | `CPF:` | 5 | php, expressão, view | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodDetails.php`)<br>`app/Modules/Registration/UI/Livewire/` ×2 (`KanbanBoard.php`, `RegistrationManager.php`)<br>`resources/views/livewire/forms/` ×1 (`response-details.blade.php`)<br>`resources/views/pdf/` ×1 (`matriz-avaliacao.blade.php`) |
 | `Curso de Interesse` | 5 | view, php | `app/Traits/` ×2 (`WithFichaPdfDownload.php` ×2)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`)<br>`resources/views/livewire/website/` ×2 (`inscricao.blade.php` ×2) |
 | `Daniel Quinteiros Silva` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
 | `Data / Hora` | 5 | view, php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`)<br>`resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`)<br>`resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`)<br>`resources/views/livewire/student/` ×1 (`minhas-solicitacoes.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Davyds Oliveira` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
 | `Deodoro` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
-| `Desconhecido` | 5 | php | `app/Modules/Comunicacao/Services/` ×3 (`EmailTrackingService.php` ×3)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`) |
 | `DESPESA` | 5 | php, expressão | `app/Modules/Financeiro/Services/` ×2 (`ProtheusOrcamentoService.php` ×2)<br>`app/Modules/Financeiro/UI/Livewire/` ×1 (`NaturezaManager.php`)<br>`database/migrations/` ×1 (`2026_10_27_023608_update_financeiro_tables_for_protheus_spec.php`)<br>`resources/views/livewire/financeiro/` ×1 (`natureza-manager.blade.php`) |
 | `Diferente de '{$valor}'` | 5 | php | `app/Jobs/` ×1 (`RecalcularPontuacoesGlobaisJob.php`)<br>`app/Modules/Registration/UI/Livewire/` ×3 (`KanbanBoard.php`, `RegistrationDetails.php`, `RegistrationManager.php`)<br>`app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Eduardo Freire Santos` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
@@ -23952,6 +24389,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Etapa padrão e obrigatória do sistema.` | 5 | php | `database/seeders/` ×5 (`EtapaSeeder.php`, `StatusInscricaoBaseSeeder.php` ×4) |
 | `Exigência:` | 5 | php, expressão | `app/Modules/Registration/UI/Livewire/` ×3 (`KanbanBoard.php`, `RegistrationDetails.php`, `RegistrationManager.php`)<br>`resources/views/livewire/registration/` ×2 (`registration-details.blade.php` ×2) |
 | `Farrapos` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
+| `Formulário` | 5 | php, atributo, view | `app/Modules/Comunicacao/Services/` ×1 (`EsteiraComunicacaoService.php`)<br>`app/Modules/Forms/UI/Livewire/` ×1 (`FormManager.php`)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`)<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Formulários` | 5 | view, atributo | `resources/views/components/layouts/` ×4 (`app.blade.php` ×4)<br>`resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Freguesia (Jacarepaguá)` | 5 | php | `database/seeders/` ×5 (`InscricoesSeeder.php` ×5) |
 | `Física` | 5 | php, view | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4)<br>`resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
@@ -24095,6 +24533,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `1 - Conservador` | 4 | php, expressão | `app/Modules/Financeiro/UI/Livewire/` ×2 (`OrcamentoAprovacaoEditor.php`, `OrcamentoEditor.php`)<br>`resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `1. Unidades` | 4 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`)<br>`resources/views/livewire/forms/` ×1 (`form-edit.blade.php`)<br>`resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `2. Cursos da Unidade` | 4 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/period/` ×1 (`period-edit.blade.php`) |
+| `Acesso Restrito` | 4 | view, expressão | `resources/views/errors/` ×1 (`403.blade.php`)<br>`resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`) |
 | `Acesso Terra Nova` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `Agatha Moany Pires` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `Agenda de E-mails` | 4 | view | `resources/views/components/layouts/` ×4 (`app.blade.php` ×4) |
@@ -24167,6 +24606,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Edson Passos` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `Educacional` | 4 | view | `resources/views/components/layouts/` ×4 (`app.blade.php` ×4) |
 | `EMAIL` | 4 | expressão, view | `resources/views/livewire/comunicacao/automacao/` ×3 (`automacao-form.blade.php`, `automacao-manager.blade.php`, `esteira-form.blade.php`)<br>`resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
+| `Erro no envio` | 4 | js, php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`)<br>`resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`)<br>`resources/views/livewire/student/` ×2 (`document-manager.blade.php`, `profile-manager.blade.php`) |
 | `Estado` | 4 | view, php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`)<br>`resources/views/livewire/auditoria/` ×2 (`error-log-manager.blade.php` ×2)<br>`resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
 | `Estrada de Itararé` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `Estrada Guavirituba` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
@@ -24369,6 +24809,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Sem Vínculo` | 4 | expressão | `resources/views/emails/financeiro/` ×1 (`orcamento-finalizado.blade.php`)<br>`resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-manager.blade.php`, `orcamento-manager.blade.php`)<br>`resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Serra Verde (Venda Nova)` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `SIM` | 4 | php, view | `app/Modules/Financeiro/Services/` ×2 (`ProtheusOrcamentoService.php` ×2)<br>`resources/views/livewire/importacao/` ×1 (`importacao-config-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-config-manager.blade.php`) |
+| `Sistema (Worker)` | 4 | php | `app/Modules/Teste/Suri/Services/` ×4 (`SuriApiService.php` ×4) |
 | `Sol Nascente (Parque Durval de Barros)` | 4 | php | `database/seeders/` ×4 (`InscricoesSeeder.php` ×4) |
 | `Solicitar Alteração` | 4 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`)<br>`resources/views/livewire/student/dashboard/` ×2 (`dashboard.blade.php` ×2) |
 | `Solicitações` | 4 | view | `resources/views/components/layouts/` ×4 (`app.blade.php` ×4) |
@@ -24430,9 +24871,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Abadie faria rosa` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Aberto ({{ $log->aberturas_count }}x)` | 3 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`)<br>`resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Acaiaca` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
+| `Acessar Orçamento` | 3 | php | `app/Modules/Financeiro/Services/` ×2 (`OrcamentoNotificacaoService.php` ×2)<br>`app/Notifications/` ×1 (`OrcamentoWorkflowNotification.php`) |
 | `Acesso global a todos os centros de custo para APROVAÇÃO de orçamentos` | 3 | php | `app/Modules/Corporate/UI/Livewire/` ×2 (`UserManager.php` ×2)<br>`database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
 | `Acesso global a todos os centros de custo para EDIÇÃO de orçamentos` | 3 | php | `app/Modules/Corporate/UI/Livewire/` ×2 (`UserManager.php` ×2)<br>`database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
-| `Acesso Restrito` | 3 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`) |
 | `Adicionar outra linha` | 3 | view | `resources/views/livewire/acl/` ×2 (`permission-manager.blade.php`, `role-manager.blade.php`)<br>`resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
 | `Adriel da Silva Nunes Fagundes` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Agronomia` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
@@ -24587,7 +25028,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Enviando...` | 3 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×2 (`responder.blade.php` ×2)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Enviar Arquivo` | 3 | view | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`)<br>`resources/views/livewire/student/` ×2 (`document-manager.blade.php`, `profile-manager.blade.php`) |
 | `Erro desconhecido` | 3 | expressão | `resources/views/livewire/importacao/` ×2 (`importacao-manager.blade.php` ×2)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
-| `Erro no envio` | 3 | js | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`)<br>`resources/views/livewire/student/` ×2 (`document-manager.blade.php`, `profile-manager.blade.php`) |
 | `Este campo é obrigatório.` | 3 | php | `app/Modules/Website/UI/Livewire/` ×3 (`FormularioPublico.php` ×2, `Inscricao.php`) |
 | `Este documento foi reprovado. Um responsável irá entrar em contato com você em breve para orientações.` | 3 | view | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`)<br>`resources/views/livewire/student/` ×2 (`document-manager.blade.php`, `profile-manager.blade.php`) |
 | `Ester de Jesus Machado` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
@@ -24603,6 +25043,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ficha Rápida` | 3 | atributo | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`)<br>`resources/views/livewire/student/` ×2 (`student-manager.blade.php` ×2) |
 | `Fiuza` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Formato de arquivo não suportado.` | 3 | php | `app/Modules/Website/UI/Livewire/` ×3 (`FormularioPublico.php` ×2, `Inscricao.php`) |
+| `Formulário:` | 3 | view, expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`)<br>`resources/views/livewire/forms/` ×1 (`response-details.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Fragoso` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Gabriel` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Gabriela Pereira de Carvalho` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
@@ -24614,9 +25055,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Guilherme Soares Galindo` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Gustavo Fernandes Delarissa` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Higienópolis` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
+| `Histórico` | 3 | view | `resources/views/livewire/registration/` ×3 (`kanban-board.blade.php`, `registration-details.blade.php`, `registration-manager.blade.php`) |
 | `Honório Gurgel` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Humaitá` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Igarassu` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
+| `Importar Contato` | 3 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×2 (`SuriTestDashboard.php` ×2)<br>`app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `Inamar` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Inativos` | 3 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-manager.blade.php`)<br>`resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/student/` ×1 (`student-manager.blade.php`) |
 | `Informações Adicionais` | 3 | view, php | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`)<br>`resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
@@ -24703,6 +25146,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `last updated` | 3 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`)<br>`app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`)<br>`app/Traits/` ×1 (`WithFichaPdfDownload.php`) |
 | `Laura Lucero` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Lista Manual` | 3 | view | `resources/views/livewire/comunicacao/automacao/` ×2 (`esteira-manager.blade.php` ×2)<br>`resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
+| `Listar Contatos` | 3 | php, view | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`)<br>`app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`)<br>`resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Listar Períodos` | 3 | view | `resources/views/components/layouts/` ×3 (`app.blade.php` ×3) |
 | `Livia Carvalho da Silva` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Lucas Barbosa de Lima Medeiros` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
@@ -25040,6 +25484,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Vera Cruz` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Viela` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `viela 14` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
+| `` view ` `` | 3 | php | `(raiz)/` ×3 (`laramap.php` ×3) |
 | `Vila Barbosa` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Vila Capela` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Vila Carrão` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
@@ -25067,9 +25512,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Vila Serena` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Vila Silva Ribeiro` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Vila Virgínia` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
+| `VISÍVEL` | 3 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/registration/` ×2 (`status-manager.blade.php` ×2) |
 | `Vitória Conrado Silveira` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `Voltar ao Dashboard` | 3 | view | `resources/views/livewire/company/` ×2 (`aprendizes-manager.blade.php`, `gestores-manager.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Voltar ao Início` | 3 | view | `resources/views/livewire/website/` ×3 (`inscricao.blade.php` ×3) |
+| `X-Livewire` | 3 | php | `app/Http/Middleware/` ×2 (`CheckSessionInactivity.php` ×2)<br>`bootstrap/` ×1 (`app.php`) |
 | `Yuri Rodrigues de Deus Silva` | 3 | php | `database/seeders/` ×3 (`InscricoesSeeder.php` ×3) |
 | `{{ $inscricao->posicao_ranking_geral }}º` | 3 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`)<br>`resources/views/livewire/registration/` ×2 (`registration-details.blade.php`, `registration-manager.blade.php`) |
 | `— sem dark —` | 3 | php | `(raiz)/` ×3 (`laramap.php` ×3) |
@@ -25121,10 +25568,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Aberturas:` | 2 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×2 (`AutomacaoDetails.php`, `EsteiraDetails.php`) |
 | `Abril` | 2 | php | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `Acari` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Accept` | 2 | php, atributo | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`)<br>`resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `Aceitar e Sair` | 2 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Acessar` | 2 | expressão, view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`listagem.blade.php`)<br>`resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `Acessar Conta` | 2 | view | `resources/views/components/layouts/` ×2 (`public.blade.php` ×2) |
-| `Acessar Orçamento` | 2 | php | `app/Modules/Financeiro/Services/` ×2 (`OrcamentoNotificacaoService.php` ×2) |
 | `Acessar Portal de Documentação` | 2 | php | `database/seeders/` ×2 (`TemplatesMatriculaSeeder.php` ×2) |
 | `Acesso` | 2 | php, view | `app/Modules/Student/UI/Livewire/` ×1 (`StudentManager.php`)<br>`resources/views/livewire/company/` ×1 (`empresa-detalhes.blade.php`) |
 | `Acesso 3` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25241,6 +25688,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Arthur Gomes de Mendonça` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Arthur Morroni de Paiva` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Arthur Oliveira paixão` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `ASCII//TRANSLIT//IGNORE` | 2 | php | `app/Models/` ×1 (`CampoFormulario.php`)<br>`app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Assinatura Digital` | 2 | php, view | `app/Traits/` ×1 (`WithFichaPdfDownload.php`)<br>`resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Assunção` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Ativada` | 2 | php | `app/Jobs/` ×1 (`RecalcularPontuacoesGlobaisJob.php`)<br>`app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
@@ -25308,9 +25756,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Avenida Visconde do Rio Branco` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Avenida Waldemar Carlos Pereira` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Avenida Água Fria` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Aviso do Sistema` | 2 | expressão | `resources/views/errors/` ×2 (`layout.blade.php` ×2) |
 | `Ayrosa` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Ação *` | 2 | view | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`)<br>`resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
 | `Background Job / CLI` | 2 | php, view | `bootstrap/` ×1 (`app.php`)<br>`resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
+| `Background Job Worker` | 2 | php | `app/Modules/Comunicacao/Jobs/` ×2 (`DispararAutomacaoJob.php` ×2) |
 | `Baeta Neves` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Bairro Novo` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Baixada santista` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25446,8 +25896,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cocaia` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `CODIGO10` | 2 | php | `app/Modules/Teste/Suri/Services/` ×2 (`SuriApiService.php` ×2) |
 | `Coelhos` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Colaborador` | 2 | php | `resources/views/errors/` ×2 (`403.blade.php` ×2) |
 | `Coluna Recebida` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-config-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-config-manager.blade.php`) |
 | `Comentário Geral` | 2 | php | `app/Modules/Financeiro/UI/Livewire/` ×2 (`OrcamentoAprovacaoEditor.php`, `OrcamentoEditor.php`) |
+| `Comentário(s)` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
+| `Comentário(s) {{ … }}` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `Comentários em modo somente leitura (orçamento finalizado).` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php` ×2) |
 | `Como acionar o Tooltip?` | 2 | view | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
 | `Comprovante de Lista de Espera` | 2 | php | `app/Traits/` ×2 (`WithFichaPdfDownload.php` ×2) |
@@ -25474,6 +25927,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Construtor de Formulário` | 2 | php, view | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Contato do Responsável` | 2 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`ProcessoMatriculaManager.php`)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`KanbanBoard.php`) |
 | `Contatos do Candidato` | 2 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`ProcessoMatriculaManager.php`)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`KanbanBoard.php`) |
+| `Continuar Conectado` | 2 | atributo, view | `resources/views/components/` ×2 (`session-timeout.blade.php` ×2) |
+| `Contém o texto` | 2 | php, view | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Cooperativa` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Copiar Iframe` | 2 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Copiar Link` | 2 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -25526,6 +25981,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Diego Front Rangel` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Diego Mendes Azevedo` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Diego Santos da Costa` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Diferente de (!=)` | 2 | php, view | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Diniel Victor Silva Souza Barbosa` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `diretórios` | 2 | php | `(raiz)/` ×2 (`laramap.php` ×2) |
 | `Disparo Imediato` | 2 | view | `resources/views/livewire/comunicacao/comunicado/` ×2 (`comunicado-form.blade.php`, `comunicado-manager.blade.php`) |
@@ -25541,6 +25997,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Duplicata` | 2 | php | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Dyanna Ellen de Queirós Falcão` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Débora dos Santos Soares` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `E (AND)` | 2 | view | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
 | `E que tal viver essa experiência ao lado de alguém que você conhece? 💜 Convide um amigo para se inscrever no Percorre e começar esse caminho com você! É só acessar o link e compartilhar pelo WhatsApp:` | 2 | php | `database/seeders/` ×2 (`TemplatesMatriculaSeeder.php` ×2) |
 | `E-mail de Acesso` | 2 | php, view | `app/Modules/Student/UI/Livewire/` ×1 (`StudentManager.php`)<br>`resources/views/livewire/company/` ×1 (`empresa-detalhes.blade.php`) |
 | `Editar Campos` | 2 | view | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`)<br>`resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
@@ -25569,6 +26026,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Emilly Victoria Gozze Montalvão` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Emilly Vitória da Gama Silva` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Emily Santana Silva` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Empresa Parceira` | 2 | php | `app/Modules/Company/UI/Livewire/` ×1 (`EmpresaManager.php`)<br>`resources/views/errors/` ×1 (`403.blade.php`) |
 | `Encerramento` | 2 | php, view | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodManager.php`)<br>`resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Encerrar Teste` | 2 | view | `resources/views/livewire/website/` ×2 (`formulario-publico.blade.php`, `inscricao.blade.php`) |
 | `Encruzilhada` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25579,6 +26037,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Engenho do Meio` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Entre {$v1} e {$v2}` | 2 | php | `app/Jobs/` ×1 (`RecalcularPontuacoesGlobaisJob.php`)<br>`app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Entregue` | 2 | php, view | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoDetails.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`) |
+| `Enviado com sucesso` | 2 | php | `app/Modules/Comunicacao/Jobs/` ×2 (`DispararAutomacaoJob.php` ×2) |
 | `Enviar Comentário Geral` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `Enviar para a Secretaria` | 2 | view | `resources/views/livewire/student/` ×2 (`document-manager.blade.php`, `profile-manager.blade.php`) |
 | `Enviar Pedido` | 2 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`)<br>`resources/views/livewire/student/dashboard/` ×1 (`dashboard.blade.php`) |
@@ -25588,7 +26047,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Erick ventura de Jesus` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Erro ao gerar ambiente:` | 2 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×2 (`GeradorMock.php`, `GeradorMockAprendizagem.php`) |
 | `Erro Fatal` | 2 | php | `app/Jobs/` ×2 (`GerarRankingGlobalJob.php`, `RecalcularPontuacoesGlobaisJob.php`) |
-| `Erro Interno` | 2 | php, view | `app/Jobs/` ×1 (`ExportarInscricoesFiltradasJob.php`)<br>`resources/views/errors/` ×1 (`500.blade.php`) |
 | `Esquina` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Estado não informado` | 2 | php | `app/Jobs/` ×1 (`RecalcularPontuacoesGlobaisJob.php`)<br>`app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Este campo aceita apenas números.` | 2 | php | `app/Modules/Website/UI/Livewire/` ×2 (`FormularioPublico.php`, `Inscricao.php`) |
@@ -25621,15 +26079,17 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Excluir Aluno` | 2 | atributo | `resources/views/livewire/student/` ×2 (`student-manager.blade.php` ×2) |
 | `Excluir este log e apagar os arquivos do servidor?` | 2 | atributo | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Excluir este turno permanentemente?` | 2 | atributo | `resources/views/livewire/turno/` ×2 (`turno-manager.blade.php` ×2) |
+| `Excluir Grupo` | 2 | atributo | `resources/views/livewire/acl/` ×1 (`role-manager.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Excluir permanentemente este aluno do sistema?` | 2 | atributo | `resources/views/livewire/student/` ×2 (`student-manager.blade.php` ×2) |
 | `Excluir Selecionados` | 2 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Expandir Tela` | 2 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
 | `Expira em:` | 2 | view | `resources/views/livewire/corporate/` ×2 (`user-manager.blade.php` ×2) |
 | `Exportar {{ … }}` | 2 | view | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Eyshila Moreira Dias` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
-| `Falha ao sincronizar template com a Suri.` | 2 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×2 (`SuriTestDashboard.php` ×2) |
+| `Falta de Permissão ACL` | 2 | php | `app/Traits/` ×2 (`ValidaAcesso.php` ×2) |
 | `Farroupilha` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Fase` | 2 | php, view | `app/Modules/GestaoEducacional/UI/Livewire/CicloAprendizagem/` ×1 (`Listagem.php`)<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1 (`detalhes.blade.php`) |
+| `Feature Desativada` | 2 | php | `app/Traits/` ×2 (`ValidaAcesso.php` ×2) |
 | `Fechado` | 2 | expressão, view | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`)<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1 (`listagem.blade.php`) |
 | `Felipe` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Fernando Marques de Miranda` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25649,8 +26109,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Formato: Data` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Formato: Monetário` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Formato: Texto / Número` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
+| `Formulário da Própria Inscrição (Retomada)` | 2 | php | `app/Modules/Registration/UI/Livewire/` ×2 (`RegistrationDetails.php` ×2) |
 | `Formulário Público` | 2 | expressão, view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
-| `Formulário:` | 2 | view, expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`)<br>`resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Francielle Machado de Almeida` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Francisco da Boa Hora Lobato Lobato` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Frente` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25716,7 +26176,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Henrique Pereira Frazonn` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Herdada` | 2 | view | `resources/views/livewire/corporate/` ×2 (`user-extra-permission-manager.blade.php`, `user-manager.blade.php`) |
 | `Hillary Marques Messias` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
-| `Histórico` | 2 | view | `resources/views/livewire/registration/` ×2 (`kanban-board.blade.php`, `registration-manager.blade.php`) |
 | `Hub de Integrações (Dicionário de Models)` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-config-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-config-manager.blade.php`) |
 | `IA` | 2 | php | `database/seeders/` ×2 (`CursosTesteSeeder.php`, `InscricoesSeeder.php`) |
 | `ID do Contato na Suri (userId) *` | 2 | view | `resources/views/livewire/comunicacao/suri/` ×2 (`suri-test-dashboard.blade.php` ×2) |
@@ -25724,8 +26183,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Id. Mín` | 2 | view | `resources/views/livewire/period/` ×2 (`period-edit.blade.php`, `period-manager.blade.php`) |
 | `Igor de Oliveira Carvalho Duarte` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Igor Rabelo Chaves` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Igual a (=)` | 2 | php, view | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Imediato` | 2 | expressão | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`)<br>`resources/views/livewire/conteudo/` ×1 (`conteudo-manager.blade.php`) |
-| `Importar Contato` | 2 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×2 (`SuriTestDashboard.php` ×2) |
 | `Importação` | 2 | php, view | `database/seeders/` ×1 (`TarefasAclSeeder.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Incorporar / Link` | 2 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Indaiatuba` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25923,7 +26382,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Linha do Tempo (Aberturas e Cliques)` | 2 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×2 (`AutomacaoDetails.php`, `EsteiraDetails.php`) |
 | `Link Público copiado!` | 2 | atributo | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Link Público Direto` | 2 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
-| `Listar Contatos` | 2 | php, view | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`)<br>`resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Livewire` | 2 | php | `(raiz)/` ×2 (`laramap.php` ×2) |
 | `Livewire dispatch` | 2 | php | `(raiz)/` ×2 (`laramap.php` ×2) |
 | `Livia maria pires dorneles` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -25999,9 +26457,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Matrículas e Turmas` | 2 | view | `resources/views/components/layouts/` ×2 (`app.blade.php` ×2) |
 | `Maya Farias da Silva Ramos` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Melissa Barbosa da Silva` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
-| `Memo` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
-| `Memo {{ … }}` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `Menor de 18` | 2 | php | `app/Modules/Report/UI/Livewire/` ×2 (`Dashboard.php` ×2) |
+| `Mensagem WhatsApp` | 2 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`)<br>`app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateManager.php`) |
 | `Mensagens & Envio` | 2 | view | `resources/views/components/layouts/` ×2 (`app.blade.php` ×2) |
 | `Mercearia jn` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Mesclar Duplicadas` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
@@ -26088,6 +26545,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Novo Disparo de Comunicado` | 2 | php, atributo | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1 (`ComunicadoForm.php`)<br>`resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `Novo Documento` | 2 | view | `resources/views/livewire/period/` ×2 (`period-edit.blade.php`, `period-manager.blade.php`) |
 | `Novo Horizonte` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Novo Input` | 2 | expressão | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
 | `Novo Mapeamento` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-config-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-config-manager.blade.php`) |
 | `Novo Osasco` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Novo Status` | 2 | expressão, view | `resources/views/livewire/registration/` ×2 (`status-manager.blade.php` ×2) |
@@ -26118,6 +26576,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Origem` | 2 | php, view | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Original` | 2 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`)<br>`resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Otávio Miguel Silva Pimentel` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `OU` | 2 | php | `app/Modules/FormBuilder/UI/Livewire/` ×2 (`DynamicFields.php` ×2) |
+| `OU (OR)` | 2 | view | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
 | `Outubro` | 2 | php | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
 | `Padre Réus` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Paloma Vitória Martins Prado` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -26258,6 +26718,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Remanso Campineiro` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Removido` | 2 | expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`)<br>`resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`relatorios.blade.php`) |
 | `Renata Vieira Giraud` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
+| `Replay` | 2 | php, view | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`)<br>`resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
+| `Replay: {$log->acao}` | 2 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×2 (`SuriTestDashboard.php` ×2) |
+| `Requisição API` | 2 | php | `app/Modules/Teste/Suri/Services/` ×2 (`SuriApiService.php` ×2) |
 | `Requisição HTTP` | 2 | php, view | `bootstrap/` ×1 (`app.php`)<br>`resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Reset` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-manager.blade.php`, `orcamento-manager.blade.php`) |
 | `Residencial Park I` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -26909,7 +27372,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Selecione ao menos um Turno vinculado ao(s) curso(s) escolhido(s).` | 2 | php | `app/Modules/Corporate/UI/Livewire/` ×2 (`UserManager.php` ×2) |
 | `Selecione o Ciclo de Inscrição...` | 2 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`)<br>`resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Selecione o Curso...` | 2 | view | `resources/views/livewire/website/` ×2 (`inscricao.blade.php` ×2) |
-| `Selecione o Formulário` | 2 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Selecione o Turno...` | 2 | view | `resources/views/livewire/website/` ×2 (`inscricao.blade.php` ×2) |
 | `Selecione pelo menos uma página para esta fase.` | 2 | php | `app/Modules/FormBuilder/UI/Livewire/` ×2 (`DynamicFields.php` ×2) |
 | `Selecione um Curso ao centro` | 2 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -26938,6 +27400,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Simulador de Integração em Lote` | 2 | php, atributo | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`GeradorMock.php`)<br>`resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock.blade.php`) |
 | `SIMULAÇÃO-` | 2 | php | `app/Traits/` ×2 (`WithFichaPdfDownload.php` ×2) |
 | `Sincronizar Protheus` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`centro-custo-manager.blade.php`, `natureza-manager.blade.php`) |
+| `Sistema (Automação)` | 2 | php | `app/Modules/Comunicacao/Jobs/` ×2 (`DispararAutomacaoJob.php` ×2) |
+| `Sistema (Automático)` | 2 | php | `app/Modules/Comunicacao/Jobs/` ×2 (`DispararAutomacaoJob.php` ×2) |
 | `Sofia Marques Justino` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Sol Guilloux Mazzarolo` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `solange dos santos cotrim` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -26984,6 +27448,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Template Excluído` | 2 | view, expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`)<br>`resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-manager.blade.php`) |
 | `Template ID (message.templateId) *` | 2 | view | `resources/views/livewire/comunicacao/suri/` ×2 (`suri-test-dashboard.blade.php` ×2) |
 | `Template Removido` | 2 | php, expressão | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1 (`ComunicadoManager.php`)<br>`resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`) |
+| `Tentativa de abrir a tela: {$nomeModuloAmigavel}` | 2 | php | `app/Traits/` ×2 (`ValidaAcesso.php` ×2) |
+| `Tentativa de executar ação: {$acaoAmigavel}` | 2 | php | `app/Traits/` ×2 (`ValidaAcesso.php` ×2) |
 | `Tente ajustar ou limpar os filtros de busca.` | 2 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Teresópolis` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Testar (Sandbox)` | 2 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`)<br>`resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -27048,6 +27514,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Utilizador` | 2 | php, view | `app/Notifications/` ×1 (`OrcamentoWorkflowNotification.php`)<br>`resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Vagas *` | 2 | view | `resources/views/livewire/period/` ×2 (`period-edit.blade.php`, `period-manager.blade.php`) |
 | `Valor` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
+| `Valor Máximo` | 2 | view | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
+| `Valor Mínimo` | 2 | view | `resources/views/livewire/form-builder/` ×2 (`dynamic-fields.blade.php` ×2) |
 | `Vargem Grande` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Variáveis SURI_API_URL ou SURI_API_TOKEN ausentes no .env.` | 2 | php | `app/Modules/Teste/Suri/Services/` ×2 (`SuriApiService.php` ×2) |
 | `Vazio = Permanente` | 2 | atributo | `resources/views/livewire/corporate/` ×2 (`user-extra-permission-manager.blade.php`, `user-manager.blade.php`) |
@@ -27063,7 +27531,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Victoria Silva Rosseto` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Vida Nova` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Viela Cecílio Ferreira de Santana` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
-| `` view ` `` | 2 | php | `(raiz)/` ×2 (`laramap.php` ×2) |
 | `Vila Aricanduva` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Vila Baruel` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Vila Brasilina` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -27116,7 +27583,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Vila Vitório Mazzei` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Vinicius da Silva Santos` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `VINICIUS VIEIRA DE SOUZA` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
-| `VISÍVEL` | 2 | expressão | `resources/views/livewire/registration/` ×2 (`status-manager.blade.php` ×2) |
 | `Visão Geral` | 2 | php, view | `database/seeders/` ×1 (`ConteudoSeeder.php`)<br>`resources/views/livewire/dashboard/` ×1 (`dashboard.blade.php`) |
 | `Vitor` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
 | `Vitória Carvalho de Medeiros` | 2 | php | `database/seeders/` ×2 (`InscricoesSeeder.php` ×2) |
@@ -27158,6 +27624,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `{{ count($comboTurnosSelecionados) }} sel.` | 2 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `{{ count($comboUnidadesSelecionadas) }} sel.` | 2 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`)<br>`resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `{{ count($itensSelecionados) }} item(ns) selecionado(s)` | 2 | view | `resources/views/livewire/financeiro/` ×2 (`orcamento-aprovacao-editor.blade.php`, `orcamento-editor.blade.php`) |
+| `{{ route(` | 2 | atributo | `resources/views/components/` ×1 (`session-timeout.blade.php`)<br>`resources/views/livewire/conteudo/` ×1 (`conteudo-publico.blade.php`) |
 | `{{ … }} leituras` | 2 | view | `resources/views/livewire/conteudo/` ×2 (`conteudo-publico.blade.php`, `portal-noticias.blade.php`) |
 | `{{ … }}% Concluído` | 2 | view | `resources/views/livewire/gestao-educacional/` ×1 (`formulario-aprendizagem.blade.php`)<br>`resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
 | `})" class="px-3 py-1.5 text-[11px] uppercase font-bold border rounded shadow-sm transition-colors` | 2 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodDetails.php`)<br>`app/Modules/Registration/UI/Livewire/` ×1 (`KanbanBoard.php`) |
@@ -27217,6 +27684,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `### Textos (palavras soltas e frases)` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `### Vocabulário — palavras isoladas` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `#### Classes CSS com cor clara e sem regra para o tema escuro` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `#### Verificações com nome dinâmico` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `` ##### `{$prefixo}{$metodo['nome']}({$params})` — linha {$metodo['linha']} `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `#ID Local` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `#Log {{ $ultimoResultado['id'] }}` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
@@ -27229,8 +27697,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `(desativará outro ciclo regular ativo)` | 1 | expressão | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `(desativará outros ciclos regulares ativos)` | 1 | expressão | `resources/views/livewire/period/` ×1 (`period-edit.blade.php`) |
 | `(Dinâmico)` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`RegrasManager.php`) |
+| `(E-mail)` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
+| `` (lista completa no `--json`) `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `(múltiplos permitidos)` | 1 | expressão | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `(name: {$rota['nome']})` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `(nível do arquivo)` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `(PNG/JPG)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `(Sem assunto definido)` | 1 | expressão | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `(sem classe clara na tag)` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -27269,6 +27740,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `+ Adicionar Variável` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `+ Botão Ligar` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `+ Botão URL` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
+| `+ Condição (E)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `+ Condição (OU)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `+ Copiar Código` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `+ Inserir` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `+ Resposta Rápida` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
@@ -27286,16 +27759,15 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `-- Escolha o Formulário --` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `-- Escolha o segmento --` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `-- Escolha quando a regra será acionada --` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
-| `-- Escolha um formulário --` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `-- Nenhum (Formulário Avulso) --` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `-- Selecionar template sincronizado --` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `-- Selecione --` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`listagem.blade.php`) |
+| `-- Selecione o campo gatilho --` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `-- Selecione o layout do comunicado --` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `-- Selecione o Modelo Ativo --` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `-- Selecione o novo status --` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `-- Selecione o Template --` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `-- Selecione o Template que será enviado --` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
-| `-- Sempre Visível --` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `--dark-padrao inválido: '{$opts['dark-padrao']}' não é uma expressão regular.` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `. Aguardando análise para liberação oficial.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `. Respostas do Questionário Complementar` | 1 | expressão | `resources/views/pdf/` ×1 (`ficha-respostas.blade.php`) |
@@ -27445,6 +27917,15 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `["Mulher Cis","Mulher Trans","Pessoa não-binária","Homem Cis","Homem Trans","Prefiro não informar","Outro"]` | 1 | php | `database/seeders/` ×1 (`CamposFormularioSeeder.php`) |
 | `["Redes Sociais","Google","Escola","Etec","Professor(a) do Instituto","Indicação de Aluno","Indicação de Ex-aluno","Empresa Parceira do Instituto","Televisão","Outros"]` | 1 | php | `database/seeders/` ×1 (`CamposFormularioSeeder.php`) |
 | `[0-9a-fA-F]{3,8})\])(?:/(?:\d+\|\[[^\]]+\]))?$~` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `[Fixo] Cidade` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Curso Selecionado (ID)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Estado (UF)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Natureza da Deficiência` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Pessoa com Deficiência PcD? (sim/nao)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Possui Nome Social? (sim/nao)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Região (centro, norte, sul, leste, oeste)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Turno Selecionado (ID)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `[Fixo] Unidade Selecionada (ID)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `[INTEGRAÇÃO PROTHEUS - ERRO PUT] Orçamento #{$orcamento->id} \| HTTP {$response->status()}` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `[INTEGRAÇÃO PROTHEUS - EXCEÇÃO PUT] Orçamento #{$orcamento->id}:` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `[INTEGRAÇÃO PROTHEUS - PUT SUCESSO] Orçamento #{$orcamento->id} integrado ao Protheus` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
@@ -27453,6 +27934,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `[PROTHEUS - ERRO RESET STATUS PUT] Orçamento #{$orcamento->id} \| HTTP {$response->status()}` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `[PROTHEUS - EXCEÇÃO RESET STATUS PUT] Orçamento #{$orcamento->id}:` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `[Sistema] Nova Solicitação: {$this->tipoAcao}` | 1 | php | `app/Mail/` ×1 (`NovaSolicitacaoMail.php`) |
+| `[{$regra['valor']} até {$regra['valor_max']}]` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `[{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }} — Assunto: {{ … }}` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `[Índice {{ $ultimoLog['linha'] ?? '?' }}] {{ … }}` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `]*)>(.*?)<\/a>/is` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -27484,7 +27966,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `` _Nenhuma tabela encontrada nas migrations (ou o projeto usa `Schema::create` de um jeito não reconhecido)._ --- `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `` _Nenhuma tag com classe `dark:` encontrada._ `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `_Nenhuma tag com cor exclusiva do tema claro sem par escuro._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `_Nenhuma verificação de feature encontrada._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `_Nenhuma view própria encontrada._ ---` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `_O nome da feature não é um texto fixo (variável ou concatenação), então não dá para saber qual é só lendo o código. Confira cada uma._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `` _O projeto ainda não usa estilos para o tema escuro (nenhum `dark:` nem regra CSS), então esta análise não se aplica._ `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `_Ordenado por quantidade de tags sem par escuro — por onde começar a corrigir._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `_Sem dependências externas detectadas._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -27525,6 +28009,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `A esteira precisa ter pelo menos 1 etapa de disparo.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`EsteiraForm.php`) |
 | `A execução falhou:` | 1 | php | `app/Jobs/` ×1 (`ProcessarImportacaoUniversalJob.php`) |
 | `A feature {$fullName} já existe.` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
+| `A funcionalidade para {$acaoAmigavel} está temporariamente desativada no sistema.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `A gravar respostas...` | 1 | view | `resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
 | `A IA rejeitou o envio da imagem.` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `A integração com o Protheus só é permitida quando o status do orçamento for "Finalizado – Aprovado".` | 1 | php | `app/Modules/Financeiro/UI/Livewire/` ×1 (`OrcamentoEditor.php`) |
@@ -27573,6 +28058,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Abre em (Liberação)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Abrir` | 1 | atributo | `resources/views/livewire/matricula/` ×1 (`processo-matricula-manager.blade.php`) |
 | `Abrir Arquivo` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-spreadsheet.blade.php`) |
+| `Abrir Construtor de Condições (E / OU)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Abrir em nova guia` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Abrir Link Público` | 1 | atributo | `resources/views/livewire/forms/` ×1 (`form-manager.blade.php`) |
 | `Abrir Modal` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
@@ -27581,15 +28067,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Abrir pré-visualização no navegador` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Abriu o E-mail` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
 | `Acadêmico` | 1 | atributo | `resources/views/livewire/gestao-educacional/turma/` ×1 (`listagem.blade.php`) |
-| `Accept` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `Accordion (Native Details)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
-| `Aceder ao Orçamento` | 1 | php | `app/Notifications/` ×1 (`OrcamentoWorkflowNotification.php`) |
 | `Aceita alunos de outros Estados` | 1 | php | `app/Modules/Curso/UI/Livewire/` ×1 (`CursoManager.php`) |
 | `Aceita Fora do Estado` | 1 | view | `resources/views/livewire/curso/` ×1 (`curso-detalhes.blade.php`) |
 | `Aceita fora do Estado?` | 1 | view | `resources/views/livewire/curso/` ×1 (`curso-manager.blade.php`) |
 | `Acessar Formulário` | 1 | view | `resources/views/livewire/registration/` ×1 (`retomar-inscricao.blade.php`) |
 | `Acessar Histórico Completo` | 1 | view | `resources/views/livewire/student/dashboard/` ×1 (`dashboard.blade.php`) |
 | `Acessar meu Perfil` | 1 | view | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`) |
+| `Acessar Minha Conta` | 1 | view | `resources/views/errors/` ×1 (`401.blade.php`) |
 | `Acessar Painel de Aprovações` | 1 | view | `resources/views/emails/financeiro/` ×1 (`orcamento-finalizado.blade.php`) |
 | `Acessar Portal` | 1 | view | `resources/views/livewire/auth/` ×1 (`login.blade.php`) |
 | `Acesse a Central de Solicitações no painel administrativo para analisar os motivos operacionais da requisição e liberar a edição do documento.` | 1 | php | `database/seeders/` ×1 (`ComunicacaoTemplatesSeeder.php`) |
@@ -27599,6 +28084,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Acesse sua conta para continuar sua jornada educacional ou administrativa.` | 1 | view | `resources/views/livewire/auth/` ×1 (`login.blade.php`) |
 | `Acesso ao Portal - Instituto Percorre` | 1 | php | `app/Modules/Auth/UI/Livewire/` ×1 (`Login.php`) |
 | `Acesso B` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Acesso Bloqueado` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Acesso c` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Acesso D` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Acesso das Araucárias` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -27615,6 +28101,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Acesso Nível Matriz` | 1 | expressão | `resources/views/livewire/corporate/` ×1 (`user-details.blade.php`) |
 | `Acesso Onze` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Acesso Restrito (Requer Login)` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-edit.blade.php`) |
+| `Acesso restrito ao seu perfil de usuário.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `Acesso restrito para o seu perfil.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Responder.php`) |
 | `Acesso restrito: Você não possui permissão para testar formulários em modo Sandbox.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`FormularioPublico.php`) |
 | `Acesso restrito: Você não possui permissão para utilizar o modo de teste/simulação.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
@@ -28476,6 +28963,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `API Key / Token Secreto` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Aplica-se incondicionalmente a todos os campos.` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Aplicar Campos a um Ciclo de Inscrição Oficial (/inscricao)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
+| `Aplicar Condições ao Input` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Aplicar Filtro Acadêmico` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Aplicar Opções ao Conjunto` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Apodi` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -28717,12 +29205,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Arquivo de Origem` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Arquivo físico não encontrado no servidor.` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `Arquivo Interno (Upload PDF, Word ou Excel)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
-| `Arquivo não disponível` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Arquivo não encontrado ou geração não concluída.` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
 | `Arquivo Original` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Arquivo(s) Anexado(s):` | 1 | view | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `Arquivo(s) Selecionado(s) (Pronto para envio):` | 1 | view | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
-| `Arquivo: {{ … }}` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `` arquivos `lang/` `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `arquivos considerados padrão da stack (clique para ver)</summary>` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Arquivos lidos :` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -28820,7 +29306,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Assunto do E-mail` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoManager.php`) |
 | `Assunto do E-mail (Destinatário)` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Atenciosamente,` | 1 | php | `database/seeders/` ×1 (`ComunicacaoTemplatesSeeder.php`) |
-| `Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }} (Participante: {{ auth()->user()->name }})` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
+| `Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Atenção ao limite de idade até o encerramento das matrículas:` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
 | `Atenção da Secretaria` | 1 | view | `resources/views/livewire/matricula/` ×1 (`processo-matricula-manager.blade.php`) |
 | `Atenção Logística (Divergência de Estado)` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
@@ -28856,6 +29342,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Atualizar Categoria` | 1 | expressão | `resources/views/livewire/conteudo/` ×1 (`categoria-manager.blade.php`) |
 | `Atualizar Contato` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Atualizar da Suri (GET /api/templates)` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
+| `Atualizar e Continuar` | 1 | view | `resources/views/errors/` ×1 (`419.blade.php`) |
 | `Atualizar Meus Dados` | 1 | view | `resources/views/livewire/student/` ×1 (`profile-manager.blade.php`) |
 | `Atualizar Publicação` | 1 | expressão | `resources/views/livewire/conteudo/` ×1 (`conteudo-form.blade.php`) |
 | `Atualizar Template` | 1 | expressão | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
@@ -28875,6 +29362,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `augusto henrique de frança cruz` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Augusto Quintiliano` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Aurora Oliveira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Autenticação Obrigatória` | 1 | expressão | `resources/views/errors/` ×1 (`401.blade.php`) |
 | `Authenticatable` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Auto (ViaCEP)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Auto-Aprovada` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
@@ -28915,12 +29403,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Avaliador Ativo` | 1 | view | `resources/views/livewire/company/` ×1 (`gestores-manager.blade.php`) |
 | `Avaliadores/Gestores` | 1 | atributo | `resources/views/livewire/company/` ×1 (`empresa-manager.blade.php`) |
 | `Avaliar Pedido de Reabertura` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-aprovacao-editor.blade.php`) |
+| `Avaliação atual desta linha no simulador` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Avaliação não encontrada.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Responder.php`) |
 | `Avaliação Semestral Aprendizes -` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`GeradorMockAprendizagem.php`) |
 | `Avaliação: Aluno solicita reabertura de fase` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
 | `Avaliação: Professor solicita reabertura de matriz` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
 | `Avaliações Concluídas` | 1 | view | `resources/views/livewire/company/` ×1 (`dashboard.blade.php`) |
 | `Avaliações Socioemocionais` | 1 | atributo | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`listagem.blade.php`) |
+| `Avançado (E/OU)` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Avançar Etapa` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Avanço de Funil em Lote: {$qtd} registros` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `Avanço iniciado em background!` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
@@ -29267,7 +29757,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `B frente casa cinza porta de madeira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `B2A12` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Background Job` | 1 | php | `app/Jobs/` ×1 (`ProcessarImportacaoUniversalJob.php`) |
-| `Background Job Worker` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
 | `Bairro Alto` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Bairro Faga` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Bairro jardim vila nova são bento` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -29778,6 +30267,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Buscar destinatário...` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-details.blade.php`) |
 | `Buscar esteira por nome...` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`) |
 | `Buscar feature por nome ou descrição...` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
+| `Buscar formulário...` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Buscar no payload, resposta, URL...` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Buscar nome, assunto ou ID Suri...` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
 | `Buscar opção...` | 1 | atributo | `resources/views/components/` ×1 (`dynamic-filter.blade.php`) |
@@ -29818,6 +30308,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cada B` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Cada linha é uma string exata — palavra solta ou frase inteira. Tags de personalização ficam no lugar, dentro da frase` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Cada tabela mostra só as propriedades que divergem._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `Cada verificação conta uma vez, em PHP ou em view._` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Cadastrar e Vincular Tudo` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Cadastrar Grupos` | 1 | expressão | `resources/views/livewire/acl/` ×1 (`role-manager.blade.php`) |
 | `Cadastrar Nova Inscrição` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -30028,7 +30519,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Carregando Mais...` | 1 | view | `resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
 | `Carregando...` | 1 | php | `app/Modules/Report/UI/Livewire/` ×1 (`Dashboard.php`) |
 | `Carregar Anexo` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
-| `Carregar Formulário` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Carregar Próxima Página →` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Carreiros` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Carro prata na frente` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -30142,6 +30632,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cascavel` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Casinhas nova` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Caso 03` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Caso esta funcionalidade precise ser utilizada agora, solicite ao administrador a ativação da chave correspondente em Feature Toggles.` | 1 | view | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Cassa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `CAST(id AS TEXT) LIKE ?` | 1 | php | `app/Jobs/` ×1 (`ExportarRespostasFormularioJob.php`) |
 | `CAST(payload AS TEXT) ILIKE ?` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
@@ -30350,6 +30841,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Cláudia Vitória Juvillar Candido` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `COALESCE(SUM(meta), 0)` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodManager.php`) |
 | `COALESCE(SUM(vagas), 0)` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodManager.php`) |
+| `CODIGO` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
 | `Coelho` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `COHAB B` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `COHAB IV` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -30387,6 +30879,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Comentários Item` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-aprovacao-editor.blade.php`) |
 | `Comentários por Item` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`) |
 | `começa aqui.` | 1 | view | `resources/views/livewire/website/` ×1 (`home.blade.php`) |
+| `Começa com` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Como a matriz ainda não foi finalizada, você pode reabrir sua própria fase para correções imediatas. Esta ação será registrada no histórico de auditoria e pode bloquear temporariamente o acesso do aluno às fases seguintes.` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
 | `Como adicionar o efeito Ripple?` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
 | `Como conheceu o Percorre?` | 1 | php | `database/seeders/` ×1 (`CamposFormularioSeeder.php`) |
@@ -30425,7 +30918,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Condicional` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Condição` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Condição atendida: {{ … }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
+| `Condição Avançada (Múltiplos Grupos E / OU)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Condição de Engajamento da Etapa #{{ $index }}` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Condição de Visibilidade` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Condição Simples (1 Campo)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Condições para Receber os Disparos` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Condições por Resposta do Formulário (Opcional)` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Condominio 5 casa 178` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -30478,6 +30974,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Configurações e Aparência do Formulário` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Configure categoria da Meta, mídia de cabeçalho (headerType), rodapé (footer) e os valores de exemplo obrigatórios para cada variável.` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Configure gatilhos automáticos para notificar candidatos e estudantes em tempo real.` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`) |
+| `Configure múltiplos grupos e regras com operadores E (AND) e OU (OR) para o campo: {{ … }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Configure múltiplos provedores de Inteligência Artificial e defina os documentos exigidos.` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Configure o evento gatilho, a ação do sistema e o template que será disparado` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
 | `Configure os dados de acesso, vínculos organizacionais e permissões em 3 etapas.` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
@@ -30520,6 +31017,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Consola Remota (Workers)` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Console de Inspeção HTTP (Payload & Resposta Suri)` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Construtor (Campos)` | 1 | view | `resources/views/livewire/period/` ×1 (`period-edit.blade.php`) |
+| `Construtor Avançado de Condições de Visibilidade` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Construtor de Campos` | 1 | atributo | `resources/views/livewire/forms/` ×1 (`form-manager.blade.php`) |
 | `Construtor de Formulários` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Construtor de Template` | 1 | expressão | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
@@ -30532,7 +31030,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `CONTA ATIVA` | 1 | view | `resources/views/livewire/student/` ×1 (`student-details.blade.php`) |
 | `Conta bloqueada temporariamente por segurança.` | 1 | php | `app/Modules/Auth/UI/Livewire/` ×1 (`Login.php`) |
 | `Conta comercial oficial` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
-| `Contato '{$id}' selecionado e carregado para os testes de envio!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `Conta conectada:` | 1 | view | `resources/views/errors/` ×1 (`403.blade.php`) |
+| `Contato '{$id}' selecionado para testes!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Contato (Lead)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `Contato Ativo (userId): {{ $userId }}` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Contato de Aprendizagem` | 1 | expressão | `resources/views/livewire/company/` ×1 (`dashboard.blade.php`) |
@@ -30553,6 +31052,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Conteúdo da Mensagem` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Conteúdo da Mensagem (message.text) *` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Conteúdo movido para a lixeira!` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoManager.php`) |
+| `Conteúdo Não Localizado` | 1 | expressão | `resources/views/errors/` ×1 (`404.blade.php`) |
 | `Conteúdo Principal (Texto/Título)` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Conteúdo removido dos destaques!` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoManager.php`) |
 | `Conteúdo validado e guardado com sucesso!` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoForm.php`) |
@@ -30567,7 +31067,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Controller` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Controlo e Triagem de Candidatos` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Controlo transferido com sucesso! Já pode editar.` | 1 | php | `app/Traits/` ×1 (`WithEditingLock.php`) |
-| `Contém o texto` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Convidado / Sistema` | 1 | expressão | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Convocação para Matrícula (Portal IA)` | 1 | php | `database/seeders/` ×1 (`AutomacaoMatriculaSeeder.php`) |
 | `Coordenação: Solicitação de Alteração em Ciclo Bloqueado` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
@@ -30627,8 +31126,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Criar Nova Senha` | 1 | view | `resources/views/livewire/portal/auth/` ×1 (`reset-password.blade.php`) |
 | `Criar Novo Funil (RD CRM)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `Criar novo template` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
+| `criar permissões` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Criar Rascunho Livre (Sem Ciclo)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Criar Template` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
+| `Criar Template Direto` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `Criação` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Crie um novo disparo para enviar comunicados aos candidatos ou estudantes.` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-manager.blade.php`) |
 | `Crie uma sequência automatizada de e-mails por etapa e condição.` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`) |
@@ -30817,6 +31318,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Data de Registro` | 1 | view | `resources/views/livewire/student/` ×1 (`student-details.blade.php`) |
 | `Data e Hora Completa` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Data e Hora de Envio` | 1 | view | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
+| `Data e Hora do Atendimento` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Data e Hora do Contato (Opcional)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Data e Hora do Disparo` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Data e Hora Programada` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
@@ -31034,9 +31536,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Dienifer Cristiny Ramos Dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Diennefer Lopes dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Diennifer da Silva Cardoso` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
-| `Dif.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Diferente de` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
-| `Diferente de (!=)` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Digite a mensagem para visualizar no WhatsApp...` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Digite a nova senha` | 1 | atributo | `resources/views/livewire/portal/auth/` ×1 (`force-password-change.blade.php`) |
 | `Digite e Enter...` | 1 | atributo | `resources/views/components/` ×1 (`dynamic-filter.blade.php`) |
@@ -31047,6 +31547,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Digite ou cole e-mails aqui...` | 1 | atributo | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `Digite seu e-mail e enviaremos um link para redefinir a senha.` | 1 | view | `resources/views/livewire/portal/auth/` ×1 (`forgot-password.blade.php`) |
 | `Digite seu nome` | 1 | atributo | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
+| `Digite um valor para testar (ex: sim, 20, SP)...` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Digite uma mensagem geral antes de enviar.` | 1 | php | `app/Modules/Financeiro/UI/Livewire/` ×1 (`OrcamentoEditor.php`) |
 | `Digite uma observação...` | 1 | atributo | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
 | `Dimas Gabriel` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -31077,6 +31578,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Disparo automático de comunicação` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`) |
 | `Disparo colocado na fila de envio!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1 (`ComunicadoForm.php`) |
 | `Disparo de Link de Matrícula (Aprovação)` | 1 | php | `database/seeders/` ×1 (`AutomacaoMatriculaSeeder.php`) |
+| `Disparo: Template c/ Botões` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
+| `Disparo: Template c/ Variáveis` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
+| `Disparo: Template Simples` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
+| `Disparo: Texto Livre` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `disparos as disparos_enviados_count` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`EsteiraManager.php`) |
 | `Disparos Entregues` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoDetails.php`) |
 | `Disparos inteligentes acionados por eventos do sistema` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`) |
@@ -31187,6 +31692,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Editar Meses →` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`) |
 | `Editar Nome` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`role-manager.blade.php`) |
 | `Editar Permissão` | 1 | expressão | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
+| `editar permissões` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Editar Publicação` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoForm.php`) |
 | `Editar Regra de Automação` | 1 | expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
 | `Editar Status` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`status-manager.blade.php`) |
@@ -31391,7 +31897,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Empresa` | 1 | view | `resources/views/components/layouts/` ×1 (`public.blade.php`) |
 | `Empresa / Provedor` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Empresa N/A` | 1 | expressão | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`acompanhamento.blade.php`) |
-| `Empresa Parceira` | 1 | php | `app/Modules/Company/UI/Livewire/` ×1 (`EmpresaManager.php`) |
 | `Empresa Vinculada` | 1 | view | `resources/views/livewire/student/` ×1 (`student-manager.blade.php`) |
 | `Empresas` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-manager.blade.php`) |
 | `Empresas Parceiras (Integração)` | 1 | php | `app/Modules/Company/UI/Livewire/` ×1 (`EmpresaManager.php`) |
@@ -31405,6 +31910,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Encerrado` | 1 | expressão | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Encerramento das atividades com sucesso.` | 1 | php | `database/seeders/` ×1 (`ConteudoSeeder.php`) |
 | `Encerrar Automático Em (Opcional)` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-edit.blade.php`) |
+| `Encontramos uma instabilidade inesperada ao processar a sua solicitação. Não se preocupe: seus dados estão seguros e a nossa equipe técnica já recebeu o registro automático desta ocorrência.` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
+| `Encontramos uma instabilidade temporária ao processar sua solicitação.` | 1 | php | `bootstrap/` ×1 (`app.php`) |
 | `Endereço / Logradouro` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Endereço da Unidade` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailParserService.php`) |
 | `Endereço de Acesso:` | 1 | php | `database/seeders/` ×1 (`InscricaoRecebidaTemplateSeeder.php`) |
@@ -31427,6 +31934,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Entrar no Portal do Aluno` | 1 | php | `database/seeders/` ×1 (`InscricaoRecebidaTemplateSeeder.php`) |
 | `Entre 1 hora e 1 hora e 30 minutos,Acima de 1 hora e 30 minutos` | 1 | php | `database/seeders/` ×1 (`Ciclo2026Seeder.php`) |
 | `Entre 30 minutos e 1 hora` | 1 | php | `database/seeders/` ×1 (`Ciclo2026Seeder.php`) |
+| `Entre dois valores (Mín e Máx)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Entre valores` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Enturmação (Vínculo de Turmas)` | 1 | view | `resources/views/livewire/gestao-educacional/matricula/` ×1 (`detalhes.blade.php`) |
 | `envia o formulario (wire:submit do` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -31436,7 +31944,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Envia para a fila de processamento agora mesmo.` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `Envia texto livre para janelas de 24h abertas usando userId e context.msgId opcional.` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Envia um template aprovado usando o userId do contato e redireciona para um flowId.` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
-| `Enviado com sucesso` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
 | `Enviado em` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoDetails.php`) |
 | `Enviado por Participante ({{ … }})` | 1 | view | `resources/views/livewire/student/` ×1 (`document-manager.blade.php`) |
 | `Enviado por Participante: {{ … }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
@@ -31547,6 +32054,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Erro de Dados` | 1 | php | `app/Jobs/` ×1 (`ProcessarImportacaoUniversalJob.php`) |
 | `Erro de ligação à API do Protheus:` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `Erro desconhecido retornado pelo servidor.` | 1 | expressão | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
+| `Erro Interno` | 1 | php | `app/Jobs/` ×1 (`ExportarInscricoesFiltradasJob.php`) |
 | `Erro na API` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Erro na API da IA:` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `Erro na API de Centros de Custo do Protheus (HTTP` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
@@ -31611,10 +32119,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Esta fase exige preenchimento de outro responsável (Ex: Aguardando o gestor da empresa).` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
 | `Esta feature já está cadastrada.` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Esta ferramenta cria Empresas fictícias, cadastra um Gestor, vincula um Aprendiz elegível e gera automaticamente a avaliação deles distribuindo-as aleatoriamente entre a Fase 1 (Aprendiz) e a Fase 2 (Empresa).` | 1 | view | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock-aprendizagem.blade.php`) |
+| `Esta funcionalidade` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
+| `Esta funcionalidade está temporariamente desativada` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
+| `Esta funcionalidade está temporariamente desativada no sistema.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `Esta inscrição já está finalizada ou em lista de espera.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Esta inscrição possui dados preenchidos ou enviados por um Participante (funcionário)` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Esta matriz já foi concluída e encontra-se bloqueada. Sua solicitação será encaminhada para análise da Coordenação (Admin/Dev).` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
 | `Esta permissão já existe.` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
+| `Esta página expirou por inatividade` | 1 | expressão | `resources/views/errors/` ×1 (`419.blade.php`) |
 | `Esta página possui campos. Mova-os ou exclua-os primeiro.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Esta URL amigável já está sendo utilizada por outro formulário.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Esta é uma mensagem automática do Módulo de Gestão Orçamentária — Instituto Percorre.` | 1 | php | `app/Notifications/` ×1 (`OrcamentoWorkflowNotification.php`) |
@@ -31622,6 +32134,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Estado da Carga` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Estado do erro atualizado com sucesso!` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`ErrorLogManager.php`) |
 | `Estamos ansiosos para te receber no Percorre! 🚀` | 1 | php | `database/seeders/` ×1 (`TemplatesMatriculaSeeder.php`) |
+| `Estamos aplicando melhorias neste exato momento para tornar sua experiência ainda melhor. O acesso estará de volta em poucos instantes.` | 1 | view | `resources/views/errors/` ×1 (`503.blade.php`) |
+| `Estamos atualizando o sistema` | 1 | expressão | `resources/views/errors/` ×1 (`503.blade.php`) |
 | `Estamos torcendo para te ver no Percorre! 🚀` | 1 | php | `database/seeders/` ×1 (`TemplatesMatriculaSeeder.php`) |
 | `Estação` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Estação Nova` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -31792,8 +32306,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Estudantes Matriculados (Portal do Aluno)` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Estuário` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Está em branco` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Está entre as opções (sep. por vírgula)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Está preenchido` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Está preenchido (Não vazio)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Está prestes a mover {{ count($selecionadas) }} inscrições selecionadas para um novo Ciclo Operacional.` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
+| `Está vazio (Não preenchido)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Estância Lago Azul` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Estância Santa Helena` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Estância Santo Antônio (Zona Rural)` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -31861,11 +32378,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ewerton Sant Ana` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Ex: 000123` | 1 | atributo | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
 | `Ex: 10` | 1 | atributo | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`listagem.blade.php`) |
+| `Ex: 18` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ex: 20` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Ex: 2026` | 1 | atributo | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`listagem.blade.php`) |
 | `Ex: 2º Semestre 2026` | 1 | atributo | `resources/views/livewire/period/` ×1 (`period-edit.blade.php`) |
 | `Ex: 4. Matrícula Finalizada (Com Detalhes)` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Ex: 5511999999999` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
+| `Ex: 65` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ex: 999.999.999-99` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ex: ["student", "company", "teacher"]` | 1 | php | `database/migrations/` ×1 (`2026_09_16_173046_create_learning_cycles_and_update_forms_table.php`) |
 | `ex: acl` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
@@ -31902,8 +32421,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ex: RG, CNH, CPF...` | 1 | atributo | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Ex: RonYTEdSON` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Ex: Régua de Cobrança de Documentos - Aprovados 2º Semestre` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Ex: sim` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ex: sim, não` | 1 | atributo | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `ex: sistema` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
+| `Ex: SP, RJ, MG` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ex: Suri • Mensagem automática` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Ex: SURI20` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `ex: tema` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
@@ -31944,13 +32465,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Excluir Fase` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Excluir feature?` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
 | `Excluir Formulário` | 1 | atributo | `resources/views/livewire/forms/` ×1 (`form-manager.blade.php`) |
-| `Excluir Grupo` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`role-manager.blade.php`) |
 | `Excluir Histórico` | 1 | atributo | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-manager.blade.php`) |
 | `Excluir permanentemente essa inscrição do sistema?` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Excluir permanentemente essa inscrição?` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Excluir permanentemente esta unidade do sistema?` | 1 | atributo | `resources/views/livewire/unidade/` ×1 (`unidade-manager.blade.php`) |
 | `Excluir permanentemente?` | 1 | atributo | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Excluir permissão?` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
+| `excluir permissões` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Excluir provedor e todos os seus modelos?` | 1 | atributo | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Excluir Registo` | 1 | atributo | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Excluir Registro` | 1 | atributo | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
@@ -31977,7 +32498,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Exibir Endereço Fixo (CEP)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Exibir no Topo da Etapa 1` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Exibir Seleção de Curso (Unidade / Curso / Turno)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
-| `Exibição Condicional` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Exibição da Dica no Input` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Exige a conclusão da Fase 1 para liberar a Fase 2, e assim por diante.` | 1 | view | `resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1 (`detalhes.blade.php`) |
 | `Exigência de documento adicionada ao ciclo.` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`IaConfigManager.php`) |
@@ -32049,6 +32569,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Falha no Disparo` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
 | `Falha técnica ao salvar no banco de dados.` | 1 | php | `app/Jobs/` ×1 (`ProcessarImportacaoUniversalJob.php`) |
 | `Falhas de Envio` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
+| `FALSE` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `FALSE (Não Atendido)` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Falta pouco! Assine seu contrato digital ✍️` | 1 | php | `database/seeders/` ×1 (`TemplatesMatriculaSeeder.php`) |
 | `Fase '{$fase->nome}' (ID: {$fase->id}) liberada com sucesso.` | 1 | php | `app/Console/Commands/` ×1 (`ProcessarFasesFormulario.php`) |
 | `Fase 1 (Autoavaliação)` | 1 | view | `resources/views/pdf/` ×1 (`matriz-avaliacao.blade.php`) |
@@ -32077,13 +32599,18 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Fazer Crop (16:9)` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-form.blade.php`) |
 | `Fazer Login no Portal` | 1 | view | `resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
 | `Faça a equivalência entre os dados submetidos e a arquitetura do sistema.` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
+| `Faça login para acessar esta página` | 1 | expressão | `resources/views/errors/` ×1 (`401.blade.php`) |
 | `Faça o upload de um PDF ou cole o Base64 do documento de exemplo.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateForm.php`) |
 | `Feature` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Feature e Permissão atualizadas!` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Feature excluída com sucesso.` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Features Ativas` | 1 | view | `resources/views/livewire/dashboard/` ×1 (`dashboard.blade.php`) |
+| `features distintas ·` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `Features: falha ao analisar {$rel}:` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Fechar Detalhes` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
 | `Fechar e Cancelar` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
+| `Fechar e Sincronizar Ficha` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
+| `Fechar Histórico` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Fechar Janela` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`acompanhamento.blade.php`) |
 | `Fechar Painel` | 1 | view | `resources/views/livewire/components/` ×1 (`quick-view-drawer.blade.php`) |
 | `Fechar painel` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -32260,12 +32787,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Formatos: {{ strtoupper($extensoes) }} · Máx: {{ $maxMb }}MB {{ … }}` | 1 | view | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `Formação profissional gratuita e empregabilidade para jovens e PcD desde 1998.` | 1 | view | `resources/views/components/layouts/` ×1 (`public.blade.php`) |
 | `Formulário - Fase Liberada: {$fase->nome}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
+| `Formulário / Nome` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Formulário Avulso` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Formulário Concluído!` | 1 | view | `resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
-| `Formulário da Própria Inscrição (Retomada)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
+| `Formulário da Própria Inscrição` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Formulário de Aprendizagem` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
 | `Formulário de Conteúdo - Administrativo` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoForm.php`) |
 | `Formulário de Inscrição do Candidato (` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
+| `Formulário do Sistema` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Formulário e Regras de Acesso configurados com sucesso!` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormEdit.php`) |
 | `Formulário e seus campos foram duplicados com sucesso!` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormManager.php`) |
 | `Formulário excluído!` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormManager.php`) |
@@ -32278,7 +32807,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Formulário Público Geral (/f/slug)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Formulário Público: Qualquer Nova Fase Liberada` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
 | `Formulário respondido e registrado com sucesso.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
-| `Formulário restrito. Inicie sessão na sua conta para aceder.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`FormularioPublico.php`) |
+| `Formulário restrito. Inicie sessão na sua conta para acessar.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`FormularioPublico.php`) |
 | `Formulário salvo com sucesso!` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormManager.php`) |
 | `Formulário salvo! O aluno avançou para a fase: {$proximaFase->nome}.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
 | `Formulário salvo! Todas as fases de avaliação foram concluídas.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
@@ -32289,7 +32818,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Formulários e liberação` | 1 | php | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Formulários Gerais` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`) |
 | `Formulários Pendentes` | 1 | view | `resources/views/livewire/company/` ×1 (`aprendizes-manager.blade.php`) |
-| `Formulários preenchidos por Participante:` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Formulários Publicados` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Formulários vinculados a um Workflow de Aprendizagem (permite múltiplos ativos ou criar em rascunho).` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Fornecimento de Dados` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
@@ -32323,6 +32851,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Freguesia do Ó` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Freshtah shariatee` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Frimisa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Funcionalidade Desativada` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Funcionalidade não encontrada ou indisponível no momento.` | 1 | php | `app/Modules/FeatureToggle/UI/Http/Middleware/` ×1 (`CheckFeatureToggle.php`) |
 | `Fundamental` | 1 | php | `database/seeders/` ×1 (`CamposFormularioSeeder.php`) |
 | `Fundo branco semi-transparente com blur.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -32335,6 +32864,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Funis e Etapas (RD)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `Furlan` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Furnas` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Fórmula Lógica Configurada:` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `G:` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `G: {{ $inscricao->posicao_ranking_geral }}º` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Gabe Rosa Belo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -32612,6 +33142,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Gerenciador de Integrações` | 1 | atributo | `resources/views/livewire/importacao/` ×1 (`import-progress.blade.php`) |
 | `Gerenciamento de Estudantes` | 1 | atributo | `resources/views/livewire/student/` ×1 (`student-manager.blade.php`) |
 | `Gerenciamento de Features` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
+| `gerenciamento de permissões` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Gerenciamento de Permissões Base` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
 | `Gerenciamento de Semestres e Vagas` | 1 | atributo | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Gerenciamento de Turnos` | 1 | atributo | `resources/views/livewire/turno/` ×1 (`turno-manager.blade.php`) |
@@ -32782,6 +33313,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Gregory Klaus da Silva Pereira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Greice Gabrielly Souza Gaspar` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Grid` | 1 | view | `resources/views/components/` ×1 (`table.blade.php`) |
+| `Grupo #{{ $gIndex + 1 }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Grupo (Role) e Vínculos` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
 | `Grupo / Escopo de Vínculos` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
 | `Grupo atualizado!` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`RoleManager.php`) |
@@ -33057,6 +33589,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Histórico Acadêmico` | 1 | view | `resources/views/livewire/student/dashboard/` ×1 (`dashboard.blade.php`) |
 | `Histórico completo de e-mails disparados, destinatários e progresso por etapa da esteira` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-details.blade.php`) |
 | `Histórico da Solicitação Confirmar Aprovação Confirmar Recusa` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
+| `Histórico de Acessos ao Formulário` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Histórico de Avaliações` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`acompanhamento.blade.php`) |
 | `Histórico de Comunicados` | 1 | atributo | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-manager.blade.php`) |
 | `Histórico de Disparos` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
@@ -33136,12 +33669,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Identidade Confirmada` | 1 | view | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`) |
 | `Identidade confirmada com sucesso. Cofre liberado!` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`PortalMatricula.php`) |
 | `Identificador (Slug)` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`) |
+| `Identificamos um volume muito alto de solicitações seguidas a partir da sua conexão. Aguarde alguns instantes antes de tentar novamente.` | 1 | view | `resources/views/errors/` ×1 (`429.blade.php`) |
 | `Identificação` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoManager.php`) |
 | `Identificação / Tipo` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
 | `Identificação da Etapa #{{ $index + 1 }}` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Identificação da Regra` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
 | `Identificação e Credenciais` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
 | `Identificação e Origem do Público` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Identificação Necessária` | 1 | expressão | `resources/views/errors/` ×1 (`401.blade.php`) |
 | `IDs específicos de usuários que podem responder` | 1 | php | `database/migrations/` ×1 (`2026_08_26_200432_alter_formularios_table_add_regras_acesso.php`) |
 | `IDs ou nomes das roles (users web)` | 1 | php | `database/migrations/` ×1 (`2026_08_26_200432_alter_formularios_table_add_regras_acesso.php`) |
 | `Ignorado: O registro já existe (Desative a Mesclagem ou corrija o CPF).` | 1 | php | `app/Jobs/` ×1 (`ProcessarImportacaoUniversalJob.php`) |
@@ -33164,9 +33699,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Igreja assembléia de Deus` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Igreja azul` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Igreja congregação cristã do Brasil` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
-| `Igual` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Igual a` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
-| `Igual a (=)` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Ihrley Nobre` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Ikaro Matheus Barros dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Ilana Vitória` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -33228,7 +33761,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Informe o seu nome completo.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Informe o seu nome social.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Informe o telefone com +DDI+DDD+Número no botão #{$num} (ex: +5585991976502).` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateForm.php`) |
-| `Informe o templateId para consultar GET /api/templates/:template_id.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `Informe o templateId para consultar.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Informe o texto do botão #{$num}.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateForm.php`) |
 | `Informe o título de cada etapa.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`EsteiraForm.php`) |
 | `Informe o título/nome do template.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateForm.php`) |
@@ -33250,6 +33783,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ingrid Roberto Carmo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Iniciando alocação de memória...` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Iniciando geração para o Ciclo: {$ciclo->nome}` | 1 | php | `app/Console/Commands/` ×1 (`GerarAvaliacoesAprendizagem.php`) |
+| `Iniciar Preenchimento` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Iniciar Tarefa` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Inicie a criação de artigos e destaques clicando no botão acima.` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-manager.blade.php`) |
 | `inicio da rua` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -33258,6 +33792,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `input(s) selecionado(s)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Inputs (Formulários)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
 | `Inscreva-se` | 1 | view | `resources/views/livewire/website/` ×1 (`home.blade.php`) |
+| `Inscrição` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Inscrição - Fase Liberada: {$fase->nome}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoForm.php`) |
 | `Inscrição - Instituto Percorre` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Inscrição Completa` | 1 | php | `database/seeders/` ×1 (`MaisStatusInscricaoSeeder.php`) |
@@ -33297,8 +33832,12 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Insira um feedback ou justificativa para esta decisão.` | 1 | php | `app/Modules/Admin/UI/Livewire/` ×1 (`SolicitacoesManager.php`) |
 | `Inspecionar` | 1 | expressão | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Inspecionar na Suri (GET /api/templates/:id)` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
+| `Inspecionar Template ({$templateId})` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
+| `Instabilidade Interna` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
+| `Instabilidade Temporária` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Instituto bola pra frente` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `INSTITUTO PERCORRE` | 1 | view | `resources/views/pdf/` ×1 (`ficha-respostas.blade.php`) |
+| `Instituto Percorre • Ambiente Seguro` | 1 | view | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Instituto Percorre • Documento emitido eletronicamente em {{ $data_emissao }} • Protocolo {{ $protocolo }}` | 1 | view | `resources/views/pdf/` ×1 (`ficha-respostas.blade.php`) |
 | `Instrução ao Candidato` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Instruções` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
@@ -33334,8 +33873,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ipatinga` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Ipojuca` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Ipsep` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Ir para a Página Inicial` | 1 | php | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Ir para o Construtor de Formulário` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
+| `Ir para o Dashboard` | 1 | php | `resources/views/errors/` ×1 (`layout.blade.php`) |
+| `Ir para o Login` | 1 | view | `resources/views/errors/` ×1 (`419.blade.php`) |
+| `Ir para o Meu Painel` | 1 | php | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Ir para o Painel` | 1 | view | `resources/views/components/layouts/` ×1 (`public.blade.php`) |
+| `Ir para o Painel Parceiro` | 1 | php | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Irailton de Jesus soares` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Iris Fernanda Borges Batista` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Isaac Cunha Dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -34876,8 +35420,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Lincoln Yori Uema` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Linha` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Linha do Tempo de Interações (Aberturas e URLs Clicadas)` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
-| `Linha não disponível` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
-| `Linha: {{ … }}` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Linhas (1 por linha)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Linhas Lidas` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Linhas por página` | 1 | view | `resources/views/components/` ×1 (`table.blade.php`) |
@@ -34908,7 +35450,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Listar centros de custo` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
 | `Listar naturezas financeiras` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
 | `Listar orçamentos financeiros` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
-| `Listar Templates (GET /api/templates)` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `Listar Templates` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `Listar Templates Suri` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `Livia Aparecida Dias Gomes` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Livia Beatriz Pereira toledo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `livia coutinho ferreira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -35249,10 +35792,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Maiko André Antunes de Sousa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Mailable` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Maio (05)` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`listagem.blade.php`) |
-| `Maior` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Maior ou igual a` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
+| `Maior ou igual a (>=)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Maior Pontuação` | 1 | view | `resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
 | `Maior que` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
+| `Maior que (>)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Maira Adriene` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Maira Breternitz` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Maira Martins de Carvalho` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -35285,6 +35829,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Manuella Lima dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Manuella Pereira da Silva` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Manuella Roveratti Lucindo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Manutenção Rápida` | 1 | expressão | `resources/views/errors/` ×1 (`503.blade.php`) |
 | `Mapa de Regras do Ciclo` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Mapa de Regras:` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`KanbanBoard.php`) |
 | `Mapeamento` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
@@ -35839,19 +36384,18 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Melyssa De Amorim Peres` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Melyssa Dias` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Melyssa Ezequiel Santos Oliveira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
-| `Menor` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Menor ou igual a` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
+| `Menor ou igual a (<=)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Menor Pontuação` | 1 | view | `resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
 | `Menor que` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
+| `Menor que (<)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Menos Inscritos` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Mensagem / Exceção` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Mensagem da *Exception*` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Mensagem de Erro:` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
-| `Mensagem do Erro: {{ … }}` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Mensagem do Sistema` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Mensagem ou arquivo...` | 1 | atributo | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Mensagem Simples (Texto Livre)` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
-| `Mensagem WhatsApp` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateManager.php`) |
 | `Mercado panorama` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Mercado Zé Luiz` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Mesmo documento gerado ao final do preenchimento.` | 1 | view | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
@@ -36014,6 +36558,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Modelo removido.` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`IaConfigManager.php`) |
 | `Modelo salvo com sucesso!` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`IaConfigManager.php`) |
 | `Modelos Disponíveis` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
+| `Modo de Exibição do Input` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Modo de Movimentação em Lote` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Modo de Pré-visualização: Pode avançar e voltar entre as etapas livremente sem preenchimento obrigatório.` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
 | `Modo de Seleção` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -36059,7 +36604,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Morro São Bento` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Morôni Fernandes Dolino` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Mostrar Filtros` | 1 | expressão | `resources/views/components/` ×1 (`dynamic-filter-chips.blade.php`) |
-| `Mostrar SOMENTE SE:` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Mostrar somente se o campo:` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Motivo IA: {{ $infoDoc['motivo_rejeicao'] }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Motivo obrigatório...` | 1 | atributo | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`) |
 | `Motivo pendente de gravação nesta sessão:` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-aprovacao-editor.blade.php`) |
@@ -36078,6 +36623,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Mozilla Thunderbird` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailTrackingService.php`) |
 | `mp4, mov, avi, webm, mkv` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Mucuripe` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Muitas ações em poucos segundos` | 1 | expressão | `resources/views/errors/` ×1 (`429.blade.php`) |
+| `Muitas Solicitações` | 1 | expressão | `resources/views/errors/` ×1 (`429.blade.php`) |
 | `Muitas tentativas de login. Tente novamente em {$seconds} segundos.` | 1 | php | `app/Modules/Auth/UI/Livewire/` ×1 (`Login.php`) |
 | `Muitas tentativas. Acesso bloqueado por segurança. Tente novamente em {$segundos} segundos.` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`PortalMatricula.php`) |
 | `Muito obrigado! As suas respostas foram registadas com sucesso no nosso sistema. Agradecemos a sua participação.` | 1 | view | `resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
@@ -36123,6 +36670,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `MÁRCIO` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Márcio Daniel Mattos Constante` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Máscara do Input (x-mask)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Máx` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Máx. (MB)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Média Final (F3)` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
 | `Média Geral (Final)` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Relatorios.php`) |
@@ -36135,10 +36683,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Métricas e Histórico de Disparos` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`) |
 | `Mídia ({{ ucfirst($c->subtipo) }})` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Mídia Visual` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Mín` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Mínimo de 6 caracteres` | 1 | atributo | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
+| `módulo` | 1 | php | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Módulo 99` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Módulo de Matrícula e Links` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailParserService.php`) |
 | `Módulo de Teste` | 1 | atributo | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
+| `Módulo Desativado no Sistema` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Módulo Teste (RDCrm)` | 1 | php | `app/Modules/Teste/RDCrm/UI/Livewire/` ×1 (`DesignSystemViewer.php`) |
 | `Módulo é obrigatório.` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Múltipla Esc.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -36264,9 +36815,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Nenhum erro registado no sistema. Excelente!` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Nenhum feedback adicional foi registado.` | 1 | expressão | `resources/views/livewire/student/` ×1 (`minhas-solicitacoes.blade.php`) |
 | `Nenhum feedback foi registrado.` | 1 | expressão | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
-| `Nenhum formulário carregado no momento` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Nenhum formulário encontrado na aba de {{ … }}.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Nenhum formulário encontrado.` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-manager.blade.php`) |
+| `Nenhum formulário localizado.` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Nenhum formulário respondido ainda.` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`acompanhamento.blade.php`) |
 | `Nenhum Funil Sincronizado` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `Nenhum Gestor (Remover vínculo)` | 1 | view | `resources/views/livewire/company/` ×1 (`aprendizes-manager.blade.php`) |
@@ -36284,6 +36835,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Nenhum professor vinculado.` | 1 | view | `resources/views/livewire/curso/` ×1 (`curso-detalhes.blade.php`) |
 | `Nenhum provedor cadastrado.` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Nenhum registro de auditoria encontrado com esses filtros.` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`auditoria-manager.blade.php`) |
+| `Nenhum registro de preenchimento assistido para este formulário.` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Nenhum registro encontrado.` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`relatorios.blade.php`) |
 | `Nenhum slide adicionado.` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-form.blade.php`) |
 | `Nenhum status configurado para a pipeline deste ciclo.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-edit.blade.php`) |
@@ -36555,7 +37107,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Novo Formulário de Aprendizagem` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
 | `Novo Formulário em Rascunho` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
 | `Novo Formulário Geral` | 1 | expressão | `resources/views/livewire/forms/` ×1 (`form-edit.blade.php`) |
-| `Novo Input` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Novo Grupo (E)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Novo Grupo (OU)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Novo Modelo` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Novo Período` | 1 | view | `resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1 (`listagem.blade.php`) |
 | `Novo Registo` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -36571,6 +37124,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `null ou ID do departamento` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `nullable\|string` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`StatusManager.php`) |
 | `Numero 3 complemento A` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Nunca preenchido` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Nurya Moreira Pereira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Nycolas Eduardo Couto dos santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Nycolas Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -36583,11 +37137,15 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Não assinada digitalmente` | 1 | php | `app/Traits/` ×1 (`WithFichaPdfDownload.php`) |
 | `Não configurada` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `Não configurado` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
+| `Não contém o texto` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Não declarada` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Não encontramos linhas com erro neste log para reprocessar de forma isolada.` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
+| `Não encontramos o que você procurava` | 1 | expressão | `resources/views/errors/` ×1 (`404.blade.php`) |
+| `Não está entre as opções (sep. por vírgula)` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Não feche esta janela. O sistema está lendo os blocos de dados.` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Não foi encontrada nenhuma inscrição em andamento para o seu perfil.` | 1 | view | `resources/views/livewire/student/dashboard/` ×1 (`dashboard.blade.php`) |
 | `Não foi possível carregar os detalhes do template '{$templateId}' na Suri.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateManager.php`) |
+| `Não foi possível concluir sua solicitação` | 1 | expressão | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Não foi possível gerar a pré-visualização deste formato no navegador.` | 1 | atributo | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `Não foi possível ler {$rel}` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Não foi possível obter os itens detalhados na API do Protheus (HTTP` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
@@ -36659,6 +37217,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `O documento será analisado pela IA antes de aprovar.` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `O e-mail é obrigatório.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `O efeito ripple já está aplicado no CSS através do pseudo-elemento ::after e do evento :active diretamente na classe summary.` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
+| `O endereço acessado pode ter sido alterado, digitado incorretamente ou o registro que você tentou abrir não está mais disponível no sistema.` | 1 | view | `resources/views/errors/` ×1 (`404.blade.php`) |
 | `O envio do arquivo é obrigatório.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
 | `O estado atual do aluno ({{ $detalhesEstudante['estado_atual'] }}) é diferente do estado da Unidade solicitada ({{ $detalhesEstudante['estado_unidade'] }}).` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
 | `O estudante {{nome_solicitante}} solicitou a reabertura de uma fase de avaliação.` | 1 | php | `database/seeders/` ×1 (`HelpdeskTemplatesSeeder.php`) |
@@ -36666,6 +37225,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `O grupo {{ strtoupper($roleName) }} ainda não possui permissões cadastradas (ou tem acesso via super-admin).` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
 | `O ID do documento que a imagem representa. Retorne 0 se a imagem não for um documento válido da lista.` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `O ID hexadecimal da etapa no RD` | 1 | php | `database/migrations/` ×1 (`2026_09_16_124848_create_rd_crm_contacts_deals_tables.php`) |
+| `O INPUT FICARÁ OCULTO` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `O INPUT FICARÁ VISÍVEL` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `O Instituto Percorre está a trazer novas ferramentas.` | 1 | php | `database/seeders/` ×1 (`ConteudoSeeder.php`) |
 | `O JSON informado é inválido.` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskConfigManager.php`) |
 | `O link oficial redireciona o candidato para o Ciclo Regular Ativo de forma automática. Para projetos customizados, copie o link diretamente no ícone da linha do ciclo na tabela.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
@@ -36673,6 +37234,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `O motivo deve ser mais descritivo.` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`ProcessoMatriculaManager.php`) |
 | `O motor de Ranking foi iniciado para o ciclo selecionado. Acompanhe no Gerenciador de Integrações.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `O motor de Ranking foi iniciado. Acompanhe a barra de progresso no Gerenciador de Integrações (I/O).` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodDetails.php`) |
+| `O módulo de {$nomeModuloAmigavel}` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `O módulo é obrigatório.` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `O nome completo é obrigatório.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `O nome da etapa não pode ficar vazio.` | 1 | php | `app/Modules/Teste/RDCrm/UI/Livewire/` ×1 (`RdCrmManager.php`) |
@@ -36696,11 +37258,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `O que é este componente?` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
 | `O RD Station rejeitou a criação do funil.` | 1 | php | `app/Modules/Teste/RDCrm/Services/` ×1 (`RdCrmService.php`) |
 | `O recorte forçará o formato {{ … }}.` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-form.blade.php`) |
+| `O recurso ou módulo que você tentou acessar encontra-se desligado no momento por definição da administração do sistema. O seu perfil de acesso atual não possui a liberação necessária para visualizar esta página ou executar esta operação.` | 1 | view | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `O responsável {$nomeAutor} finalizou a edição do orçamento de {$orcamento->ano} do Centro de Custo {$orcamento->ccusto} ({$ccNome}) e submeteu-o para aprovação.` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`OrcamentoNotificacaoService.php`) |
 | `O seu feedback para o aluno` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
 | `O seu nível de acesso ou vínculo académico não permite visualizar este formulário.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`FormularioPublico.php`) |
 | `O seu pedido` | 1 | view | `resources/views/livewire/student/` ×1 (`minhas-solicitacoes.blade.php`) |
 | `O seu pedido • {{ … }}` | 1 | view | `resources/views/livewire/student/` ×1 (`minhas-solicitacoes.blade.php`) |
+| `O seu perfil não possui permissão para {$acaoAmigavel}.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `O seu progresso está salvo! A fase seguinte ({{ $this->bloqueioFaseSeguinte->nome }}) será liberada em {{ … }}. O botão de avançar reaparecerá no horário estipulado.` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
 | `O sistema disparará automaticamente no horário escolhido.` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `O sistema lerá a planilha desde a primeira linha ignorando duplicatas com sucesso.` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
@@ -36721,8 +37285,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Observação:` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`EsteiraDetails.php`) |
 | `Obter Template ({$this->templateId})` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Ocorreu um erro ao tentar processar o envio.` | 1 | php | `app/Modules/Teste/RDCrm/UI/Livewire/` ×1 (`RdCrmManager.php`) |
-| `Ocorreu um erro interno no servidor.` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
-| `Ocorreu um erro no processamento da requisição. A nossa equipa técnica já foi notificada.` | 1 | php | `bootstrap/` ×1 (`app.php`) |
 | `ocorrências em` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `ocorrências ·` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Oculta Unidades/Cursos/Turnos com vagas esgotadas.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -36730,6 +37292,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ocultar fases de outros responsáveis` | 1 | view | `resources/views/livewire/admin/` ×1 (`configuracoes-gerais-manager.blade.php`) |
 | `Ocultar Filtros` | 1 | expressão | `resources/views/components/` ×1 (`dynamic-filter-chips.blade.php`) |
 | `Ocultar ou Mostrar Menus do Sistema` | 1 | atributo | `resources/views/livewire/forms/` ×1 (`form-spreadsheet.blade.php`) |
+| `OCULTO` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ocupar Restante` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Ocupação (Vagas)` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodManager.php`) |
 | `Oeste` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
@@ -36748,6 +37311,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `On` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Onde buscar os IDs na Suri?` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Onde este formulário será utilizado?` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
+| `Op1, Op2...` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Opacidade (0 a 1)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Opcional` | 1 | atributo | `resources/views/livewire/unidade/` ×1 (`unidade-manager.blade.php`) |
 | `Opcional: ID da campanha no RD` | 1 | php | `database/migrations/` ×1 (`2026_09_16_124848_create_rd_crm_contacts_deals_tables.php`) |
@@ -36755,15 +37319,17 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `OpenAI Compatible (Universal)` | 1 | view | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
 | `Opera` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailTrackingService.php`) |
 | `Operador` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
+| `Operador de Comparação:` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Operação Perfeita` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Operações de Inscrição` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
-| `Ops! Ocorreu um erro interno.` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
+| `Ops! Algo não saiu como esperado` | 1 | expressão | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Opção desconhecida: --{$k}` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Opção rápida` | 1 | expressão | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
 | `Opções de Resposta (1 por linha)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `opções de tema (light/dark)` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Opções de Unidades, Cursos e Turnos aplicadas ao campo dinâmico!` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Opções Disponíveis` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Opções separadas por vírgula:` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Organize as colunas de status pelas quais os candidatos passarão no funil seletivo.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Origem de Dados: {{ … }}` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Origem: {{ … }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
@@ -36806,7 +37372,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ou escolha um Template Sincronizado do Sistema` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Outline Tags (Small)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
 | `Outro / Proxy Webmail` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailTrackingService.php`) |
-| `Outro Formulário do Sistema (Avaliação / Geral)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Outros` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Pablo Deryk Rodrigues de Carvalho` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Pablo Emanuel Rodrigues Martins` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -36850,6 +37415,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Para formatos de Carrossel ou Story, é obrigatório adicionar pelo menos um item (slide) no construtor.` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoForm.php`) |
 | `Para garantir sua vaga e efetivar sua matrícula, você precisa enviar as fotos dos seus documentos obrigatórios através do nosso portal seguro. Nosso sistema de Inteligência Artificial fará a validação das imagens em tempo real.` | 1 | php | `database/seeders/` ×1 (`AutomacaoMatriculaSeeder.php`) |
 | `Para garantir sua vaga, você precisa enviar seus documentos no nosso portal e efetivar sua matrícula:` | 1 | php | `database/seeders/` ×1 (`TemplatesMatriculaSeeder.php`) |
+| `Para proteger as suas informações, a conexão desta página foi encerrada porque ela permaneceu aberta sem interação por muito tempo. Atualize a página ou acesse novamente para continuar.` | 1 | view | `resources/views/errors/` ×1 (`419.blade.php`) |
 | `Para proteção dos seus dados (LGPD), seu e-mail e telefone aparecem parcialmente ocultos. Caso precise alterá-los, clique em "Alterar" acima do respectivo campo.` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
 | `Para Quem (Destinatário)` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-details.blade.php`) |
 | `Para você acompanhar o andamento do processo seletivo, envio de documentos e futuras comunicações, criamos o seu acesso exclusivo ao Portal do Aluno.` | 1 | php | `database/seeders/` ×1 (`InscricaoRecebidaTemplateSeeder.php`) |
@@ -36949,6 +37515,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Partenom` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `participant {$id} as {$label}` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Participante #` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`ResponseDetails.php`) |
+| `Participante (Autor)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Participante ({{ $infoPartCampo['user_nome'] }})` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Participante / Candidato(a)` | 1 | php | `app/Traits/` ×1 (`WithFichaPdfDownload.php`) |
 | `Participante / Identificação` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormDetails.php`) |
@@ -37125,6 +37692,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Perguntas Estruturadas` | 1 | view | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Peri alto` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Permissão` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
+| `Permissão de Acesso Necessária` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Permissão e Feature atualizadas!` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Permissão excluída com sucesso.` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Permissão Global de Centros de Custo (Todos os Centros de Custo)` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
@@ -37225,6 +37793,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `ph ph-toggle-right` | 1 | atributo | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
 | `ph ph-tree-structure` | 1 | atributo | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock-aprendizagem.blade.php`) |
 | `ph ph-users` | 1 | atributo | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
+| `ph-fill ph-shield-Warning` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Phamella Rafaela Souza Alves` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Phelipe De Paula` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Piauí` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -37289,6 +37858,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Por favor, selecione um Ciclo específico no filtro superior para gerar o ranking.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `Por favor, selecione um Ciclo específico no filtro superior para recalcular a pontuação.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `Por favor, selecione um Ciclo no filtro superior antes de utilizar a seleção avançada.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
+| `Por forma:` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `Por motivos de segurança, sua conexão será encerrada automaticamente por inatividade em:` | 1 | view | `resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `` Por padrão só entram textos de interface (chaves, classes CSS, caminhos, SQL e formatos de data são descartados); use `--strings-todas` para listar tudo._ `` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Por Perfil de Acesso (Roles)` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-edit.blade.php`) |
 | `Por que esta matriz precisa ser reaberta?` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
@@ -37362,11 +37933,13 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Praça Vinte e Cinco de Novembro` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Predios` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Preencha a Descrição da Despesa antes de liberar para aprovação.` | 1 | php | `app/Modules/Financeiro/UI/Livewire/` ×1 (`OrcamentoEditor.php`) |
+| `Preencha abaixo valores de teste para os campos usados nas condições e veja imediatamente se o input ficará visível ou oculto.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Preencha o CEP/UF primeiro... Selecione a Unidade primeiro... Selecione o Curso primeiro... Selecione...` | 1 | view | `resources/views/livewire/website/partials/` ×1 (`render-dinamico.blade.php`) |
 | `Preencha o limite de vagas e faixas etárias para cada combinação académica selecionada.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Preencha os campos abaixo conforme as diretrizes da fase atual.` | 1 | expressão | `resources/views/livewire/gestao-educacional/` ×1 (`formulario-aprendizagem.blade.php`) |
 | `Preencha os passos sequenciais para estruturar o processo seletivo.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Preencha sua Data de Nascimento e o CEP acima para visualizarmos os cursos disponíveis para o seu perfil e região.` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
+| `Preenchendo em nome de {{ $inscricao->nome }} (Participante Logado: {{ auth()->user()->name }})` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Preencher ecrã (Cover)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Preencher Formulário em Nome do Candidato (Embed)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Preencher Novamente` | 1 | view | `resources/views/livewire/website/` ×1 (`formulario-publico.blade.php`) |
@@ -37379,6 +37952,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Preenchido por Participante{{ … }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Preenchimento concluído` | 1 | expressão | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`) |
 | `Preenchimento de Vagas` | 1 | view | `resources/views/livewire/admin/` ×1 (`configuracoes-gerais-manager.blade.php`) |
+| `Preenchimentos` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Presencial` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailParserService.php`) |
 | `Presidente Prudente` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Presidente Venceslau` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -37426,6 +38000,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Proteja seu histórico acadêmico mantendo uma senha segura e que só você conheça.` | 1 | view | `resources/views/livewire/student/` ×1 (`profile-manager.blade.php`) |
 | `Protendit` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Proteção Anti-Spam e Saída` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
+| `Proteção de Tráfego` | 1 | expressão | `resources/views/errors/` ×1 (`429.blade.php`) |
 | `PROTHEUS_API_URL não configurada.` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
 | `Protocolo #{{ … }}` | 1 | view | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Protocolo (ID)` | 1 | php | `app/Jobs/` ×1 (`ExportarRespostasFormularioJob.php`) |
@@ -37483,10 +38058,12 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Pyetra sant'ana Barboza` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Pyetra Vitorya de Almeida Silveira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Pyetro Henrique Santana clementino` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Pág. #{$c->etapa} —` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Pág. {{ $campo->etapa }}` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Página` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Página #{{ $etDestino->numero }} - {{ $etDestino->nome }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Página (Fase) e Posição` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Página Não Encontrada` | 1 | expressão | `resources/views/errors/` ×1 (`404.blade.php`) |
 | `Página ou Rota Interna do Sistema` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Página removida e numeração das páginas seguintes atualizada!` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Página {{ $pag }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -37791,6 +38368,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Registrar tentativa de contato por E-mail` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Registrar tentativa de contato por Telefone` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `Registrar tentativa de contato por WhatsApp` | 1 | expressão | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
+| `Registro automático enviado ao suporte` | 1 | view | `resources/views/errors/` ×1 (`500.blade.php`) |
 | `Registro de comunicado removido com sucesso!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1 (`ComunicadoManager.php`) |
 | `Registro de contato removido.` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `Registro de log excluído.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
@@ -37878,8 +38456,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Rennan Alves Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Repetir Mosaico` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Repita a Nova Senha` | 1 | view | `resources/views/livewire/student/` ×1 (`profile-manager.blade.php`) |
-| `Replay` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
-| `Replay: {$log->acao}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Replicar em Features Toggles` | 1 | view | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
 | `Replicar em Permissões (ACL)` | 1 | view | `resources/views/livewire/feature-toggle/` ×1 (`feature-manager.blade.php`) |
 | `Represa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -37943,6 +38519,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Restantes: {{ … }}` | 1 | view | `resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
 | `Restrição Geográfica` | 1 | php | `app/Modules/Curso/UI/Livewire/` ×1 (`CursoManager.php`) |
 | `Resultado da Análise do Orçamento — CC {$orcamento->ccusto}` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`OrcamentoNotificacaoService.php`) |
+| `Resultado do Grupo: {{ … }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Resultados da Pesquisa Publicações da Categoria As Últimas` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`portal-noticias.blade.php`) |
 | `Resumo cadastral` | 1 | php | `app/Modules/Student/UI/Livewire/` ×1 (`StudentManager.php`) |
 | `Resumo do Preenchimento` | 1 | php | `app/Modules/Forms/UI/Livewire/` ×1 (`FormDetails.php`) |
@@ -41372,6 +41949,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Sabrina Santos da Silva` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Sagrada Família` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Sagrado Coração de Jesus` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Sair Agora` | 1 | view | `resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `Saiu da Condição` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-details.blade.php`) |
 | `Sala 12` | 1 | php | `database/seeders/` ×1 (`UnidadesTesteSeeder.php`) |
 | `Sala 5` | 1 | php | `database/seeders/` ×1 (`UnidadesTesteSeeder.php`) |
@@ -41392,6 +41970,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Salvar e Prosseguir` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-edit.blade.php`) |
 | `Salvar e Voltar` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
 | `Salvar Fase` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`responder.blade.php`) |
+| `salvar permissões` | 1 | php | `app/Modules/ACL/UI/Livewire/` ×1 (`PermissionManager.php`) |
 | `Salvar Permissões` | 1 | view | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
 | `Salvar Regras` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Salvar Status` | 1 | view | `resources/views/livewire/registration/` ×1 (`status-manager.blade.php`) |
@@ -41515,6 +42094,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Savio Henrique Ximenez da Silva` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Saída de Console (Logs)` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Saúde` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `SE (IF)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Se aceitar, será redirecionado para o dashboard e o seu trabalho não guardado será perdido.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Se ativado, alunos não verão as colunas exclusivas dos professores, e os professores não verão as colunas exclusivas dos alunos. Fases "Ambos" permanecem visíveis para os dois.` | 1 | view | `resources/views/livewire/admin/` ×1 (`configuracoes-gerais-manager.blade.php`) |
 | `Se deixar tudo desmarcado, a esteira considerará todas as Unidades, Cursos e Turnos.` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
@@ -41538,6 +42118,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Se true, exige login de aluno` | 1 | php | `database/migrations/` ×1 (`2026_08_26_200432_alter_formularios_table_add_regras_acesso.php`) |
 | `Se true, qualquer pessoa com o link acessa` | 1 | php | `database/migrations/` ×1 (`2026_08_26_200432_alter_formularios_table_add_regras_acesso.php`) |
 | `Se você não solicitou uma redefinição de senha, nenhuma ação é necessária e sua conta continua segura.` | 1 | php | `app/Notifications/` ×1 (`CustomResetPasswordNotification.php`) |
+| `Se você precisa acessar este recurso para realizar suas atividades, solicite à coordenação ou ao administrador a liberação da permissão no seu perfil de acesso.` | 1 | view | `resources/views/errors/` ×1 (`403.blade.php`) |
 | `Sec. Aprovou` | 1 | view | `resources/views/livewire/matricula/` ×1 (`processo-matricula-manager.blade.php`) |
 | `Sec. Reprovou` | 1 | view | `resources/views/livewire/matricula/` ×1 (`processo-matricula-manager.blade.php`) |
 | `Secondary` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
@@ -41567,6 +42148,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Selecione as Unidades, Cursos e Turnos que estarão disponíveis neste conjunto de campos (mesmo padrão da configuração de Ciclo).` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Selecione cada item na lista à esquerda para revisar seus valores mensais à direita e liberar para aprovação.` | 1 | view | `resources/views/livewire/financeiro/` ×1 (`orcamento-editor.blade.php`) |
 | `Selecione o Aluno...` | 1 | view | `resources/views/livewire/gestao-educacional/matricula/` ×1 (`detalhes.blade.php`) |
+| `Selecione o campo de referência em todas as condições do Grupo #` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `Selecione o campo...` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Selecione o Ciclo de Aprendizagem.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
 | `Selecione o ciclo ou marque a opção de salvar como Rascunho.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
 | `Selecione o Ciclo Seletivo` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`hub.blade.php`) |
@@ -41574,7 +42157,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Selecione o curso.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Selecione o curso...` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `Selecione o Evento do Sistema` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-form.blade.php`) |
-| `Selecione o formulário acima e clique em "Carregar Formulário" para preenchê-lo em nome do candidato.` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
+| `Selecione o Formulário` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `Selecione o Formulário Público` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Selecione o grupo...` | 1 | view | `resources/views/livewire/comunicacao/comunicado/` ×1 (`comunicado-form.blade.php`) |
 | `Selecione o novo ciclo...` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -41589,6 +42172,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Selecione os status que o sistema deve considerar para barrar superlotação no Kanban e Listagem (se a regra for por matrícula, ele usará isso para saber quando barrar a ação do usuário de enviar pra lá).` | 1 | view | `resources/views/livewire/admin/` ×1 (`configuracoes-gerais-manager.blade.php`) |
 | `Selecione ou digite o templateId...` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Selecione para qual Ciclo de Inscrição deseja aplicar este formulário.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
+| `Selecione pelo menos um campo nas condições ao lado para liberar os inputs de simulação.` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Selecione pelo menos um item nas caixas de seleção.` | 1 | php | `app/Modules/Financeiro/UI/Livewire/` ×1 (`OrcamentoAprovacaoEditor.php`) |
 | `Selecione pelo menos um público-alvo para esta publicação.` | 1 | php | `app/Modules/Conteudo/UI/Livewire/` ×1 (`ConteudoForm.php`) |
 | `Selecione pelo menos um responsável para esta fase.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/CicloAprendizagem/` ×1 (`Listagem.php`) |
@@ -41662,6 +42246,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Semestre {$ciclo->ano}.{$ciclo->semestre} • De` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodManager.php`) |
 | `Semestre {{ $ciclo->ano }}.{{ $ciclo->semestre }}` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `Sempre visível` | 1 | view | `resources/views/livewire/conteudo/` ×1 (`conteudo-manager.blade.php`) |
+| `Sempre Visível (Sem condição)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Sempre visível (sem restrições condicionais).` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Senha` | 1 | view | `resources/views/livewire/auth/` ×1 (`login.blade.php`) |
 | `Senha atualizada com sucesso! Bem-vindo(a).` | 1 | php | `app/Modules/Portal/UI/Livewire/Auth/` ×1 (`ForcePasswordChange.php`) |
 | `Senha de acesso gerada automaticamente` | 1 | php | `app/Modules/Comunicacao/Services/` ×1 (`EmailParserService.php`) |
@@ -41676,7 +42262,10 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Servidor de IA indisponível no momento.` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `Sessão encerrada (Manual ou Inatividade)` | 1 | php | `app/Providers/` ×1 (`AppServiceProvider.php`) |
 | `Sessão encerrada com segurança.` | 1 | php | `app/Modules/Matricula/UI/Livewire/` ×1 (`PortalMatricula.php`) |
+| `Sessão Expirada` | 1 | expressão | `resources/views/errors/` ×1 (`419.blade.php`) |
 | `Sessão iniciada com sucesso` | 1 | php | `app/Providers/` ×1 (`AppServiceProvider.php`) |
+| `Sessão Prestes a Expirar` | 1 | view | `resources/views/components/` ×1 (`session-timeout.blade.php`) |
+| `Sessão renovada com sucesso!` | 1 | atributo | `resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `Sete` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Setor Habitacional Mestre D'Armas (Planaltina)` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Setor Norte (Brazlândia)` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -41712,12 +42301,16 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Sim, Reenviar E-mail` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Simone Caroline Ramos carneiro Barbosa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Simone Rodrigues` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Simples` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Simulador de Avaliação de Aprendizagem` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`GeradorMockAprendizagem.php`) |
 | `Simulador de E-mail` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
+| `Simulador de Visibilidade do Input` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Simulador: Workflow de Aprendizagem` | 1 | atributo | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock-aprendizagem.blade.php`) |
 | `Simular Importação Aleatória` | 1 | view | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock.blade.php`) |
+| `Simular Respostas do Candidato` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Simular Workflow Completo` | 1 | view | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock-aprendizagem.blade.php`) |
 | `Simulação` | 1 | view | `resources/views/livewire/website/` ×1 (`inscricao.blade.php`) |
+| `Simulação: {{ … }}` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Simule listagem e importação de contatos, disparos de templates e mensagens livres. Todos os testes ficam registrados no Log Exclusivo abaixo.` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `Sinal de cancelamento enviado! O processamento irá parar.` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
 | `Sincronizado` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
@@ -41728,12 +42321,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Sincronizar centros de custo com o Protheus` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
 | `Sincronizar com Suri` | 1 | atributo | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
 | `Sincronizar naturezas financeiras com o Protheus` | 1 | php | `database/seeders/` ×1 (`FinanceiroPermissionsSeeder.php`) |
-| `Sincronizar Template Local` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `Sincronizar Template Local` | 1 | php | `app/Modules/Teste/Suri/Services/` ×1 (`SuriApiService.php`) |
 | `Sincronização concluída! {$processados} orçamento(s) listado(s).` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`ProtheusOrcamentoService.php`) |
-| `Sistema (Automação)` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
-| `Sistema (Automático)` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
 | `Sistema ACL` | 1 | atributo | `resources/views/livewire/acl/` ×1 (`permission-manager.blade.php`) |
 | `Sistema Administrativo` | 1 | expressão | `resources/views/components/layouts/` ×1 (`app.blade.php`) |
+| `Sistema em Atualização` | 1 | expressão | `resources/views/errors/` ×1 (`503.blade.php`) |
 | `Situação` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-details.blade.php`) |
 | `Situação de Preenchimento do Formulário` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
 | `sk-...` | 1 | atributo | `resources/views/livewire/matricula/` ×1 (`ia-config-manager.blade.php`) |
@@ -41828,6 +42420,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Status alterado rapidamente com sucesso!` | 1 | php | `app/Modules/Period/UI/Livewire/` ×1 (`PeriodDetails.php`) |
 | `Status Ativado!` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`StatusManager.php`) |
 | `Status Ativo/Inativo` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
+| `Status Atual do Input` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Status cadastrado com sucesso!` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`StatusManager.php`) |
 | `Status da feature alterado!` | 1 | php | `app/Modules/FeatureToggle/UI/Livewire/` ×1 (`FeatureManager.php`) |
 | `Status da Inscrição` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
@@ -41906,6 +42499,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Sua nova senha deve ser diferente das anteriores.` | 1 | view | `resources/views/livewire/portal/auth/` ×1 (`reset-password.blade.php`) |
 | `Sua pasta foi fechada e enviada para a nossa Secretaria. Entraremos em contato em breve.` | 1 | view | `resources/views/livewire/matricula/` ×1 (`portal-matricula.blade.php`) |
 | `Sua senha foi redefinida!` | 1 | lang | `lang/pt_BR/` ×1 (`passwords.php`) |
+| `Sua sessão expirou por inatividade.` | 1 | php | `app/Http/Middleware/` ×1 (`CheckSessionInactivity.php`) |
+| `Sua sessão foi encerrada automaticamente por inatividade.` | 1 | php | `app/Http/Middleware/` ×1 (`CheckSessionInactivity.php`) |
 | `Sua solicitação de alteração está em análise.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Responder.php`) |
 | `Sua solicitação de alteração foi enviada e será analisada!` | 1 | php | `app/Modules/Student/UI/Livewire/Dashboard/` ×1 (`Dashboard.php`) |
 | `Sua solicitação está em análise.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/Avaliacao/` ×1 (`Responder.php`) |
@@ -42080,7 +42675,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Template salvo localmente, mas falhou ao sincronizar com a Suri: {$erroDetalhe}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateForm.php`) |
 | `Template Simples` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Template sincronizado com a Suri com sucesso!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateManager.php`) |
-| `Template sincronizado! ID Suri: {$suriId}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `Template Suri {$suriTemplateId}` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Template/` ×1 (`TemplateManager.php`) |
 | `Template Utilizado` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Comunicado/` ×1 (`ComunicadoManager.php`) |
 | `Template Vinculado` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`AutomacaoManager.php`) |
@@ -42092,12 +42686,14 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Templates Retornados da Suri (API)` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
 | `Templates Retornados da Suri (GET {{ rtrim(env('SURI_API_URL', ''), '/') }}/api/templates)` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
 | `Templates WhatsApp no Sistema` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
+| `Tempo de Segurança Expirado` | 1 | expressão | `resources/views/errors/` ×1 (`419.blade.php`) |
 | `Tempo:` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Tenho cursos de informática e tecnologia e excel avançado` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Tentar Novamente / Reprocessar` | 1 | atributo | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `Tentativa de contato via` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `Terceiro portao` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Teresina` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Termina com` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Terminal de Tarefas (Chunks)` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Termo: Autorização de Uso de Dados (0/1)` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
 | `Termo: Receber Informações (0/1)` | 1 | php | `app/Modules/SystemTasks/UI/Livewire/` ×1 (`SystemTaskManager.php`) |
@@ -42260,7 +42856,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Tipo de Destino` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Tipo de Erro` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `Tipo de exportação '{$this->exportacao->tipo}' não implementado.` | 1 | php | `app/Jobs/` ×1 (`ProcessarExportacaoUniversalJob.php`) |
-| `Tipo de Formulário` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Tipo de Mídia` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Tipo de Operação` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Tipo de Regra` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
@@ -42475,6 +43070,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Travessa Ângelo Ravanel` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Trevo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Troca de Unidade/Curso` | 1 | expressão | `resources/views/livewire/student/dashboard/` ×1 (`dashboard.blade.php`) |
+| `TRUE` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `TRUE (Atendido)` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `True se o documento for válido e pertencer ao candidato.` | 1 | php | `app/Modules/Matricula/Services/` ×1 (`AiValidationService.php`) |
 | `Trv mercúrio 5sb` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Três Fontes` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -42583,6 +43180,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `User` | 1 | php | `app/Models/` ×1 (`Conteudo.php`) |
 | `Usuário / IP` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Usuário excluído com sucesso!` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
+| `Usuário Não Autenticado` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `Usuário Responsável` | 1 | view | `resources/views/livewire/importacao/` ×1 (`importacao-manager.blade.php`) |
 | `Usuário sem cargo/grupo definido.` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-details.blade.php`) |
 | `Usuário, IP ou ID do Registro...` | 1 | atributo | `resources/views/livewire/auditoria/` ×1 (`auditoria-manager.blade.php`) |
@@ -42630,12 +43228,11 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Valor Anterior` | 1 | php | `app/Modules/Auditoria/UI/Livewire/` ×1 (`AuditoriaManager.php`) |
 | `Valor Comparado` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Valor da variável {{ $idx + 1 }}` | 1 | atributo | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
-| `Valor esperado` | 1 | atributo | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Valor Esperado` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Valor esperado...` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-form.blade.php`) |
-| `Valor Máximo` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
-| `Valor Mínimo` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Valor esperado:` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Valor Total Submetido: R$` | 1 | php | `app/Modules/Financeiro/Services/` ×1 (`OrcamentoNotificacaoService.php`) |
+| `Valor...` | 1 | expressão | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Valor:` | 1 | view | `resources/views/livewire/period/` ×1 (`regras-manager.blade.php`) |
 | `Valéria da Silva Seixas` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Valéria de Souza Moreira` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -42678,6 +43275,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Ver Detalhes e Vínculos` | 1 | atributo | `resources/views/livewire/company/` ×1 (`empresa-manager.blade.php`) |
 | `Ver Disparos e Destinatários` | 1 | atributo | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`) |
 | `Ver Histórico` | 1 | view | `resources/views/livewire/admin/` ×1 (`solicitacoes-manager.blade.php`) |
+| `Ver histórico completo de edições` | 1 | atributo | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `Ver JSON Consolidado (Protheus)` | 1 | atributo | `resources/views/livewire/financeiro/` ×1 (`orcamento-manager.blade.php`) |
 | `Ver Log de Erro` | 1 | atributo | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
 | `Ver mapa completo` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
@@ -42700,7 +43298,12 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Verifica as fases que atingiram a data de liberação e notifica os candidatos retidos.` | 1 | php | `app/Console/Commands/` ×1 (`ProcessarFasesFormulario.php`) |
 | `Verifica fases de formulários/ciclos recém-liberadas e dispara as automações de e-mail para quem iniciou o preenchimento.` | 1 | php | `app/Console/Commands/` ×1 (`ProcessarLiberacaoFasesCommand.php`) |
 | `Verifica prazos e encerra avaliações atrasadas ou ciclos vencidos.` | 1 | php | `app/Console/Commands/` ×1 (`ProcessarFechamentoCiclos.php`) |
+| `Verificador em Tempo Real` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
+| `Verificar Disponibilidade` | 1 | view | `resources/views/errors/` ×1 (`503.blade.php`) |
 | `Verificação executada! {$enviados} novo(s) disparo(s) processado(s).` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Automacao/` ×1 (`EsteiraDetails.php`) |
+| `verificações com nome dinâmico (tabela abaixo)` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `Verificações de feature :` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `verificações ·` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Veronica da Silva Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Veronica Rodrigues Bartolomeu` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Vertical (9:16)` | 1 | expressão | `resources/views/livewire/conteudo/` ×1 (`conteudo-form.blade.php`) |
@@ -43069,6 +43672,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Visualização de E-mail` | 1 | view | `resources/views/livewire/comunicacao/email-log/` ×1 (`email-log-manager.blade.php`) |
 | `Visualização rápida de dados e escopo` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
 | `Visualize todos os templates diretamente da Suri, consulte um template específico (/api/templates/:template_id) ou importe para o sistema.` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-manager.blade.php`) |
+| `Visualizável no Console da Suri Lab (ID Log:` | 1 | php | `app/Modules/Comunicacao/Jobs/` ×1 (`DispararAutomacaoJob.php`) |
 | `Visão Geral & Estrutura` | 1 | view | `resources/views/livewire/period/` ×1 (`period-details.blade.php`) |
 | `Visão geral e metadados da unidade operacional.` | 1 | atributo | `resources/views/livewire/unidade/` ×1 (`unidade-detalhes.blade.php`) |
 | `Visível para estudante` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`StatusManager.php`) |
@@ -43194,6 +43798,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Você não pode excluir a sua própria conta.` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
 | `Você não pode pular posições. A posição máxima permitida agora é` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `Você não possui matrizes de avaliação pendentes neste momento.` | 1 | view | `resources/views/livewire/gestao-educacional/avaliacao/` ×1 (`listagem.blade.php`) |
+| `Você não possui permissão para acessar esta área` | 1 | expressão | `resources/views/errors/` ×1 (`403.blade.php`) |
+| `Você não possui permissão para realizar esta operação.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `Você não tem autorização para conceder a permissão '{$permission->name}'.` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserExtraPermissionManager.php`) |
 | `Você não tem permissão para editar um usuário DEV.` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
 | `Você não tem privilégios para alterar as permissões de um usuário DEV.` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserExtraPermissionManager.php`) |
@@ -43204,6 +43810,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Você pode usar o login do gestor abaixo no Portal da Empresa para ver a listagem e responder às avaliações!` | 1 | view | `resources/views/livewire/gestao-educacional/` ×1 (`gerador-mock-aprendizagem.blade.php`) |
 | `Você precisa aceitar os termos para finalizar.` | 1 | php | `app/Modules/Website/UI/Livewire/` ×1 (`Inscricao.php`) |
 | `Você precisa definir a propriedade $modelClass no seu componente Livewire.` | 1 | php | `app/Traits/` ×1 (`WithToggleStatus.php`) |
+| `Você precisa estar conectado à sua conta para visualizar este conteúdo. Entre com suas credenciais para continuar.` | 1 | view | `resources/views/errors/` ×1 (`401.blade.php`) |
 | `Você precisa estar logado.` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`FormularioAprendizagem.php`) |
 | `Você precisa selecionar a fase do ciclo.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`Hub.php`) |
 | `Você recebeu esta mensagem porque seu endereço de e-mail está vinculado a um cadastro ou inscrição em nossa plataforma.` | 1 | view | `resources/views/emails/layouts/` ×1 (`padrao.blade.php`) |
@@ -43222,6 +43829,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Voltar para Templates` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
 | `Voltar para Usuários` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-extra-permission-manager.blade.php`) |
 | `Voltar à Listagem` | 1 | view | `resources/views/livewire/company/` ×1 (`empresa-detalhes.blade.php`) |
+| `Voltar à Página Anterior` | 1 | view | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `Voltar às Respostas` | 1 | atributo | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `Volte ao Passo 2 e selecione as combinações académicas.` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `VSCO` | 1 | php | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
@@ -43293,7 +43901,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Witallo Vinícius Vieira Conceição` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Workflow de Fases` | 1 | view | `resources/views/livewire/gestao-educacional/periodo-avaliacao/` ×1 (`detalhes.blade.php`) |
 | `WPP` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`automacao-manager.blade.php`) |
-| `X-Livewire` | 1 | php | `bootstrap/` ×1 (`app.php`) |
+| `X-CSRF-TOKEN` | 1 | atributo | `resources/views/components/` ×1 (`session-timeout.blade.php`) |
 | `Xodó Marize` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Yagho Puñales Felix De Mello` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Yago Aragão dos Santos` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
@@ -43441,8 +44049,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Zona Sul São Paulo` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Zoraide Borges Evangelista` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `{ } Ver JSON Suri` | 1 | view | `resources/views/livewire/comunicacao/template/` ×1 (`template-form.blade.php`) |
-| `{$acao}: Falha na requisição (HTTP {$resultado['http_status']}). Registro salvo no Log.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
-| `{$acao}: Requisição executada e gravada no Log (HTTP {$resultado['http_status']})!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `{$acao}: Executada com sucesso (HTTP {$resultado['http_status']})!` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
+| `{$acao}: Falha na requisição (HTTP {$resultado['http_status']}). Verifique o console.` | 1 | php | `app/Modules/Comunicacao/UI/Livewire/Suri/` ×1 (`SuriTestDashboard.php`) |
 | `{$enviados} disparo(s) de esteira processado(s) com sucesso.` | 1 | php | `app/Console/Commands/` ×1 (`ProcessarEsteirasComunicacaoCommand.php`) |
 | `{$ini} até {$fim}` | 1 | php | `app/Traits/` ×1 (`ComFiltroAvancado.php`) |
 | `{$itensMovidos} naturezas (linhas) foram distribuídas pelos Centros de Custo reais.` | 1 | php | `database/seeders/` ×1 (`OrcamentoAjusteSeeder.php`) |
@@ -43454,6 +44062,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `{$qtdExtras} permissão(ões) avulsa(s)` | 1 | php | `app/Modules/Corporate/UI/Livewire/` ×1 (`UserManager.php`) |
 | `{$qtdRemovida} bloco(s) excluído(s) com sucesso!` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
 | `{$qtd} campo(s) movido(s) para a Página #{$destino}!` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `{$rotulo} está temporariamente desativado no sistema.` | 1 | php | `app/Traits/` ×1 (`ValidaAcesso.php`) |
 | `{$this->ordenacaoCampo} {$this->ordenacaoDirecao} NULLS LAST` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationManager.php`) |
 | `{$this->quantidadeInjecao} avaliações injetadas com sucesso!` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`GeradorMock.php`) |
 | `{$this->quantidadeInjecao} fluxos de aprendizagem injetados!` | 1 | php | `app/Modules/GestaoEducacional/UI/Livewire/` ×1 (`GeradorMockAprendizagem.php`) |
@@ -43476,8 +44085,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `{{ $errorDetalhes->tipo }} • Código: {{ $errorDetalhes->http_code ?? 'N/A' }}` | 1 | view | `resources/views/livewire/auditoria/` ×1 (`error-log-manager.blade.php`) |
 | `{{ $est->name }} (CPF: {{ $est->cpf }})` | 1 | view | `resources/views/livewire/gestao-educacional/matricula/` ×1 (`detalhes.blade.php`) |
 | `{{ $et->data_disparo->format('d/m H:i') }} +{{ $et->atraso_valor }} {{ $et->atraso_unidade }} Imediato` | 1 | view | `resources/views/livewire/comunicacao/automacao/` ×1 (`esteira-manager.blade.php`) |
-| `{{ $fa['titulo'] ?? 'Formulário' }} — por {{ … }} ({{ $fa['data'] ?? '' }})` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `{{ $form->total_respostas }} resp.` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-manager.blade.php`) |
+| `{{ $form['total_preenchimentos'] }}x` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `{{ $formItem->titulo }} ({{ $formItem->respostas_count ?? 0 }} resposta(s))` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `{{ $index + 1 }}º` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`rd-crm-manager.blade.php`) |
 | `{{ $insc->pontuacao_total ?? 0 }} pts` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
@@ -43514,6 +44123,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `{{ count($campos) }} item(ns)` | 1 | view | `resources/views/livewire/forms/` ×1 (`response-details.blade.php`) |
 | `{{ count($camposSelecionados) }} Inputs Selecionados` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `{{ count($cursosSelecionados) }} sel.` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
+| `{{ count($gruposCondicionais) }} Grupo(s) Configurado(s)` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `{{ count($selecionadas) }} ciclos selecionados` | 1 | view | `resources/views/livewire/period/` ×1 (`period-manager.blade.php`) |
 | `{{ count($selecionadas) }} inscrições selecionadas` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-manager.blade.php`) |
 | `{{ count($selecionadas) }} resposta(s) selecionada(s)` | 1 | view | `resources/views/livewire/forms/` ×1 (`form-details.blade.php`) |
@@ -43524,7 +44134,6 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `{{ count($this->logsComunicacao) }} disparo(s)` | 1 | view | `resources/views/livewire/registration/` ×1 (`registration-details.blade.php`) |
 | `{{ count($turnosSelecionados) }} sel.` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
 | `{{ count($unidadesSelecionadas) }} sel.` | 1 | view | `resources/views/livewire/corporate/` ×1 (`user-manager.blade.php`) |
-| `{{ route(` | 1 | atributo | `resources/views/livewire/conteudo/` ×1 (`conteudo-publico.blade.php`) |
 | `{{ … }} a {{ … }}` | 1 | view | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/` ×1 (`listagem.blade.php`) |
 | `{{ … }} ciclos completos` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
 | `{{ … }} de {{ … }} ciclos processados` | 1 | view | `resources/views/livewire/system-tasks/` ×1 (`system-task-manager.blade.php`) |
@@ -43540,7 +44149,9 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `\| Coluna \| Tipo \| Nulo? \| Único? \| Chave estrangeira \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Diretório \| Textos únicos \| Ocorrências \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Evento \| Emitido por \| Ouvido por \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `\| Feature \| Qtd \| Formas \| Verificada em \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Linha \| Tag \| Classe principal \| Claro → escuro \| Outras classes dark \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `\| Local \| Forma \| Expressão \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Local \| Seletor \| Estilo no tema escuro \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Local \| Tag \| Classe principal \| Falta dark para \| Sugestão \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `\| Local \| Tag \| Tipo \| Trecho \|` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -43574,6 +44185,8 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Água Funda` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Álvaro Fernandes de Andrade Costa` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Área de Texto (Textarea)` | 1 | view | `resources/views/livewire/teste/rd-crm/` ×1 (`design-system-viewer.blade.php`) |
+| `Árvore de condições avançadas aplicada ao input! Clique em Guardar/Atualizar Bloco para persistir.` | 1 | php | `app/Modules/FormBuilder/UI/Livewire/` ×1 (`DynamicFields.php`) |
+| `Árvore de Grupos Lógicos` | 1 | view | `resources/views/livewire/form-builder/` ×1 (`dynamic-fields.blade.php`) |
 | `Â` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Ã` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `Ä` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
@@ -43600,6 +44213,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `Última casa da rua` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Última casa da Rua` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
 | `Última casa verde` | 1 | php | `database/seeders/` ×1 (`InscricoesSeeder.php`) |
+| `Última Edição` | 1 | php | `app/Modules/Registration/UI/Livewire/` ×1 (`RegistrationDetails.php`) |
 | `Últimas Inscrições` | 1 | view | `resources/views/livewire/curso/` ×1 (`curso-detalhes.blade.php`) |
 | `Último Acesso` | 1 | view | `resources/views/livewire/student/` ×1 (`student-details.blade.php`) |
 | `Último Ciclo Registado` | 1 | view | `resources/views/livewire/registration/` ×1 (`kanban-board.blade.php`) |
@@ -43624,6 +44238,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 | `õ` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `ú` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `ü` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
+| `— Instituto Percorre` | 1 | view | `resources/views/errors/` ×1 (`layout.blade.php`) |
 | `— mapeando` | 1 | php | `(raiz)/` ×1 (`laramap.php`) |
 | `` • Clique no cartão "1. Listar Contatos" (`GET /api/contacts`) e clique em "Usar Contato" na tabela, ou execute o cartão "2. Importar Contato" (`POST /api/contacts`). `` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
 | `• No Portal da Suri: acesse o menu Fluxos de Atendimento (Chatbot), clique no fluxo desejado e copie o UUID no final da URL.` | 1 | view | `resources/views/livewire/comunicacao/suri/` ×1 (`suri-test-dashboard.blade.php`) |
@@ -43688,7 +44303,7 @@ _Ordenados por quantidade de ocorrências. "Onde aparece" mostra cada diretório
 
 ## Tema escuro (dark mode)
 
-_3161 tags/regras com estilo para o tema escuro em 106 arquivos · 1845 tags com cor que só funciona no tema claro e sem par `dark:` · 8 regras CSS do tema escuro · 112 citações de ativação/configuração._
+_3228 tags/regras com estilo para o tema escuro em 111 arquivos · 1869 tags com cor que só funciona no tema claro e sem par `dark:` · 8 regras CSS do tema escuro · 115 citações de ativação/configuração._
 
 _Como ler: **classe principal** = primeira classe que não é utilitária (`card`, `btn`, `modal`...). **Claro → escuro** = a classe clara da tag e a classe `dark:` que a substitui. "Sem dark" só é apontado para cores que dependem do tema: fundo/borda claros (`bg-white`, `border-gray-200`) e texto escuro (`text-gray-900`). ⚡ = classe vinda de expressão condicional (`{{ }}`, `@class`, `:class`). Fundos escuros fixos (`bg-dark`, `btn-dark`) não contam como tema._
 
@@ -43722,41 +44337,41 @@ _Como ler: **classe principal** = primeira classe que não é utilitária (`card
 | `laramap.php:4204` | — | valor "dark" | `$r['uso'][$sc]['dark'] = ($r['uso'][$sc]['dark'] ?? 0) + 1;` |
 | `laramap.php:4259` | — | atributo data-theme | `} elseif (in_array($an, ['data-theme', 'data-bs-theme', ':data-theme', 'x-bind:data-theme', 'data-color-mode', 'data-color-scheme'], true)) {` |
 | `laramap.php:4369` | — | color-scheme | `if (stripos($t, 'dark') === false && stripos($t, 'escuro') === false && stripos($t, 'color-scheme') === false` |
-| `laramap.php:4431` | — | atributo data-theme | `public array $darkAtivacoes = []; // tags que ligam o tema (class="dark", data-theme...)` |
-| `laramap.php:4432` | — | texto/nome "tema escuro" | `public array $darkCitacoes = [];  // linhas que citam o tema escuro fora de classes (config, JS, CSS, nomes)` |
-| `laramap.php:4433` | — | texto/nome "tema escuro" | `public array $darkRegras = [];    // regras CSS do tema escuro` |
-| `laramap.php:4435` | — | valor "dark" | `public array $darkUso = [];       // classe semântica => ['total'=>n, 'dark'=>n] nas views` |
-| `laramap.php:4483` | — | valor "dark" | `$this->darkUso[$classe]['dark'] = ($this->darkUso[$classe]['dark'] ?? 0) + ($u['dark'] ?? 0);` |
-| `laramap.php:5093` | — | texto/nome "tema escuro" | `17. [Tema escuro (dark mode)](#tema-escuro-dark-mode)` |
-| `laramap.php:6330` | — | texto/nome "tema escuro" | `` return "## Tema escuro (dark mode)\n\n_Gerado em arquivo separado: `" . basename($this->darkArquivo) . "` (opção `--dark-out`)._\n\n---\n"; `` |
-| `laramap.php:6341` | — | texto/nome "tema escuro" | `return "# 🌙 Tema escuro — {$this->projeto}\n\n> Gerado por **LaraMap** em {$data}\n\n" . $this->corpoDark();` |
-| `laramap.php:6348` | — | texto/nome "tema escuro" | `$out = ["## Tema escuro (dark mode)\n"];` |
-| `laramap.php:6351` | — | prefers-color-scheme | `` return $out[0] . "_Nenhuma citação do tema escuro encontrada (`dark:`, `.dark`, `data-theme`, `prefers-color-scheme`...)._\n"; `` |
-| `laramap.php:6361` | — | valor "dark" | `if ($t['dark'] !== []) {` |
-| `laramap.php:6372` | — | texto/nome "tema escuro" | `$out[] = '_' . $comDark . ' tags/regras com estilo para o tema escuro em ' . count($arqDark) . ' arquivos · '` |
-| `laramap.php:6374` | — | texto/nome "tema escuro" | `. count($idx->darkRegras) . ' regras CSS do tema escuro · '` |
-| `laramap.php:6391` | — | texto/nome "tema escuro" | `$out[] = "### Como o tema escuro é ativado e configurado\n";` |
-| `laramap.php:6393` | — | alterna a classe dark (JS) | `` $out[] = "_Nenhuma ativação encontrada (`class=\"dark\"`, `data-theme`, `darkMode`, `classList.toggle('dark')`...). Se o tema é controlado por outro mecanismo, use `--dark-padrao=REGEX`._\n"; `` |
-| `laramap.php:6444` | — | texto/nome "tema escuro" | `$out[] = '_Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mesma classe clara tem mais de um tratamento escuro (inclusive "sem dark")._' . "\n";` |
-| `laramap.php:6470` | — | valor "dark" | `if ($t['dark'] !== []) {` |
-| `laramap.php:6526` | — | texto/nome "tema escuro" | `$out[] = '\| Propriedade \| Valor no tema escuro \| Qtd \| Exemplos \|';` |
-| `laramap.php:6540` | — | texto/nome "tema escuro" | `$out[] = "### Tags que deveriam ter tema escuro\n";` |
-| `laramap.php:6542` | — | texto/nome "tema escuro" | `` $out[] = '_O projeto ainda não usa estilos para o tema escuro (nenhum `dark:` nem regra CSS), então esta análise não se aplica._' . "\n"; `` |
-| `laramap.php:6569` | — | texto/nome "tema escuro" | `$out[] = '\| Local \| Seletor \| Estilo no tema escuro \|';` |
-| `laramap.php:6583` | — | valor "dark" | `if ($t['tag'] === '@apply' && $t['dark'] !== [] && $t['principal'] !== null) {` |
-| `laramap.php:6594` | — | texto/nome "tema escuro" | `$out[] = "\n#### Classes CSS com cor clara e sem regra para o tema escuro\n";` |
-| `laramap.php:6600` | — | valor "dark" | `$uso = $idx->darkUso[$classe] ?? ['total' => 0, 'dark' => 0];` |
-| `laramap.php:6602` | — | valor "dark" | `. ($uso['total'] ?? 0) . ' / ' . ($uso['dark'] ?? 0) . ' \|';` |
-| `laramap.php:6610` | — | valor "dark" | `if ($t['dark'] !== []) {` |
-| `laramap.php:6614` | — | texto/nome "tema escuro" | `$out[] = "\n### Inventário: todas as tags com estilo para o tema escuro\n";` |
-| `laramap.php:6651` | — | valor "dark" | `foreach ($t['dark'] as $i => $d) {` |
-| `laramap.php:6936` | — | texto/nome "tema escuro" | `$index->avisos[] = "Tema escuro: falha ao analisar {$rel}: " . $e->getMessage();` |
-| `laramap.php:7005` | — | texto/nome "tema escuro" | `$log('  Tags/regras com tema escuro   : ' . count(array_filter($index->darkTags, fn (array $t): bool => $t['dark'] !== [])));` |
-| `laramap.php:7028` | — | texto/nome "tema escuro" | `$log('  ✓ Tema escuro gerado: ' . $darkArquivo . ' (' . number_format(strlen($darkMd) / 1024, 1) . ' KB)');` |
-| `laramap.php:7053` | — | valor "dark" | `'dark' => [` |
-| `laramap.php:7097` | — | texto/nome "tema escuro" | `--no-dark            Não gera a seção de tema escuro (dark mode)` |
-| `laramap.php:7098` | — | texto/nome "tema escuro" | `--dark-out=ARQ       Grava a análise de tema escuro num arquivo separado` |
-| `laramap.php:7099` | — | valor "dark" | `--dark-padrao=REGEX  Classes que o projeto usa como "dark" além de dark: (ex.: '^dark-')` |
+| `laramap.php:4627` | — | atributo data-theme | `public array $darkAtivacoes = []; // tags que ligam o tema (class="dark", data-theme...)` |
+| `laramap.php:4628` | — | texto/nome "tema escuro" | `public array $darkCitacoes = [];  // linhas que citam o tema escuro fora de classes (config, JS, CSS, nomes)` |
+| `laramap.php:4629` | — | texto/nome "tema escuro" | `public array $darkRegras = [];    // regras CSS do tema escuro` |
+| `laramap.php:4631` | — | valor "dark" | `public array $darkUso = [];       // classe semântica => ['total'=>n, 'dark'=>n] nas views` |
+| `laramap.php:4688` | — | valor "dark" | `$this->darkUso[$classe]['dark'] = ($this->darkUso[$classe]['dark'] ?? 0) + ($u['dark'] ?? 0);` |
+| `laramap.php:5298` | — | texto/nome "tema escuro" | `17. [Tema escuro (dark mode)](#tema-escuro-dark-mode)` |
+| `laramap.php:6619` | — | texto/nome "tema escuro" | `` return "## Tema escuro (dark mode)\n\n_Gerado em arquivo separado: `" . basename($this->darkArquivo) . "` (opção `--dark-out`)._\n\n---\n"; `` |
+| `laramap.php:6630` | — | texto/nome "tema escuro" | `return "# 🌙 Tema escuro — {$this->projeto}\n\n> Gerado por **LaraMap** em {$data}\n\n" . $this->corpoDark();` |
+| `laramap.php:6637` | — | texto/nome "tema escuro" | `$out = ["## Tema escuro (dark mode)\n"];` |
+| `laramap.php:6640` | — | prefers-color-scheme | `` return $out[0] . "_Nenhuma citação do tema escuro encontrada (`dark:`, `.dark`, `data-theme`, `prefers-color-scheme`...)._\n"; `` |
+| `laramap.php:6650` | — | valor "dark" | `if ($t['dark'] !== []) {` |
+| `laramap.php:6661` | — | texto/nome "tema escuro" | `$out[] = '_' . $comDark . ' tags/regras com estilo para o tema escuro em ' . count($arqDark) . ' arquivos · '` |
+| `laramap.php:6663` | — | texto/nome "tema escuro" | `. count($idx->darkRegras) . ' regras CSS do tema escuro · '` |
+| `laramap.php:6680` | — | texto/nome "tema escuro" | `$out[] = "### Como o tema escuro é ativado e configurado\n";` |
+| `laramap.php:6682` | — | alterna a classe dark (JS) | `` $out[] = "_Nenhuma ativação encontrada (`class=\"dark\"`, `data-theme`, `darkMode`, `classList.toggle('dark')`...). Se o tema é controlado por outro mecanismo, use `--dark-padrao=REGEX`._\n"; `` |
+| `laramap.php:6733` | — | texto/nome "tema escuro" | `$out[] = '_Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mesma classe clara tem mais de um tratamento escuro (inclusive "sem dark")._' . "\n";` |
+| `laramap.php:6759` | — | valor "dark" | `if ($t['dark'] !== []) {` |
+| `laramap.php:6815` | — | texto/nome "tema escuro" | `$out[] = '\| Propriedade \| Valor no tema escuro \| Qtd \| Exemplos \|';` |
+| `laramap.php:6829` | — | texto/nome "tema escuro" | `$out[] = "### Tags que deveriam ter tema escuro\n";` |
+| `laramap.php:6831` | — | texto/nome "tema escuro" | `` $out[] = '_O projeto ainda não usa estilos para o tema escuro (nenhum `dark:` nem regra CSS), então esta análise não se aplica._' . "\n"; `` |
+| `laramap.php:6858` | — | texto/nome "tema escuro" | `$out[] = '\| Local \| Seletor \| Estilo no tema escuro \|';` |
+| `laramap.php:6872` | — | valor "dark" | `if ($t['tag'] === '@apply' && $t['dark'] !== [] && $t['principal'] !== null) {` |
+| `laramap.php:6883` | — | texto/nome "tema escuro" | `$out[] = "\n#### Classes CSS com cor clara e sem regra para o tema escuro\n";` |
+| `laramap.php:6889` | — | valor "dark" | `$uso = $idx->darkUso[$classe] ?? ['total' => 0, 'dark' => 0];` |
+| `laramap.php:6891` | — | valor "dark" | `. ($uso['total'] ?? 0) . ' / ' . ($uso['dark'] ?? 0) . ' \|';` |
+| `laramap.php:6899` | — | valor "dark" | `if ($t['dark'] !== []) {` |
+| `laramap.php:6903` | — | texto/nome "tema escuro" | `$out[] = "\n### Inventário: todas as tags com estilo para o tema escuro\n";` |
+| `laramap.php:6940` | — | valor "dark" | `foreach ($t['dark'] as $i => $d) {` |
+| `laramap.php:7233` | — | texto/nome "tema escuro" | `$index->avisos[] = "Tema escuro: falha ao analisar {$rel}: " . $e->getMessage();` |
+| `laramap.php:7303` | — | texto/nome "tema escuro" | `$log('  Tags/regras com tema escuro   : ' . count(array_filter($index->darkTags, fn (array $t): bool => $t['dark'] !== [])));` |
+| `laramap.php:7326` | — | texto/nome "tema escuro" | `$log('  ✓ Tema escuro gerado: ' . $darkArquivo . ' (' . number_format(strlen($darkMd) / 1024, 1) . ' KB)');` |
+| `laramap.php:7352` | — | valor "dark" | `'dark' => [` |
+| `laramap.php:7396` | — | texto/nome "tema escuro" | `--no-dark            Não gera a seção de tema escuro (dark mode)` |
+| `laramap.php:7397` | — | texto/nome "tema escuro" | `--dark-out=ARQ       Grava a análise de tema escuro num arquivo separado` |
+| `laramap.php:7398` | — | valor "dark" | `--dark-padrao=REGEX  Classes que o projeto usa como "dark" além de dark: (ex.: '^dark-')` |
 | `resources/css/app.css:10` | — | variante dark (Tailwind v4) | `@custom-variant dark (&:is(.dark *));` |
 | `resources/views/components/layouts/app.blade.php:5` | `html` | classe "dark" na tag | `<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ tema: localStorage.getItem('tema_sistema') \|\| (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }" x-init="$watch('tema'…` |
 | `resources/views/components/layouts/app.blade.php:6` | `html` | prefers-color-scheme | `x-data="{ tema: localStorage.getItem('tema_sistema') \|\| (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }"` |
@@ -43803,6 +44418,9 @@ _Como ler: **classe principal** = primeira classe que não é utilitária (`card
 | `resources/views/components/layouts/student-auth.blade.php:5` | `html` | valor "dark" | `:class="{ 'dark': tema === 'dark' }"` |
 | `resources/views/components/layouts/student-auth.blade.php:14` | — | prefers-color-scheme | `if (localStorage.getItem('tema_sistema') === 'dark' \|\| (!('tema_sistema' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {` |
 | `resources/views/components/layouts/student-auth.blade.php:15` | — | alterna a classe dark (JS) | `document.documentElement.classList.add('dark');` |
+| `resources/views/errors/layout.blade.php:12` | — | valor "dark" | `if (tema === 'dark') {` |
+| `resources/views/errors/layout.blade.php:13` | — | alterna a classe dark (JS) | `d.classList.add('dark');` |
+| `resources/views/errors/layout.blade.php:15` | — | alterna a classe dark (JS) | `d.classList.remove('dark');` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:614` | — | valor "dark" | `'dark'    => 'bg-gray-900 text-white',` |
 | `resources/views/livewire/conteudo/conteudo-publico.blade.php:10` | — | seletor CSS .dark | `.dark .ql-editor h1, .dark .ql-editor h2, .dark .ql-editor h3 { color: #f9fafb; }` |
 | `resources/views/livewire/conteudo/conteudo-publico.blade.php:12` | — | seletor CSS .dark | `.dark .ql-editor p { color: #d1d5db; }` |
@@ -43815,8 +44433,8 @@ _Ordenado por quantidade de tags sem par escuro — por onde começar a corrigir
 
 | Arquivo | Tags com dark | Tags sem dark |
 | --- | ---: | ---: |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php` | 95 | 267 |
-| `resources/views/livewire/registration/registration-details.blade.php` | 13 | 146 |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php` | 133 | 281 |
+| `resources/views/livewire/registration/registration-details.blade.php` | 17 | 155 |
 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php` | 0 | 115 |
 | `resources/views/livewire/financeiro/orcamento-editor.blade.php` | 0 | 108 |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php` | 11 | 104 |
@@ -43907,6 +44525,7 @@ _Ordenado por quantidade de tags sem par escuro — por onde começar a corrigir
 | `resources/views/livewire/website/home.blade.php` | 1 | 2 |
 | `resources/views/components/breadcrumb.blade.php` | 0 | 1 |
 | `resources/views/components/dynamic-filter-chips.blade.php` | 5 | 1 |
+| `resources/views/errors/419.blade.php` | 1 | 1 |
 | `resources/views/livewire/auditoria/auditoria-manager.blade.php` | 26 | 1 |
 | `resources/views/livewire/components/quick-view-drawer.blade.php` | 6 | 1 |
 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php` | 44 | 1 |
@@ -43920,8 +44539,12 @@ _Ordenado por quantidade de tags sem par escuro — por onde começar a corrigir
 | `resources/views/components/layouts/student-auth.blade.php` | 1 | 0 |
 | `resources/views/components/modal.blade.php` | 2 | 0 |
 | `resources/views/components/paginacao-customizada.blade.php` | 6 | 0 |
+| `resources/views/components/session-timeout.blade.php` | 8 | 0 |
 | `resources/views/components/summary-cards.blade.php` | 9 | 0 |
 | `resources/views/components/table.blade.php` | 12 | 0 |
+| `resources/views/errors/403.blade.php` | 6 | 0 |
+| `resources/views/errors/500.blade.php` | 1 | 0 |
+| `resources/views/errors/layout.blade.php` | 9 | 0 |
 | `resources/views/livewire/acl/role-manager.blade.php` | 20 | 0 |
 | `resources/views/livewire/admin/notification-badge.blade.php` | 2 | 0 |
 | `resources/views/livewire/auth/login.blade.php` | 13 | 0 |
@@ -43947,20 +44570,20 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 
 | Propriedade | Claro | Escuro | Qtd | Exemplos |
 | --- | --- | --- | ---: | --- |
-| `bg` | `bg-white` ⚠️ | `dark:bg-gray-800` | 378 | `resources/css/app.css:170`<br>`resources/css/app.css:200`<br>`resources/css/app.css:211` |
-| `bg` | `bg-white` ⚠️ | `— sem dark —` | 226 | `resources/css/app.css:116`<br>`resources/views/components/details-card.blade.php:26`<br>`resources/views/components/details-card.blade.php:48` |
-| `bg` | `bg-white` ⚠️ | `dark:bg-gray-900` | 70 | `resources/views/components/dynamic-filter.blade.php:14`<br>`resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/layouts/app.blade.php:436` |
+| `bg` | `bg-white` ⚠️ | `dark:bg-gray-800` | 381 | `resources/css/app.css:170`<br>`resources/css/app.css:200`<br>`resources/css/app.css:211` |
+| `bg` | `bg-white` ⚠️ | `— sem dark —` | 227 | `resources/css/app.css:116`<br>`resources/views/components/details-card.blade.php:26`<br>`resources/views/components/details-card.blade.php:48` |
+| `bg` | `bg-white` ⚠️ | `dark:bg-gray-900` | 80 | `resources/views/components/dynamic-filter.blade.php:14`<br>`resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/layouts/app.blade.php:436` |
 | `bg` | `bg-white` ⚠️ | `dark:bg-gray-700` | 16 | `resources/views/components/table.blade.php:34`<br>`resources/views/components/table.blade.php:37`<br>`resources/views/livewire/auth/profile-manager.blade.php:16` |
-| `bg` | `bg-white` ⚠️ | `dark:bg-red-900/20` | 5 | `resources/views/livewire/website/partials/render-dinamico.blade.php:650`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:988`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1015` |
+| `bg` | `bg-white` ⚠️ | `dark:bg-red-900/20` | 5 | `resources/views/livewire/website/partials/render-dinamico.blade.php:745`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1083`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1110` |
 | `bg` | `bg-white` ⚠️ | `dark:bg-gray-800/40` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:436`<br>`resources/views/livewire/corporate/user-manager.blade.php:479` |
 | `bg` | `bg-white` ⚠️ | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/student/document-manager.blade.php:91`<br>`resources/views/livewire/student/profile-manager.blade.php:175` |
 | `bg` | `bg-white` ⚠️ | `dark:bg-gray-800/60` | 1 | `resources/views/livewire/period/period-manager.blade.php:416` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-gray-700` | 171 | `resources/views/livewire/acl/permission-manager.blade.php:171`<br>`resources/views/livewire/acl/permission-manager.blade.php:177`<br>`resources/views/livewire/acl/permission-manager.blade.php:183` |
-| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-gray-800` | 72 | `resources/views/components/dynamic-filter.blade.php:85`<br>`resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113` |
+| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-gray-800` | 76 | `resources/views/components/dynamic-filter.blade.php:85`<br>`resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-700` | 66 | `resources/views/components/layouts/app.blade.php:450`<br>`resources/views/components/layouts/app.blade.php:451`<br>`resources/views/components/layouts/app.blade.php:452` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-purpura-900/30` | 45 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/dynamic-filter-chips.blade.php:22`<br>`resources/views/components/dynamic-filter.blade.php:92` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-600` | 38 | `resources/views/livewire/acl/role-manager.blade.php:49`<br>`resources/views/livewire/acl/role-manager.blade.php:56`<br>`resources/views/livewire/acl/role-manager.blade.php:87` |
-| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-gray-900` | 25 | `resources/views/livewire/auth/login.blade.php:45`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:44`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:63` |
+| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-gray-900` | 29 | `resources/views/livewire/auth/login.blade.php:45`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:44`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:63` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-purpura-900/40` | 22 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:98`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:25`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:117` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-purpura-900/20` | 14 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:146`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:88`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:96` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-800` | 8 | `resources/views/components/layouts/company.blade.php:73`<br>`resources/views/components/layouts/company.blade.php:77`<br>`resources/views/components/layouts/company.blade.php:80` |
@@ -43975,75 +44598,80 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-purpura-900/50` | 1 | `resources/views/components/dynamic-filter.blade.php:30` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:before:bg-gray-700` | 1 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:227` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-800/50` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:195` |
+| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-purpura-950/30` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1722` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-purpura-900/60` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:97` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-pitaya-900/20` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:384` |
 | `bg` | `(sem classe clara na tag)` ⚠️ | `dark:bg-yellow-400` | 1 | `resources/views/livewire/website/inscricao.blade.php:166` |
-| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-700/60` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:470` |
-| `bg` | `bg-gray-50` ⚠️ | `— sem dark —` | 120 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:33`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:43` |
+| `bg` | `(sem classe clara na tag)` ⚠️ | `dark:hover:bg-gray-700/60` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:565` |
+| `bg` | `bg-gray-50` ⚠️ | `— sem dark —` | 122 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:33`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:43` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/50` | 91 | `resources/css/app.css:203`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:20`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:71` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900` | 47 | `resources/views/components/dynamic-filter.blade.php:263`<br>`resources/views/components/layouts/app.blade.php:51`<br>`resources/views/components/layouts/app.blade.php:585` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800` | 29 | `resources/views/components/layouts/public.blade.php:143`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:107`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:165` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/60` | 14 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:75`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:32`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:94` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/30` | 11 | `resources/views/livewire/company/aprendizes-manager.blade.php:24`<br>`resources/views/livewire/company/gestores-manager.blade.php:24`<br>`resources/views/livewire/forms/form-edit.blade.php:164` |
-| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/50` | 8 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1978`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:151`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:145` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/50` | 8 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2043`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:151`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:145` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-700` | 6 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:134`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:203`<br>`resources/views/livewire/period/regras-manager.blade.php:97` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/80` | 6 | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/listagem.blade.php:13`<br>`resources/views/livewire/period/period-details.blade.php:223`<br>`resources/views/livewire/period/period-details.blade.php:469` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/60` | 4 | `resources/views/errors/403.blade.php:59`<br>`resources/views/errors/500.blade.php:17`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:188` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/40` | 3 | `resources/views/livewire/corporate/user-manager.blade.php:455`<br>`resources/views/livewire/corporate/user-manager.blade.php:498`<br>`resources/views/livewire/registration/registration-manager.blade.php:972` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-950` | 2 | `resources/views/livewire/auth/login.blade.php:13`<br>`resources/views/livewire/registration/registration-details.blade.php:1084` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/20` | 2 | `resources/views/livewire/financeiro/centro-custo-manager.blade.php:21`<br>`resources/views/livewire/financeiro/natureza-manager.blade.php:21` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-400/10` | 1 | `resources/css/app.css:193` |
-| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-950` | 1 | `resources/views/livewire/auth/login.blade.php:13` |
-| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/60` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:188` |
-| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1861` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-900/70` | 1 | `resources/views/components/session-timeout.blade.php:177` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1926` |
 | `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-700/60` | 1 | `resources/views/livewire/forms/form-details.blade.php:141` |
-| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-700/50` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:811` |
-| `bg` | `bg-gray-100` ⚠️ | `— sem dark —` | 83 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:61` |
-| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-700` | 48 | `resources/css/app.css:240`<br>`resources/css/app.css:251`<br>`resources/views/components/layouts/app.blade.php:543` |
-| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-800` | 42 | `resources/css/app.css:178`<br>`resources/views/components/dynamic-filter.blade.php:133`<br>`resources/views/components/dynamic-filter.blade.php:187` |
+| `bg` | `bg-gray-50` ⚠️ | `dark:bg-gray-700/50` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:906` |
+| `bg` | `bg-gray-100` ⚠️ | `— sem dark —` | 83 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:61` |
+| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-700` | 49 | `resources/css/app.css:240`<br>`resources/css/app.css:251`<br>`resources/views/components/layouts/app.blade.php:543` |
+| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-800` | 44 | `resources/css/app.css:178`<br>`resources/views/components/dynamic-filter.blade.php:133`<br>`resources/views/components/dynamic-filter.blade.php:187` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-900` | 8 | `resources/css/app.css:214`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:82`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:376` |
-| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-950` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:167`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:169`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:441` |
+| `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-950` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:167`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:169`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:536` |
+| `bg` | `bg-gray-100` ⚠️ | `dark:bg-red-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-800/70` | 2 | `resources/views/livewire/website/inscricao.blade.php:284`<br>`resources/views/livewire/website/inscricao.blade.php:301` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-green-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-gray-100` ⚠️ | `dark:bg-red-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-gray-100` ⚠️ | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/website/inscricao.blade.php:433` |
-| `bg` | `hover:bg-gray-50` ⚠️ | `— sem dark —` | 80 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/livewire/acl/permission-manager.blade.php:67`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:61` |
+| `bg` | `hover:bg-gray-50` ⚠️ | `— sem dark —` | 83 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/livewire/acl/permission-manager.blade.php:67`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:61` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-700` | 36 | `resources/css/app.css:170`<br>`resources/views/components/layouts/public.blade.php:175`<br>`resources/views/livewire/acl/permission-manager.blade.php:261` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-700/50` | 26 | `resources/views/livewire/acl/role-manager.blade.php:28`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:43`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:76` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-800` | 9 | `resources/views/components/dynamic-filter.blade.php:92`<br>`resources/views/components/dynamic-filter.blade.php:224`<br>`resources/views/components/table.blade.php:62` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-800/80` | 5 | `resources/views/livewire/acl/permission-manager.blade.php:80`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:92`<br>`resources/views/livewire/financeiro/centro-custo-manager.blade.php:46` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-900` | 5 | `resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:88`<br>`resources/views/livewire/gestao-educacional/matricula/detalhes.blade.php:106`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:88` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-800/50` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:111`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:503`<br>`resources/views/livewire/registration/registration-manager.blade.php:238` |
-| `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-600` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1884`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:193`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:221` |
-| `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-700/40` | 3 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:88`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:96`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:258` |
+| `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-600` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1949`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:193`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:221` |
+| `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-700/40` | 3 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:88`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:96`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:353` |
 | `bg` | `hover:bg-gray-50` ⚠️ | `dark:hover:bg-gray-800/40` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:880` |
-| `bg` | `bg-red-50` ⚠️ | `— sem dark —` | 45 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56` |
+| `bg` | `bg-red-50` ⚠️ | `— sem dark —` | 46 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56` |
 | `bg` | `bg-red-50` ⚠️ | `dark:bg-red-900/20` | 9 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:71`<br>`resources/views/livewire/period/regras-manager.blade.php:19`<br>`resources/views/livewire/registration/registration-manager.blade.php:721` |
 | `bg` | `bg-red-50` ⚠️ | `dark:bg-red-900/30` | 8 | `resources/views/livewire/company/empresa-manager.blade.php:61`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:47`<br>`resources/views/livewire/period/period-manager.blade.php:257` |
-| `bg` | `bg-red-50` ⚠️ | `dark:bg-gray-800` | 6 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:650`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:988` |
+| `bg` | `bg-red-50` ⚠️ | `dark:bg-gray-800` | 6 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:745`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1083` |
 | `bg` | `bg-red-50` ⚠️ | `dark:bg-gray-700` | 5 | `resources/views/livewire/period/regras-manager.blade.php:97`<br>`resources/views/livewire/period/regras-manager.blade.php:112`<br>`resources/views/livewire/period/regras-manager.blade.php:120` |
 | `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-gray-600` | 22 | `resources/views/livewire/acl/permission-manager.blade.php:105`<br>`resources/views/livewire/acl/role-manager.blade.php:61`<br>`resources/views/livewire/acl/role-manager.blade.php:94` |
 | `bg` | `hover:bg-red-50` ⚠️ | `— sem dark —` | 18 | `resources/views/livewire/auditoria/error-log-manager.blade.php:99`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:242`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:56` |
 | `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-gray-700` | 10 | `resources/views/livewire/acl/permission-manager.blade.php:136`<br>`resources/views/livewire/acl/permission-manager.blade.php:196`<br>`resources/views/livewire/acl/role-manager.blade.php:131` |
-| `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-red-900/30` | 7 | `resources/views/livewire/auth/logout-button.blade.php:1`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1970`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:125` |
+| `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-red-900/30` | 7 | `resources/views/livewire/auth/logout-button.blade.php:1`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2035`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:125` |
 | `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-gray-800` | 4 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:155`<br>`resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:146`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:139` |
 | `bg` | `hover:bg-red-50` ⚠️ | `dark:hover:bg-red-900/20` | 1 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:66` |
-| `bg` | `bg-emerald-50` ⚠️ | `— sem dark —` | 38 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113` |
+| `bg` | `bg-emerald-50` ⚠️ | `— sem dark —` | 39 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113` |
 | `bg` | `bg-emerald-50` ⚠️ | `dark:bg-emerald-900/30` | 7 | `resources/views/livewire/auth/profile-manager.blade.php:22`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129` |
 | `bg` | `bg-emerald-50` ⚠️ | `dark:bg-emerald-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:76`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:215` |
 | `bg` | `bg-emerald-50` ⚠️ | `dark:bg-emerald-400/10` | 1 | `resources/css/app.css:191` |
 | `bg` | `bg-emerald-50` ⚠️ | `dark:bg-emerald-950/40` | 1 | `resources/views/livewire/period/period-details.blade.php:15` |
-| `bg` | `bg-blue-50` ⚠️ | `— sem dark —` | 26 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:141` |
-| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/30` | 16 | `resources/views/livewire/auth/profile-manager.blade.php:141`<br>`resources/views/livewire/company/dashboard.blade.php:10`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:32` |
-| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/20` | 3 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:16`<br>`resources/views/livewire/registration/registration-manager.blade.php:664`<br>`resources/views/livewire/website/inscricao.blade.php:223` |
-| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:52`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:86` |
-| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/10` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:283` |
-| `bg` | `bg-indigo-50` ⚠️ | `— sem dark —` | 26 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38` |
+| `bg` | `bg-indigo-50` ⚠️ | `— sem dark —` | 28 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38` |
 | `bg` | `bg-indigo-50` ⚠️ | `dark:bg-indigo-900/30` | 16 | `resources/views/livewire/company/dashboard.blade.php:18`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:920` |
 | `bg` | `bg-indigo-50` ⚠️ | `dark:bg-indigo-900/10` | 2 | `resources/views/livewire/forms/form-edit.blade.php:50`<br>`resources/views/livewire/student/student-manager.blade.php:257` |
 | `bg` | `bg-indigo-50` ⚠️ | `dark:bg-indigo-900/40` | 2 | `resources/views/livewire/registration/kanban-board.blade.php:240`<br>`resources/views/livewire/registration/registration-manager.blade.php:259` |
 | `bg` | `bg-indigo-50` ⚠️ | `dark:bg-indigo-900/20` | 1 | `resources/views/livewire/company/dashboard.blade.php:55` |
 | `bg` | `bg-indigo-50` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/period/regras-manager.blade.php:97` |
+| `bg` | `bg-blue-50` ⚠️ | `— sem dark —` | 26 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:141` |
+| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/30` | 16 | `resources/views/livewire/auth/profile-manager.blade.php:141`<br>`resources/views/livewire/company/dashboard.blade.php:10`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:32` |
+| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/20` | 3 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:16`<br>`resources/views/livewire/registration/registration-manager.blade.php:664`<br>`resources/views/livewire/website/inscricao.blade.php:223` |
+| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:52`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:86` |
+| `bg` | `bg-blue-50` ⚠️ | `dark:bg-blue-900/10` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:283` |
+| `bg` | `bg-gray-200` ⚠️ | `dark:bg-gray-700` | 24 | `resources/css/app.css:208`<br>`resources/css/app.css:258`<br>`resources/views/components/session-timeout.blade.php:158` |
+| `bg` | `bg-gray-200` ⚠️ | `— sem dark —` | 16 | `resources/views/livewire/auditoria/error-log-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:263`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:297` |
+| `bg` | `bg-gray-200` ⚠️ | `dark:bg-gray-800` | 4 | `resources/views/livewire/forms/form-spreadsheet.blade.php:120`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:122`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:126` |
 | `bg` | `hover:bg-blue-50` ⚠️ | `dark:hover:bg-gray-600` | 18 | `resources/views/livewire/acl/permission-manager.blade.php:100`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:51`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:139` |
 | `bg` | `hover:bg-blue-50` ⚠️ | `— sem dark —` | 14 | `resources/views/livewire/auditoria/error-log-manager.blade.php:93`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:149`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:116` |
 | `bg` | `hover:bg-blue-50` ⚠️ | `dark:hover:bg-gray-700` | 8 | `resources/views/livewire/acl/permission-manager.blade.php:133`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:156`<br>`resources/views/livewire/forms/form-details.blade.php:76` |
@@ -44053,52 +44681,49 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-green-50` ⚠️ | `dark:bg-green-900/30` | 11 | `resources/views/livewire/company/dashboard.blade.php:38`<br>`resources/views/livewire/company/empresa-manager.blade.php:57`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:43` |
 | `bg` | `bg-green-50` ⚠️ | `dark:bg-green-900/20` | 3 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:15`<br>`resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:34`<br>`resources/views/livewire/gestao-educacional/gerador-mock.blade.php:38` |
 | `bg` | `bg-green-50` ⚠️ | `dark:bg-green-950/40` | 1 | `resources/views/livewire/period/period-details.blade.php:496` |
-| `bg` | `bg-gray-200` ⚠️ | `dark:bg-gray-700` | 22 | `resources/css/app.css:208`<br>`resources/css/app.css:258`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:117` |
-| `bg` | `bg-gray-200` ⚠️ | `— sem dark —` | 15 | `resources/views/livewire/auditoria/error-log-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:263`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:297` |
-| `bg` | `bg-gray-200` ⚠️ | `dark:bg-gray-800` | 4 | `resources/views/livewire/forms/form-spreadsheet.blade.php:120`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:122`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:126` |
 | `bg` | `hover:bg-gray-100` ⚠️ | `— sem dark —` | 29 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:33`<br>`resources/views/livewire/admin/configuracoes-gerais-manager.blade.php:43` |
 | `bg` | `hover:bg-gray-100` ⚠️ | `dark:hover:bg-gray-700` | 6 | `resources/views/livewire/forms/form-spreadsheet.blade.php:34`<br>`resources/views/livewire/period/period-details.blade.php:312`<br>`resources/views/livewire/period/period-details.blade.php:313` |
 | `bg` | `hover:bg-gray-100` ⚠️ | `dark:hover:bg-gray-800` | 4 | `resources/views/components/paginacao-customizada.blade.php:30`<br>`resources/views/livewire/admin/notification-badge.blade.php:3`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:105` |
 | `bg` | `hover:bg-gray-100` ⚠️ | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/period/period-details.blade.php:354` |
-| `bg` | `bg-amber-50` ⚠️ | `— sem dark —` | 28 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
-| `bg` | `bg-amber-50` ⚠️ | `dark:bg-amber-900/30` | 2 | `resources/views/livewire/forms/form-details.blade.php:121`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
+| `bg` | `bg-amber-50` ⚠️ | `— sem dark —` | 30 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
+| `bg` | `bg-amber-50` ⚠️ | `dark:bg-amber-900/30` | 4 | `resources/views/components/session-timeout.blade.php:164`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1654`<br>`resources/views/livewire/forms/form-details.blade.php:121` |
 | `bg` | `bg-amber-50` ⚠️ | `dark:bg-amber-900/20` | 2 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:400` |
 | `bg` | `bg-amber-50` ⚠️ | `dark:bg-amber-950/30` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:817` |
-| `bg` | `hover:bg-white/10` ⚠️ | `— sem dark —` | 23 | `resources/views/components/layouts/app.blade.php:88`<br>`resources/views/components/layouts/app.blade.php:96`<br>`resources/views/components/layouts/app.blade.php:118` |
+| `bg` | `hover:bg-white/10` ⚠️ | `— sem dark —` | 24 | `resources/views/components/layouts/app.blade.php:88`<br>`resources/views/components/layouts/app.blade.php:96`<br>`resources/views/components/layouts/app.blade.php:118` |
 | `bg` | `hover:bg-white/10` ⚠️ | `dark:hover:bg-gray-800` | 7 | `resources/views/components/layouts/app.blade.php:409`<br>`resources/views/components/layouts/app.blade.php:415`<br>`resources/views/components/layouts/company.blade.php:45` |
+| `bg` | `bg-red-100` ⚠️ | `— sem dark —` | 14 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:66`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:89` |
+| `bg` | `bg-red-100` ⚠️ | `dark:bg-red-900/30` | 7 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-red-100` ⚠️ | `dark:bg-green-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-red-100` ⚠️ | `dark:bg-blue-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-red-100` ⚠️ | `dark:bg-purple-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-red-100` ⚠️ | `dark:bg-gray-700` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `hover:bg-gray-200` ⚠️ | `— sem dark —` | 17 | `resources/views/components/layouts/public.blade.php:163`<br>`resources/views/errors/419.blade.php:24`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:58` |
+| `bg` | `hover:bg-gray-200` ⚠️ | `dark:hover:bg-gray-600` | 6 | `resources/views/components/session-timeout.blade.php:183`<br>`resources/views/livewire/company/empresa-manager.blade.php:21`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:14` |
+| `bg` | `hover:bg-gray-200` ⚠️ | `dark:hover:bg-gray-700` | 5 | `resources/views/errors/layout.blade.php:102`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:87`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:930` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-800/50` | 9 | `resources/views/livewire/acl/permission-manager.blade.php:167`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:187`<br>`resources/views/livewire/registration/registration-manager.blade.php:596` |
-| `bg` | `bg-gray-50/50` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/auditoria/error-log-manager.blade.php:64`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-800/80` | 4 | `resources/views/livewire/forms/form-edit.blade.php:140`<br>`resources/views/livewire/period/period-edit.blade.php:160`<br>`resources/views/livewire/period/period-manager.blade.php:555` |
+| `bg` | `bg-gray-50/50` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/auditoria/error-log-manager.blade.php:64`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-900/40` | 3 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:66`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:85`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:207` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-900/30` | 2 | `resources/views/livewire/period/period-details.blade.php:309`<br>`resources/views/livewire/unidade/unidade-manager.blade.php:160` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-900/80` | 1 | `resources/views/livewire/curso/curso-manager.blade.php:179` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-800/40` | 1 | `resources/views/livewire/form-builder/hub.blade.php:53` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-900/20` | 1 | `resources/views/livewire/period/period-details.blade.php:143` |
 | `bg` | `bg-gray-50/50` ⚠️ | `dark:bg-gray-900` | 1 | `resources/views/livewire/period/period-manager.blade.php:447` |
-| `bg` | `hover:bg-gray-200` ⚠️ | `— sem dark —` | 16 | `resources/views/components/layouts/public.blade.php:163`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:61` |
-| `bg` | `hover:bg-gray-200` ⚠️ | `dark:hover:bg-gray-600` | 5 | `resources/views/livewire/company/empresa-manager.blade.php:21`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:14`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:55` |
-| `bg` | `hover:bg-gray-200` ⚠️ | `dark:hover:bg-gray-700` | 4 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:87`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:930`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:49` |
-| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/30` | 10 | `resources/views/livewire/company/dashboard.blade.php:28`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:47`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:238` |
-| `bg` | `bg-yellow-50` ⚠️ | `— sem dark —` | 9 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:90`<br>`resources/views/livewire/company/gestores-manager.blade.php:110` |
-| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/20` | 3 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:163`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:147`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:106` |
-| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/10` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:313` |
-| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/40` | 1 | `resources/views/livewire/period/period-details.blade.php:460` |
-| `bg` | `bg-green-100` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:87`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128` |
+| `bg` | `bg-green-100` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:87`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-green-900/30` | 4 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/listagem.blade.php:49`<br>`resources/views/livewire/gestao-educacional/turma/listagem.blade.php:58` |
+| `bg` | `bg-green-100` ⚠️ | `dark:bg-red-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-green-100` ⚠️ | `dark:bg-red-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-green-900/50` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:17` |
 | `bg` | `bg-green-100` ⚠️ | `dark:bg-green-900/40` | 1 | `resources/views/livewire/period/period-manager.blade.php:431` |
+| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/30` | 10 | `resources/views/livewire/company/dashboard.blade.php:28`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:47`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:238` |
+| `bg` | `bg-yellow-50` ⚠️ | `— sem dark —` | 8 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:90`<br>`resources/views/livewire/company/gestores-manager.blade.php:110` |
+| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/20` | 3 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:163`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:147`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:106` |
+| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/10` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:313` |
+| `bg` | `bg-yellow-50` ⚠️ | `dark:bg-yellow-900/40` | 1 | `resources/views/livewire/period/period-details.blade.php:460` |
 | `bg` | `!bg-red-50` ⚠️ | `dark:!bg-red-900/30` | 13 | `resources/views/livewire/website/inscricao.blade.php:236`<br>`resources/views/livewire/website/inscricao.blade.php:257`<br>`resources/views/livewire/website/inscricao.blade.php:264` |
 | `bg` | `!bg-red-50` ⚠️ | `dark:!bg-green-900/20` | 10 | `resources/views/livewire/website/inscricao.blade.php:236`<br>`resources/views/livewire/website/inscricao.blade.php:257`<br>`resources/views/livewire/website/inscricao.blade.php:264` |
-| `bg` | `bg-red-100` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:66`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:89` |
-| `bg` | `bg-red-100` ⚠️ | `dark:bg-red-900/30` | 4 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/gestao-educacional/turma/listagem.blade.php:60`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:26` |
-| `bg` | `bg-red-100` ⚠️ | `dark:bg-green-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-red-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-red-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-red-100` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `!bg-green-50` ⚠️ | `dark:!bg-red-900/30` | 10 | `resources/views/livewire/website/inscricao.blade.php:236`<br>`resources/views/livewire/website/inscricao.blade.php:257`<br>`resources/views/livewire/website/inscricao.blade.php:264` |
 | `bg` | `!bg-green-50` ⚠️ | `dark:!bg-green-900/20` | 10 | `resources/views/livewire/website/inscricao.blade.php:236`<br>`resources/views/livewire/website/inscricao.blade.php:257`<br>`resources/views/livewire/website/inscricao.blade.php:264` |
 | `bg` | `hover:bg-white` ⚠️ | `dark:hover:bg-gray-700` | 14 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:430`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:461`<br>`resources/views/livewire/corporate/user-manager.blade.php:369` |
@@ -44109,12 +44734,15 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `hover:bg-orange-50` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/company/aprendizes-manager.blade.php:80`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:487`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:503` |
 | `bg` | `bg-gray-300` ⚠️ | `dark:bg-gray-600` | 7 | `resources/views/livewire/conteudo/categoria-manager.blade.php:41`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:126`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:177` |
 | `bg` | `bg-gray-300` ⚠️ | `— sem dark —` | 4 | `resources/views/components/toggle.blade.php:3`<br>`resources/views/livewire/corporate/user-manager.blade.php:179`<br>`resources/views/livewire/corporate/user-manager.blade.php:190` |
-| `bg` | `bg-blue-100` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:114`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:108` |
+| `bg` | `bg-gray-300` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2258` |
+| `bg` | `bg-blue-100` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:114`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:108` |
+| `bg` | `bg-blue-100` ⚠️ | `dark:bg-red-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-blue-100` ⚠️ | `dark:bg-green-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-blue-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-blue-100` ⚠️ | `dark:bg-red-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-blue-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `bg-blue-100` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `hover:bg-indigo-100` ⚠️ | `— sem dark —` | 10 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2241` |
+| `bg` | `hover:bg-indigo-100` ⚠️ | `dark:hover:bg-indigo-800` | 1 | `resources/views/livewire/period/period-details.blade.php:299` |
 | `bg` | `bg-indigo-100` ⚠️ | `— sem dark —` | 8 | `resources/views/components/details-card.blade.php:30`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:75`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:118` |
 | `bg` | `bg-indigo-100` ⚠️ | `dark:bg-indigo-900/30` | 1 | `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:125` |
 | `bg` | `bg-indigo-100` ⚠️ | `dark:bg-indigo-900/40` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:46` |
@@ -44125,35 +44753,38 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-yellow-100` ⚠️ | `— sem dark —` | 7 | `resources/views/livewire/auditoria/error-log-manager.blade.php:66`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:886` |
 | `bg` | `bg-yellow-100` ⚠️ | `dark:bg-yellow-900/30` | 3 | `resources/views/livewire/acl/permission-manager.blade.php:244`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:264`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:83` |
 | `bg` | `hover:bg-red-100` | `— sem dark —` | 10 | `resources/views/livewire/auditoria/error-log-manager.blade.php:8`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:192`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:32` |
-| `bg` | `hover:bg-indigo-100` ⚠️ | `— sem dark —` | 9 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/hub.blade.php:112` |
-| `bg` | `hover:bg-indigo-100` ⚠️ | `dark:hover:bg-indigo-800` | 1 | `resources/views/livewire/period/period-details.blade.php:299` |
+| `bg` | `bg-emerald-100` ⚠️ | `— sem dark —` | 7 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
+| `bg` | `bg-emerald-100` ⚠️ | `dark:bg-emerald-900/40` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
 | `bg` | `bg-white/10` | `— sem dark —` | 9 | `resources/css/app.css:174`<br>`resources/views/components/layouts/app.blade.php:403`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:289` |
+| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-900` | 5 | `resources/views/components/layouts/auth.blade.php:33`<br>`resources/views/components/layouts/company.blade.php:36`<br>`resources/views/components/layouts/student-app.blade.php:40` |
+| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-950` | 2 | `resources/views/components/layouts/public.blade.php:71`<br>`resources/views/errors/layout.blade.php:27` |
+| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/student/dashboard/dashboard.blade.php:80`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:15` |
 | `bg` | `hover:bg-gray-300` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/auditoria/error-log-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:263`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:297` |
 | `bg` | `hover:bg-gray-300` ⚠️ | `dark:hover:bg-gray-700` | 3 | `resources/views/livewire/forms/form-spreadsheet.blade.php:122`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:126`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:132` |
 | `bg` | `hover:bg-emerald-100` | `— sem dark —` | 9 | `resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:183`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:199`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:380` |
 | `bg` | `bg-gray-50/40` ⚠️ | `dark:bg-gray-900/20` | 5 | `resources/views/livewire/period/period-details.blade.php:201`<br>`resources/views/livewire/period/period-details.blade.php:339`<br>`resources/views/livewire/period/period-edit.blade.php:211` |
-| `bg` | `bg-gray-50/40` ⚠️ | `dark:bg-gray-800/80` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:421`<br>`resources/views/livewire/corporate/user-manager.blade.php:361`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2057` |
+| `bg` | `bg-gray-50/40` ⚠️ | `dark:bg-gray-800/80` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:421`<br>`resources/views/livewire/corporate/user-manager.blade.php:361`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2122` |
 | `bg` | `bg-gray-50/40` ⚠️ | `dark:bg-gray-900` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:103` |
-| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-900` | 5 | `resources/views/components/layouts/auth.blade.php:33`<br>`resources/views/components/layouts/company.blade.php:36`<br>`resources/views/components/layouts/student-app.blade.php:40` |
-| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/student/dashboard/dashboard.blade.php:80`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:15` |
-| `bg` | `bg-slate-50` ⚠️ | `dark:bg-gray-950` | 1 | `resources/views/components/layouts/public.blade.php:71` |
+| `bg` | `hover:bg-amber-100` | `— sem dark —` | 9 | `resources/views/livewire/comunicacao/template/template-form.blade.php:437`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:74`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:173` |
 | `bg` | `bg-orange-50` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:106`<br>`resources/views/livewire/auth/profile-manager.blade.php:116`<br>`resources/views/livewire/form-builder/hub.blade.php:171` |
 | `bg` | `bg-orange-50` ⚠️ | `dark:bg-orange-900/30` | 4 | `resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:11`<br>`resources/views/livewire/student/document-manager.blade.php:127`<br>`resources/views/livewire/student/profile-manager.blade.php:206` |
 | `bg` | `hover:bg-blue-100` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:124`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:431`<br>`resources/views/livewire/forms/form-details.blade.php:368` |
-| `bg` | `bg-emerald-100` ⚠️ | `— sem dark —` | 5 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
-| `bg` | `bg-emerald-100` ⚠️ | `dark:bg-emerald-900/40` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
-| `bg` | `hover:bg-amber-100` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:437`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:74`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:173` |
 | `bg` | `hover:bg-emerald-50` ⚠️ | `dark:hover:bg-gray-600` | 4 | `resources/views/livewire/forms/form-manager.blade.php:105`<br>`resources/views/livewire/period/period-manager.blade.php:298`<br>`resources/views/livewire/period/period-manager.blade.php:302` |
 | `bg` | `hover:bg-emerald-50` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/comunicacao/template/template-manager.blade.php:107`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:269`<br>`resources/views/livewire/financeiro/orcamento-manager.blade.php:121` |
 | `bg` | `hover:bg-emerald-50` ⚠️ | `dark:hover:bg-gray-700` | 1 | `resources/views/livewire/forms/form-details.blade.php:72` |
+| `bg` | `bg-gray-50/70` ⚠️ | `dark:bg-gray-900/50` | 4 | `resources/views/components/dynamic-filter.blade.php:25`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:148`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:119` |
+| `bg` | `bg-gray-50/70` ⚠️ | `dark:bg-gray-800/50` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:452`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2311` |
+| `bg` | `bg-gray-50/70` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:458` |
 | `bg` | `bg-amber-100` ⚠️ | `dark:bg-amber-900/30` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:59`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:61`<br>`resources/views/livewire/period/regras-manager.blade.php:9` |
 | `bg` | `bg-amber-100` ⚠️ | `dark:bg-amber-900/40` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:41`<br>`resources/views/livewire/registration/kanban-board.blade.php:120`<br>`resources/views/livewire/registration/registration-manager.blade.php:152` |
 | `bg` | `bg-amber-100` ⚠️ | `dark:bg-amber-900/50` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:819` |
-| `bg` | `bg-gray-50/70` ⚠️ | `dark:bg-gray-900/50` | 4 | `resources/views/components/dynamic-filter.blade.php:25`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:148`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:119` |
-| `bg` | `bg-gray-50/70` ⚠️ | `dark:bg-gray-800/50` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:452` |
-| `bg` | `bg-gray-50/70` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:458` |
 | `bg` | `hover:bg-gray-50/50` ⚠️ | `dark:hover:bg-gray-800/50` | 4 | `resources/views/livewire/acl/role-permission-manager.blade.php:94`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:104`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:108` |
 | `bg` | `hover:bg-gray-50/50` ⚠️ | `dark:hover:bg-gray-700/30` | 2 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:30`<br>`resources/views/livewire/period/regras-manager.blade.php:90` |
+| `bg` | `bg-purple-100` ⚠️ | `dark:bg-red-900/30` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-purple-100` ⚠️ | `dark:bg-green-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-purple-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-purple-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `bg-purple-100` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `bg` | `hover:bg-green-50` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/auditoria/error-log-manager.blade.php:96`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:103`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:152` |
 | `bg` | `hover:bg-green-50` ⚠️ | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:136` |
 | `bg` | `hover:bg-green-50` ⚠️ | `dark:hover:bg-gray-700` | 1 | `resources/views/livewire/forms/form-spreadsheet.blade.php:64` |
@@ -44161,8 +44792,8 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-orange-100` ⚠️ | `dark:bg-orange-900/50` | 1 | `resources/views/livewire/student/dashboard/dashboard.blade.php:11` |
 | `bg` | `hover:bg-gray-50/80` ⚠️ | `dark:hover:bg-gray-800/50` | 3 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:74`<br>`resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:71`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:75` |
 | `bg` | `hover:bg-gray-50/80` ⚠️ | `dark:hover:bg-gray-800/40` | 3 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:353`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:181`<br>`resources/views/livewire/form-builder/hub.blade.php:75` |
-| `bg` | `hover:bg-yellow-100` ⚠️ | `— sem dark —` | 5 | `resources/views/livewire/conteudo/conteudo-form.blade.php:344`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:114`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1651` |
-| `bg` | `hover:bg-yellow-100` ⚠️ | `dark:hover:bg-yellow-800` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
+| `bg` | `hover:bg-indigo-50` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:557`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2289`<br>`resources/views/livewire/form-builder/hub.blade.php:147` |
+| `bg` | `hover:bg-indigo-50` ⚠️ | `dark:hover:bg-gray-600` | 3 | `resources/views/livewire/forms/form-manager.blade.php:118`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:181`<br>`resources/views/livewire/period/period-manager.blade.php:281` |
 | `bg` | `bg-red-50/50` ⚠️ | `dark:bg-red-900/20` | 4 | `resources/views/livewire/student/document-manager.blade.php:139`<br>`resources/views/livewire/student/document-manager.blade.php:147`<br>`resources/views/livewire/student/profile-manager.blade.php:218` |
 | `bg` | `bg-red-50/50` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/matricula/portal-matricula.blade.php:170`<br>`resources/views/livewire/matricula/portal-matricula.blade.php:178` |
 | `bg` | `bg-green-50/50` ⚠️ | `dark:bg-green-900/20` | 4 | `resources/views/livewire/student/document-manager.blade.php:156`<br>`resources/views/livewire/student/document-manager.blade.php:164`<br>`resources/views/livewire/student/profile-manager.blade.php:235` |
@@ -44172,26 +44803,22 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-gray-100/70` ⚠️ | `dark:bg-gray-950` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:575` |
 | `bg` | `bg-white/20` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/components/quick-view-drawer.blade.php:57`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:645`<br>`resources/views/livewire/conteudo/portal-noticias.blade.php:57` |
 | `bg` | `bg-white/20` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/components/layouts/public.blade.php:100` |
-| `bg` | `bg-blue-50/50` ⚠️ | `dark:bg-blue-900/20` | 3 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:90`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:362`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1941` |
+| `bg` | `bg-blue-50/50` ⚠️ | `dark:bg-blue-900/20` | 3 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:90`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:362`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2006` |
 | `bg` | `bg-blue-50/50` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/importacao/importacao-manager.blade.php:236`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:248` |
-| `bg` | `bg-purple-100` ⚠️ | `dark:bg-green-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-purple-100` ⚠️ | `dark:bg-blue-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-purple-100` ⚠️ | `dark:bg-red-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-purple-100` ⚠️ | `dark:bg-purple-900/30` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `bg-purple-100` ⚠️ | `dark:bg-gray-700` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `hover:bg-indigo-50` ⚠️ | `dark:hover:bg-gray-600` | 3 | `resources/views/livewire/forms/form-manager.blade.php:118`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:181`<br>`resources/views/livewire/period/period-manager.blade.php:281` |
-| `bg` | `hover:bg-indigo-50` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:557`<br>`resources/views/livewire/form-builder/hub.blade.php:147` |
+| `bg` | `bg-gray-50/60` ⚠️ | `dark:bg-gray-900/40` | 2 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:170`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:290` |
+| `bg` | `bg-gray-50/60` ⚠️ | `dark:bg-gray-900/50` | 1 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:234` |
+| `bg` | `bg-gray-50/60` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:791` |
+| `bg` | `bg-gray-50/60` ⚠️ | `dark:bg-gray-950` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2234` |
+| `bg` | `hover:bg-yellow-100` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/conteudo/conteudo-form.blade.php:344`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:114`<br>`resources/views/livewire/period/period-details.blade.php:31` |
+| `bg` | `hover:bg-yellow-100` ⚠️ | `dark:hover:bg-yellow-800` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
 | `bg` | `bg-green-50/20` ⚠️ | `dark:bg-green-900/10` | 2 | `resources/views/livewire/student/document-manager.blade.php:91`<br>`resources/views/livewire/student/profile-manager.blade.php:175` |
 | `bg` | `bg-green-50/20` ⚠️ | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/student/document-manager.blade.php:91`<br>`resources/views/livewire/student/profile-manager.blade.php:175` |
 | `bg` | `bg-green-50/20` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/matricula/portal-matricula.blade.php:127` |
 | `bg` | `hover:bg-white/20` | `— sem dark —` | 4 | `resources/css/app.css:174`<br>`resources/views/components/layouts/app.blade.php:403`<br>`resources/views/components/toast.blade.php:59` |
-| `bg` | `bg-gray-50/60` ⚠️ | `dark:bg-gray-900/40` | 2 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:170`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:290` |
-| `bg` | `bg-gray-50/60` ⚠️ | `dark:bg-gray-900/50` | 1 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:234` |
-| `bg` | `bg-gray-50/60` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:791` |
 | `bg` | `bg-teal-50` | `— sem dark —` | 4 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:54`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:57`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:365` |
 | `bg` | `bg-white/60` ⚠️ | `dark:bg-gray-900/70` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:56`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:57`<br>`resources/views/livewire/period/regras-manager.blade.php:5` |
 | `bg` | `bg-white/60` ⚠️ | `dark:bg-gray-900/40` | 1 | `resources/views/livewire/website/inscricao.blade.php:164` |
-| `bg` | `bg-indigo-50/60` ⚠️ | `dark:bg-indigo-900/20` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1824`<br>`resources/views/livewire/period/period-manager.blade.php:485` |
+| `bg` | `bg-indigo-50/60` ⚠️ | `dark:bg-indigo-900/20` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1889`<br>`resources/views/livewire/period/period-manager.blade.php:485` |
 | `bg` | `bg-indigo-50/60` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:247` |
 | `bg` | `bg-indigo-50/60` ⚠️ | `dark:bg-indigo-950/30` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:329` |
 | `bg` | `hover:bg-black` ⚠️ | `dark:hover:bg-gray-200` | 3 | `resources/views/livewire/website/formulario-publico.blade.php:119`<br>`resources/views/livewire/website/inscricao.blade.php:615`<br>`resources/views/livewire/website/inscricao.blade.php:637` |
@@ -44201,8 +44828,10 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `hover:bg-gray-50/70` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:179` |
 | `bg` | `bg-indigo-50/70` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1221`<br>`resources/views/livewire/registration/registration-details.blade.php:709` |
 | `bg` | `bg-indigo-50/70` ⚠️ | `dark:bg-indigo-900/20` | 1 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:106` |
-| `bg` | `bg-gray-50/80` | `dark:bg-gray-900/30` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:450`<br>`resources/views/livewire/corporate/user-manager.blade.php:392`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2086` |
+| `bg` | `bg-gray-50/80` | `dark:bg-gray-900/30` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:450`<br>`resources/views/livewire/corporate/user-manager.blade.php:392`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2151` |
 | `bg` | `hover:bg-white/30` | `— sem dark —` | 3 | `resources/views/livewire/conteudo/conteudo-publico.blade.php:153`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:156`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:186` |
+| `bg` | `hover:bg-amber-50` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:278`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2292` |
+| `bg` | `hover:bg-amber-50` ⚠️ | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/period/period-manager.blade.php:295` |
 | `bg` | `bg-indigo-50/80` ⚠️ | `dark:bg-indigo-950/40` | 1 | `resources/views/components/dynamic-filter-chips.blade.php:34` |
 | `bg` | `bg-indigo-50/80` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/registration/registration-details.blade.php:142` |
 | `bg` | `bg-[#310B47]` | `dark:bg-gray-900` | 2 | `resources/views/components/layouts/public.blade.php:80`<br>`resources/views/livewire/website/home.blade.php:6` |
@@ -44214,12 +44843,12 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-amber-50/60` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:181` |
 | `bg` | `bg-sky-100/80` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:193`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:301` |
 | `bg` | `bg-sky-50` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:217`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:337` |
-| `bg` | `hover:bg-amber-50` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:278` |
-| `bg` | `hover:bg-amber-50` ⚠️ | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/period/period-manager.blade.php:295` |
-| `bg` | `hover:bg-gray-50/60` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:690`<br>`resources/views/livewire/registration/registration-details.blade.php:907` |
+| `bg` | `hover:bg-gray-50/60` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:690`<br>`resources/views/livewire/registration/registration-details.blade.php:908` |
 | `bg` | `bg-blue-50/60` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:778`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1251` |
 | `bg` | `group-hover:bg-blue-100` | `— sem dark —` | 2 | `resources/views/livewire/importacao/importacao-manager.blade.php:478`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:494` |
 | `bg` | `group-hover:bg-orange-100` | `— sem dark —` | 2 | `resources/views/livewire/importacao/importacao-manager.blade.php:488`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:504` |
+| `bg` | `bg-indigo-600` ⚠️ | `dark:bg-indigo-500` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:345` |
+| `bg` | `bg-indigo-600` ⚠️ | `dark:bg-indigo-700` | 1 | `resources/views/livewire/registration/registration-details.blade.php:1062` |
 | `bg` | `bg-[#1f072e]` | `dark:bg-gray-950` | 1 | `resources/views/components/layouts/public.blade.php:183` |
 | `bg` | `hover:bg-orange-100` | `— sem dark —` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:116` |
 | `bg` | `bg-emerald-50/30` | `— sem dark —` | 1 | `resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:216` |
@@ -44234,6 +44863,11 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-indigo-50/30` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:690` |
 | `bg` | `bg-rose-50` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:756` |
 | `bg` | `bg-rose-50/60` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1317` |
+| `bg` | `bg-amber-50/30` | `dark:bg-amber-950/20` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1653` |
+| `bg` | `bg-amber-200` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1659` |
+| `bg` | `bg-gray-100/80` | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2278` |
+| `bg` | `bg-emerald-50/70` | `dark:bg-emerald-950/30` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `bg` | `bg-red-50/70` | `dark:bg-red-950/30` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
 | `bg` | `bg-orange-50/60` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:268` |
 | `bg` | `bg-purple-50` | `— sem dark —` | 1 | `resources/views/livewire/forms/form-manager.blade.php:71` |
 | `bg` | `hover:bg-yellow-200` | `— sem dark —` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:32` |
@@ -44244,7 +44878,6 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `hover:bg-yellow-50` | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/period/period-manager.blade.php:305` |
 | `bg` | `bg-indigo-50/20` | `dark:bg-indigo-900/10` | 1 | `resources/views/livewire/period/regras-manager.blade.php:90` |
 | `bg` | `bg-gray-100/50` | `dark:bg-gray-800/40` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:214` |
-| `bg` | `bg-indigo-600` | `dark:bg-indigo-500` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:345` |
 | `bg` | `bg-white/40` | `dark:bg-gray-800/40` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:357` |
 | `bg` | `bg-amber-50/70` | `— sem dark —` | 1 | `resources/views/livewire/registration/registration-details.blade.php:655` |
 | `bg` | `bg-emerald-50/10` | `— sem dark —` | 1 | `resources/views/livewire/registration/registration-details.blade.php:676` |
@@ -44253,65 +44886,68 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `bg` | `bg-yellow-50/30` | `dark:bg-yellow-900/10` | 1 | `resources/views/livewire/website/formulario-publico.blade.php:81` |
 | `bg` | `bg-white/80` | `dark:bg-gray-900/80` | 1 | `resources/views/livewire/website/inscricao.blade.php:159` |
 | `bg` | `bg-gray-300/80` | `dark:bg-white/20` | 1 | `resources/views/livewire/website/inscricao.blade.php:166` |
-| `bg` | `disabled:bg-gray-100` | `— sem dark —` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:988` |
-| `border` | `border-gray-200` ⚠️ | `dark:border-gray-700` | 448 | `resources/css/app.css:178`<br>`resources/css/app.css:200`<br>`resources/css/app.css:211` |
-| `border` | `border-gray-200` ⚠️ | `— sem dark —` | 303 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/components/details-card.blade.php:26`<br>`resources/views/components/fab.blade.php:41` |
-| `border` | `border-gray-200` ⚠️ | `dark:border-gray-800` | 59 | `resources/views/components/dynamic-filter.blade.php:14`<br>`resources/views/components/dynamic-filter.blade.php:25`<br>`resources/views/components/dynamic-filter.blade.php:158` |
+| `bg` | `disabled:bg-gray-100` | `— sem dark —` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:1083` |
+| `border` | `border-gray-200` ⚠️ | `dark:border-gray-700` | 461 | `resources/css/app.css:178`<br>`resources/css/app.css:200`<br>`resources/css/app.css:211` |
+| `border` | `border-gray-200` ⚠️ | `— sem dark —` | 304 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/components/details-card.blade.php:26`<br>`resources/views/components/fab.blade.php:41` |
+| `border` | `border-gray-200` ⚠️ | `dark:border-gray-800` | 61 | `resources/views/components/dynamic-filter.blade.php:14`<br>`resources/views/components/dynamic-filter.blade.php:25`<br>`resources/views/components/dynamic-filter.blade.php:158` |
 | `border` | `border-gray-200` ⚠️ | `dark:border-gray-600` | 41 | `resources/views/components/table.blade.php:34`<br>`resources/views/components/table.blade.php:37`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-gray-200` ⚠️ | `dark:border-red-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-gray-200` ⚠️ | `dark:border-green-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-gray-200` ⚠️ | `dark:border-blue-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-gray-200` ⚠️ | `dark:border-red-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-gray-200` ⚠️ | `dark:border-purple-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-gray-300` ⚠️ | `— sem dark —` | 365 | `resources/css/app.css:116`<br>`resources/css/app.css:128`<br>`resources/views/components/dynamic-filter.blade.php:94` |
-| `border` | `border-gray-300` ⚠️ | `dark:border-gray-600` | 224 | `resources/css/app.css:170`<br>`resources/views/livewire/acl/permission-manager.blade.php:171`<br>`resources/views/livewire/acl/permission-manager.blade.php:177` |
-| `border` | `border-gray-300` ⚠️ | `dark:border-gray-700` | 70 | `resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113`<br>`resources/views/components/dynamic-filter.blade.php:119` |
+| `border` | `border-gray-300` ⚠️ | `— sem dark —` | 366 | `resources/css/app.css:116`<br>`resources/css/app.css:128`<br>`resources/views/components/dynamic-filter.blade.php:94` |
+| `border` | `border-gray-300` ⚠️ | `dark:border-gray-600` | 229 | `resources/css/app.css:170`<br>`resources/views/livewire/acl/permission-manager.blade.php:171`<br>`resources/views/livewire/acl/permission-manager.blade.php:177` |
+| `border` | `border-gray-300` ⚠️ | `dark:border-gray-700` | 74 | `resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113`<br>`resources/views/components/dynamic-filter.blade.php:119` |
 | `border` | `border-gray-100` ⚠️ | `dark:border-gray-700` | 242 | `resources/views/components/layouts/app.blade.php:449`<br>`resources/views/components/layouts/app.blade.php:463`<br>`resources/views/components/layouts/app.blade.php:478` |
-| `border` | `border-gray-100` ⚠️ | `— sem dark —` | 91 | `resources/views/components/details-card.blade.php:46`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:161` |
-| `border` | `border-gray-100` ⚠️ | `dark:border-gray-800` | 20 | `resources/views/components/layouts/public.blade.php:141`<br>`resources/views/components/table.blade.php:58`<br>`resources/views/components/table.blade.php:86` |
+| `border` | `border-gray-100` ⚠️ | `— sem dark —` | 95 | `resources/views/components/details-card.blade.php:46`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:161` |
+| `border` | `border-gray-100` ⚠️ | `dark:border-gray-800` | 23 | `resources/views/components/layouts/public.blade.php:141`<br>`resources/views/components/table.blade.php:58`<br>`resources/views/components/table.blade.php:86` |
 | `border` | `border-gray-100` ⚠️ | `dark:border-gray-600` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:16` |
-| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-800` | 28 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/dynamic-filter-chips.blade.php:22`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:146` |
+| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-800` | 29 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/dynamic-filter-chips.blade.php:22`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:146` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-gray-700` | 25 | `resources/views/livewire/acl/permission-manager.blade.php:212`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:9`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:12` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-400` | 8 | `resources/views/livewire/company/empresa-detalhes.blade.php:47`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:53`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:11` |
-| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-gray-600` | 7 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1884` |
-| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-700` | 6 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917`<br>`resources/views/livewire/period/period-details.blade.php:527`<br>`resources/views/livewire/period/period-edit.blade.php:221` |
+| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-gray-600` | 7 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1949` |
+| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-700` | 6 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982`<br>`resources/views/livewire/period/period-details.blade.php:527`<br>`resources/views/livewire/period/period-edit.blade.php:221` |
+| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-gray-800` | 2 | `resources/views/components/layouts/public.blade.php:183`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1732` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-ponkan-800` | 2 | `resources/views/livewire/period/period-edit.blade.php:279`<br>`resources/views/livewire/period/period-manager.blade.php:632` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-t` | 1 | `resources/views/components/layouts/public.blade.php:183` |
-| `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-gray-800` | 1 | `resources/views/components/layouts/public.blade.php:183` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-800/60` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:115` |
-| `border` | `(sem classe clara na tag)` ⚠️ | `dark:hover:border-purpura-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1898` |
+| `border` | `(sem classe clara na tag)` ⚠️ | `dark:hover:border-purpura-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1963` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:hover:border-purpura-500` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:230` |
 | `border` | `(sem classe clara na tag)` ⚠️ | `dark:border-purpura-900/50` | 1 | `resources/views/livewire/website/inscricao.blade.php:437` |
-| `border` | `border-indigo-200` ⚠️ | `— sem dark —` | 43 | `resources/views/livewire/acl/permission-manager.blade.php:52`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:47`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:137` |
+| `border` | `border-indigo-200` ⚠️ | `— sem dark —` | 44 | `resources/views/livewire/acl/permission-manager.blade.php:52`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:47`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:137` |
 | `border` | `border-indigo-200` ⚠️ | `dark:border-indigo-800` | 20 | `resources/views/components/dynamic-filter-chips.blade.php:34`<br>`resources/views/livewire/company/dashboard.blade.php:55`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:106` |
 | `border` | `border-indigo-200` ⚠️ | `dark:border-gray-700` | 5 | `resources/views/livewire/period/period-manager.blade.php:99`<br>`resources/views/livewire/registration/kanban-board.blade.php:59`<br>`resources/views/livewire/registration/kanban-board.blade.php:106` |
 | `border` | `border-indigo-200` ⚠️ | `dark:border-indigo-700` | 3 | `resources/views/livewire/period/period-details.blade.php:35`<br>`resources/views/livewire/period/period-details.blade.php:299`<br>`resources/views/livewire/period/period-details.blade.php:326` |
-| `border` | `border-red-200` ⚠️ | `— sem dark —` | 43 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56` |
-| `border` | `border-red-200` ⚠️ | `dark:border-red-800` | 12 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/company/empresa-manager.blade.php:61`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:71` |
-| `border` | `border-red-200` ⚠️ | `dark:border-green-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-red-200` ⚠️ | `dark:border-blue-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-red-200` ⚠️ | `dark:border-purple-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-red-200` ⚠️ | `dark:border-gray-600` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-red-200` ⚠️ | `— sem dark —` | 44 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56` |
+| `border` | `border-red-200` ⚠️ | `dark:border-red-800` | 15 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-red-200` ⚠️ | `dark:border-green-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-red-200` ⚠️ | `dark:border-blue-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-red-200` ⚠️ | `dark:border-purple-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `border-red-200` ⚠️ | `dark:border-gray-600` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-red-200` ⚠️ | `dark:border-red-900/50` | 1 | `resources/views/livewire/website/inscricao.blade.php:475` |
 | `border` | `border-red-200` ⚠️ | `dark:border-red-800/50` | 1 | `resources/views/livewire/website/inscricao.blade.php:480` |
 | `border` | `border-green-200` ⚠️ | `— sem dark —` | 37 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:47`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:55`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:124` |
 | `border` | `border-green-200` ⚠️ | `dark:border-green-800` | 12 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/company/empresa-manager.blade.php:57`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:43` |
 | `border` | `border-green-200` ⚠️ | `dark:border-green-800/50` | 4 | `resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:34`<br>`resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:35`<br>`resources/views/livewire/gestao-educacional/gerador-mock.blade.php:38` |
+| `border` | `border-green-200` ⚠️ | `dark:border-red-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-green-200` ⚠️ | `dark:border-blue-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-green-200` ⚠️ | `dark:border-red-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-green-200` ⚠️ | `dark:border-purple-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-green-200` ⚠️ | `dark:border-gray-600` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-blue-200` ⚠️ | `— sem dark —` | 33 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52` |
+| `border` | `border-blue-200` ⚠️ | `— sem dark —` | 33 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52` |
 | `border` | `border-blue-200` ⚠️ | `dark:border-blue-800` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:32`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:52` |
-| `border` | `border-blue-200` ⚠️ | `dark:border-blue-700` | 5 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:96`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1962`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1964` |
+| `border` | `border-blue-200` ⚠️ | `dark:border-blue-700` | 5 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:96`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2027`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2029` |
+| `border` | `border-blue-200` ⚠️ | `dark:border-red-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-blue-200` ⚠️ | `dark:border-green-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-blue-200` ⚠️ | `dark:border-red-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-blue-200` ⚠️ | `dark:border-purple-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-blue-200` ⚠️ | `dark:border-gray-600` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-emerald-200` ⚠️ | `— sem dark —` | 42 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113` |
+| `border` | `border-emerald-200` ⚠️ | `— sem dark —` | 43 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113` |
 | `border` | `border-emerald-200` ⚠️ | `dark:border-emerald-800` | 7 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:76` |
-| `border` | `border-amber-200` ⚠️ | `— sem dark —` | 24 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
+| `border` | `border-emerald-200` ⚠️ | `dark:border-emerald-800/60` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2311` |
+| `border` | `border-amber-200` ⚠️ | `— sem dark —` | 26 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
 | `border` | `border-amber-200` ⚠️ | `dark:border-amber-800` | 6 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:256`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:375`<br>`resources/views/livewire/registration/kanban-board.blade.php:41` |
-| `border` | `border-yellow-200` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/company/gestores-manager.blade.php:110`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128` |
+| `border` | `border-amber-200` ⚠️ | `dark:border-amber-800/70` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1653`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1654` |
+| `border` | `border-amber-200` ⚠️ | `dark:border-amber-700` | 1 | `resources/views/components/session-timeout.blade.php:164` |
+| `border` | `border-yellow-200` ⚠️ | `— sem dark —` | 11 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/company/gestores-manager.blade.php:110`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128` |
 | `border` | `border-yellow-200` ⚠️ | `dark:border-yellow-800` | 6 | `resources/views/livewire/conteudo/conteudo-form.blade.php:314`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:47`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:238` |
 | `border` | `border-yellow-200` ⚠️ | `dark:border-yellow-700` | 3 | `resources/views/livewire/period/period-details.blade.php:31`<br>`resources/views/livewire/period/period-details.blade.php:294`<br>`resources/views/livewire/period/period-details.blade.php:460` |
 | `border` | `border-yellow-200` ⚠️ | `dark:border-yellow-900/30` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:313` |
@@ -44321,7 +44957,7 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `border` | `border-red-100` ⚠️ | `dark:border-red-800/50` | 4 | `resources/views/livewire/student/document-manager.blade.php:139`<br>`resources/views/livewire/student/document-manager.blade.php:147`<br>`resources/views/livewire/student/profile-manager.blade.php:218` |
 | `border` | `border-red-100` ⚠️ | `dark:border-red-800` | 2 | `resources/views/livewire/student/document-manager.blade.php:97`<br>`resources/views/livewire/student/profile-manager.blade.php:181` |
 | `border` | `border-red-500` ⚠️ | `dark:border-gray-600` | 6 | `resources/views/livewire/period/regras-manager.blade.php:97`<br>`resources/views/livewire/period/regras-manager.blade.php:112`<br>`resources/views/livewire/period/regras-manager.blade.php:120` |
-| `border` | `border-red-500` ⚠️ | `dark:border-gray-700` | 6 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:650`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:988` |
+| `border` | `border-red-500` ⚠️ | `dark:border-gray-700` | 6 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:745`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1083` |
 | `border` | `border-orange-200` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:106`<br>`resources/views/livewire/auth/profile-manager.blade.php:116`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:114` |
 | `border` | `border-orange-200` ⚠️ | `dark:border-orange-800` | 3 | `resources/views/livewire/student/document-manager.blade.php:127`<br>`resources/views/livewire/student/profile-manager.blade.php:206`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:114` |
 | `border` | `border-orange-200` ⚠️ | `dark:border-orange-800/50` | 2 | `resources/views/livewire/student/dashboard/dashboard.blade.php:9`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:33` |
@@ -44336,14 +44972,14 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `border` | `border-indigo-100` ⚠️ | `dark:border-indigo-700` | 2 | `resources/views/livewire/forms/form-edit.blade.php:56`<br>`resources/views/livewire/forms/form-edit.blade.php:60` |
 | `border` | `border-blue-100` ⚠️ | `dark:border-blue-800` | 5 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:90`<br>`resources/views/livewire/auth/profile-manager.blade.php:141`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:15` |
 | `border` | `border-blue-100` ⚠️ | `dark:border-blue-900/30` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:283` |
-| `border` | `border-blue-100` ⚠️ | `dark:border-blue-800/50` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1941` |
+| `border` | `border-blue-100` ⚠️ | `dark:border-blue-800/50` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2006` |
 | `border` | `border-blue-100` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/forms/form-details.blade.php:111` |
 | `border` | `border-white` ⚠️ | `— sem dark —` | 4 | `resources/views/components/layouts/app.blade.php:599`<br>`resources/views/components/layouts/company.blade.php:99`<br>`resources/views/components/layouts/student-app.blade.php:252` |
-| `border` | `border-white` ⚠️ | `dark:border-gray-900` | 2 | `resources/views/livewire/admin/notification-badge.blade.php:7`<br>`resources/views/livewire/registration/registration-details.blade.php:863` |
+| `border` | `border-white` ⚠️ | `dark:border-gray-900` | 2 | `resources/views/livewire/admin/notification-badge.blade.php:7`<br>`resources/views/livewire/registration/registration-details.blade.php:864` |
 | `border` | `border-white` ⚠️ | `dark:border-gray-700` | 1 | `resources/views/livewire/student/profile-manager.blade.php:18` |
+| `border` | `border-purple-200` ⚠️ | `dark:border-red-800` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-purple-200` ⚠️ | `dark:border-green-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-purple-200` ⚠️ | `dark:border-blue-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `border-purple-200` ⚠️ | `dark:border-red-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-purple-200` ⚠️ | `dark:border-purple-800` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-purple-200` ⚠️ | `dark:border-gray-600` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `border` | `border-purple-200` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/forms/form-manager.blade.php:71` |
@@ -44364,6 +45000,7 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `border` | `border-gray-50` ⚠️ | `dark:border-gray-700` | 1 | `resources/views/livewire/period/period-details.blade.php:436` |
 | `border` | `sm:border-gray-200` | `sm:dark:border-gray-700` | 2 | `resources/views/livewire/student/dashboard/dashboard.blade.php:85`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:89` |
 | `border` | `border-gray-200/50` | `dark:border-white/10` | 2 | `resources/views/livewire/website/inscricao.blade.php:159`<br>`resources/views/livewire/website/inscricao.blade.php:164` |
+| `border` | `border-gray-200/80` | `dark:border-gray-700` | 1 | `resources/views/errors/403.blade.php:61` |
 | `border` | `border-emerald-100` | `dark:border-emerald-800` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:22` |
 | `border` | `border-gray-200/70` | `dark:border-gray-700` | 1 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:272` |
 | `border` | `border-amber-300` | `dark:border-amber-700` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:258` |
@@ -44372,7 +45009,10 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `border` | `hover:border-gray-200` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:690` |
 | `border` | `border-blue-200/70` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1283` |
 | `border` | `border-rose-200/70` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1330` |
-| `border` | `border-blue-200/60` | `dark:border-blue-800/60` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1960` |
+| `border` | `border-blue-200/60` | `dark:border-blue-800/60` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2025` |
+| `border` | `border-emerald-300` | `dark:border-emerald-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2275` |
+| `border` | `border-emerald-400` | `dark:border-emerald-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `border` | `border-red-300` | `dark:border-red-800` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
 | `border` | `border-amber-100` | `— sem dark —` | 1 | `resources/views/livewire/forms/form-details.blade.php:121` |
 | `border` | `border-indigo-200/60` | `dark:border-indigo-800/50` | 1 | `resources/views/livewire/forms/form-edit.blade.php:55` |
 | `border` | `border-orange-100` | `— sem dark —` | 1 | `resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:11` |
@@ -44385,11 +45025,11 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `border` | `border-amber-200/70` | `dark:border-amber-800/60` | 1 | `resources/views/livewire/website/inscricao.blade.php:412` |
 | `divide` | `divide-gray-100` ⚠️ | `dark:divide-gray-800` | 14 | `resources/views/components/dynamic-filter.blade.php:44`<br>`resources/views/components/dynamic-filter.blade.php:184`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:351` |
 | `divide` | `divide-gray-100` ⚠️ | `dark:divide-gray-700` | 14 | `resources/views/livewire/company/aprendizes-manager.blade.php:41`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:74`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:125` |
-| `divide` | `divide-gray-100` ⚠️ | `— sem dark —` | 12 | `resources/views/livewire/auditoria/error-log-manager.blade.php:62`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:105`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:47` |
+| `divide` | `divide-gray-100` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/auditoria/error-log-manager.blade.php:62`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:105`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:47` |
 | `divide` | `divide-gray-100` ⚠️ | `dark:divide-gray-700/60` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:84`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:103` |
 | `divide` | `divide-gray-200` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:140`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:172`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:331` |
-| `divide` | `divide-gray-200` ⚠️ | `dark:divide-gray-700` | 4 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:398`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2034`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:119` |
-| `divide` | `divide-gray-200` ⚠️ | `dark:divide-gray-800` | 1 | `resources/views/livewire/forms/form-spreadsheet.blade.php:139` |
+| `divide` | `divide-gray-200` ⚠️ | `dark:divide-gray-700` | 4 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:398`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2099`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:119` |
+| `divide` | `divide-gray-200` ⚠️ | `dark:divide-gray-800` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2231`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:139` |
 | `divide` | `divide-gray-50` ⚠️ | `dark:divide-gray-800/50` | 1 | `resources/views/components/table.blade.php:80` |
 | `divide` | `divide-gray-50` ⚠️ | `dark:divide-gray-700` | 1 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:28` |
 | `from` | `from-indigo-50/50` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:540` |
@@ -44414,19 +45054,19 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `ring-offset` | `(sem classe clara na tag)` ⚠️ | `dark:focus:ring-offset-gray-900` | 1 | `resources/css/app.css:154` |
 | `ring-offset` | `(sem classe clara na tag)` ⚠️ | `dark:ring-offset-gray-800` | 1 | `resources/views/livewire/registration/status-manager.blade.php:139` |
 | `ring-offset` | `ring-offset-gray-50` | `dark:ring-offset-gray-900` | 1 | `resources/views/livewire/website/inscricao.blade.php:114` |
-| `text` | `text-gray-700` ⚠️ | `dark:text-gray-300` | 291 | `resources/views/components/dynamic-filter.blade.php:92`<br>`resources/views/components/dynamic-filter.blade.php:133`<br>`resources/views/components/dynamic-filter.blade.php:224` |
-| `text` | `text-gray-700` ⚠️ | `— sem dark —` | 228 | `resources/views/livewire/acl/permission-manager.blade.php:67`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:61`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165` |
-| `text` | `text-gray-700` ⚠️ | `dark:text-gray-200` | 58 | `resources/css/app.css:170`<br>`resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/layouts/app.blade.php:610` |
+| `text` | `text-gray-700` ⚠️ | `dark:text-gray-300` | 292 | `resources/views/components/dynamic-filter.blade.php:92`<br>`resources/views/components/dynamic-filter.blade.php:133`<br>`resources/views/components/dynamic-filter.blade.php:224` |
+| `text` | `text-gray-700` ⚠️ | `— sem dark —` | 227 | `resources/views/livewire/acl/permission-manager.blade.php:67`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:61`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165` |
+| `text` | `text-gray-700` ⚠️ | `dark:text-gray-200` | 61 | `resources/css/app.css:170`<br>`resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/layouts/app.blade.php:610` |
 | `text` | `text-gray-700` ⚠️ | `dark:text-gray-400` | 4 | `resources/views/livewire/acl/role-permission-manager.blade.php:129`<br>`resources/views/livewire/company/empresa-manager.blade.php:83`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:154` |
 | `text` | `text-gray-700` ⚠️ | `dark:text-white` | 3 | `resources/views/components/summary-cards.blade.php:8`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:52`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:59` |
-| `text` | `text-gray-900` ⚠️ | `dark:text-white` | 285 | `resources/css/app.css:206`<br>`resources/css/app.css:218`<br>`resources/css/app.css:232` |
-| `text` | `text-gray-900` ⚠️ | `— sem dark —` | 155 | `resources/css/app.css:116`<br>`resources/views/components/breadcrumb.blade.php:20`<br>`resources/views/components/details-card.blade.php:15` |
-| `text` | `text-gray-900` ⚠️ | `dark:text-gray-100` | 12 | `resources/views/components/layouts/app.blade.php:51`<br>`resources/views/components/layouts/auth.blade.php:33`<br>`resources/views/components/layouts/company.blade.php:36` |
+| `text` | `text-gray-900` ⚠️ | `dark:text-white` | 288 | `resources/css/app.css:206`<br>`resources/css/app.css:218`<br>`resources/css/app.css:232` |
+| `text` | `text-gray-900` ⚠️ | `— sem dark —` | 159 | `resources/css/app.css:116`<br>`resources/views/components/breadcrumb.blade.php:20`<br>`resources/views/components/details-card.blade.php:15` |
+| `text` | `text-gray-900` ⚠️ | `dark:text-gray-100` | 13 | `resources/views/components/layouts/app.blade.php:51`<br>`resources/views/components/layouts/auth.blade.php:33`<br>`resources/views/components/layouts/company.blade.php:36` |
 | `text` | `text-gray-900` ⚠️ | `dark:text-gray-300` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:152`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:140`<br>`resources/views/livewire/forms/form-edit.blade.php:44` |
 | `text` | `text-gray-900` ⚠️ | `dark:text-gray-200` | 4 | `resources/views/livewire/forms/form-details.blade.php:126`<br>`resources/views/livewire/forms/response-details.blade.php:117`<br>`resources/views/livewire/period/period-manager.blade.php:356` |
-| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-white` | 239 | `resources/views/components/dynamic-filter.blade.php:85`<br>`resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113` |
-| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-purpura-400` | 78 | `resources/css/app.css:188`<br>`resources/css/app.css:196`<br>`resources/views/components/layouts/app.blade.php:514` |
-| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-purpura-300` | 27 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/dynamic-filter-chips.blade.php:22`<br>`resources/views/components/dynamic-filter.blade.php:30` |
+| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-white` | 248 | `resources/views/components/dynamic-filter.blade.php:85`<br>`resources/views/components/dynamic-filter.blade.php:109`<br>`resources/views/components/dynamic-filter.blade.php:113` |
+| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-purpura-400` | 79 | `resources/css/app.css:188`<br>`resources/css/app.css:196`<br>`resources/views/components/layouts/app.blade.php:514` |
+| `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-purpura-300` | 28 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/dynamic-filter-chips.blade.php:22`<br>`resources/views/components/dynamic-filter.blade.php:30` |
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-gray-200` | 11 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:12`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:10`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:13` |
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:hover:text-purpura-400` | 9 | `resources/views/components/layouts/company.blade.php:73`<br>`resources/views/components/layouts/company.blade.php:77`<br>`resources/views/components/layouts/company.blade.php:80` |
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-gray-300` | 6 | `resources/views/livewire/period/period-manager.blade.php:15`<br>`resources/views/livewire/period/period-manager.blade.php:37`<br>`resources/views/livewire/period/period-manager.blade.php:47` |
@@ -44438,82 +45078,85 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-petunia-400` | 1 | `resources/css/app.css:192` |
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:hover:text-purpura-300` | 1 | `resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:176` |
 | `text` | `(sem classe clara na tag)` ⚠️ | `dark:text-yellow-400` | 1 | `resources/views/livewire/website/inscricao.blade.php:160` |
-| `text` | `text-gray-600` ⚠️ | `— sem dark —` | 131 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:76`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:98` |
-| `text` | `text-gray-600` ⚠️ | `dark:text-gray-300` | 116 | `resources/css/app.css:203`<br>`resources/css/app.css:249`<br>`resources/css/app.css:251` |
-| `text` | `text-gray-600` ⚠️ | `dark:text-gray-400` | 102 | `resources/css/app.css:193`<br>`resources/css/app.css:197`<br>`resources/views/components/layouts/app.blade.php:621` |
-| `text` | `text-gray-500` ⚠️ | `dark:text-gray-400` | 214 | `resources/css/app.css:207`<br>`resources/css/app.css:220`<br>`resources/css/app.css:242` |
+| `text` | `text-gray-600` ⚠️ | `— sem dark —` | 137 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:76`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:98` |
+| `text` | `text-gray-600` ⚠️ | `dark:text-gray-300` | 120 | `resources/css/app.css:203`<br>`resources/css/app.css:249`<br>`resources/css/app.css:251` |
+| `text` | `text-gray-600` ⚠️ | `dark:text-gray-400` | 106 | `resources/css/app.css:193`<br>`resources/css/app.css:197`<br>`resources/views/components/layouts/app.blade.php:621` |
+| `text` | `text-gray-500` ⚠️ | `dark:text-gray-400` | 216 | `resources/css/app.css:207`<br>`resources/css/app.css:220`<br>`resources/css/app.css:242` |
 | `text` | `text-gray-500` ⚠️ | `dark:text-gray-300` | 5 | `resources/views/livewire/curso/curso-manager.blade.php:81`<br>`resources/views/livewire/forms/form-manager.blade.php:165`<br>`resources/views/livewire/student/student-manager.blade.php:145` |
-| `text` | `text-gray-500` ⚠️ | `dark:text-white` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:213` |
-| `text` | `text-gray-800` ⚠️ | `dark:text-gray-200` | 101 | `resources/views/components/dynamic-filter-chips.blade.php:36`<br>`resources/views/components/dynamic-filter.blade.php:28`<br>`resources/views/components/dynamic-filter.blade.php:64` |
-| `text` | `text-gray-800` ⚠️ | `— sem dark —` | 73 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/livewire/acl/permission-manager.blade.php:54`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:49` |
-| `text` | `text-gray-800` ⚠️ | `dark:text-white` | 23 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:119`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:67`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:86` |
+| `text` | `text-gray-500` ⚠️ | `dark:text-white` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:308` |
+| `text` | `text-gray-800` ⚠️ | `dark:text-gray-200` | 103 | `resources/views/components/dynamic-filter-chips.blade.php:36`<br>`resources/views/components/dynamic-filter.blade.php:28`<br>`resources/views/components/dynamic-filter.blade.php:64` |
+| `text` | `text-gray-800` ⚠️ | `— sem dark —` | 74 | `resources/views/components/details-card.blade.php:21`<br>`resources/views/livewire/acl/permission-manager.blade.php:54`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:49` |
+| `text` | `text-gray-800` ⚠️ | `dark:text-white` | 24 | `resources/views/errors/layout.blade.php:48`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:119`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:67` |
 | `text` | `text-gray-800` ⚠️ | `dark:text-gray-300` | 4 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/listagem.blade.php:51`<br>`resources/views/livewire/registration/kanban-board.blade.php:366` |
+| `text` | `text-gray-800` ⚠️ | `dark:text-red-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-gray-800` ⚠️ | `dark:text-green-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-gray-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-gray-800` ⚠️ | `dark:text-red-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-gray-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-gray-800` ⚠️ | `dark:text-gray-100` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:658` |
-| `text` | `text-indigo-700` ⚠️ | `— sem dark —` | 34 | `resources/views/components/details-card.blade.php:30`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128` |
-| `text` | `text-indigo-700` ⚠️ | `dark:text-indigo-400` | 13 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1829`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:160`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `text` | `text-indigo-700` ⚠️ | `— sem dark —` | 35 | `resources/views/components/details-card.blade.php:30`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128` |
+| `text` | `text-indigo-700` ⚠️ | `dark:text-indigo-400` | 13 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1894`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:160`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
 | `text` | `text-indigo-700` ⚠️ | `dark:text-indigo-300` | 8 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:283`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:102`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:48` |
 | `text` | `text-indigo-700` ⚠️ | `dark:text-white` | 1 | `resources/views/livewire/period/regras-manager.blade.php:97` |
-| `text` | `text-red-700` ⚠️ | `— sem dark —` | 35 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:120` |
+| `text` | `text-red-700` ⚠️ | `— sem dark —` | 36 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:49`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:56`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:120` |
 | `text` | `text-red-700` ⚠️ | `dark:text-red-400` | 11 | `resources/views/livewire/company/empresa-manager.blade.php:61`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:71`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:26` |
 | `text` | `text-red-700` ⚠️ | `dark:text-white` | 5 | `resources/views/livewire/period/regras-manager.blade.php:97`<br>`resources/views/livewire/period/regras-manager.blade.php:112`<br>`resources/views/livewire/period/regras-manager.blade.php:120` |
 | `text` | `text-green-700` ⚠️ | `— sem dark —` | 34 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:47`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:55`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:126` |
 | `text` | `text-green-700` ⚠️ | `dark:text-green-400` | 9 | `resources/views/livewire/company/empresa-manager.blade.php:57`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:64`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:43` |
 | `text` | `text-green-700` ⚠️ | `dark:text-green-500` | 5 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:22`<br>`resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:39`<br>`resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:42` |
 | `text` | `text-green-700` ⚠️ | `dark:text-green-300` | 1 | `resources/views/livewire/period/period-manager.blade.php:431` |
-| `text` | `text-emerald-700` ⚠️ | `— sem dark —` | 41 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
+| `text` | `text-emerald-700` ⚠️ | `— sem dark —` | 42 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
 | `text` | `text-emerald-700` ⚠️ | `dark:text-emerald-400` | 4 | `resources/css/app.css:191`<br>`resources/views/livewire/forms/form-details.blade.php:72`<br>`resources/views/livewire/period/period-details.blade.php:15` |
 | `text` | `text-emerald-700` ⚠️ | `dark:text-emerald-300` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129` |
 | `text` | `text-blue-700` ⚠️ | `— sem dark —` | 24 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:141` |
-| `text` | `text-blue-700` ⚠️ | `dark:text-blue-400` | 9 | `resources/views/livewire/company/dashboard.blade.php:10`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1942`<br>`resources/views/livewire/forms/form-details.blade.php:76` |
+| `text` | `text-blue-700` ⚠️ | `dark:text-blue-400` | 9 | `resources/views/livewire/company/dashboard.blade.php:10`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2007`<br>`resources/views/livewire/forms/form-details.blade.php:76` |
 | `text` | `text-blue-700` ⚠️ | `dark:text-blue-300` | 4 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:32`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:98`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:22` |
 | `text` | `hover:text-gray-700` ⚠️ | `— sem dark —` | 23 | `resources/views/livewire/auditoria/error-log-manager.blade.php:133`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:448`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:633` |
 | `text` | `hover:text-gray-700` ⚠️ | `dark:hover:text-gray-300` | 7 | `resources/views/components/table.blade.php:34`<br>`resources/views/components/table.blade.php:37`<br>`resources/views/livewire/registration/registration-details.blade.php:106` |
 | `text` | `hover:text-gray-700` ⚠️ | `dark:hover:text-white` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:210`<br>`resources/views/livewire/registration/registration-manager.blade.php:831`<br>`resources/views/livewire/registration/registration-manager.blade.php:936` |
 | `text` | `hover:text-gray-700` ⚠️ | `dark:hover:text-gray-200` | 2 | `resources/views/livewire/period/period-edit.blade.php:355`<br>`resources/views/livewire/period/period-manager.blade.php:698` |
-| `text` | `text-gray-300` | `dark:text-gray-600` | 27 | `resources/views/components/paginacao-customizada.blade.php:6`<br>`resources/views/components/paginacao-customizada.blade.php:44`<br>`resources/views/components/table.blade.php:68` |
-| `text` | `text-amber-800` ⚠️ | `— sem dark —` | 20 | `resources/views/livewire/comunicacao/template/template-form.blade.php:378`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:382`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:388` |
+| `text` | `text-red-800` ⚠️ | `— sem dark —` | 16 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:119`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161` |
+| `text` | `text-red-800` ⚠️ | `dark:text-red-400` | 9 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-red-800` ⚠️ | `dark:text-green-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-red-800` ⚠️ | `dark:text-blue-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-red-800` ⚠️ | `dark:text-purple-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-red-800` ⚠️ | `dark:text-gray-300` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-amber-800` ⚠️ | `— sem dark —` | 22 | `resources/views/livewire/comunicacao/template/template-form.blade.php:378`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:382`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:388` |
 | `text` | `text-amber-800` ⚠️ | `dark:text-amber-300` | 6 | `resources/views/livewire/registration/kanban-board.blade.php:41`<br>`resources/views/livewire/registration/kanban-board.blade.php:120`<br>`resources/views/livewire/registration/registration-manager.blade.php:152` |
 | `text` | `text-amber-800` ⚠️ | `dark:text-amber-200` | 1 | `resources/views/livewire/website/inscricao.blade.php:107` |
-| `text` | `text-red-800` ⚠️ | `— sem dark —` | 15 | `resources/views/components/page-header.blade.php:19`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:119`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160` |
-| `text` | `text-red-800` ⚠️ | `dark:text-red-400` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/gestao-educacional/turma/listagem.blade.php:60`<br>`resources/views/livewire/student/document-manager.blade.php:142` |
-| `text` | `text-red-800` ⚠️ | `dark:text-green-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-red-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-red-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-red-800` ⚠️ | `dark:text-gray-300` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-gray-400` | `dark:text-gray-500` | 24 | `resources/css/app.css:178`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:120`<br>`resources/views/livewire/auth/login.blade.php:56` |
+| `text` | `text-gray-300` | `dark:text-gray-600` | 27 | `resources/views/components/paginacao-customizada.blade.php:6`<br>`resources/views/components/paginacao-customizada.blade.php:44`<br>`resources/views/components/table.blade.php:68` |
+| `text` | `text-gray-400` | `dark:text-gray-500` | 26 | `resources/css/app.css:178`<br>`resources/views/errors/layout.blade.php:55`<br>`resources/views/errors/layout.blade.php:121` |
 | `text` | `text-green-800` ⚠️ | `dark:text-green-400` | 10 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:21`<br>`resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:36` |
-| `text` | `text-green-800` ⚠️ | `— sem dark —` | 10 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:87`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:18` |
+| `text` | `text-green-800` ⚠️ | `— sem dark —` | 10 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:87`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:18` |
+| `text` | `text-green-800` ⚠️ | `dark:text-red-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-green-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-green-800` ⚠️ | `dark:text-red-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-green-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-green-800` ⚠️ | `dark:text-gray-300` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `hover:text-gray-900` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/comunicacao/template/template-form.blade.php:135`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:138`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:141` |
 | `text` | `hover:text-gray-900` ⚠️ | `dark:hover:text-white` | 10 | `resources/views/components/paginacao-customizada.blade.php:10`<br>`resources/views/components/paginacao-customizada.blade.php:30`<br>`resources/views/components/paginacao-customizada.blade.php:40` |
-| `text` | `text-yellow-700` ⚠️ | `— sem dark —` | 11 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:66`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:346` |
+| `text` | `text-yellow-700` ⚠️ | `— sem dark —` | 10 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:46`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:66`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:346` |
 | `text` | `text-yellow-700` ⚠️ | `dark:text-yellow-400` | 7 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:164`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:45`<br>`resources/views/livewire/period/period-details.blade.php:31` |
 | `text` | `text-yellow-700` ⚠️ | `dark:text-yellow-500` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:47` |
 | `text` | `text-indigo-600` ⚠️ | `dark:text-indigo-400` | 16 | `resources/views/components/dynamic-filter-chips.blade.php:35`<br>`resources/views/livewire/company/dashboard.blade.php:18`<br>`resources/views/livewire/company/dashboard.blade.php:58` |
 | `text` | `text-indigo-600` ⚠️ | `dark:text-indigo-300` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:334` |
-| `text` | `text-amber-700` ⚠️ | `— sem dark —` | 14 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
+| `text` | `text-amber-700` ⚠️ | `— sem dark —` | 15 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:159` |
 | `text` | `text-amber-700` ⚠️ | `dark:text-amber-400` | 2 | `resources/views/livewire/registration/registration-manager.blade.php:819`<br>`resources/views/livewire/registration/registration-manager.blade.php:826` |
 | `text` | `text-blue-800` ⚠️ | `dark:text-blue-300` | 6 | `resources/views/livewire/comunicacao/template/template-form.blade.php:364`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:369`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:15` |
-| `text` | `text-blue-800` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:837` |
+| `text` | `text-blue-800` ⚠️ | `dark:text-red-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-blue-800` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:837` |
 | `text` | `text-blue-800` ⚠️ | `dark:text-green-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-blue-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-blue-800` ⚠️ | `dark:text-red-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-blue-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-blue-800` ⚠️ | `dark:text-gray-300` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-blue-800` ⚠️ | `dark:text-blue-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:279` |
-| `text` | `hover:text-gray-800` ⚠️ | `— sem dark —` | 11 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:83`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:86`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:454` |
+| `text` | `text-blue-800` ⚠️ | `dark:text-blue-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:374` |
+| `text` | `hover:text-gray-800` ⚠️ | `— sem dark —` | 13 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:83`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:86`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:454` |
 | `text` | `hover:text-gray-800` ⚠️ | `dark:hover:text-gray-200` | 2 | `resources/views/livewire/form-builder/hub.blade.php:55`<br>`resources/views/livewire/form-builder/hub.blade.php:61` |
-| `text` | `text-yellow-800` ⚠️ | `— sem dark —` | 8 | `resources/views/livewire/company/gestores-manager.blade.php:110`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:326` |
+| `text` | `text-yellow-800` ⚠️ | `— sem dark —` | 7 | `resources/views/livewire/company/gestores-manager.blade.php:110`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:128`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:326` |
 | `text` | `text-yellow-800` ⚠️ | `dark:text-yellow-400` | 2 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:238`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:147` |
 | `text` | `text-yellow-800` ⚠️ | `dark:text-yellow-500` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:83` |
 | `text` | `text-yellow-800` ⚠️ | `dark:text-yellow-200` | 1 | `resources/views/livewire/student/minhas-solicitacoes.blade.php:106` |
+| `text` | `text-amber-900` ⚠️ | `— sem dark —` | 6 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:552`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1659`<br>`resources/views/livewire/form-builder/hub.blade.php:184` |
+| `text` | `text-amber-900` ⚠️ | `dark:text-amber-300` | 4 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:257`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1655`<br>`resources/views/livewire/registration/registration-manager.blade.php:823` |
+| `text` | `text-amber-900` ⚠️ | `dark:text-amber-200` | 1 | `resources/views/livewire/website/inscricao.blade.php:413` |
 | `text` | `text-red-500` | `dark:text-red-400` | 11 | `resources/views/livewire/website/inscricao.blade.php:237`<br>`resources/views/livewire/website/inscricao.blade.php:258`<br>`resources/views/livewire/website/inscricao.blade.php:265` |
 | `text` | `text-white` ⚠️ | `dark:text-gray-200` | 5 | `resources/views/components/layouts/app.blade.php:401`<br>`resources/views/components/layouts/company.blade.php:57`<br>`resources/views/components/layouts/student-app.blade.php:184` |
 | `text` | `text-white` ⚠️ | `dark:text-gray-900` | 5 | `resources/views/components/paginacao-customizada.blade.php:26`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:95`<br>`resources/views/livewire/website/formulario-publico.blade.php:119` |
@@ -44521,37 +45164,35 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `text` | `text-green-600` ⚠️ | `dark:text-green-300` | 4 | `resources/views/livewire/student/document-manager.blade.php:160`<br>`resources/views/livewire/student/document-manager.blade.php:168`<br>`resources/views/livewire/student/profile-manager.blade.php:239` |
 | `text` | `text-red-600` ⚠️ | `dark:text-red-400` | 6 | `resources/views/livewire/forms/form-spreadsheet.blade.php:47`<br>`resources/views/livewire/matricula/processo-matricula-manager.blade.php:19`<br>`resources/views/livewire/period/period-manager.blade.php:257` |
 | `text` | `text-red-600` ⚠️ | `dark:text-red-300` | 4 | `resources/views/livewire/student/document-manager.blade.php:143`<br>`resources/views/livewire/student/document-manager.blade.php:151`<br>`resources/views/livewire/student/profile-manager.blade.php:222` |
-| `text` | `text-amber-900` ⚠️ | `— sem dark —` | 5 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:552`<br>`resources/views/livewire/form-builder/hub.blade.php:184`<br>`resources/views/livewire/registration/registration-details.blade.php:655` |
-| `text` | `text-amber-900` ⚠️ | `dark:text-amber-300` | 3 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:257`<br>`resources/views/livewire/registration/registration-manager.blade.php:823`<br>`resources/views/livewire/website/inscricao.blade.php:174` |
-| `text` | `text-amber-900` ⚠️ | `dark:text-amber-200` | 1 | `resources/views/livewire/website/inscricao.blade.php:413` |
 | `text` | `text-indigo-900` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:971`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1222`<br>`resources/views/livewire/form-builder/hub.blade.php:225` |
-| `text` | `text-indigo-900` ⚠️ | `dark:text-indigo-300` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1826`<br>`resources/views/livewire/period/period-details.blade.php:319`<br>`resources/views/livewire/period/period-manager.blade.php:486` |
+| `text` | `text-indigo-900` ⚠️ | `dark:text-indigo-300` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1891`<br>`resources/views/livewire/period/period-details.blade.php:319`<br>`resources/views/livewire/period/period-manager.blade.php:486` |
 | `text` | `text-indigo-900` ⚠️ | `dark:text-indigo-400` | 1 | `resources/views/livewire/forms/form-edit.blade.php:51` |
 | `text` | `text-orange-700` ⚠️ | `— sem dark —` | 4 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:110`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:114`<br>`resources/views/livewire/matricula/portal-matricula.blade.php:158` |
 | `text` | `text-orange-700` ⚠️ | `dark:text-orange-400` | 4 | `resources/views/livewire/student/dashboard/dashboard.blade.php:16`<br>`resources/views/livewire/student/document-manager.blade.php:127`<br>`resources/views/livewire/student/profile-manager.blade.php:206` |
 | `text` | `hover:text-gray-600` ⚠️ | `dark:hover:text-gray-300` | 6 | `resources/views/livewire/auth/profile-manager.blade.php:42`<br>`resources/views/livewire/auth/profile-manager.blade.php:47`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:47` |
 | `text` | `hover:text-gray-600` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:170`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:78` |
+| `text` | `text-emerald-800` ⚠️ | `— sem dark —` | 4 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1727`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2371` |
+| `text` | `text-emerald-800` ⚠️ | `dark:text-emerald-300` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
+| `text` | `text-indigo-800` ⚠️ | `dark:text-indigo-300` | 3 | `resources/views/livewire/company/dashboard.blade.php:57`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:106`<br>`resources/views/livewire/registration/kanban-board.blade.php:46` |
+| `text` | `text-indigo-800` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:923`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2323`<br>`resources/views/livewire/registration/registration-details.blade.php:709` |
+| `text` | `text-indigo-800` ⚠️ | `dark:text-indigo-400` | 1 | `resources/views/livewire/period/period-details.blade.php:324` |
 | `text` | `text-emerald-600` | `dark:text-emerald-400` | 7 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:34`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:76`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:131` |
 | `text` | `text-blue-600` | `dark:text-blue-400` | 7 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:52`<br>`resources/views/livewire/corporate/user-manager.blade.php:63`<br>`resources/views/livewire/forms/form-details.blade.php:111` |
 | `text` | `hover:text-red-700` | `— sem dark —` | 7 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:131`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:585`<br>`resources/views/livewire/registration/registration-manager.blade.php:890` |
 | `text` | `text-white/90` ⚠️ | `dark:text-gray-400` | 4 | `resources/views/components/layouts/app.blade.php:409`<br>`resources/views/components/layouts/app.blade.php:415`<br>`resources/views/components/layouts/student-app.blade.php:186` |
 | `text` | `text-white/90` ⚠️ | `dark:text-gray-300` | 2 | `resources/views/components/layouts/public.blade.php:95`<br>`resources/views/components/layouts/public.blade.php:122` |
 | `text` | `hover:text-blue-800` | `— sem dark —` | 6 | `resources/views/livewire/acl/permission-manager.blade.php:63`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:57`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:65` |
-| `text` | `text-indigo-800` ⚠️ | `dark:text-indigo-300` | 3 | `resources/views/livewire/company/dashboard.blade.php:57`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:106`<br>`resources/views/livewire/registration/kanban-board.blade.php:46` |
-| `text` | `text-indigo-800` ⚠️ | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:923`<br>`resources/views/livewire/registration/registration-details.blade.php:709` |
-| `text` | `text-indigo-800` ⚠️ | `dark:text-indigo-400` | 1 | `resources/views/livewire/period/period-details.blade.php:324` |
+| `text` | `text-purple-800` ⚠️ | `dark:text-red-400` | 2 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-purple-800` ⚠️ | `dark:text-green-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-purple-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-purple-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `text-purple-800` ⚠️ | `dark:text-gray-300` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-blue-900` ⚠️ | `— sem dark —` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1252`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:241`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:253` |
 | `text` | `text-blue-900` ⚠️ | `dark:text-blue-200` | 2 | `resources/views/livewire/conteudo/conteudo-form.blade.php:291`<br>`resources/views/livewire/website/inscricao.blade.php:226` |
 | `text` | `text-blue-900` ⚠️ | `dark:text-blue-300` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:284` |
-| `text` | `text-emerald-800` ⚠️ | `dark:text-emerald-300` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
-| `text` | `text-emerald-800` ⚠️ | `— sem dark —` | 2 | `resources/views/components/page-header.blade.php:13`<br>`resources/views/livewire/registration/registration-details.blade.php:916` |
-| `text` | `text-purple-800` ⚠️ | `dark:text-green-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-purple-800` ⚠️ | `dark:text-blue-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-purple-800` ⚠️ | `dark:text-red-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-purple-800` ⚠️ | `dark:text-purple-400` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `text-purple-800` ⚠️ | `dark:text-gray-300` | 1 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 | `text` | `text-slate-800` | `dark:text-white` | 5 | `resources/views/livewire/student/dashboard/dashboard.blade.php:27`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:63`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:107` |
 | `text` | `text-[#310B47]` | `— sem dark —` | 4 | `resources/views/components/layouts/public.blade.php:106`<br>`resources/views/components/layouts/public.blade.php:113`<br>`resources/views/components/layouts/public.blade.php:155` |
+| `text` | `text-amber-600` | `dark:text-amber-400` | 4 | `resources/views/components/session-timeout.blade.php:164`<br>`resources/views/components/session-timeout.blade.php:178`<br>`resources/views/livewire/form-builder/hub.blade.php:61` |
 | `text` | `text-sky-700` | `— sem dark —` | 4 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:217`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:309`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:337` |
 | `text` | `text-slate-900` ⚠️ | `dark:text-white` | 3 | `resources/views/livewire/student/dashboard/dashboard.blade.php:4`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:38`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:4` |
 | `text` | `text-slate-900` ⚠️ | `dark:text-slate-100` | 1 | `resources/views/livewire/student/minhas-solicitacoes.blade.php:30` |
@@ -44565,7 +45206,6 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `text` | `text-yellow-900` ⚠️ | `dark:text-yellow-400` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:320` |
 | `text` | `text-gray-200` | `dark:text-gray-700` | 2 | `resources/views/livewire/conteudo/conteudo-publico.blade.php:95`<br>`resources/views/livewire/conteudo/portal-noticias.blade.php:217` |
 | `text` | `text-rose-900` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1318`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1333` |
-| `text` | `text-amber-600` | `dark:text-amber-400` | 2 | `resources/views/livewire/form-builder/hub.blade.php:61`<br>`resources/views/livewire/forms/form-details.blade.php:121` |
 | `text` | `text-orange-900` ⚠️ | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:172` |
 | `text` | `text-orange-900` ⚠️ | `dark:text-orange-300` | 1 | `resources/views/livewire/student/dashboard/dashboard.blade.php:15` |
 | `text` | `hover:text-indigo-800` | `— sem dark —` | 2 | `resources/views/livewire/forms/form-spreadsheet.blade.php:160`<br>`resources/views/livewire/period/regras-manager.blade.php:54` |
@@ -44576,7 +45216,9 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 | `text` | `text-teal-800` | `— sem dark —` | 1 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:476` |
 | `text` | `hover:text-emerald-700` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-manager.blade.php:121` |
 | `text` | `text-rose-700` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1334` |
-| `text` | `text-blue-500` | `dark:text-blue-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1951` |
+| `text` | `text-blue-500` | `dark:text-blue-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2016` |
+| `text` | `text-emerald-900` | `dark:text-emerald-200` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `text` | `text-red-900` | `dark:text-red-200` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
 | `text` | `group-hover:text-indigo-700` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:149` |
 | `text` | `text-purple-700` | `— sem dark —` | 1 | `resources/views/livewire/forms/form-manager.blade.php:71` |
 | `text` | `text-indigo-500` | `dark:text-indigo-400` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:47` |
@@ -44589,74 +45231,77 @@ _Cada classe clara e o que o projeto usa no tema escuro para ela. ⚠️ = a mes
 
 _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada por `dark:` e por regra CSS ao mesmo tempo. Cada tabela mostra só as propriedades que divergem._
 
-#### `<div> bg-white` — 402 ocorrências em `div`
+#### `<div> bg-white` — 411 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-800` | 254 | `resources/views/components/layouts/app.blade.php:449`<br>`resources/views/components/layouts/app.blade.php:463`<br>`resources/views/components/layouts/app.blade.php:478` |
-| `bg` | `— sem dark —` | 114 | `resources/views/components/details-card.blade.php:26`<br>`resources/views/components/details-card.blade.php:48`<br>`resources/views/livewire/acl/permission-manager.blade.php:66` |
-| `bg` | `dark:bg-gray-900` | 35 | `resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/layouts/public.blade.php:136`<br>`resources/views/components/summary-cards.blade.php:4` |
+| `bg` | `dark:bg-gray-800` | 256 | `resources/views/components/layouts/app.blade.php:449`<br>`resources/views/components/layouts/app.blade.php:463`<br>`resources/views/components/layouts/app.blade.php:478` |
+| `bg` | `— sem dark —` | 115 | `resources/views/components/details-card.blade.php:26`<br>`resources/views/components/details-card.blade.php:48`<br>`resources/views/livewire/acl/permission-manager.blade.php:66` |
+| `bg` | `dark:bg-gray-900` | 41 | `resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/layouts/public.blade.php:136`<br>`resources/views/components/summary-cards.blade.php:4` |
 | `bg` | `dark:bg-gray-800/40` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:436`<br>`resources/views/livewire/corporate/user-manager.blade.php:479` |
-| `bg` | `dark:bg-red-900/20` | 2 | `resources/views/livewire/website/partials/render-dinamico.blade.php:650`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:650` |
+| `bg` | `dark:bg-red-900/20` | 2 | `resources/views/livewire/website/partials/render-dinamico.blade.php:745`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:745` |
 | `bg` | `dark:bg-gray-800/60` | 1 | `resources/views/livewire/period/period-manager.blade.php:416` |
-| `bg` | `dark:bg-purpura-900/20` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:737` |
-| `border` | `dark:border-gray-700` | 215 | `resources/views/components/layouts/app.blade.php:449`<br>`resources/views/components/layouts/app.blade.php:463`<br>`resources/views/components/layouts/app.blade.php:478` |
-| `border` | `— sem dark —` | 95 | `resources/views/components/details-card.blade.php:26`<br>`resources/views/livewire/acl/permission-manager.blade.php:52`<br>`resources/views/livewire/acl/permission-manager.blade.php:66` |
-| `border` | `dark:border-gray-800` | 22 | `resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/summary-cards.blade.php:4`<br>`resources/views/components/summary-cards.blade.php:46` |
+| `bg` | `dark:bg-purpura-900/20` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:832` |
+| `border` | `dark:border-gray-700` | 218 | `resources/views/components/layouts/app.blade.php:449`<br>`resources/views/components/layouts/app.blade.php:463`<br>`resources/views/components/layouts/app.blade.php:478` |
+| `border` | `— sem dark —` | 96 | `resources/views/components/details-card.blade.php:26`<br>`resources/views/livewire/acl/permission-manager.blade.php:52`<br>`resources/views/livewire/acl/permission-manager.blade.php:66` |
+| `border` | `dark:border-gray-800` | 24 | `resources/views/components/dynamic-filter.blade.php:158`<br>`resources/views/components/summary-cards.blade.php:4`<br>`resources/views/components/summary-cards.blade.php:46` |
+| `border` | `dark:border-gray-600` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2259`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:686` |
 | `border` | `dark:border-green-800/30` | 2 | `resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:49`<br>`resources/views/livewire/gestao-educacional/gerador-mock.blade.php:50` |
-| `border` | `dark:hover:border-purpura-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1898` |
+| `border` | `dark:hover:border-purpura-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1963` |
+| `border` | `dark:border-emerald-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2275` |
 | `border` | `dark:hover:border-purpura-500` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:230` |
 | `border` | `dark:border-orange-800/50` | 1 | `resources/views/livewire/student/dashboard/dashboard.blade.php:33` |
-| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:591` |
 | `divide` | `— sem dark —` | 5 | `resources/views/livewire/forms/form-details.blade.php:70`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:62`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:128` |
-| `divide` | `dark:divide-gray-700` | 2 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:398`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2034` |
+| `divide` | `dark:divide-gray-700` | 2 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:398`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2099` |
 | `text` | `— sem dark —` | 8 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:1`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:391`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:1` |
-| `text` | `dark:text-gray-300` | 3 | `resources/views/livewire/period/period-manager.blade.php:614`<br>`resources/views/livewire/period/period-manager.blade.php:618`<br>`resources/views/livewire/period/period-manager.blade.php:622` |
+| `text` | `dark:text-gray-300` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1732`<br>`resources/views/livewire/period/period-manager.blade.php:614`<br>`resources/views/livewire/period/period-manager.blade.php:618` |
 | `text` | `dark:text-gray-100` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:658` |
 
-#### `<div> bg-gray-50` — 235 ocorrências em `div`
+#### `<div> bg-gray-50` — 241 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `border` | `dark:border-gray-700` | 118 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:71`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:79`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:137` |
-| `border` | `— sem dark —` | 79 | `resources/views/livewire/auditoria/error-log-manager.blade.php:117`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:143` |
+| `border` | `dark:border-gray-700` | 122 | `resources/views/components/session-timeout.blade.php:177`<br>`resources/views/errors/403.blade.php:59`<br>`resources/views/errors/500.blade.php:17` |
+| `border` | `— sem dark —` | 80 | `resources/views/livewire/auditoria/error-log-manager.blade.php:117`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:143` |
 | `border` | `dark:border-gray-800` | 12 | `resources/views/components/dynamic-filter.blade.php:263`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:171`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:524` |
 | `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:175` |
-| `bg` | `— sem dark —` | 97 | `resources/views/livewire/auditoria/error-log-manager.blade.php:117`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:143` |
+| `bg` | `— sem dark —` | 98 | `resources/views/livewire/auditoria/error-log-manager.blade.php:117`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:126`<br>`resources/views/livewire/auditoria/error-log-manager.blade.php:143` |
 | `bg` | `dark:bg-gray-900/50` | 74 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:71`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:79`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:137` |
 | `bg` | `dark:bg-gray-900` | 23 | `resources/views/components/dynamic-filter.blade.php:263`<br>`resources/views/livewire/auth/profile-manager.blade.php:154`<br>`resources/views/livewire/components/quick-view-drawer.blade.php:100` |
 | `bg` | `dark:bg-gray-800` | 21 | `resources/views/components/layouts/public.blade.php:143`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:155` |
 | `bg` | `dark:bg-gray-900/30` | 11 | `resources/views/livewire/company/aprendizes-manager.blade.php:24`<br>`resources/views/livewire/company/gestores-manager.blade.php:24`<br>`resources/views/livewire/forms/form-edit.blade.php:164` |
 | `bg` | `dark:bg-gray-900/60` | 6 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:479`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:431`<br>`resources/views/livewire/corporate/user-manager.blade.php:161` |
-| `bg` | `dark:bg-gray-800/50` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1978`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:151`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:145` |
+| `bg` | `dark:bg-gray-800/50` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2043`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:151`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:145` |
+| `bg` | `dark:bg-gray-800/60` | 3 | `resources/views/errors/403.blade.php:59`<br>`resources/views/errors/500.blade.php:17`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2425` |
+| `bg` | `dark:bg-gray-950` | 2 | `resources/views/livewire/auth/login.blade.php:13`<br>`resources/views/livewire/registration/registration-details.blade.php:1084` |
 | `bg` | `dark:bg-gray-900/20` | 2 | `resources/views/livewire/financeiro/centro-custo-manager.blade.php:21`<br>`resources/views/livewire/financeiro/natureza-manager.blade.php:21` |
-| `bg` | `dark:bg-gray-950` | 1 | `resources/views/livewire/auth/login.blade.php:13` |
-| `bg` | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1861` |
+| `bg` | `dark:bg-gray-900/70` | 1 | `resources/views/components/session-timeout.blade.php:177` |
+| `bg` | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1926` |
 | `bg` | `dark:bg-gray-900/80` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:254` |
-| `bg` | `dark:bg-gray-700/50` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:811` |
-| `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:137`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:87` |
-| `text` | `— sem dark —` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:652` |
+| `bg` | `dark:bg-gray-700/50` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:906` |
+| `text` | `dark:text-gray-300` | 3 | `resources/views/errors/500.blade.php:17`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:137`<br>`resources/views/livewire/student/minhas-solicitacoes.blade.php:87` |
+| `text` | `— sem dark —` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:747` |
 
-#### `<button> bg-white` — 78 ocorrências em `button`
+#### `<button> bg-white` — 81 ocorrências em `button`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 85 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165` |
+| `bg` | `— sem dark —` | 89 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:165` |
 | `bg` | `dark:bg-gray-800` | 28 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/layouts/public.blade.php:175`<br>`resources/views/livewire/acl/permission-manager.blade.php:261` |
 | `bg` | `dark:hover:bg-gray-700` | 11 | `resources/views/components/layouts/public.blade.php:175`<br>`resources/views/components/table.blade.php:34`<br>`resources/views/livewire/acl/permission-manager.blade.php:261` |
 | `bg` | `dark:bg-gray-700` | 7 | `resources/views/components/table.blade.php:34`<br>`resources/views/livewire/auth/profile-manager.blade.php:16`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:193` |
+| `bg` | `dark:bg-gray-900` | 5 | `resources/views/livewire/comunicacao/template/template-form.blade.php:149`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:136`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2289` |
 | `bg` | `dark:hover:bg-gray-600` | 4 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:193`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:221`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:249` |
-| `bg` | `dark:bg-gray-900` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:149`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:136`<br>`resources/views/livewire/registration/kanban-board.blade.php:78` |
 | `bg` | `dark:bg-gray-800/30` | 3 | `resources/views/livewire/corporate/user-manager.blade.php:178`<br>`resources/views/livewire/corporate/user-manager.blade.php:189`<br>`resources/views/livewire/corporate/user-manager.blade.php:200` |
 | `bg` | `dark:bg-gray-800/50` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:178`<br>`resources/views/livewire/corporate/user-manager.blade.php:189` |
 | `bg` | `dark:bg-purpura-900/30` | 1 | `resources/views/components/dynamic-filter-chips.blade.php:10` |
-| `border` | `— sem dark —` | 41 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:484`<br>`resources/views/livewire/financeiro/centro-custo-manager.blade.php:12` |
+| `border` | `— sem dark —` | 44 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:484`<br>`resources/views/livewire/financeiro/centro-custo-manager.blade.php:12` |
 | `border` | `dark:border-gray-600` | 19 | `resources/views/components/table.blade.php:34`<br>`resources/views/livewire/acl/permission-manager.blade.php:261`<br>`resources/views/livewire/auth/profile-manager.blade.php:16` |
 | `border` | `dark:border-gray-700` | 13 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/components/layouts/public.blade.php:175`<br>`resources/views/livewire/corporate/user-manager.blade.php:178` |
 | `border` | `dark:border-red-800` | 2 | `resources/views/livewire/period/period-edit.blade.php:292`<br>`resources/views/livewire/period/period-edit.blade.php:414` |
 | `border` | `dark:border-purpura-800` | 1 | `resources/views/components/dynamic-filter-chips.blade.php:10` |
 | `border` | `dark:border-indigo-700` | 1 | `resources/views/livewire/period/period-details.blade.php:326` |
-| `text` | `— sem dark —` | 44 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:484`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:149` |
+| `text` | `— sem dark —` | 47 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:484`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:149` |
 | `text` | `dark:text-gray-300` | 23 | `resources/views/components/layouts/public.blade.php:175`<br>`resources/views/livewire/acl/permission-manager.blade.php:261`<br>`resources/views/livewire/auth/profile-manager.blade.php:16` |
 | `text` | `dark:text-gray-200` | 2 | `resources/views/components/dynamic-filter-chips.blade.php:10`<br>`resources/views/livewire/website/inscricao.blade.php:418` |
 | `text` | `dark:text-purpura-300` | 1 | `resources/views/components/dynamic-filter-chips.blade.php:10` |
@@ -44680,23 +45325,24 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `border` | `— sem dark —` | 10 | `resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:163`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:114`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:118` |
 | `border` | `dark:border-gray-700` | 6 | `resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:105`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:175`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:188` |
 
-#### `<button> bg-gray-100` — 46 ocorrências em `button`
+#### `<button> bg-gray-100` — 48 ocorrências em `button`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `— sem dark —` | 49 | `resources/views/components/layouts/public.blade.php:163`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:58` |
-| `bg` | `dark:bg-gray-700` | 12 | `resources/views/components/layouts/company.blade.php:125`<br>`resources/views/components/layouts/student-app.blade.php:281`<br>`resources/views/livewire/company/empresa-manager.blade.php:21` |
-| `bg` | `dark:bg-gray-800` | 7 | `resources/views/components/layouts/public.blade.php:163`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:87`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:66` |
-| `bg` | `dark:hover:bg-gray-600` | 5 | `resources/views/livewire/company/empresa-manager.blade.php:21`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:14`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:55` |
-| `bg` | `dark:hover:bg-gray-700` | 4 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:87`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:930`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:49` |
+| `bg` | `dark:bg-gray-700` | 13 | `resources/views/components/layouts/company.blade.php:125`<br>`resources/views/components/layouts/student-app.blade.php:281`<br>`resources/views/components/session-timeout.blade.php:183` |
+| `bg` | `dark:bg-gray-800` | 8 | `resources/views/components/layouts/public.blade.php:163`<br>`resources/views/errors/layout.blade.php:102`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:87` |
+| `bg` | `dark:hover:bg-gray-600` | 6 | `resources/views/components/session-timeout.blade.php:183`<br>`resources/views/livewire/company/empresa-manager.blade.php:21`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:14` |
+| `bg` | `dark:hover:bg-gray-700` | 5 | `resources/views/errors/layout.blade.php:102`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:87`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:930` |
 | `bg` | `dark:hover:bg-red-900/20` | 1 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:66` |
 | `bg` | `dark:bg-gray-900` | 1 | `resources/views/livewire/student/dashboard/dashboard.blade.php:171` |
-| `text` | `dark:text-gray-300` | 13 | `resources/views/components/layouts/company.blade.php:125`<br>`resources/views/components/layouts/public.blade.php:163`<br>`resources/views/components/layouts/student-app.blade.php:281` |
+| `text` | `dark:text-gray-300` | 14 | `resources/views/components/layouts/company.blade.php:125`<br>`resources/views/components/layouts/public.blade.php:163`<br>`resources/views/components/layouts/student-app.blade.php:281` |
 | `text` | `— sem dark —` | 13 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:61`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:138` |
-| `text` | `dark:text-gray-200` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:930`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:53`<br>`resources/views/livewire/period/period-manager.blade.php:768` |
+| `text` | `dark:text-gray-200` | 4 | `resources/views/errors/layout.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:930`<br>`resources/views/livewire/forms/form-spreadsheet.blade.php:53` |
 | `text` | `dark:text-gray-500` | 2 | `resources/views/livewire/student/document-manager.blade.php:176`<br>`resources/views/livewire/student/profile-manager.blade.php:255` |
 | `border` | `— sem dark —` | 9 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:58`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:81`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:269` |
 | `border` | `dark:border-gray-600` | 3 | `resources/views/livewire/forms/form-spreadsheet.blade.php:53`<br>`resources/views/livewire/student/document-manager.blade.php:176`<br>`resources/views/livewire/student/profile-manager.blade.php:255` |
+| `border` | `dark:border-gray-700` | 1 | `resources/views/errors/layout.blade.php:102` |
 
 #### `<div> bg-gray-100` — 33 ocorrências em `div`
 
@@ -44706,7 +45352,7 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `bg` | `— sem dark —` | 6 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:109`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:204`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:862` |
 | `bg` | `dark:bg-gray-900` | 4 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:82`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:376`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:40` |
 | `bg` | `dark:bg-gray-700` | 3 | `resources/views/components/layouts/app.blade.php:543`<br>`resources/views/components/layouts/app.blade.php:565`<br>`resources/views/livewire/period/period-manager.blade.php:375` |
-| `bg` | `dark:bg-gray-950` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:167`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:169`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:441` |
+| `bg` | `dark:bg-gray-950` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:167`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:169`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:536` |
 | `bg` | `dark:bg-purpura-900/30` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:81`<br>`resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:78` |
 | `bg` | `dark:bg-gray-800/80` | 1 | `resources/views/livewire/website/inscricao.blade.php:433` |
 | `border` | `dark:border-gray-700` | 13 | `resources/views/components/table.blade.php:33`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:81`<br>`resources/views/livewire/comunicacao/automacao/esteira-manager.blade.php:78` |
@@ -44717,19 +45363,19 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `text` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:862` |
 | `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/student/student-manager.blade.php:69` |
 
-#### `<span> bg-emerald-50` — 30 ocorrências em `span`
+#### `<span> bg-emerald-50` — 31 ocorrências em `span`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 25 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
+| `bg` | `— sem dark —` | 27 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
 | `bg` | `dark:bg-emerald-900/30` | 4 | `resources/views/livewire/auth/profile-manager.blade.php:22`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129` |
 | `bg` | `dark:bg-emerald-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:76`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:215` |
 | `bg` | `dark:bg-emerald-950/40` | 1 | `resources/views/livewire/period/period-details.blade.php:15` |
 | `bg` | `dark:bg-gray-700` | 1 | `resources/views/livewire/period/period-details.blade.php:15` |
-| `border` | `— sem dark —` | 26 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
+| `border` | `— sem dark —` | 28 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136` |
 | `border` | `dark:border-emerald-800` | 6 | `resources/views/livewire/auth/profile-manager.blade.php:22`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129` |
 | `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/period/period-details.blade.php:15` |
-| `text` | `— sem dark —` | 23 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:147` |
+| `text` | `— sem dark —` | 25 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:113`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:136`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:147` |
 | `text` | `dark:text-emerald-400` | 3 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:76`<br>`resources/views/livewire/period/period-details.blade.php:15`<br>`resources/views/livewire/teste/rd-crm/rd-crm-manager.blade.php:110` |
 | `text` | `dark:text-emerald-300` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:112`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:129` |
 | `text` | `dark:text-gray-400` | 1 | `resources/views/livewire/period/period-details.blade.php:15` |
@@ -44741,31 +45387,31 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `bg` | `dark:bg-gray-800` | 17 | `resources/css/app.css:178`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:12`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:10` |
 | `bg` | `— sem dark —` | 10 | `resources/views/livewire/acl/role-permission-manager.blade.php:9`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17` |
 | `bg` | `dark:hover:bg-gray-700` | 2 | `resources/views/livewire/period/period-manager.blade.php:15`<br>`resources/views/livewire/registration/registration-manager.blade.php:15` |
-| `bg` | `dark:bg-gray-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1884` |
-| `bg` | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1884` |
+| `bg` | `dark:bg-gray-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1949` |
+| `bg` | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1949` |
 | `bg` | `dark:hover:!bg-red-900/20` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:750` |
 | `text` | `dark:text-gray-200` | 11 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:12`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:10`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:13` |
 | `text` | `— sem dark —` | 5 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20` |
 | `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/period/period-manager.blade.php:15`<br>`resources/views/livewire/registration/registration-manager.blade.php:15` |
 | `text` | `dark:text-gray-500` | 1 | `resources/css/app.css:178` |
-| `text` | `dark:text-white` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1884` |
+| `text` | `dark:text-white` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1949` |
 | `border` | `dark:border-gray-700` | 14 | `resources/css/app.css:178`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:12`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:10` |
 | `border` | `— sem dark —` | 6 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:17`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:20` |
-| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1884` |
+| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1949` |
 | `border` | `dark:!border-red-900/50` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:750` |
 
-#### `<input> bg-white` — 26 ocorrências em `input`
+#### `<input> bg-white` — 27 ocorrências em `input`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-800` | 15 | `resources/views/livewire/acl/permission-manager.blade.php:30`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:27`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:41` |
+| `bg` | `dark:bg-gray-800` | 16 | `resources/views/livewire/acl/permission-manager.blade.php:30`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:27`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:41` |
 | `bg` | `dark:bg-gray-700` | 6 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:122`<br>`resources/views/livewire/period/regras-manager.blade.php:143`<br>`resources/views/livewire/period/regras-manager.blade.php:143` |
 | `bg` | `— sem dark —` | 4 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:324`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:511`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1269` |
 | `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/auth/login.blade.php:27`<br>`resources/views/livewire/auth/login.blade.php:39` |
-| `border` | `dark:border-gray-700` | 11 | `resources/views/livewire/acl/permission-manager.blade.php:30`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:27`<br>`resources/views/livewire/auth/login.blade.php:27` |
+| `border` | `dark:border-gray-700` | 12 | `resources/views/livewire/acl/permission-manager.blade.php:30`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:27`<br>`resources/views/livewire/auth/login.blade.php:27` |
 | `border` | `dark:border-gray-600` | 11 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:6`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:122`<br>`resources/views/livewire/gestao-educacional/matricula/listagem.blade.php:18` |
 | `border` | `— sem dark —` | 4 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:324`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:511`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1269` |
-| `text` | `dark:text-white` | 9 | `resources/views/livewire/auth/login.blade.php:27`<br>`resources/views/livewire/auth/login.blade.php:39`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:41` |
+| `text` | `dark:text-white` | 10 | `resources/views/livewire/auth/login.blade.php:27`<br>`resources/views/livewire/auth/login.blade.php:39`<br>`resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:41` |
 | `text` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1269` |
 | `text` | `dark:text-purpura-400` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:122` |
 | `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:116` |
@@ -44784,18 +45430,39 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `border` | `dark:border-green-800` | 6 | `resources/views/livewire/company/empresa-manager.blade.php:57`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:43`<br>`resources/views/livewire/period/period-details.blade.php:381` |
 | `border` | `dark:border-gray-700` | 1 | `resources/views/livewire/period/period-details.blade.php:381` |
 
-#### `<span> bg-indigo-50` — 23 ocorrências em `span`
+#### `<span> bg-indigo-50` — 22 ocorrências em `span`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 17 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:149` |
+| `bg` | `— sem dark —` | 16 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:149` |
 | `bg` | `dark:bg-indigo-900/30` | 4 | `resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:102`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:35`<br>`resources/views/livewire/period/period-details.blade.php:387` |
 | `bg` | `dark:bg-indigo-900/40` | 2 | `resources/views/livewire/registration/kanban-board.blade.php:240`<br>`resources/views/livewire/registration/registration-manager.blade.php:259` |
-| `text` | `— sem dark —` | 16 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:165` |
+| `text` | `— sem dark —` | 15 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:165` |
 | `text` | `dark:text-indigo-300` | 4 | `resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:102`<br>`resources/views/livewire/period/period-manager.blade.php:213`<br>`resources/views/livewire/registration/kanban-board.blade.php:240` |
 | `text` | `dark:text-indigo-400` | 2 | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:35`<br>`resources/views/livewire/period/period-details.blade.php:387` |
-| `border` | `— sem dark —` | 16 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:149` |
+| `border` | `— sem dark —` | 15 | `resources/views/livewire/company/empresa-detalhes.blade.php:137`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:128`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:149` |
 | `border` | `dark:border-indigo-800` | 6 | `resources/views/livewire/comunicacao/comunicado/comunicado-manager.blade.php:102`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/acompanhamento.blade.php:35`<br>`resources/views/livewire/period/period-details.blade.php:387` |
+
+#### `.custom-scrollbar` — 21 ocorrências em `div`, `main`
+
+_Também estilizado por regra CSS, além das classes `dark:`:_
+- `.dark .custom-scrollbar::-webkit-scrollbar-thumb` → `background-color: #4b5563` (`resources/css/app.css:282`)
+- `.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb` → `background-color: #6b7280` (`resources/css/app.css:284`)
+- `.dark .unified-container .custom-scrollbar table thead tr th` → `border-top-color: #374151` (`resources/views/livewire/period/period-details.blade.php:91`)
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `divide` | `dark:divide-gray-800` | 2 | `resources/views/components/dynamic-filter.blade.php:44`<br>`resources/views/components/dynamic-filter.blade.php:184` |
+| `divide` | `dark:divide-gray-700` | 1 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:177` |
+| `bg` | `dark:bg-gray-900` | 6 | `resources/views/components/layouts/app.blade.php:585`<br>`resources/views/components/layouts/student-app.blade.php:237`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:410` |
+| `bg` | `dark:bg-gray-950` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:575`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2234` |
+| `bg` | `dark:bg-gray-900/40` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:455`<br>`resources/views/livewire/corporate/user-manager.blade.php:498` |
+| `bg` | `dark:bg-gray-800` | 2 | `resources/views/livewire/forms/form-details.blade.php:222`<br>`resources/views/livewire/forms/form-details.blade.php:259` |
+| `bg` | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/forms/form-edit.blade.php:86`<br>`resources/views/livewire/forms/form-edit.blade.php:97` |
+| `bg` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-manager.blade.php:159` |
+| `border` | `dark:border-gray-700` | 9 | `resources/views/livewire/corporate/user-manager.blade.php:455`<br>`resources/views/livewire/corporate/user-manager.blade.php:498`<br>`resources/views/livewire/forms/form-details.blade.php:222` |
+| `border` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-manager.blade.php:159` |
+| `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:410` |
 
 #### `<div> bg-red-50` — 21 ocorrências em `div`
 
@@ -44824,27 +45491,6 @@ _Mesma classe principal, estilo escuro diferente em cada lugar — ou estilizada
 | `border` | `— sem dark —` | 15 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:48`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:52`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:141` |
 | `border` | `dark:border-blue-800` | 5 | `resources/views/livewire/auth/profile-manager.blade.php:141`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:32`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:52` |
 
-#### `.custom-scrollbar` — 19 ocorrências em `div`, `main`
-
-_Também estilizado por regra CSS, além das classes `dark:`:_
-- `.dark .custom-scrollbar::-webkit-scrollbar-thumb` → `background-color: #4b5563` (`resources/css/app.css:282`)
-- `.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb` → `background-color: #6b7280` (`resources/css/app.css:284`)
-- `.dark .unified-container .custom-scrollbar table thead tr th` → `border-top-color: #374151` (`resources/views/livewire/period/period-details.blade.php:91`)
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `divide` | `dark:divide-gray-800` | 2 | `resources/views/components/dynamic-filter.blade.php:44`<br>`resources/views/components/dynamic-filter.blade.php:184` |
-| `divide` | `dark:divide-gray-700` | 1 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:177` |
-| `bg` | `dark:bg-gray-900` | 5 | `resources/views/components/layouts/app.blade.php:585`<br>`resources/views/components/layouts/student-app.blade.php:237`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:410` |
-| `bg` | `dark:bg-gray-900/40` | 2 | `resources/views/livewire/corporate/user-manager.blade.php:455`<br>`resources/views/livewire/corporate/user-manager.blade.php:498` |
-| `bg` | `dark:bg-gray-800` | 2 | `resources/views/livewire/forms/form-details.blade.php:222`<br>`resources/views/livewire/forms/form-details.blade.php:259` |
-| `bg` | `dark:bg-gray-900/50` | 2 | `resources/views/livewire/forms/form-edit.blade.php:86`<br>`resources/views/livewire/forms/form-edit.blade.php:97` |
-| `bg` | `dark:bg-gray-950` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:575` |
-| `bg` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-manager.blade.php:159` |
-| `border` | `dark:border-gray-700` | 9 | `resources/views/livewire/corporate/user-manager.blade.php:455`<br>`resources/views/livewire/corporate/user-manager.blade.php:498`<br>`resources/views/livewire/forms/form-details.blade.php:222` |
-| `border` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-manager.blade.php:159` |
-| `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:410` |
-
 #### `<span> bg-red-50` — 19 ocorrências em `span`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
@@ -44865,7 +45511,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `bg` | `dark:hover:bg-gray-700` | 6 | `resources/views/livewire/company/empresa-detalhes.blade.php:9`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:21`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:8` |
 | `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:41`<br>`resources/views/livewire/form-builder/hub.blade.php:38` |
 | `bg` | `dark:bg-gray-700` | 1 | `resources/views/livewire/period/period-details.blade.php:39` |
-| `bg` | `dark:hover:bg-gray-700/60` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:470` |
+| `bg` | `dark:hover:bg-gray-700/60` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:565` |
 | `border` | `dark:border-gray-700` | 9 | `resources/views/livewire/company/empresa-detalhes.blade.php:9`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:41`<br>`resources/views/livewire/conteudo/conteudo-form.blade.php:21` |
 | `border` | `— sem dark —` | 7 | `resources/views/livewire/company/dashboard.blade.php:49`<br>`resources/views/livewire/curso/curso-detalhes.blade.php:98`<br>`resources/views/livewire/form-builder/hub.blade.php:108` |
 | `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/form-builder/hub.blade.php:38` |
@@ -44889,6 +45535,21 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-white` | 6 | `resources/views/livewire/auth/profile-manager.blade.php:69`<br>`resources/views/livewire/auth/profile-manager.blade.php:74`<br>`resources/views/livewire/auth/profile-manager.blade.php:100` |
 | `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/period/period-manager.blade.php:47`<br>`resources/views/livewire/registration/registration-manager.blade.php:54` |
 | `text` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:963` |
+
+#### `<span> bg-white` — 15 ocorrências em `span`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `— sem dark —` | 8 | `resources/views/components/toggle.blade.php:6`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:42` |
+| `bg` | `dark:bg-gray-800` | 6 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:135`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:144`<br>`resources/views/livewire/auth/profile-manager.blade.php:157` |
+| `bg` | `dark:bg-gray-900` | 1 | `resources/views/errors/403.blade.php:66` |
+| `border` | `dark:border-gray-700` | 2 | `resources/views/errors/403.blade.php:66`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:105` |
+| `border` | `— sem dark —` | 2 | `resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:736` |
+| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:157` |
+| `text` | `— sem dark —` | 3 | `resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:534`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:550` |
+| `text` | `dark:text-purpura-400` | 1 | `resources/views/errors/403.blade.php:66` |
+| `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:157` |
+| `text` | `dark:text-gray-200` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:105` |
 
 #### `<button> bg-red-50` — 15 ocorrências em `button`
 
@@ -44931,7 +45592,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-blue-400` | 4 | `resources/views/livewire/forms/form-details.blade.php:111`<br>`resources/views/livewire/student/dashboard/dashboard.blade.php:117`<br>`resources/views/livewire/student/document-manager.blade.php:130` |
 | `text` | `dark:text-blue-300` | 3 | `resources/views/livewire/corporate/user-extra-permission-manager.blade.php:15`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:210`<br>`resources/views/livewire/registration/registration-manager.blade.php:664` |
 | `text` | `— sem dark —` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:837`<br>`resources/views/livewire/matricula/portal-matricula.blade.php:161`<br>`resources/views/livewire/website/formulario-publico.blade.php:173` |
-| `text` | `dark:text-blue-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:279` |
+| `text` | `dark:text-blue-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:374` |
 
 #### `<input> bg-gray-100` — 15 ocorrências em `input`
 
@@ -44947,41 +45608,28 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-gray-400` | 2 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:37`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:41` |
 | `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/website/inscricao.blade.php:284`<br>`resources/views/livewire/website/inscricao.blade.php:301` |
 
-#### `<span> bg-white` — 14 ocorrências em `span`
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 8 | `resources/views/components/toggle.blade.php:6`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/conteudo/categoria-manager.blade.php:42` |
-| `bg` | `dark:bg-gray-800` | 6 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:135`<br>`resources/views/livewire/admin/solicitacoes-manager.blade.php:144`<br>`resources/views/livewire/auth/profile-manager.blade.php:157` |
-| `text` | `— sem dark —` | 3 | `resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/importacao/importacao-manager.blade.php:534`<br>`resources/views/livewire/system-tasks/system-task-manager.blade.php:550` |
-| `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:157` |
-| `text` | `dark:text-gray-200` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:105` |
-| `border` | `— sem dark —` | 2 | `resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:246`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:736` |
-| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/auth/profile-manager.blade.php:157` |
-| `border` | `dark:border-gray-700` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:105` |
-
 #### `<span> bg-green-100` — 13 ocorrências em `span`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160` |
-| `bg` | `dark:bg-green-900/30` | 7 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `dark:bg-blue-900/30` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `dark:bg-red-900/30` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `dark:bg-purple-900/30` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `bg` | `dark:bg-gray-700` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160` |
-| `text` | `dark:text-green-400` | 7 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `dark:text-blue-400` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `dark:text-red-400` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `dark:text-purple-400` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `text` | `dark:text-gray-300` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `— sem dark —` | 9 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:160` |
-| `border` | `dark:border-green-800` | 7 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `dark:border-blue-800` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `dark:border-red-800` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `dark:border-purple-800` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
-| `border` | `dark:border-gray-600` | 5 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161` |
+| `bg` | `dark:bg-red-900/30` | 12 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `dark:bg-green-900/30` | 8 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `dark:bg-blue-900/30` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `dark:bg-purple-900/30` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `bg` | `dark:bg-gray-700` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `— sem dark —` | 13 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161` |
+| `text` | `dark:text-red-400` | 12 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `dark:text-green-400` | 8 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `dark:text-blue-400` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `dark:text-purple-400` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `text` | `dark:text-gray-300` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `dark:border-red-800` | 12 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `— sem dark —` | 9 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:161` |
+| `border` | `dark:border-green-800` | 8 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `dark:border-blue-800` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `dark:border-purple-800` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
+| `border` | `dark:border-gray-600` | 6 | `resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123`<br>`resources/views/livewire/auditoria/auditoria-manager.blade.php:123` |
 
 #### `<span> bg-red-100` — 11 ocorrências em `span`
 
@@ -44998,22 +45646,39 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 5 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1609`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1748`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1748` |
+| `bg` | `— sem dark —` | 5 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1609`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1813`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1813` |
 | `bg` | `dark:bg-gray-800` | 4 | `resources/views/livewire/forms/form-edit.blade.php:56`<br>`resources/views/livewire/forms/form-edit.blade.php:60`<br>`resources/views/livewire/student/document-manager.blade.php:123` |
-| `bg` | `dark:bg-gray-900` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1917`<br>`resources/views/livewire/registration/registration-manager.blade.php:605` |
-| `bg` | `dark:bg-purpura-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1917` |
-| `bg` | `dark:hover:bg-gray-800` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917`<br>`resources/views/livewire/registration/registration-manager.blade.php:605` |
+| `bg` | `dark:bg-gray-900` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1982`<br>`resources/views/livewire/registration/registration-manager.blade.php:605` |
+| `bg` | `dark:bg-purpura-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1982` |
+| `bg` | `dark:hover:bg-gray-800` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982`<br>`resources/views/livewire/registration/registration-manager.blade.php:605` |
 | `bg` | `dark:bg-purpura-900/30` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:605` |
 | `text` | `dark:text-gray-300` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/student/document-manager.blade.php:123`<br>`resources/views/livewire/student/profile-manager.blade.php:202` |
-| `text` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917`<br>`resources/views/livewire/matricula/portal-matricula.blade.php:154` |
+| `text` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982`<br>`resources/views/livewire/matricula/portal-matricula.blade.php:154` |
 | `text` | `dark:hover:text-purpura-400` | 2 | `resources/views/livewire/student/document-manager.blade.php:123`<br>`resources/views/livewire/student/profile-manager.blade.php:202` |
 | `text` | `dark:text-purpura-200` | 1 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102` |
-| `text` | `dark:text-purpura-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917` |
-| `border` | `— sem dark —` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1609`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1748`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/listagem.blade.php:147` |
-| `border` | `dark:border-gray-600` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917`<br>`resources/views/livewire/student/document-manager.blade.php:123`<br>`resources/views/livewire/student/profile-manager.blade.php:202` |
+| `text` | `dark:text-purpura-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982` |
+| `border` | `— sem dark —` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1609`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1813`<br>`resources/views/livewire/gestao-educacional/ciclo-aprendizagem/listagem.blade.php:147` |
+| `border` | `dark:border-gray-600` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982`<br>`resources/views/livewire/student/document-manager.blade.php:123`<br>`resources/views/livewire/student/profile-manager.blade.php:202` |
 | `border` | `dark:border-gray-700` | 2 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:102`<br>`resources/views/livewire/registration/registration-manager.blade.php:605` |
 | `border` | `dark:border-indigo-700` | 2 | `resources/views/livewire/forms/form-edit.blade.php:56`<br>`resources/views/livewire/forms/form-edit.blade.php:60` |
-| `border` | `dark:border-purpura-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917` |
+| `border` | `dark:border-purpura-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982` |
+
+#### `<div> bg-amber-50` — 10 ocorrências em `div`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `dark:bg-amber-900/30` | 4 | `resources/views/components/session-timeout.blade.php:164`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1654`<br>`resources/views/livewire/forms/form-details.blade.php:121` |
+| `bg` | `— sem dark —` | 3 | `resources/views/livewire/corporate/user-manager.blade.php:319`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:78`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:550` |
+| `bg` | `dark:bg-amber-900/20` | 2 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:400` |
+| `bg` | `dark:bg-amber-950/30` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:817` |
+| `border` | `— sem dark —` | 4 | `resources/views/livewire/corporate/user-manager.blade.php:319`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:78`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:550` |
+| `border` | `dark:border-amber-800` | 3 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:400`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
+| `border` | `dark:border-amber-700` | 1 | `resources/views/components/session-timeout.blade.php:164` |
+| `border` | `dark:border-amber-800/70` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1654` |
+| `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:817` |
+| `text` | `dark:text-amber-400` | 2 | `resources/views/components/session-timeout.blade.php:164`<br>`resources/views/livewire/forms/form-details.blade.php:121` |
+| `text` | `dark:text-amber-300` | 2 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
+| `text` | `— sem dark —` | 1 | `resources/views/livewire/corporate/user-manager.blade.php:319` |
 
 #### `<span> bg-yellow-50` — 9 ocorrências em `span`
 
@@ -45043,6 +45708,17 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `border` | `dark:border-yellow-900/30` | 1 | `resources/views/livewire/conteudo/conteudo-form.blade.php:313` |
 | `border` | `dark:border-gray-700` | 1 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:163` |
 
+#### `<span> bg-emerald-100` — 9 ocorrências em `span`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
+| `bg` | `dark:bg-emerald-900/40` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
+| `text` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
+| `text` | `dark:text-emerald-300` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
+| `border` | `— sem dark —` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
+| `border` | `dark:border-emerald-800` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:37` |
+
 #### `<button> bg-gray-50` — 8 ocorrências em `button`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
@@ -45060,42 +45736,16 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `border` | `dark:border-gray-700` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-manager.blade.php:107`<br>`resources/views/livewire/registration/registration-manager.blade.php:309` |
 | `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:188` |
 
-#### `<span> bg-emerald-100` — 8 ocorrências em `span`
+#### `<button> bg-indigo-50` — 8 ocorrências em `button`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 6 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
-| `bg` | `dark:bg-emerald-900/40` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
-| `text` | `— sem dark —` | 6 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:148`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
-| `text` | `dark:text-emerald-300` | 3 | `resources/views/livewire/registration/kanban-board.blade.php:37`<br>`resources/views/livewire/registration/kanban-board.blade.php:116`<br>`resources/views/livewire/registration/registration-manager.blade.php:148` |
-| `border` | `— sem dark —` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:116` |
-| `border` | `dark:border-emerald-800` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:37` |
-
-#### `<div> bg-amber-50` — 8 ocorrências em `div`
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `text` | `dark:text-amber-300` | 2 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
-| `text` | `— sem dark —` | 1 | `resources/views/livewire/corporate/user-manager.blade.php:319` |
-| `text` | `dark:text-amber-400` | 1 | `resources/views/livewire/forms/form-details.blade.php:121` |
-| `bg` | `— sem dark —` | 3 | `resources/views/livewire/corporate/user-manager.blade.php:319`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:78`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:550` |
-| `bg` | `dark:bg-amber-900/30` | 2 | `resources/views/livewire/forms/form-details.blade.php:121`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
-| `bg` | `dark:bg-amber-900/20` | 2 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:400` |
-| `bg` | `dark:bg-amber-950/30` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:817` |
-| `border` | `— sem dark —` | 4 | `resources/views/livewire/corporate/user-manager.blade.php:319`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:78`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:550` |
-| `border` | `dark:border-amber-800` | 3 | `resources/views/livewire/website/inscricao.blade.php:174`<br>`resources/views/livewire/website/inscricao.blade.php:400`<br>`resources/views/livewire/website/inscricao.blade.php:570` |
-| `border` | `dark:border-gray-800` | 1 | `resources/views/livewire/registration/registration-manager.blade.php:817` |
-
-#### `<button> bg-indigo-50` — 7 ocorrências em `button`
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 10 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202` |
+| `bg` | `— sem dark —` | 12 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202` |
 | `bg` | `dark:bg-indigo-900/30` | 3 | `resources/views/livewire/forms/form-spreadsheet.blade.php:160`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:105`<br>`resources/views/livewire/period/period-details.blade.php:299` |
 | `bg` | `dark:hover:bg-indigo-800` | 1 | `resources/views/livewire/period/period-details.blade.php:299` |
-| `text` | `— sem dark —` | 5 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/hub.blade.php:112` |
+| `text` | `— sem dark —` | 6 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2241` |
 | `text` | `dark:text-indigo-400` | 3 | `resources/views/livewire/forms/form-spreadsheet.blade.php:160`<br>`resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:105`<br>`resources/views/livewire/period/period-details.blade.php:299` |
-| `border` | `— sem dark —` | 4 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/hub.blade.php:112` |
+| `border` | `— sem dark —` | 5 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:38`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:202`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2241` |
 | `border` | `dark:border-indigo-800` | 1 | `resources/views/livewire/forms/form-spreadsheet.blade.php:160` |
 | `border` | `dark:border-indigo-700` | 1 | `resources/views/livewire/period/period-details.blade.php:299` |
 
@@ -45179,6 +45829,20 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-white` | 3 | `resources/views/livewire/period/regras-manager.blade.php:112`<br>`resources/views/livewire/period/regras-manager.blade.php:120`<br>`resources/views/livewire/period/regras-manager.blade.php:130` |
 | `text` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:958` |
 
+#### `<a> bg-gray-100` — 3 ocorrências em `a`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/forms/form-details.blade.php:303`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `text` | `dark:text-gray-200` | 1 | `resources/views/errors/419.blade.php:24` |
+| `text` | `dark:text-indigo-400` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `bg` | `dark:bg-gray-800` | 3 | `resources/views/errors/419.blade.php:24`<br>`resources/views/livewire/forms/form-details.blade.php:303`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `bg` | `— sem dark —` | 3 | `resources/views/errors/419.blade.php:24`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `bg` | `dark:bg-indigo-900/30` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `border` | `dark:border-gray-700` | 2 | `resources/views/errors/419.blade.php:24`<br>`resources/views/livewire/forms/form-details.blade.php:303` |
+| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `border` | `dark:border-indigo-800` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+
 #### `<div> bg-indigo-50/70` — 3 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
@@ -45190,30 +45854,18 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-indigo-300` | 1 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:106` |
 | `text` | `— sem dark —` | 1 | `resources/views/livewire/registration/registration-details.blade.php:709` |
 
-#### `<button> bg-yellow-50` — 3 ocorrências em `button`
+#### `.visivel` — 2 ocorrências em `span`, `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 4 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:114`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:114`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1651` |
-| `bg` | `dark:bg-yellow-900/30` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
-| `bg` | `dark:hover:bg-yellow-800` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
-| `border` | `— sem dark —` | 1 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:114` |
-| `border` | `dark:border-yellow-700` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
-| `text` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1651` |
-| `text` | `dark:text-yellow-400` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
-
-#### `<a> bg-gray-100` — 2 ocorrências em `a`
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-800` | 2 | `resources/views/livewire/forms/form-details.blade.php:303`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `bg` | `— sem dark —` | 2 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `bg` | `dark:bg-indigo-900/30` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/forms/form-details.blade.php:303`<br>`resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `text` | `dark:text-indigo-400` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `border` | `dark:border-gray-700` | 1 | `resources/views/livewire/forms/form-details.blade.php:303` |
-| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
-| `border` | `dark:border-indigo-800` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/listagem.blade.php:55` |
+| `bg` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1727`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1727` |
+| `bg` | `dark:bg-emerald-950/30` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `bg` | `dark:bg-red-950/30` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `text` | `— sem dark —` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1727`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1727` |
+| `text` | `dark:text-emerald-200` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `text` | `dark:text-red-200` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `border` | `dark:border-emerald-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
+| `border` | `dark:border-red-800` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2404` |
 
 #### `<a> bg-indigo-50` — 2 ocorrências em `a`
 
@@ -45226,54 +45878,54 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `border` | `dark:border-indigo-700` | 1 | `resources/views/livewire/period/period-details.blade.php:35` |
 | `border` | `dark:border-indigo-800` | 1 | `resources/views/livewire/period/period-details.blade.php:70` |
 
-#### `<thead> bg-gray-50` — 27 ocorrências em `thead`
+#### `<thead> bg-gray-50` — 28 ocorrências em `thead`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `dark:bg-gray-900/50` | 10 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:20`<br>`resources/views/livewire/company/aprendizes-manager.blade.php:33`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:66` |
-| `bg` | `— sem dark —` | 6 | `resources/views/livewire/auditoria/error-log-manager.blade.php:51`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:35`<br>`resources/views/livewire/financeiro/orcamento-manager.blade.php:54` |
+| `bg` | `— sem dark —` | 7 | `resources/views/livewire/auditoria/error-log-manager.blade.php:51`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:35`<br>`resources/views/livewire/financeiro/orcamento-manager.blade.php:54` |
 | `bg` | `dark:bg-gray-900/80` | 5 | `resources/views/livewire/gestao-educacional/ciclo-aprendizagem/listagem.blade.php:13`<br>`resources/views/livewire/period/period-details.blade.php:223`<br>`resources/views/livewire/period/period-details.blade.php:469` |
 | `bg` | `dark:bg-gray-900/60` | 4 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:75`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:94`<br>`resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:340` |
 | `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/comunicacao/suri/suri-test-dashboard.blade.php:487`<br>`resources/views/livewire/comunicacao/template/template-manager.blade.php:161` |
 | `border` | `dark:border-gray-700` | 16 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:20`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:66`<br>`resources/views/livewire/company/empresa-detalhes.blade.php:117` |
-| `border` | `— sem dark —` | 7 | `resources/views/livewire/auditoria/error-log-manager.blade.php:51`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:35`<br>`resources/views/livewire/financeiro/orcamento-manager.blade.php:54` |
+| `border` | `— sem dark —` | 8 | `resources/views/livewire/auditoria/error-log-manager.blade.php:51`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-manager.blade.php:35`<br>`resources/views/livewire/financeiro/orcamento-manager.blade.php:54` |
 | `border` | `dark:border-gray-800` | 2 | `resources/views/livewire/registration/registration-manager.blade.php:544`<br>`resources/views/livewire/registration/registration-manager.blade.php:736` |
 
-#### `<div> bg-gray-50/50` — 23 ocorrências em `div`
+#### `<div> bg-gray-50/50` — 22 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `border` | `dark:border-gray-700` | 14 | `resources/views/livewire/acl/permission-manager.blade.php:167`<br>`resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:66`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:85` |
 | `border` | `dark:border-gray-800` | 4 | `resources/views/livewire/form-builder/hub.blade.php:53`<br>`resources/views/livewire/registration/registration-manager.blade.php:596`<br>`resources/views/livewire/registration/registration-manager.blade.php:657` |
-| `border` | `— sem dark —` | 3 | `resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904`<br>`resources/views/livewire/registration/registration-details.blade.php:841` |
+| `border` | `— sem dark —` | 2 | `resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904` |
 | `bg` | `dark:bg-gray-800/50` | 9 | `resources/views/livewire/acl/permission-manager.blade.php:167`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:187`<br>`resources/views/livewire/registration/registration-manager.blade.php:596` |
 | `bg` | `dark:bg-gray-800/80` | 4 | `resources/views/livewire/forms/form-edit.blade.php:140`<br>`resources/views/livewire/period/period-edit.blade.php:160`<br>`resources/views/livewire/period/period-manager.blade.php:555` |
-| `bg` | `— sem dark —` | 3 | `resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904`<br>`resources/views/livewire/registration/registration-details.blade.php:841` |
 | `bg` | `dark:bg-gray-900/40` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-details.blade.php:66`<br>`resources/views/livewire/comunicacao/automacao/esteira-details.blade.php:85` |
+| `bg` | `— sem dark —` | 2 | `resources/views/livewire/curso/curso-detalhes.blade.php:92`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:904` |
 | `bg` | `dark:bg-gray-900/30` | 2 | `resources/views/livewire/period/period-details.blade.php:309`<br>`resources/views/livewire/unidade/unidade-manager.blade.php:160` |
 | `bg` | `dark:bg-gray-900/80` | 1 | `resources/views/livewire/curso/curso-manager.blade.php:179` |
 | `bg` | `dark:bg-gray-800/40` | 1 | `resources/views/livewire/form-builder/hub.blade.php:53` |
 | `bg` | `dark:bg-gray-900/20` | 1 | `resources/views/livewire/period/period-details.blade.php:143` |
 
-#### `<div> bg-gray-200` — 19 ocorrências em `div`
+#### `<div> bg-gray-200` — 20 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-700` | 12 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:172`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137` |
+| `bg` | `dark:bg-gray-700` | 13 | `resources/views/components/session-timeout.blade.php:158`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:172` |
 | `bg` | `— sem dark —` | 9 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:414` |
 | `border` | `— sem dark —` | 4 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137` |
 | `border` | `dark:border-gray-600` | 2 | `resources/views/livewire/acl/role-permission-manager.blade.php:117`<br>`resources/views/livewire/corporate/user-extra-permission-manager.blade.php:137` |
 
-#### `<div> bg-indigo-50` — 12 ocorrências em `div`
+#### `<div> bg-indigo-50` — 13 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `dark:bg-indigo-900/30` | 6 | `resources/views/livewire/company/dashboard.blade.php:18`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:920`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:46` |
-| `bg` | `— sem dark —` | 3 | `resources/views/livewire/curso/curso-detalhes.blade.php:109`<br>`resources/views/livewire/form-builder/hub.blade.php:224`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:130` |
+| `bg` | `— sem dark —` | 4 | `resources/views/livewire/curso/curso-detalhes.blade.php:109`<br>`resources/views/livewire/form-builder/hub.blade.php:224`<br>`resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:130` |
 | `bg` | `dark:bg-indigo-900/10` | 2 | `resources/views/livewire/forms/form-edit.blade.php:50`<br>`resources/views/livewire/student/student-manager.blade.php:257` |
 | `bg` | `dark:bg-indigo-900/20` | 1 | `resources/views/livewire/company/dashboard.blade.php:55` |
 | `border` | `dark:border-indigo-800` | 7 | `resources/views/livewire/company/dashboard.blade.php:55`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:920`<br>`resources/views/livewire/forms/form-edit.blade.php:50` |
-| `border` | `— sem dark —` | 2 | `resources/views/livewire/curso/curso-detalhes.blade.php:109`<br>`resources/views/livewire/form-builder/hub.blade.php:224` |
+| `border` | `— sem dark —` | 3 | `resources/views/livewire/curso/curso-detalhes.blade.php:109`<br>`resources/views/livewire/form-builder/hub.blade.php:224`<br>`resources/views/livewire/registration/registration-details.blade.php:1120` |
 
 #### `<label> bg-gray-50` — 9 ocorrências em `label`
 
@@ -45294,7 +45946,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `dark:bg-gray-900/20` | 5 | `resources/views/livewire/period/period-details.blade.php:201`<br>`resources/views/livewire/period/period-details.blade.php:339`<br>`resources/views/livewire/period/period-edit.blade.php:211` |
-| `bg` | `dark:bg-gray-800/80` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:421`<br>`resources/views/livewire/corporate/user-manager.blade.php:361`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2057` |
+| `bg` | `dark:bg-gray-800/80` | 3 | `resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:421`<br>`resources/views/livewire/corporate/user-manager.blade.php:361`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2122` |
 | `bg` | `dark:bg-gray-900` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:103` |
 | `border` | `dark:border-gray-700` | 5 | `resources/views/livewire/corporate/user-manager.blade.php:361`<br>`resources/views/livewire/period/period-details.blade.php:201`<br>`resources/views/livewire/period/period-edit.blade.php:211` |
 | `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:103` |
@@ -45304,19 +45956,20 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `border` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:458`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:385`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1079` |
-| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1797` |
+| `border` | `dark:border-gray-600` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1862` |
 | `bg` | `— sem dark —` | 8 | `resources/views/livewire/comunicacao/template/template-form.blade.php:458`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:385`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1079` |
-| `bg` | `dark:bg-gray-900` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1797` |
+| `bg` | `dark:bg-gray-900` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1862` |
 
-#### `<div> bg-gray-50/70` — 6 ocorrências em `div`
+#### `<div> bg-gray-50/70` — 7 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `border` | `dark:border-gray-700` | 4 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:148`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:119`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:296` |
+| `border` | `dark:border-gray-700` | 5 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:148`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:119`<br>`resources/views/livewire/comunicacao/comunicado/comunicado-form.blade.php:296` |
 | `border` | `dark:border-gray-800` | 1 | `resources/views/components/dynamic-filter.blade.php:25` |
 | `border` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:458` |
+| `border` | `dark:border-emerald-800/60` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2311` |
 | `bg` | `dark:bg-gray-900/50` | 4 | `resources/views/components/dynamic-filter.blade.php:25`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:148`<br>`resources/views/livewire/comunicacao/automacao/esteira-form.blade.php:119` |
-| `bg` | `dark:bg-gray-800/50` | 1 | `resources/views/livewire/comunicacao/template/template-form.blade.php:452` |
+| `bg` | `dark:bg-gray-800/50` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:452`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2311` |
 | `bg` | `— sem dark —` | 1 | `resources/views/livewire/financeiro/orcamento-editor.blade.php:458` |
 
 #### `<button> bg-gray-200` — 6 ocorrências em `button`
@@ -45328,6 +45981,16 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `— sem dark —` | 6 | `resources/views/livewire/auditoria/error-log-manager.blade.php:165`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:263`<br>`resources/views/livewire/comunicacao/email-log/email-log-manager.blade.php:297` |
 | `text` | `dark:text-gray-300` | 6 | `resources/views/livewire/comunicacao/template/template-form.blade.php:152`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:152`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:140` |
 | `text` | `dark:text-white` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:152`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:140`<br>`resources/views/livewire/registration/kanban-board.blade.php:86` |
+
+#### `<span> bg-gray-200` — 6 ocorrências em `span`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `dark:bg-gray-700` | 4 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2319`<br>`resources/views/livewire/matricula/ia-config-manager.blade.php:99`<br>`resources/views/livewire/period/period-edit.blade.php:356` |
+| `bg` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:47`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1804` |
+| `text` | `dark:text-gray-300` | 3 | `resources/views/livewire/matricula/ia-config-manager.blade.php:99`<br>`resources/views/livewire/period/period-edit.blade.php:356`<br>`resources/views/livewire/period/period-manager.blade.php:699` |
+| `text` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:47`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1804` |
+| `text` | `dark:text-gray-200` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2319` |
 
 #### `<div> bg-red-50/50` — 6 ocorrências em `div`
 
@@ -45357,15 +46020,6 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `— sem dark —` | 5 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:454`<br>`resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:454`<br>`resources/views/livewire/financeiro/orcamento-editor.blade.php:639` |
 | `text` | `dark:text-purpura-400` | 1 | `resources/views/livewire/period/period-edit.blade.php:30` |
 | `text` | `dark:hover:text-gray-300` | 1 | `resources/views/livewire/registration/registration-details.blade.php:106` |
-
-#### `<span> bg-gray-200` — 5 ocorrências em `span`
-
-| Propriedade | Valor no tema escuro | Qtd | Exemplos |
-| --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-700` | 3 | `resources/views/livewire/matricula/ia-config-manager.blade.php:99`<br>`resources/views/livewire/period/period-edit.blade.php:356`<br>`resources/views/livewire/period/period-manager.blade.php:699` |
-| `bg` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:47`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1739` |
-| `text` | `dark:text-gray-300` | 3 | `resources/views/livewire/matricula/ia-config-manager.blade.php:99`<br>`resources/views/livewire/period/period-edit.blade.php:356`<br>`resources/views/livewire/period/period-manager.blade.php:699` |
-| `text` | `— sem dark —` | 2 | `resources/views/livewire/financeiro/orcamento-aprovacao-editor.blade.php:47`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1739` |
 
 #### `<thead> bg-gray-100` — 5 ocorrências em `thead`
 
@@ -45402,9 +46056,9 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `dark:bg-gray-800` | 2 | `resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:108`<br>`resources/views/livewire/comunicacao/automacao/automacao-form.blade.php:108` |
-| `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1962`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:1964` |
-| `text` | `dark:text-purpura-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1962` |
-| `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1964` |
+| `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2027`<br>`resources/views/livewire/form-builder/dynamic-fields.blade.php:2029` |
+| `text` | `dark:text-purpura-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2027` |
+| `text` | `dark:text-gray-300` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2029` |
 
 #### `<div> bg-gray-50/60` — 4 ocorrências em `div`
 
@@ -45429,7 +46083,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 5 | `resources/views/livewire/registration/registration-details.blade.php:909`<br>`resources/views/livewire/registration/registration-details.blade.php:909`<br>`resources/views/livewire/registration/registration-details.blade.php:909` |
+| `bg` | `— sem dark —` | 5 | `resources/views/livewire/registration/registration-details.blade.php:910`<br>`resources/views/livewire/registration/registration-details.blade.php:910`<br>`resources/views/livewire/registration/registration-details.blade.php:910` |
 | `bg` | `dark:bg-gray-900` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:138`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:536` |
 | `text` | `— sem dark —` | 3 | `resources/views/livewire/comunicacao/template/template-form.blade.php:138`<br>`resources/views/livewire/registration/registration-manager.blade.php:947`<br>`resources/views/livewire/registration/registration-manager.blade.php:947` |
 | `text` | `dark:text-gray-400` | 2 | `resources/views/livewire/comunicacao/template/template-form.blade.php:138`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:536` |
@@ -45447,10 +46101,10 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-indigo-900/20` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1824`<br>`resources/views/livewire/period/period-manager.blade.php:485` |
+| `bg` | `dark:bg-indigo-900/20` | 2 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1889`<br>`resources/views/livewire/period/period-manager.blade.php:485` |
 | `bg` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:247` |
 | `bg` | `dark:bg-indigo-950/30` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:329` |
-| `border` | `dark:border-indigo-800` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1824`<br>`resources/views/livewire/period/period-manager.blade.php:485`<br>`resources/views/livewire/registration/kanban-board.blade.php:329` |
+| `border` | `dark:border-indigo-800` | 3 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1889`<br>`resources/views/livewire/period/period-manager.blade.php:485`<br>`resources/views/livewire/registration/kanban-board.blade.php:329` |
 | `border` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/hub.blade.php:247` |
 
 #### `<div> bg-green-100` — 4 ocorrências em `div`
@@ -45520,6 +46174,16 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `border` | `dark:border-indigo-800` | 1 | `resources/views/components/dynamic-filter-chips.blade.php:34` |
 | `border` | `— sem dark —` | 1 | `resources/views/livewire/registration/registration-details.blade.php:142` |
 
+#### `<button> bg-yellow-50` — 2 ocorrências em `button`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `— sem dark —` | 2 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:114`<br>`resources/views/livewire/conteudo/conteudo-manager.blade.php:114` |
+| `bg` | `dark:bg-yellow-900/30` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
+| `bg` | `dark:hover:bg-yellow-800` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
+| `border` | `— sem dark —` | 1 | `resources/views/livewire/conteudo/conteudo-manager.blade.php:114` |
+| `border` | `dark:border-yellow-700` | 1 | `resources/views/livewire/period/period-details.blade.php:294` |
+
 #### `.revisao` — 2 ocorrências em `button`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
@@ -45549,8 +46213,8 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `text` | `dark:text-yellow-500` | 2 | `resources/views/livewire/acl/permission-manager.blade.php:245`<br>`resources/views/livewire/feature-toggle/feature-manager.blade.php:265` |
 | `text` | `dark:text-green-400` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:18` |
 | `text` | `dark:text-blue-400` | 1 | `resources/views/livewire/website/inscricao.blade.php:224` |
-| `text` | `dark:text-white` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:656` |
-| `text` | `dark:text-gray-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:657` |
+| `text` | `dark:text-white` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:751` |
+| `text` | `dark:text-gray-200` | 1 | `resources/views/livewire/website/partials/render-dinamico.blade.php:752` |
 
 #### `<input> bg-transparent` — 15 ocorrências em `input`
 
@@ -45582,12 +46246,13 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `bg` | `dark:bg-emerald-900/30` | 1 | `resources/views/livewire/forms/form-manager.blade.php:118` |
 | `bg` | `dark:hover:bg-gray-600` | 1 | `resources/views/livewire/forms/form-manager.blade.php:118` |
 
-#### `<div> bg-gray-300` — 7 ocorrências em `div`
+#### `<div> bg-gray-300` — 8 ocorrências em `div`
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `bg` | `dark:bg-gray-600` | 4 | `resources/views/livewire/conteudo/conteudo-publico.blade.php:177`<br>`resources/views/livewire/conteudo/conteudo-publico.blade.php:177`<br>`resources/views/livewire/registration/kanban-board.blade.php:259` |
 | `bg` | `— sem dark —` | 3 | `resources/views/livewire/corporate/user-manager.blade.php:179`<br>`resources/views/livewire/corporate/user-manager.blade.php:190`<br>`resources/views/livewire/corporate/user-manager.blade.php:201` |
+| `bg` | `dark:bg-gray-700` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2258` |
 
 #### `<input> !bg-red-50` — 7 ocorrências em `input`
 
@@ -45609,7 +46274,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | --- | --- | ---: | --- |
 | `text` | `dark:hover:text-gray-200` | 2 | `resources/views/livewire/period/period-edit.blade.php:355`<br>`resources/views/livewire/period/period-manager.blade.php:698` |
 | `text` | `dark:text-gray-600` | 1 | `resources/views/components/table.blade.php:68` |
-| `text` | `dark:text-purpura-400` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1885` |
+| `text` | `dark:text-purpura-400` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1950` |
 | `text` | `dark:text-orange-400` | 1 | `resources/views/livewire/gestao-educacional/gerador-mock-aprendizagem.blade.php:12` |
 | `text` | `dark:text-yellow-400` | 1 | `resources/views/livewire/website/inscricao.blade.php:160` |
 
@@ -45619,6 +46284,13 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | --- | --- | ---: | --- |
 | `bg` | `dark:!bg-red-900/30` | 9 | `resources/views/livewire/website/inscricao.blade.php:442`<br>`resources/views/livewire/website/inscricao.blade.php:442`<br>`resources/views/livewire/website/inscricao.blade.php:453` |
 | `bg` | `dark:!bg-green-900/20` | 6 | `resources/views/livewire/website/inscricao.blade.php:442`<br>`resources/views/livewire/website/inscricao.blade.php:442`<br>`resources/views/livewire/website/inscricao.blade.php:453` |
+
+#### `<body> bg-slate-50` — 5 ocorrências em `body`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `dark:bg-gray-900` | 4 | `resources/views/components/layouts/auth.blade.php:33`<br>`resources/views/components/layouts/company.blade.php:36`<br>`resources/views/components/layouts/student-app.blade.php:40` |
+| `bg` | `dark:bg-gray-950` | 1 | `resources/views/errors/layout.blade.php:27` |
 
 #### `<button> bg-gray-900` — 5 ocorrências em `button`
 
@@ -45633,8 +46305,8 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `text` | `dark:text-gray-200` | 5 | `resources/views/livewire/website/formulario-publico.blade.php:151`<br>`resources/views/livewire/website/formulario-publico.blade.php:151`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:152` |
-| `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/website/partials/render-dinamico.blade.php:224`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:234` |
+| `text` | `dark:text-gray-200` | 5 | `resources/views/livewire/website/formulario-publico.blade.php:151`<br>`resources/views/livewire/website/formulario-publico.blade.php:151`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:247` |
+| `text` | `dark:text-gray-300` | 2 | `resources/views/livewire/website/partials/render-dinamico.blade.php:319`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:329` |
 
 #### `<div> bg-white/60` — 4 ocorrências em `div`
 
@@ -45656,8 +46328,8 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-800` | 8 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1015` |
-| `bg` | `dark:bg-red-900/20` | 6 | `resources/views/livewire/website/partials/render-dinamico.blade.php:1015`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1015`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1068` |
+| `bg` | `dark:bg-gray-800` | 8 | `resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/formulario-publico.blade.php:154`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1110` |
+| `bg` | `dark:bg-red-900/20` | 6 | `resources/views/livewire/website/partials/render-dinamico.blade.php:1110`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1110`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:1163` |
 
 #### `<div> bg-white/20` — 3 ocorrências em `div`
 
@@ -45678,7 +46350,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
 | `border` | `dark:border-blue-800` | 2 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:90`<br>`resources/views/livewire/comunicacao/template/template-form.blade.php:362` |
-| `border` | `dark:border-blue-800/50` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1941` |
+| `border` | `dark:border-blue-800/50` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:2006` |
 
 #### `<div> bg-orange-100` — 3 ocorrências em `div`
 
@@ -45698,7 +46370,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `dark:bg-gray-800` | 3 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:109`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:116`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:261` |
+| `bg` | `dark:bg-gray-800` | 3 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:109`<br>`resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:116`<br>`resources/views/livewire/website/partials/render-dinamico.blade.php:356` |
 | `bg` | `dark:bg-gray-900` | 1 | `resources/views/livewire/gestao-educacional/avaliacao/responder.blade.php:116` |
 
 #### `<textarea> bg-gray-50` — 3 ocorrências em `textarea`
@@ -45712,7 +46384,7 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 
 | Propriedade | Valor no tema escuro | Qtd | Exemplos |
 | --- | --- | ---: | --- |
-| `bg` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1724` |
+| `bg` | `— sem dark —` | 1 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1789` |
 | `bg` | `dark:bg-gray-800` | 1 | `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:18` |
 
 #### `<tr> bg-gray-50` — 2 ocorrências em `tr`
@@ -45738,6 +46410,13 @@ _Também estilizado por regra CSS, além das classes `dark:`:_
 | `bg` | `— sem dark —` | 2 | `resources/views/livewire/period/period-details.blade.php:31`<br>`resources/views/livewire/period/period-details.blade.php:460` |
 | `bg` | `dark:bg-yellow-900/30` | 1 | `resources/views/livewire/period/period-details.blade.php:31` |
 | `bg` | `dark:bg-yellow-900/40` | 1 | `resources/views/livewire/period/period-details.blade.php:460` |
+
+#### `<div> bg-indigo-600` — 2 ocorrências em `div`
+
+| Propriedade | Valor no tema escuro | Qtd | Exemplos |
+| --- | --- | ---: | --- |
+| `bg` | `dark:bg-indigo-500` | 1 | `resources/views/livewire/registration/kanban-board.blade.php:345` |
+| `bg` | `dark:bg-indigo-700` | 1 | `resources/views/livewire/registration/registration-details.blade.php:1062` |
 
 #### `.unified-container` — 1 ocorrências em `div`
 
@@ -45812,6 +46491,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/components/toast.blade.php:59` | `button` | — | `hover:bg-white/20` | _(sem padrão no projeto)_ |
 | `resources/views/components/toggle.blade.php:3` | `button` ⚡ | — | `bg-gray-300` | `dark:bg-gray-600` |
 | `resources/views/components/toggle.blade.php:6` | `span` ⚡ | — | `bg-white` | `dark:bg-gray-800` |
+| `resources/views/errors/419.blade.php:24` | `a` | — | `hover:bg-gray-200` | `dark:hover:bg-gray-600` |
 | `resources/views/livewire/acl/permission-manager.blade.php:52` | `div` | — | `border-indigo-200` | `dark:border-indigo-800` |
 | `resources/views/livewire/acl/permission-manager.blade.php:54` | `select` | — | `text-gray-800` | `dark:text-gray-200` |
 | `resources/views/livewire/acl/permission-manager.blade.php:63` | `button` | — | `hover:text-blue-800` | _(sem padrão no projeto)_ |
@@ -45847,7 +46527,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:124` | `div` | — | `bg-green-50`<br>`border-green-200` | `dark:bg-green-900/30`<br>`dark:border-green-800` |
 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:126` | `span` | — | `text-green-700` | `dark:text-green-400` |
 | `resources/views/livewire/admin/solicitacoes-manager.blade.php:165` | `button` | — | `bg-white`<br>`border-gray-300`<br>`text-gray-700`<br>`hover:bg-gray-100` | `dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
-| `resources/views/livewire/auditoria/auditoria-manager.blade.php:160` | `span` | — | `bg-green-100`<br>`text-green-800`<br>`border-green-200`<br>`bg-blue-100`<br>`text-blue-800`<br>`border-blue-200`<br>`bg-red-100`<br>`text-red-800`<br>`border-red-200`<br>`bg-gray-100`<br>`text-gray-800`<br>`border-gray-200` | `dark:bg-green-900/30`<br>`dark:text-green-400`<br>`dark:border-green-800`<br>`dark:bg-green-900/30`<br>`dark:text-blue-300`<br>`dark:border-blue-800`<br>`dark:bg-red-900/30`<br>`dark:text-red-400`<br>`dark:border-red-800`<br>`dark:bg-gray-700`<br>`dark:text-gray-200`<br>`dark:border-gray-700` |
+| `resources/views/livewire/auditoria/auditoria-manager.blade.php:161` | `span` | — | `bg-green-100`<br>`text-green-800`<br>`border-green-200`<br>`bg-blue-100`<br>`text-blue-800`<br>`border-blue-200`<br>`bg-red-100`<br>`text-red-800`<br>`border-red-200`<br>`bg-gray-100`<br>`text-gray-800`<br>`border-gray-200` | `dark:bg-green-900/30`<br>`dark:text-green-400`<br>`dark:border-green-800`<br>`dark:bg-red-900/30`<br>`dark:text-blue-300`<br>`dark:border-blue-800`<br>`dark:bg-red-900/30`<br>`dark:text-red-400`<br>`dark:border-red-800`<br>`dark:bg-gray-700`<br>`dark:text-gray-200`<br>`dark:border-gray-700` |
 | `resources/views/livewire/auditoria/error-log-manager.blade.php:8` | `button` | — | `bg-red-50`<br>`border-red-200`<br>`hover:bg-red-100` | `dark:bg-red-900/20`<br>`dark:border-red-800`<br>_(sem padrão no projeto)_ |
 | `resources/views/livewire/auditoria/error-log-manager.blade.php:17` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
 | `resources/views/livewire/auditoria/error-log-manager.blade.php:21` | `select` | — | `border-gray-300` | `dark:border-gray-600` |
@@ -46094,7 +46774,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:68` | `div` | — | `bg-red-50`<br>`border-red-200`<br>`text-red-700` | `dark:bg-red-900/20`<br>`dark:border-red-800`<br>`dark:text-red-400` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:81` | `button` | — | `bg-gray-100`<br>`border-gray-200` | `dark:bg-gray-700`<br>`dark:border-gray-700` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:91` | `a` | — | `bg-gray-200`<br>`hover:bg-gray-300`<br>`text-gray-700` | `dark:bg-gray-700`<br>`dark:hover:bg-gray-700`<br>`dark:text-gray-300` |
-| `resources/views/livewire/comunicacao/template/template-form.blade.php:114` | `span` | — | `bg-blue-100`<br>`text-blue-700`<br>`border-blue-200` | `dark:bg-green-900/30`<br>`dark:text-blue-400`<br>`dark:border-blue-800` |
+| `resources/views/livewire/comunicacao/template/template-form.blade.php:114` | `span` | — | `bg-blue-100`<br>`text-blue-700`<br>`border-blue-200` | `dark:bg-red-900/30`<br>`dark:text-blue-400`<br>`dark:border-blue-800` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:118` | `span` | — | `bg-emerald-100`<br>`text-emerald-700`<br>`border-emerald-200` | `dark:bg-emerald-900/40`<br>`dark:text-emerald-400`<br>`dark:border-emerald-800` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:135` | `button` ⚡ | `email` | `hover:text-gray-900` | `dark:hover:text-white` |
 | `resources/views/livewire/comunicacao/template/template-form.blade.php:138` | `button` ⚡ | `whatsapp` | `hover:text-gray-900` | `dark:hover:text-white` |
@@ -46787,38 +47467,52 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1640` | `label` | — | `border-gray-200`<br>`hover:bg-gray-50` | `dark:border-gray-700`<br>`dark:hover:bg-gray-700` |
 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1641` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
 | `resources/views/livewire/form-builder/dynamic-fields.blade.php:1643` | `span` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1650` | `div` | — | `border-yellow-200` | `dark:border-yellow-800` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1651` | `button` | — | `bg-yellow-50`<br>`hover:bg-yellow-100`<br>`text-yellow-800` | `dark:bg-yellow-900/30`<br>`dark:hover:bg-yellow-800`<br>`dark:text-yellow-400` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1655` | `div` | — | `bg-white`<br>`border-yellow-200` | `dark:bg-gray-800`<br>`dark:border-yellow-800` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1657` | `label` | — | `text-yellow-700` | `dark:text-yellow-400` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1669` | `select` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1675` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1684` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1685` | `button` | — | `bg-white`<br>`border-gray-300`<br>`text-gray-700`<br>`hover:bg-gray-50` | `dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1724` | `form` | — | `bg-white` | `dark:bg-gray-800` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1736` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1737` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1739` | `span` | — | `bg-gray-200`<br>`border-gray-300`<br>`text-gray-600` | `dark:bg-gray-700`<br>`dark:border-gray-600`<br>`dark:text-gray-300` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1740` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1746` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1747` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1748` | `label` | — | `border-gray-300`<br>`bg-white`<br>`hover:bg-gray-50` | `dark:border-gray-600`<br>`dark:bg-gray-800`<br>`dark:hover:bg-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1757` | `div` | — | `border-gray-200` | `dark:border-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1760` | `select` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1769` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1773` | `input` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1779` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1780` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1784` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1788` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1835` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1843` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1851` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1917` | `label` ⚡ | — | `text-gray-600` | `dark:text-gray-300` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2047` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2070` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2099` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2120` | `button` | — | `text-gray-600`<br>`bg-white`<br>`border-gray-300`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:hover:bg-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1659` | `span` ⚡ | `avancado` | `bg-amber-200`<br>`text-amber-900` | _(sem padrão no projeto)_<br>`dark:text-amber-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1701` | `label` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1702` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1705` | `label` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1706` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1727` | `span` ⚡ | `visivel` | `bg-emerald-100`<br>`text-emerald-800`<br>`bg-red-100`<br>`text-red-800` | `dark:bg-emerald-900/40`<br>`dark:text-emerald-300`<br>`dark:bg-red-900/30`<br>`dark:text-red-400` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1749` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1750` | `button` | — | `bg-white`<br>`border-gray-300`<br>`text-gray-700`<br>`hover:bg-gray-50` | `dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1789` | `form` | — | `bg-white` | `dark:bg-gray-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1801` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1802` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1804` | `span` | — | `bg-gray-200`<br>`border-gray-300`<br>`text-gray-600` | `dark:bg-gray-700`<br>`dark:border-gray-600`<br>`dark:text-gray-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1805` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1811` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1812` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1813` | `label` | — | `border-gray-300`<br>`bg-white`<br>`hover:bg-gray-50` | `dark:border-gray-600`<br>`dark:bg-gray-800`<br>`dark:hover:bg-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1822` | `div` | — | `border-gray-200` | `dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1825` | `select` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1834` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1838` | `input` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1844` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1845` | `label` | — | `text-gray-800` | `dark:text-gray-200` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1849` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1853` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1900` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1908` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1916` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:1982` | `label` ⚡ | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2112` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2135` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2164` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2185` | `button` | — | `text-gray-600`<br>`bg-white`<br>`border-gray-300`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:hover:bg-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2225` | `button` | — | `hover:bg-white/10` | `dark:hover:bg-gray-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2241` | `button` | — | `bg-indigo-50`<br>`hover:bg-indigo-100`<br>`text-indigo-700`<br>`border-indigo-200` | `dark:bg-indigo-900/30`<br>`dark:hover:bg-indigo-800`<br>`dark:text-indigo-400`<br>`dark:border-indigo-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2244` | `button` | — | `bg-amber-50`<br>`hover:bg-amber-100`<br>`text-amber-800`<br>`border-amber-200` | `dark:bg-amber-900/30`<br>_(sem padrão no projeto)_<br>`dark:text-amber-300`<br>`dark:border-amber-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2260` | `button` ⚡ | `conector` | `hover:text-gray-800` | `dark:hover:text-gray-200` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2265` | `button` ⚡ | `conector` | `hover:text-gray-800` | `dark:hover:text-gray-200` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2283` | `span` ⚡ | — | `bg-emerald-50`<br>`text-emerald-700`<br>`border-emerald-200`<br>`bg-red-50`<br>`text-red-700`<br>`border-red-200` | `dark:bg-emerald-900/30`<br>`dark:text-emerald-400`<br>`dark:border-emerald-800`<br>`dark:bg-red-900/20`<br>`dark:text-red-400`<br>`dark:border-red-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2289` | `button` | — | `hover:bg-indigo-50`<br>`text-indigo-700`<br>`border-indigo-200` | `dark:hover:bg-gray-600`<br>`dark:text-indigo-400`<br>`dark:border-indigo-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2292` | `button` | — | `hover:bg-amber-50`<br>`text-amber-700`<br>`border-amber-200` | `dark:hover:bg-gray-600`<br>`dark:text-amber-400`<br>`dark:border-amber-800` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2323` | `select` ⚡ | `conector` | `bg-amber-50`<br>`text-amber-800`<br>`bg-indigo-50`<br>`text-indigo-800` | `dark:bg-amber-900/30`<br>`dark:text-amber-300`<br>`dark:bg-indigo-900/30`<br>`dark:text-indigo-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2357` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2358` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2371` | `span` ⚡ | — | `bg-emerald-100`<br>`text-emerald-800`<br>`bg-gray-200`<br>`text-gray-600` | `dark:bg-emerald-900/40`<br>`dark:text-emerald-300`<br>`dark:bg-gray-700`<br>`dark:text-gray-300` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2435` | `div` | — | `border-gray-200` | `dark:border-gray-700` |
+| `resources/views/livewire/form-builder/dynamic-fields.blade.php:2453` | `button` | — | `text-gray-600`<br>`bg-gray-100`<br>`hover:bg-gray-200` | `dark:text-gray-300`<br>`dark:bg-gray-700`<br>`dark:hover:bg-gray-600` |
 | `resources/views/livewire/form-builder/hub.blade.php:15` | `div` | — | `bg-indigo-100` | `dark:bg-indigo-900/30` |
 | `resources/views/livewire/form-builder/hub.blade.php:27` | `div` | — | `bg-orange-100` | `dark:bg-orange-900/50` |
 | `resources/views/livewire/form-builder/hub.blade.php:68` | `button` | — | `bg-amber-50`<br>`hover:bg-amber-100`<br>`text-amber-800`<br>`border-amber-200` | `dark:bg-amber-900/30`<br>_(sem padrão no projeto)_<br>`dark:text-amber-300`<br>`dark:border-amber-800` |
@@ -46897,7 +47591,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/forms/form-edit.blade.php:111` | `input` | — | `border-gray-300` | `dark:border-gray-600` |
 | `resources/views/livewire/forms/form-manager.blade.php:42` | `span` | — | `bg-emerald-50`<br>`text-emerald-700`<br>`border-emerald-200` | `dark:bg-emerald-900/30`<br>`dark:text-emerald-400`<br>`dark:border-emerald-800` |
 | `resources/views/livewire/forms/form-manager.blade.php:46` | `span` | — | `bg-amber-50`<br>`text-amber-700`<br>`border-amber-200` | `dark:bg-amber-900/30`<br>`dark:text-amber-400`<br>`dark:border-amber-800` |
-| `resources/views/livewire/forms/form-manager.blade.php:71` | `span` | — | `bg-purple-50`<br>`text-purple-700`<br>`border-purple-200` | _(sem padrão no projeto)_<br>_(sem padrão no projeto)_<br>`dark:border-green-800` |
+| `resources/views/livewire/forms/form-manager.blade.php:71` | `span` | — | `bg-purple-50`<br>`text-purple-700`<br>`border-purple-200` | _(sem padrão no projeto)_<br>_(sem padrão no projeto)_<br>`dark:border-red-800` |
 | `resources/views/livewire/forms/form-manager.blade.php:73` | `span` | — | `bg-gray-100`<br>`text-gray-700`<br>`border-gray-200` | `dark:bg-gray-700`<br>`dark:text-gray-300`<br>`dark:border-gray-700` |
 | `resources/views/livewire/forms/form-spreadsheet.blade.php:47` | `button` | — | `hover:bg-red-100` | _(sem padrão no projeto)_ |
 | `resources/views/livewire/forms/form-spreadsheet.blade.php:53` | `button` ⚡ | — | `hover:bg-gray-200` | `dark:hover:bg-gray-600` |
@@ -46957,7 +47651,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:67` | `div` ⚡ | `dot` | `bg-white` | `dark:bg-gray-800` |
 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:105` | `button` | — | `hover:bg-indigo-100` | `dark:hover:bg-indigo-800` |
 | `resources/views/livewire/gestao-educacional/periodo-avaliacao/detalhes.blade.php:131` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
-| `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:108` | `div` | — | `bg-blue-100` | `dark:bg-green-900/30` |
+| `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:108` | `div` | — | `bg-blue-100` | `dark:bg-red-900/30` |
 | `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:130` | `div` | — | `bg-indigo-50` | `dark:bg-indigo-900/30` |
 | `resources/views/livewire/gestao-educacional/turma/detalhes.blade.php:138` | `span` ⚡ | `ativa` | `bg-green-100`<br>`text-green-700`<br>`bg-red-100`<br>`text-red-700` | `dark:bg-green-900/30`<br>`dark:text-green-400`<br>`dark:bg-red-900/30`<br>`dark:text-red-400` |
 | `resources/views/livewire/importacao/import-progress.blade.php:4` | `a` | — | `bg-blue-50`<br>`border-blue-200`<br>`hover:bg-blue-100` | `dark:bg-blue-900/30`<br>`dark:border-blue-800`<br>_(sem padrão no projeto)_ |
@@ -47024,7 +47718,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/importacao/importacao-manager.blade.php:265` | `div` | — | `bg-white` | `dark:bg-gray-800` |
 | `resources/views/livewire/importacao/importacao-manager.blade.php:267` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
 | `resources/views/livewire/importacao/importacao-manager.blade.php:269` | `h3` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/importacao/importacao-manager.blade.php:272` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-green-900/30`<br>`dark:text-blue-400` |
+| `resources/views/livewire/importacao/importacao-manager.blade.php:272` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-red-900/30`<br>`dark:text-blue-400` |
 | `resources/views/livewire/importacao/importacao-manager.blade.php:277` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
 | `resources/views/livewire/importacao/importacao-manager.blade.php:280` | `span` | — | `text-gray-700` | `dark:text-gray-300` |
 | `resources/views/livewire/importacao/importacao-manager.blade.php:284` | `select` | — | `bg-white`<br>`border-gray-300` | `dark:bg-gray-800`<br>`dark:border-gray-600` |
@@ -47086,7 +47780,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/matricula/ia-config-manager.blade.php:192` | `button` | — | `hover:bg-red-50` | `dark:hover:bg-gray-600` |
 | `resources/views/livewire/matricula/ia-config-manager.blade.php:243` | `button` | — | `text-gray-600`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
 | `resources/views/livewire/matricula/ia-config-manager.blade.php:280` | `button` | — | `text-gray-600`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
-| `resources/views/livewire/matricula/ia-config-manager.blade.php:337` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-green-900/30`<br>`dark:text-blue-400` |
+| `resources/views/livewire/matricula/ia-config-manager.blade.php:337` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-red-900/30`<br>`dark:text-blue-400` |
 | `resources/views/livewire/matricula/ia-config-manager.blade.php:357` | `button` | — | `text-gray-600`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:hover:bg-gray-700` |
 | `resources/views/livewire/matricula/portal-matricula.blade.php:1` | `div` | — | `bg-gray-50` | `dark:bg-gray-900/50` |
 | `resources/views/livewire/matricula/portal-matricula.blade.php:5` | `h2` | — | `text-gray-900` | `dark:text-white` |
@@ -47334,40 +48028,49 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/registration/registration-details.blade.php:760` | `p` | — | `text-gray-600` | `dark:text-gray-300` |
 | `resources/views/livewire/registration/registration-details.blade.php:772` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
 | `resources/views/livewire/registration/registration-details.blade.php:774` | `h3` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/registration/registration-details.blade.php:785` | `select` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/registration/registration-details.blade.php:794` | `select` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/registration/registration-details.blade.php:808` | `button` | — | `bg-gray-100`<br>`hover:bg-gray-200`<br>`text-gray-700` | `dark:bg-gray-700`<br>`dark:hover:bg-gray-600`<br>`dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:819` | `span` | — | `bg-indigo-50`<br>`text-indigo-700`<br>`border-indigo-200` | `dark:bg-indigo-900/30`<br>`dark:text-indigo-400`<br>`dark:border-indigo-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:828` | `div` | — | `border-indigo-200`<br>`bg-gray-50` | `dark:border-indigo-800`<br>`dark:bg-gray-900/50` |
-| `resources/views/livewire/registration/registration-details.blade.php:838` | `iframe` | — | `bg-white` | `dark:bg-gray-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:841` | `div` | — | `border-gray-200`<br>`bg-gray-50/50` | `dark:border-gray-700`<br>`dark:bg-gray-800/50` |
-| `resources/views/livewire/registration/registration-details.blade.php:843` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:865` | `div` ⚡ | `is_participante` | `border-indigo-200` | `dark:border-indigo-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:870` | `span` | — | `bg-indigo-50`<br>`text-indigo-700`<br>`border-indigo-200` | `dark:bg-indigo-900/30`<br>`dark:text-indigo-400`<br>`dark:border-indigo-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:907` | `div` | — | `hover:bg-gray-50/60` | _(sem padrão no projeto)_ |
-| `resources/views/livewire/registration/registration-details.blade.php:909` | `div` ⚡ | `whatsapp` | `bg-emerald-50`<br>`border-emerald-200`<br>`bg-blue-50`<br>`border-blue-200`<br>`bg-amber-50`<br>`border-amber-200` | `dark:bg-emerald-900/30`<br>`dark:border-emerald-800`<br>`dark:bg-blue-900/30`<br>`dark:border-blue-800`<br>`dark:bg-amber-900/30`<br>`dark:border-amber-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:915` | `span` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/registration/registration-details.blade.php:916` | `span` ⚡ | — | `bg-emerald-100`<br>`text-emerald-800`<br>`bg-gray-100`<br>`text-gray-600` | `dark:bg-emerald-900/40`<br>`dark:text-emerald-300`<br>`dark:bg-gray-700`<br>`dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:921` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:938` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
-| `resources/views/livewire/registration/registration-details.blade.php:948` | `thead` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
-| `resources/views/livewire/registration/registration-details.blade.php:959` | `tbody` | — | `divide-gray-100` | `dark:divide-gray-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:961` | `tr` | — | `hover:bg-gray-50` | `dark:hover:bg-gray-700` |
-| `resources/views/livewire/registration/registration-details.blade.php:963` | `div` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/registration/registration-details.blade.php:971` | `td` | — | `text-gray-600` | `dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:977` | `span` | — | `bg-emerald-50`<br>`text-emerald-700`<br>`border-emerald-200` | `dark:bg-emerald-900/30`<br>`dark:text-emerald-400`<br>`dark:border-emerald-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:981` | `span` | — | `bg-gray-100`<br>`border-gray-200` | `dark:bg-gray-700`<br>`dark:border-gray-700` |
-| `resources/views/livewire/registration/registration-details.blade.php:987` | `td` | — | `text-gray-600` | `dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:991` | `span` | — | `text-green-700`<br>`bg-green-100`<br>`border-green-200` | `dark:text-green-400`<br>`dark:bg-green-900/30`<br>`dark:border-green-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:996` | `button` | — | `bg-gray-100`<br>`text-gray-600` | `dark:bg-gray-700`<br>`dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:1018` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
-| `resources/views/livewire/registration/registration-details.blade.php:1024` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
-| `resources/views/livewire/registration/registration-details.blade.php:1028` | `div` | — | `border-gray-100`<br>`bg-gray-50` | `dark:border-gray-700`<br>`dark:bg-gray-900/50` |
-| `resources/views/livewire/registration/registration-details.blade.php:1041` | `div` | — | `bg-white` | `dark:bg-gray-800` |
-| `resources/views/livewire/registration/registration-details.blade.php:1042` | `div` | — | `border-gray-100`<br>`bg-gray-50` | `dark:border-gray-700`<br>`dark:bg-gray-900/50` |
-| `resources/views/livewire/registration/registration-details.blade.php:1043` | `h3` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/registration/registration-details.blade.php:1048` | `div` | — | `bg-gray-50` | `dark:bg-gray-900/50` |
-| `resources/views/livewire/registration/registration-details.blade.php:1049` | `div` | — | `bg-white`<br>`border-gray-200` | `dark:bg-gray-800`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:801` | `tr` | — | `hover:bg-gray-50` | `dark:hover:bg-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:803` | `span` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:817` | `div` | — | `text-gray-800` | `dark:text-gray-200` |
+| `resources/views/livewire/registration/registration-details.blade.php:828` | `button` | — | `text-gray-600`<br>`bg-white`<br>`border-gray-300`<br>`hover:bg-gray-50` | `dark:text-gray-300`<br>`dark:bg-gray-800`<br>`dark:border-gray-600`<br>`dark:hover:bg-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:842` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:866` | `div` ⚡ | `is_participante` | `border-indigo-200` | `dark:border-indigo-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:871` | `span` | — | `bg-indigo-50`<br>`text-indigo-700`<br>`border-indigo-200` | `dark:bg-indigo-900/30`<br>`dark:text-indigo-400`<br>`dark:border-indigo-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:908` | `div` | — | `hover:bg-gray-50/60` | _(sem padrão no projeto)_ |
+| `resources/views/livewire/registration/registration-details.blade.php:910` | `div` ⚡ | `whatsapp` | `bg-emerald-50`<br>`border-emerald-200`<br>`bg-blue-50`<br>`border-blue-200`<br>`bg-amber-50`<br>`border-amber-200` | `dark:bg-emerald-900/30`<br>`dark:border-emerald-800`<br>`dark:bg-blue-900/30`<br>`dark:border-blue-800`<br>`dark:bg-amber-900/30`<br>`dark:border-amber-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:916` | `span` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:917` | `span` ⚡ | — | `bg-emerald-100`<br>`text-emerald-800`<br>`bg-gray-100`<br>`text-gray-600` | `dark:bg-emerald-900/40`<br>`dark:text-emerald-300`<br>`dark:bg-gray-700`<br>`dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:922` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:939` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:949` | `thead` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:960` | `tbody` | — | `divide-gray-100` | `dark:divide-gray-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:962` | `tr` | — | `hover:bg-gray-50` | `dark:hover:bg-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:964` | `div` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:972` | `td` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:978` | `span` | — | `bg-emerald-50`<br>`text-emerald-700`<br>`border-emerald-200` | `dark:bg-emerald-900/30`<br>`dark:text-emerald-400`<br>`dark:border-emerald-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:982` | `span` | — | `bg-gray-100`<br>`border-gray-200` | `dark:bg-gray-700`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:988` | `td` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:992` | `span` | — | `text-green-700`<br>`bg-green-100`<br>`border-green-200` | `dark:text-green-400`<br>`dark:bg-green-900/30`<br>`dark:border-green-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:997` | `button` | — | `bg-gray-100`<br>`text-gray-600` | `dark:bg-gray-700`<br>`dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:1019` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:1025` | `p` | — | `text-gray-700` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:1029` | `div` | — | `border-gray-100`<br>`bg-gray-50` | `dark:border-gray-700`<br>`dark:bg-gray-900/50` |
+| `resources/views/livewire/registration/registration-details.blade.php:1042` | `div` | — | `bg-white` | `dark:bg-gray-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:1043` | `div` | — | `border-gray-100`<br>`bg-gray-50` | `dark:border-gray-700`<br>`dark:bg-gray-900/50` |
+| `resources/views/livewire/registration/registration-details.blade.php:1044` | `h3` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:1049` | `div` | — | `bg-gray-50` | `dark:bg-gray-900/50` |
+| `resources/views/livewire/registration/registration-details.blade.php:1050` | `div` | — | `bg-white`<br>`border-gray-200` | `dark:bg-gray-800`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:1093` | `div` | — | `bg-white`<br>`border-gray-200` | `dark:bg-gray-800`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:1094` | `div` | — | `border-gray-100`<br>`bg-gray-50` | `dark:border-gray-700`<br>`dark:bg-gray-900/50` |
+| `resources/views/livewire/registration/registration-details.blade.php:1095` | `h3` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:1102` | `div` | — | `border-gray-100`<br>`bg-white` | `dark:border-gray-700`<br>`dark:bg-gray-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:1104` | `p` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:1109` | `thead` | — | `bg-gray-50`<br>`border-gray-100` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:1115` | `tbody` | — | `divide-gray-100` | `dark:divide-gray-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:1117` | `tr` | — | `hover:bg-gray-50` | `dark:hover:bg-gray-700` |
+| `resources/views/livewire/registration/registration-details.blade.php:1118` | `td` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/registration/registration-details.blade.php:1119` | `td` | — | `text-gray-900` | `dark:text-white` |
+| `resources/views/livewire/registration/registration-details.blade.php:1120` | `div` | — | `bg-indigo-50`<br>`border-indigo-200` | `dark:bg-indigo-900/30`<br>`dark:border-indigo-800` |
+| `resources/views/livewire/registration/registration-details.blade.php:1136` | `div` | — | `bg-gray-50`<br>`border-gray-100` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
 | `resources/views/livewire/registration/registration-manager.blade.php:60` | `a` | — | `text-amber-700`<br>`hover:text-amber-800`<br>`bg-amber-50`<br>`border-amber-200` | `dark:text-amber-400`<br>_(sem padrão no projeto)_<br>`dark:bg-amber-900/30`<br>`dark:border-amber-800` |
 | `resources/views/livewire/registration/registration-manager.blade.php:75` | `button` | `btn` | `bg-white` | `dark:bg-gray-800` |
 | `resources/views/livewire/registration/registration-manager.blade.php:79` | `div` | — | `divide-gray-100` | `dark:divide-gray-800` |
@@ -47478,7 +48181,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:277` | `div` | — | `bg-white` | `dark:bg-gray-800` |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:279` | `div` | — | `border-gray-100` | `dark:border-gray-700` |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:281` | `h3` | — | `text-gray-900` | `dark:text-white` |
-| `resources/views/livewire/system-tasks/system-task-manager.blade.php:284` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-green-900/30`<br>`dark:text-blue-400` |
+| `resources/views/livewire/system-tasks/system-task-manager.blade.php:284` | `span` | — | `bg-blue-100`<br>`text-blue-700` | `dark:bg-red-900/30`<br>`dark:text-blue-400` |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:289` | `div` | — | `bg-gray-50`<br>`border-gray-200` | `dark:bg-gray-900/50`<br>`dark:border-gray-700` |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:292` | `span` | — | `text-gray-700` | `dark:text-gray-300` |
 | `resources/views/livewire/system-tasks/system-task-manager.blade.php:296` | `select` | — | `bg-white`<br>`border-gray-300` | `dark:bg-gray-800`<br>`dark:border-gray-600` |
@@ -47581,21 +48284,21 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `resources/views/livewire/website/inscricao.blade.php:600` | `div` | — | `bg-green-100` | `dark:bg-green-900/30` |
 | `resources/views/livewire/website/inscricao.blade.php:624` | `div` | — | `bg-yellow-100` | `dark:bg-yellow-900/30` |
 | `resources/views/livewire/website/inscricao.blade.php:646` | `div` | — | `bg-red-50` | `dark:bg-red-900/20` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:426` | `a` | — | `bg-white/10`<br>`hover:bg-white/20` | _(sem padrão no projeto)_<br>_(sem padrão no projeto)_ |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:434` | `button` | — | `hover:bg-white/10` | `dark:hover:bg-gray-800` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:443` | `iframe` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:447` | `div` | — | `text-gray-600` | `dark:text-gray-300` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:455` | `p` | — | `text-gray-800` | `dark:text-gray-200` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:591` | `div` ⚡ | — | `bg-white` | `dark:bg-gray-800` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:595` | `div` | — | `border-gray-300` | `dark:border-gray-600` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:596` | `span` | — | `bg-white` | `dark:bg-gray-800` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:619` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:652` | `div` | — | `text-gray-600` | `dark:text-gray-300` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:658` | `i` | `ph-fill` | `text-blue-700` | `dark:text-blue-400` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:791` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:814` | `img` | — | `border-gray-200` | `dark:border-gray-700` |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:829` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
-| `resources/views/livewire/website/partials/render-dinamico.blade.php:988` | `select` | — | `disabled:bg-gray-100` | _(sem padrão no projeto)_ |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:521` | `a` | — | `bg-white/10`<br>`hover:bg-white/20` | _(sem padrão no projeto)_<br>_(sem padrão no projeto)_ |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:529` | `button` | — | `hover:bg-white/10` | `dark:hover:bg-gray-800` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:538` | `iframe` | — | `border-gray-300`<br>`bg-white` | `dark:border-gray-600`<br>`dark:bg-gray-800` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:542` | `div` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:550` | `p` | — | `text-gray-800` | `dark:text-gray-200` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:686` | `div` ⚡ | — | `bg-white` | `dark:bg-gray-800` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:690` | `div` | — | `border-gray-300` | `dark:border-gray-600` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:691` | `span` | — | `bg-white` | `dark:bg-gray-800` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:714` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:747` | `div` | — | `text-gray-600` | `dark:text-gray-300` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:753` | `i` | `ph-fill` | `text-blue-700` | `dark:text-blue-400` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:886` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:909` | `img` | — | `border-gray-200` | `dark:border-gray-700` |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:924` | `button` | — | `hover:text-red-700` | _(sem padrão no projeto)_ |
+| `resources/views/livewire/website/partials/render-dinamico.blade.php:1083` | `select` | — | `disabled:bg-gray-100` | _(sem padrão no projeto)_ |
 
 ### Estilos em arquivos CSS/SCSS
 
@@ -47635,7 +48338,7 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | `.signature-section` | `border-top: 1px dashed #d1d5db` | `resources/views/pdf/ficha-respostas.blade.php:152` | 1 / 0 |
 | `.signer-name` | `color: #111827` | `resources/views/pdf/ficha-respostas.blade.php:190` | 1 / 0 |
 | `.template-quill` | `border-color: #e5e7eb; background-color: #f9fafb; border-color: #e5e7eb` | `resources/views/livewire/comunicacao/template/template-form.blade.php:25` | 1 / 0 |
-| `.excel-preview-table` | `border: 1px solid #e5e7eb; background-color: #f9fafb` | `resources/views/livewire/website/partials/render-dinamico.blade.php:367` | 0 / 0 |
+| `.excel-preview-table` | `border: 1px solid #e5e7eb; background-color: #f9fafb` | `resources/views/livewire/website/partials/render-dinamico.blade.php:462` | 0 / 0 |
 | `.ql-container` | `border-color: #e5e7eb; background-color: #ffffff; border-color: #e5e7eb` | `resources/views/livewire/comunicacao/template/template-form.blade.php:33` | 0 / 0 |
 | `.ql-toolbar` | `border-color: #e5e7eb; background-color: #f9fafb; border-color: #e5e7eb` | `resources/views/livewire/comunicacao/template/template-form.blade.php:25` | 0 / 0 |
 | `.select2-container--default` | `background-color: #ffffff !important; border: 1px solid #d1d5db !important; color: #1f2937 !important` | `resources/views/livewire/financeiro/orcamento-editor.blade.php:31` | 0 / 0 |
@@ -47942,6 +48645,19 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | 40 | `button` | — | `text-gray-500` → `dark:text-gray-400`<br>`hover:text-gray-900` → `dark:hover:text-white` | — |
 | 44 | `span` | — | `text-gray-300` → `dark:text-gray-600` | — |
 
+#### `resources/views/components/session-timeout.blade.php`
+
+| Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
+| ---: | --- | --- | --- | --- |
+| 157 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 158 | `div` | — | `bg-gray-200` → `dark:bg-gray-700` | — |
+| 164 | `div` | — | `bg-amber-50` → `dark:bg-amber-900/30`<br>`border-amber-200` → `dark:border-amber-700`<br>`text-amber-600` → `dark:text-amber-400` | — |
+| 169 | `h3` | — | `text-gray-900` → `dark:text-white` | — |
+| 172 | `p` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 177 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/70`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 178 | `span` | — | `text-amber-600` → `dark:text-amber-400` | — |
+| 183 | `button` | — | `text-gray-600` → `dark:text-gray-300`<br>`bg-gray-100` → `dark:bg-gray-700`<br>`hover:bg-gray-200` → `dark:hover:bg-gray-600` | — |
+
 #### `resources/views/components/summary-cards.blade.php`
 
 | Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
@@ -47972,6 +48688,43 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | 68 | `i` | `ph-bold` | `text-gray-300` → `dark:text-gray-600` | — |
 | 80 | `tbody` | — | `divide-gray-50` → `dark:divide-gray-800/50` | — |
 | 86 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-100` → `dark:border-gray-800` | — |
+
+#### `resources/views/errors/403.blade.php`
+
+| Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
+| ---: | --- | --- | --- | --- |
+| 59 | `div` | — | `bg-gray-50` → `dark:bg-gray-800/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 61 | `div` | — | `border-gray-200/80` → `dark:border-gray-700` | — |
+| 62 | `span` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 63 | `span` | — | `text-gray-800` → `dark:text-gray-200` | — |
+| 66 | `span` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:text-purpura-400` | — |
+| 74 | `div` | — | `text-gray-600` → `dark:text-gray-300` | — |
+
+#### `resources/views/errors/419.blade.php`
+
+| Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
+| ---: | --- | --- | --- | --- |
+| 24 | `a` | — | `text-gray-700` → `dark:text-gray-200`<br>`bg-gray-100` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+
+#### `resources/views/errors/500.blade.php`
+
+| Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
+| ---: | --- | --- | --- | --- |
+| 17 | `div` | — | `bg-gray-50` → `dark:bg-gray-800/60`<br>`border-gray-200` → `dark:border-gray-700`<br>`text-gray-600` → `dark:text-gray-300` | — |
+
+#### `resources/views/errors/layout.blade.php`
+
+| Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
+| ---: | --- | --- | --- | --- |
+| 27 | `body` | — | `bg-slate-50` → `dark:bg-gray-950`<br>`text-gray-900` → `dark:text-gray-100` | — |
+| 48 | `a` | — | `text-gray-800` → `dark:text-white` | — |
+| 55 | `span` | — | `text-gray-400` → `dark:text-gray-500` | — |
+| 62 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-800` | — |
+| 82 | `h1` | — | `text-gray-900` → `dark:text-white` | — |
+| 85 | `p` | — | `text-gray-600` → `dark:text-gray-400` | — |
+| 98 | `div` | — | `border-gray-100` → `dark:border-gray-800` | — |
+| 102 | `button` | — | `text-gray-700` → `dark:text-gray-200`<br>`bg-gray-100` → `dark:bg-gray-800`<br>`hover:bg-gray-200` → `dark:hover:bg-gray-700`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 121 | `footer` | — | `text-gray-400` → `dark:text-gray-500` | — |
 
 #### `resources/views/livewire/acl/permission-manager.blade.php`
 
@@ -48142,14 +48895,14 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | 115 | `td` | — | `text-gray-900` → `dark:text-white` | — |
 | 119 | `div` | — | `text-gray-800` → `dark:text-white` | — |
 | 120 | `div` | — | `text-gray-400` → `dark:text-gray-500` | — |
-| 123 | `span` | — | `bg-green-100` → `dark:bg-green-900/30`<br>`bg-blue-100` → `dark:bg-green-900/30`<br>`bg-red-100` → `dark:bg-green-900/30`<br>`bg-purple-100` → `dark:bg-green-900/30`<br>`bg-gray-100` → `dark:bg-green-900/30`<br>`text-green-800` → `dark:text-green-400`<br>`text-blue-800` → `dark:text-green-400`<br>`text-red-800` → `dark:text-green-400`<br>`text-purple-800` → `dark:text-green-400`<br>`text-gray-800` → `dark:text-green-400`<br>`border-green-200` → `dark:border-green-800`<br>`border-blue-200` → `dark:border-green-800`<br>`border-red-200` → `dark:border-green-800`<br>`border-purple-200` → `dark:border-green-800`<br>`border-gray-200` → `dark:border-green-800`<br>`bg-green-100` → `dark:bg-blue-900/30`<br>`bg-blue-100` → `dark:bg-blue-900/30`<br>`bg-red-100` → `dark:bg-blue-900/30`<br>`bg-purple-100` → `dark:bg-blue-900/30`<br>`bg-gray-100` → `dark:bg-blue-900/30`<br>`text-green-800` → `dark:text-blue-400`<br>`text-blue-800` → `dark:text-blue-400`<br>`text-red-800` → `dark:text-blue-400`<br>`text-purple-800` → `dark:text-blue-400`<br>`text-gray-800` → `dark:text-blue-400`<br>`border-green-200` → `dark:border-blue-800`<br>`border-blue-200` → `dark:border-blue-800`<br>`border-red-200` → `dark:border-blue-800`<br>`border-purple-200` → `dark:border-blue-800`<br>`border-gray-200` → `dark:border-blue-800`<br>`bg-green-100` → `dark:bg-red-900/30`<br>`bg-blue-100` → `dark:bg-red-900/30`<br>`bg-red-100` → `dark:bg-red-900/30`<br>`bg-purple-100` → `dark:bg-red-900/30`<br>`bg-gray-100` → `dark:bg-red-900/30`<br>`text-green-800` → `dark:text-red-400`<br>`text-blue-800` → `dark:text-red-400`<br>`text-red-800` → `dark:text-red-400`<br>`text-purple-800` → `dark:text-red-400`<br>`text-gray-800` → `dark:text-red-400`<br>`border-green-200` → `dark:border-red-800`<br>`border-blue-200` → `dark:border-red-800`<br>`border-red-200` → `dark:border-red-800`<br>`border-purple-200` → `dark:border-red-800`<br>`border-gray-200` → `dark:border-red-800`<br>`bg-green-100` → `dark:bg-purple-900/30`<br>`bg-blue-100` → `dark:bg-purple-900/30`<br>`bg-red-100` → `dark:bg-purple-900/30`<br>`bg-purple-100` → `dark:bg-purple-900/30`<br>`bg-gray-100` → `dark:bg-purple-900/30`<br>`text-green-800` → `dark:text-purple-400`<br>`text-blue-800` → `dark:text-purple-400`<br>`text-red-800` → `dark:text-purple-400`<br>`text-purple-800` → `dark:text-purple-400`<br>`text-gray-800` → `dark:text-purple-400`<br>`border-green-200` → `dark:border-purple-800`<br>`border-blue-200` → `dark:border-purple-800`<br>`border-red-200` → `dark:border-purple-800`<br>`border-purple-200` → `dark:border-purple-800`<br>`border-gray-200` → `dark:border-purple-800`<br>`bg-green-100` → `dark:bg-gray-700`<br>`bg-blue-100` → `dark:bg-gray-700`<br>`bg-red-100` → `dark:bg-gray-700`<br>`bg-purple-100` → `dark:bg-gray-700`<br>`bg-gray-100` → `dark:bg-gray-700`<br>`text-green-800` → `dark:text-gray-300`<br>`text-blue-800` → `dark:text-gray-300`<br>`text-red-800` → `dark:text-gray-300`<br>`text-purple-800` → `dark:text-gray-300`<br>`text-gray-800` → `dark:text-gray-300`<br>`border-green-200` → `dark:border-gray-600`<br>`border-blue-200` → `dark:border-gray-600`<br>`border-red-200` → `dark:border-gray-600`<br>`border-purple-200` → `dark:border-gray-600`<br>`border-gray-200` → `dark:border-gray-600` | — |
-| 132 | `td` | — | `text-gray-600` → `dark:text-gray-300` | — |
-| 139 | `button` | — | _(sem claro)_ → `dark:hover:bg-gray-600` | — |
-| 150 | `td` | — | `text-gray-500` → `dark:text-gray-400` | — |
-| 158 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-100` → `dark:border-gray-700` | — |
-| 170 | `div` | — | `text-gray-900` → `dark:text-white` | — |
-| 173 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
-| 178 | `button` | — | _(sem claro)_ → `dark:hover:bg-gray-600` | — |
+| 123 | `span` | — | `bg-green-100` → `dark:bg-green-900/30`<br>`bg-blue-100` → `dark:bg-green-900/30`<br>`bg-red-100` → `dark:bg-green-900/30`<br>`bg-purple-100` → `dark:bg-green-900/30`<br>`bg-red-100` → `dark:bg-green-900/30`<br>`bg-gray-100` → `dark:bg-green-900/30`<br>`text-green-800` → `dark:text-green-400`<br>`text-blue-800` → `dark:text-green-400`<br>`text-red-800` → `dark:text-green-400`<br>`text-purple-800` → `dark:text-green-400`<br>`text-red-800` → `dark:text-green-400`<br>`text-gray-800` → `dark:text-green-400`<br>`border-green-200` → `dark:border-green-800`<br>`border-blue-200` → `dark:border-green-800`<br>`border-red-200` → `dark:border-green-800`<br>`border-purple-200` → `dark:border-green-800`<br>`border-red-200` → `dark:border-green-800`<br>`border-gray-200` → `dark:border-green-800`<br>`bg-green-100` → `dark:bg-blue-900/30`<br>`bg-blue-100` → `dark:bg-blue-900/30`<br>`bg-red-100` → `dark:bg-blue-900/30`<br>`bg-purple-100` → `dark:bg-blue-900/30`<br>`bg-red-100` → `dark:bg-blue-900/30`<br>`bg-gray-100` → `dark:bg-blue-900/30`<br>`text-green-800` → `dark:text-blue-400`<br>`text-blue-800` → `dark:text-blue-400`<br>`text-red-800` → `dark:text-blue-400`<br>`text-purple-800` → `dark:text-blue-400`<br>`text-red-800` → `dark:text-blue-400`<br>`text-gray-800` → `dark:text-blue-400`<br>`border-green-200` → `dark:border-blue-800`<br>`border-blue-200` → `dark:border-blue-800`<br>`border-red-200` → `dark:border-blue-800`<br>`border-purple-200` → `dark:border-blue-800`<br>`border-red-200` → `dark:border-blue-800`<br>`border-gray-200` → `dark:border-blue-800`<br>`bg-green-100` → `dark:bg-red-900/30`<br>`bg-blue-100` → `dark:bg-red-900/30`<br>`bg-red-100` → `dark:bg-red-900/30`<br>`bg-purple-100` → `dark:bg-red-900/30`<br>`bg-red-100` → `dark:bg-red-900/30`<br>`bg-gray-100` → `dark:bg-red-900/30`<br>`text-green-800` → `dark:text-red-400`<br>`text-blue-800` → `dark:text-red-400`<br>`text-red-800` → `dark:text-red-400`<br>`text-purple-800` → `dark:text-red-400`<br>`text-red-800` → `dark:text-red-400`<br>`text-gray-800` → `dark:text-red-400`<br>`border-green-200` → `dark:border-red-800`<br>`border-blue-200` → `dark:border-red-800`<br>`border-red-200` → `dark:border-red-800`<br>`border-purple-200` → `dark:border-red-800`<br>`border-red-200` → `dark:border-red-800`<br>`border-gray-200` → `dark:border-red-800`<br>`bg-green-100` → `dark:bg-purple-900/30`<br>`bg-blue-100` → `dark:bg-purple-900/30`<br>`bg-red-100` → `dark:bg-purple-900/30`<br>`bg-purple-100` → `dark:bg-purple-900/30`<br>`bg-red-100` → `dark:bg-purple-900/30`<br>`bg-gray-100` → `dark:bg-purple-900/30`<br>`text-green-800` → `dark:text-purple-400`<br>`text-blue-800` → `dark:text-purple-400`<br>`text-red-800` → `dark:text-purple-400`<br>`text-purple-800` → `dark:text-purple-400`<br>`text-red-800` → `dark:text-purple-400`<br>`text-gray-800` → `dark:text-purple-400`<br>`border-green-200` → `dark:border-purple-800`<br>`border-blue-200` → `dark:border-purple-800`<br>`border-red-200` → `dark:border-purple-800`<br>`border-purple-200` → `dark:border-purple-800`<br>`border-red-200` → `dark:border-purple-800`<br>`border-gray-200` → `dark:border-purple-800`<br>`bg-green-100` → `dark:bg-red-900/30`<br>`bg-blue-100` → `dark:bg-red-900/30`<br>`bg-red-100` → `dark:bg-red-900/30`<br>`bg-purple-100` → `dark:bg-red-900/30`<br>`bg-red-100` → `dark:bg-red-900/30`<br>`bg-gray-100` → `dark:bg-red-900/30`<br>`text-green-800` → `dark:text-red-400`<br>`text-blue-800` → `dark:text-red-400`<br>`text-red-800` → `dark:text-red-400`<br>`text-purple-800` → `dark:text-red-400`<br>`text-red-800` → `dark:text-red-400`<br>`text-gray-800` → `dark:text-red-400`<br>`border-green-200` → `dark:border-red-800`<br>`border-blue-200` → `dark:border-red-800`<br>`border-red-200` → `dark:border-red-800`<br>`border-purple-200` → `dark:border-red-800`<br>`border-red-200` → `dark:border-red-800`<br>`border-gray-200` → `dark:border-red-800`<br>`bg-green-100` → `dark:bg-gray-700`<br>`bg-blue-100` → `dark:bg-gray-700`<br>`bg-red-100` → `dark:bg-gray-700`<br>`bg-purple-100` → `dark:bg-gray-700`<br>`bg-red-100` → `dark:bg-gray-700`<br>`bg-gray-100` → `dark:bg-gray-700`<br>`text-green-800` → `dark:text-gray-300`<br>`text-blue-800` → `dark:text-gray-300`<br>`text-red-800` → `dark:text-gray-300`<br>`text-purple-800` → `dark:text-gray-300`<br>`text-red-800` → `dark:text-gray-300`<br>`text-gray-800` → `dark:text-gray-300`<br>`border-green-200` → `dark:border-gray-600`<br>`border-blue-200` → `dark:border-gray-600`<br>`border-red-200` → `dark:border-gray-600`<br>`border-purple-200` → `dark:border-gray-600`<br>`border-red-200` → `dark:border-gray-600`<br>`border-gray-200` → `dark:border-gray-600` | — |
+| 133 | `td` | — | `text-gray-600` → `dark:text-gray-300` | — |
+| 140 | `button` | — | _(sem claro)_ → `dark:hover:bg-gray-600` | — |
+| 151 | `td` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 159 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-100` → `dark:border-gray-700` | — |
+| 171 | `div` | — | `text-gray-900` → `dark:text-white` | — |
+| 174 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
+| 179 | `button` | — | _(sem claro)_ → `dark:hover:bg-gray-600` | — |
 
 #### `resources/views/livewire/auth/login.blade.php`
 
@@ -49293,72 +50046,110 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | 930 | `button` | — | `bg-gray-100` → `dark:bg-gray-800`<br>`hover:bg-gray-200` → `dark:hover:bg-gray-700`<br>`text-gray-700` → `dark:text-gray-200` | — |
 | 937 | `div` | — | `border-gray-200` → `dark:border-gray-800`<br>`bg-gray-50` → `dark:bg-gray-900/50` | — |
 | 938 | `span` | — | `text-gray-700` → `dark:text-gray-200` | — |
-| 1695 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1698 | `p` | — | `text-gray-700` → `dark:text-gray-200` | — |
-| 1793 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1794 | `h4` | — | `text-gray-800` → `dark:text-gray-200`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1797 | `select` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:text-white` | — |
-| 1804 | `input` | — | _(sem claro)_ → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600` | — |
-| 1806 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 1812 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1813 | `h4` | — | `text-gray-800` → `dark:text-gray-200`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1815 | `input` | — | _(sem claro)_ → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600` | — |
-| 1817 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 1824 | `div` | — | `bg-indigo-50/60` → `dark:bg-indigo-900/20`<br>`border-indigo-200` → `dark:border-indigo-800` | — |
-| 1825 | `div` | — | `border-indigo-200` → `dark:border-indigo-800` | — |
-| 1826 | `h4` | — | `text-indigo-900` → `dark:text-indigo-300` | — |
-| 1829 | `p` | — | `text-indigo-700` → `dark:text-indigo-400` | — |
-| 1837 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 1845 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 1853 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 1861 | `div` | — | `bg-gray-50` → `dark:bg-gray-800/80`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 1875 | `div` | — | `bg-gray-50` → `dark:bg-gray-900` | — |
-| 1876 | `div` | — | `border-gray-200` → `dark:border-gray-800`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 1878 | `h3` | — | `text-gray-900` → `dark:text-white` | — |
-| 1881 | `p` | — | `text-gray-500` → `dark:text-gray-400` | — |
-| 1884 | `button` | `btn` | `bg-white` → `dark:bg-gray-700`<br>_(sem claro)_ → `dark:text-white`<br>_(sem claro)_ → `dark:border-gray-600`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-600` | — |
-| 1885 | `i` | `ph-bold` | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 1898 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:hover:border-purpura-600` | — |
-| 1902 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
-| 1905 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
-| 1917 | `label` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-700`<br>`bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-600`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-800` | — |
-| 1918 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-800` | — |
-| 1932 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
-| 1937 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
-| 1941 | `div` | — | `bg-blue-50/50` → `dark:bg-blue-900/20`<br>`border-blue-100` → `dark:border-blue-800/50` | — |
-| 1942 | `label` | — | `text-blue-700` → `dark:text-blue-400` | — |
-| 1945 | `select` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
-| 1951 | `p` | — | `text-blue-500` → `dark:text-blue-300` | — |
-| 1960 | `div` | — | `border-blue-200/60` → `dark:border-blue-800/60` | — |
-| 1961 | `span` | — | `text-blue-800` → `dark:text-blue-300` | — |
-| 1962 | `code` | — | `bg-white` → `dark:bg-gray-900`<br>`border-blue-200` → `dark:border-blue-700`<br>_(sem claro)_ → `dark:text-purpura-300` | — |
-| 1964 | `code` | — | `bg-white` → `dark:bg-gray-900`<br>`border-blue-200` → `dark:border-blue-700`<br>`text-gray-600` → `dark:text-gray-300` | — |
-| 1969 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
-| 1970 | `button` | — | `hover:bg-red-50` → `dark:hover:bg-red-900/30` | — |
-| 1978 | `div` | — | `border-gray-200` → `dark:border-gray-700`<br>`bg-gray-50` → `dark:bg-gray-800/50` | — |
-| 1979 | `i` | `ph-fill` | `text-gray-300` → `dark:text-gray-600` | — |
-| 1980 | `p` | — | `text-gray-600` → `dark:text-gray-400` | — |
-| 1990 | `div` | — | `bg-white` → `dark:bg-gray-800` | — |
-| 1992 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/30` | — |
-| 1996 | `h4` | — | `text-gray-900` → `dark:text-white` | — |
-| 1997 | `p` | — | `text-gray-600` → `dark:text-gray-300` | — |
-| 2006 | `button` | — | `bg-gray-100` → `dark:bg-gray-700`<br>`text-gray-700` → `dark:text-gray-300`<br>`hover:bg-gray-200` → `dark:hover:bg-gray-600` | — |
-| 2019 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 2020 | `div` | — | `border-gray-200` → `dark:border-gray-700`<br>`bg-gray-50` → `dark:bg-gray-900/50` | — |
-| 2022 | `h3` | — | `text-gray-900` → `dark:text-white` | — |
-| 2034 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`divide-gray-200` → `dark:divide-gray-700` | — |
-| 2037 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 2043 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-700` | — |
-| 2048 | `span` ⚡ | — | _(sem claro)_ → `dark:text-purpura-400`<br>`text-gray-700` → `dark:text-gray-300` | — |
-| 2057 | `div` | — | `bg-gray-50/40` → `dark:bg-gray-800/80` | — |
-| 2058 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 2066 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>`hover:bg-white` → `dark:hover:bg-gray-700` | — |
-| 2071 | `span` ⚡ | — | _(sem claro)_ → `dark:text-purpura-400`<br>`text-gray-700` → `dark:text-gray-300` | — |
-| 2086 | `div` | — | `bg-gray-50/80` → `dark:bg-gray-900/30` | — |
-| 2087 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 2097 | `div` | — | `hover:bg-white` → `dark:hover:bg-gray-700` | — |
-| 2100 | `span` | — | `text-gray-700` → `dark:text-gray-300` | — |
-| 2115 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1653 | `div` | — | `border-amber-200` → `dark:border-amber-800/70`<br>`bg-amber-50/30` → `dark:bg-amber-950/20` | — |
+| 1654 | `div` | — | `bg-amber-50` → `dark:bg-amber-900/30`<br>`border-amber-200` → `dark:border-amber-800/70` | — |
+| 1655 | `span` | — | `text-amber-900` → `dark:text-amber-300` | — |
+| 1665 | `div` | — | `bg-white` → `dark:bg-gray-900` | — |
+| 1668 | `select` | — | `border-gray-300` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1676 | `div` | — | `border-gray-100` → `dark:border-gray-800` | — |
+| 1678 | `label` | — | `text-gray-600` → `dark:text-gray-400` | — |
+| 1679 | `select` | — | `border-gray-300` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1689 | `label` | — | `text-gray-600` → `dark:text-gray-400` | — |
+| 1690 | `select` | — | `border-gray-300` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1711 | `label` | — | `text-gray-600` → `dark:text-gray-400` | — |
+| 1714 | `input` | — | `border-gray-300` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1722 | `div` | — | _(sem claro)_ → `dark:bg-purpura-950/30`<br>_(sem claro)_ → `dark:border-purpura-800` | — |
+| 1724 | `span` | — | _(sem claro)_ → `dark:text-purpura-300` | — |
+| 1732 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:border-gray-800`<br>`text-gray-700` → `dark:text-gray-300` | — |
+| 1760 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1763 | `p` | — | `text-gray-700` → `dark:text-gray-200` | — |
+| 1858 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1859 | `h4` | — | `text-gray-800` → `dark:text-gray-200`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1862 | `select` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1869 | `input` | — | _(sem claro)_ → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600` | — |
+| 1871 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 1877 | `div` | — | `bg-gray-50` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1878 | `h4` | — | `text-gray-800` → `dark:text-gray-200`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1880 | `input` | — | _(sem claro)_ → `dark:bg-gray-900`<br>`border-gray-300` → `dark:border-gray-600` | — |
+| 1882 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 1889 | `div` | — | `bg-indigo-50/60` → `dark:bg-indigo-900/20`<br>`border-indigo-200` → `dark:border-indigo-800` | — |
+| 1890 | `div` | — | `border-indigo-200` → `dark:border-indigo-800` | — |
+| 1891 | `h4` | — | `text-indigo-900` → `dark:text-indigo-300` | — |
+| 1894 | `p` | — | `text-indigo-700` → `dark:text-indigo-400` | — |
+| 1902 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 1910 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 1918 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 1926 | `div` | — | `bg-gray-50` → `dark:bg-gray-800/80`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 1940 | `div` | — | `bg-gray-50` → `dark:bg-gray-900` | — |
+| 1941 | `div` | — | `border-gray-200` → `dark:border-gray-800`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 1943 | `h3` | — | `text-gray-900` → `dark:text-white` | — |
+| 1946 | `p` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 1949 | `button` | `btn` | `bg-white` → `dark:bg-gray-700`<br>_(sem claro)_ → `dark:text-white`<br>_(sem claro)_ → `dark:border-gray-600`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-600` | — |
+| 1950 | `i` | `ph-bold` | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 1963 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:hover:border-purpura-600` | — |
+| 1967 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
+| 1970 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 1982 | `label` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-700`<br>`bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-600`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-800` | — |
+| 1983 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-800` | — |
+| 1997 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2002 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2006 | `div` | — | `bg-blue-50/50` → `dark:bg-blue-900/20`<br>`border-blue-100` → `dark:border-blue-800/50` | — |
+| 2007 | `label` | — | `text-blue-700` → `dark:text-blue-400` | — |
+| 2010 | `select` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2016 | `p` | — | `text-blue-500` → `dark:text-blue-300` | — |
+| 2025 | `div` | — | `border-blue-200/60` → `dark:border-blue-800/60` | — |
+| 2026 | `span` | — | `text-blue-800` → `dark:text-blue-300` | — |
+| 2027 | `code` | — | `bg-white` → `dark:bg-gray-900`<br>`border-blue-200` → `dark:border-blue-700`<br>_(sem claro)_ → `dark:text-purpura-300` | — |
+| 2029 | `code` | — | `bg-white` → `dark:bg-gray-900`<br>`border-blue-200` → `dark:border-blue-700`<br>`text-gray-600` → `dark:text-gray-300` | — |
+| 2034 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
+| 2035 | `button` | — | `hover:bg-red-50` → `dark:hover:bg-red-900/30` | — |
+| 2043 | `div` | — | `border-gray-200` → `dark:border-gray-700`<br>`bg-gray-50` → `dark:bg-gray-800/50` | — |
+| 2044 | `i` | `ph-fill` | `text-gray-300` → `dark:text-gray-600` | — |
+| 2045 | `p` | — | `text-gray-600` → `dark:text-gray-400` | — |
+| 2055 | `div` | — | `bg-white` → `dark:bg-gray-800` | — |
+| 2057 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/30` | — |
+| 2061 | `h4` | — | `text-gray-900` → `dark:text-white` | — |
+| 2062 | `p` | — | `text-gray-600` → `dark:text-gray-300` | — |
+| 2071 | `button` | — | `bg-gray-100` → `dark:bg-gray-700`<br>`text-gray-700` → `dark:text-gray-300`<br>`hover:bg-gray-200` → `dark:hover:bg-gray-600` | — |
+| 2084 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2085 | `div` | — | `border-gray-200` → `dark:border-gray-700`<br>`bg-gray-50` → `dark:bg-gray-900/50` | — |
+| 2087 | `h3` | — | `text-gray-900` → `dark:text-white` | — |
+| 2099 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`divide-gray-200` → `dark:divide-gray-700` | — |
+| 2102 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2108 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-700` | — |
+| 2113 | `span` ⚡ | — | _(sem claro)_ → `dark:text-purpura-400`<br>`text-gray-700` → `dark:text-gray-300` | — |
+| 2122 | `div` | — | `bg-gray-50/40` → `dark:bg-gray-800/80` | — |
+| 2123 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2131 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>`hover:bg-white` → `dark:hover:bg-gray-700` | — |
+| 2136 | `span` ⚡ | — | _(sem claro)_ → `dark:text-purpura-400`<br>`text-gray-700` → `dark:text-gray-300` | — |
+| 2151 | `div` | — | `bg-gray-50/80` → `dark:bg-gray-900/30` | — |
+| 2152 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2162 | `div` | — | `hover:bg-white` → `dark:hover:bg-gray-700` | — |
+| 2165 | `span` | — | `text-gray-700` → `dark:text-gray-300` | — |
+| 2180 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2207 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2231 | `div` | — | `divide-gray-200` → `dark:divide-gray-800` | — |
+| 2234 | `div` | `custom-scrollbar` | `bg-gray-50/60` → `dark:bg-gray-950` | — |
+| 2237 | `span` | — | `text-gray-600` → `dark:text-gray-300` | — |
+| 2258 | `div` | — | `bg-gray-300` → `dark:bg-gray-700` | — |
+| 2259 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-600` | — |
+| 2275 | `div` ⚡ | — | `border-emerald-300` → `dark:border-emerald-700`<br>`border-gray-200` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-900` | — |
+| 2278 | `div` | — | `bg-gray-100/80` → `dark:bg-gray-800/80`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2289 | `button` | — | `bg-white` → `dark:bg-gray-900` | — |
+| 2292 | `button` | — | `bg-white` → `dark:bg-gray-900` | — |
+| 2311 | `div` ⚡ | — | `border-emerald-200` → `dark:border-emerald-800/60`<br>`border-gray-200` → `dark:border-gray-700`<br>`bg-gray-50/70` → `dark:bg-gray-800/50` | — |
+| 2319 | `span` | — | `bg-gray-200` → `dark:bg-gray-700`<br>`text-gray-700` → `dark:text-gray-200` | — |
+| 2333 | `select` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2344 | `select` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2361 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2389 | `div` | `custom-scrollbar` | `bg-white` → `dark:bg-gray-900` | — |
+| 2395 | `h4` | — | `text-gray-900` → `dark:text-white` | — |
+| 2404 | `div` ⚡ | `visivel` | `bg-emerald-50/70` → `dark:bg-emerald-950/30`<br>`border-emerald-400` → `dark:border-emerald-700`<br>`text-emerald-900` → `dark:text-emerald-200`<br>`bg-red-50/70` → `dark:bg-red-950/30`<br>`border-red-300` → `dark:border-red-800`<br>`text-red-900` → `dark:text-red-200` | — |
+| 2420 | `span` | — | `border-gray-100` → `dark:border-gray-800` | — |
+| 2425 | `div` | — | `bg-gray-50` → `dark:bg-gray-800/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 2426 | `label` | — | `text-gray-800` → `dark:text-gray-200` | — |
+| 2429 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>_(sem claro)_ → `dark:bg-gray-900`<br>_(sem claro)_ → `dark:text-white` | — |
+| 2452 | `div` | — | `border-gray-200` → `dark:border-gray-800` | — |
 
 #### `resources/views/livewire/form-builder/hub.blade.php`
 
@@ -50499,13 +51290,17 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 | 119 | `button` ⚡ | `formularios` | `hover:text-gray-700` → `dark:hover:text-gray-300` | — |
 | 123 | `button` ⚡ | `movimentacao` | `hover:text-gray-700` → `dark:hover:text-gray-300` | — |
 | 127 | `button` ⚡ | `comunicacao` | `hover:text-gray-700` → `dark:hover:text-gray-300` | — |
-| 860 | `div` | — | `border-gray-200` → `dark:border-gray-700` | — |
-| 863 | `div` ⚡ | `tipo` | `border-white` → `dark:border-gray-900` | — |
-| 865 | `div` ⚡ | `is_participante` | `border-gray-100` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 868 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 875 | `p` | — | `text-gray-700` → `dark:text-gray-300` | — |
-| 897 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
-| 905 | `div` | — | `divide-gray-100` → `dark:divide-gray-800` | — |
+| 796 | `input` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700`<br>_(sem claro)_ → `dark:text-white` | — |
+| 861 | `div` | — | `border-gray-200` → `dark:border-gray-700` | — |
+| 864 | `div` ⚡ | `tipo` | `border-white` → `dark:border-gray-900` | — |
+| 866 | `div` ⚡ | `is_participante` | `border-gray-100` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 869 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 876 | `p` | — | `text-gray-700` → `dark:text-gray-300` | — |
+| 898 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
+| 906 | `div` | — | `divide-gray-100` → `dark:divide-gray-800` | — |
+| 1060 | `div` | — | `bg-white` → `dark:bg-gray-900` | — |
+| 1062 | `div` | — | `bg-indigo-600` → `dark:bg-indigo-700` | — |
+| 1084 | `div` | — | `bg-gray-50` → `dark:bg-gray-950` | — |
 
 #### `resources/views/livewire/registration/registration-manager.blade.php`
 
@@ -51277,67 +52072,67 @@ _Tags com fundo/borda claros ou texto escuro **sem** a classe `dark:` equivalent
 
 | Linha | Tag | Classe principal | Claro → escuro | Outras classes dark |
 | ---: | --- | --- | --- | --- |
-| 152 | `label` ⚡ | `bg_image` | `text-white` → `dark:text-gray-200`<br>`text-gray-800` → `dark:text-gray-200` | — |
-| 179 | `button` | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-700` | — |
-| 213 | `select` | — | `bg-gray-100` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700`<br>`text-gray-500` → `dark:text-white`<br>`text-gray-900` → `dark:text-white`<br>`bg-gray-100` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 224 | `label` ⚡ | `bg_image` | `text-gray-700` → `dark:text-gray-300` | — |
-| 225 | `input` | `form-radio` | `bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 234 | `label` ⚡ | `bg_image` | `text-gray-700` → `dark:text-gray-300` | — |
-| 235 | `input` | `form-checkbox` | `bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 246 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 248 | `thead` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 250 | `th` | — | `text-gray-500` → `dark:text-gray-400` | — |
-| 252 | `th` | — | `text-gray-600` → `dark:text-gray-300`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 256 | `tbody` | — | `divide-gray-100` → `dark:divide-gray-700` | — |
-| 258 | `tr` | — | `hover:bg-gray-50` → `dark:hover:bg-gray-700/40` | — |
-| 259 | `td` | — | `text-gray-800` → `dark:text-gray-200` | — |
-| 261 | `td` | — | `border-gray-100` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 262 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>`bg-white` → `dark:bg-gray-700` | — |
-| 272 | `div` ⚡ | `bg_image` | `text-gray-800` → `dark:text-gray-200` | — |
-| 277 | `a` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 279 | `div` | — | `bg-blue-50` → `dark:bg-blue-900/30`<br>`text-blue-800` → `dark:text-blue-200` | — |
-| 303 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 372 | `div` | — | `bg-gray-50` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 382 | `h4` | — | `text-gray-900` → `dark:text-white` | — |
-| 383 | `p` | — | `text-gray-500` → `dark:text-gray-400` | — |
-| 384 | `span` | — | `bg-gray-100` → `dark:bg-gray-700` | — |
-| 391 | `button` | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-800` | — |
-| 414 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 441 | `div` | — | `bg-gray-100` → `dark:bg-gray-950` | — |
-| 470 | `a` | — | `bg-white` → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:hover:bg-gray-700/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 475 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-400` | — |
-| 479 | `span` | — | `text-gray-900` → `dark:text-white` | — |
-| 485 | `span` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 591 | `div` ⚡ | — | `border-gray-300` → `dark:border-gray-600` | — |
-| 613 | `span` | — | `text-gray-500` → `dark:text-gray-400` | — |
-| 630 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
-| 632 | `img` | — | `bg-white` → `dark:bg-gray-800` | — |
-| 639 | `hr` | — | `border-gray-300` → `dark:border-gray-700` | — |
-| 650 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-red-900/20`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 652 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 656 | `i` | `ph-fill` | `text-gray-900` → `dark:text-white` | — |
-| 657 | `i` | `ph-fill` | `text-gray-800` → `dark:text-gray-200` | — |
-| 662 | `input` | — | `text-gray-900` → `dark:text-white` | — |
-| 679 | `i` ⚡ | `ph-fill` | `text-gray-300` → `dark:text-gray-600`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 693 | `div` | — | `border-gray-300` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 695 | `label` | — | `border-gray-200` → `dark:border-gray-700`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-700/50` | — |
-| 697 | `div` ⚡ | — | `text-gray-600` → `dark:text-gray-300` | — |
-| 737 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/20`<br>`border-gray-300` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
-| 762 | `p` | — | `text-gray-700` → `dark:text-gray-200` | — |
-| 774 | `div` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 780 | `span` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 785 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>_(sem claro)_ → `dark:border-purpura-800` | — |
-| 788 | `span` | — | `text-gray-800` → `dark:text-gray-200` | — |
-| 791 | `button` | — | `text-red-500` → `dark:text-red-400` | — |
-| 811 | `div` | — | `bg-gray-50` → `dark:bg-gray-700/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
-| 822 | `span` | — | `text-gray-700` → `dark:text-gray-200` | — |
-| 825 | `a` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
-| 829 | `button` | — | `text-red-500` → `dark:text-red-400` | — |
-| 988 | `select` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 1015 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 1068 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 1082 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
-| 1106 | `div` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 247 | `label` ⚡ | `bg_image` | `text-white` → `dark:text-gray-200`<br>`text-gray-800` → `dark:text-gray-200` | — |
+| 274 | `button` | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-700` | — |
+| 308 | `select` | — | `bg-gray-100` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700`<br>`text-gray-500` → `dark:text-white`<br>`text-gray-900` → `dark:text-white`<br>`bg-gray-100` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 319 | `label` ⚡ | `bg_image` | `text-gray-700` → `dark:text-gray-300` | — |
+| 320 | `input` | `form-radio` | `bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 329 | `label` ⚡ | `bg_image` | `text-gray-700` → `dark:text-gray-300` | — |
+| 330 | `input` | `form-checkbox` | `bg-white` → `dark:bg-gray-800`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 341 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 343 | `thead` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 345 | `th` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 347 | `th` | — | `text-gray-600` → `dark:text-gray-300`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 351 | `tbody` | — | `divide-gray-100` → `dark:divide-gray-700` | — |
+| 353 | `tr` | — | `hover:bg-gray-50` → `dark:hover:bg-gray-700/40` | — |
+| 354 | `td` | — | `text-gray-800` → `dark:text-gray-200` | — |
+| 356 | `td` | — | `border-gray-100` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 357 | `input` | — | `border-gray-300` → `dark:border-gray-600`<br>`bg-white` → `dark:bg-gray-700` | — |
+| 367 | `div` ⚡ | `bg_image` | `text-gray-800` → `dark:text-gray-200` | — |
+| 372 | `a` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 374 | `div` | — | `bg-blue-50` → `dark:bg-blue-900/30`<br>`text-blue-800` → `dark:text-blue-200` | — |
+| 398 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 467 | `div` | — | `bg-gray-50` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 477 | `h4` | — | `text-gray-900` → `dark:text-white` | — |
+| 478 | `p` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 479 | `span` | — | `bg-gray-100` → `dark:bg-gray-700` | — |
+| 486 | `button` | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>_(sem claro)_ → `dark:text-purpura-300`<br>_(sem claro)_ → `dark:border-purpura-800` | — |
+| 509 | `div` | — | `bg-white` → `dark:bg-gray-900`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 536 | `div` | — | `bg-gray-100` → `dark:bg-gray-950` | — |
+| 565 | `a` | — | `bg-white` → `dark:bg-gray-800`<br>_(sem claro)_ → `dark:hover:bg-gray-700/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 570 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/40`<br>_(sem claro)_ → `dark:text-purpura-400` | — |
+| 574 | `span` | — | `text-gray-900` → `dark:text-white` | — |
+| 580 | `span` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 686 | `div` ⚡ | — | `border-gray-300` → `dark:border-gray-600` | — |
+| 708 | `span` | — | `text-gray-500` → `dark:text-gray-400` | — |
+| 725 | `div` | — | `border-gray-100` → `dark:border-gray-700` | — |
+| 727 | `img` | — | `bg-white` → `dark:bg-gray-800` | — |
+| 734 | `hr` | — | `border-gray-300` → `dark:border-gray-700` | — |
+| 745 | `div` | — | `bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-red-900/20`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 747 | `div` | — | `bg-gray-50` → `dark:bg-gray-900/60`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 751 | `i` | `ph-fill` | `text-gray-900` → `dark:text-white` | — |
+| 752 | `i` | `ph-fill` | `text-gray-800` → `dark:text-gray-200` | — |
+| 757 | `input` | — | `text-gray-900` → `dark:text-white` | — |
+| 774 | `i` ⚡ | `ph-fill` | `text-gray-300` → `dark:text-gray-600`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 788 | `div` | — | `border-gray-300` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 790 | `label` | — | `border-gray-200` → `dark:border-gray-700`<br>`hover:bg-gray-50` → `dark:hover:bg-gray-700/50` | — |
+| 792 | `div` ⚡ | — | `text-gray-600` → `dark:text-gray-300` | — |
+| 832 | `div` ⚡ | — | _(sem claro)_ → `dark:bg-purpura-900/20`<br>`border-gray-300` → `dark:border-gray-700`<br>`bg-white` → `dark:bg-gray-800` | — |
+| 857 | `p` | — | `text-gray-700` → `dark:text-gray-200` | — |
+| 869 | `div` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 875 | `span` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 880 | `div` | — | _(sem claro)_ → `dark:bg-purpura-900/30`<br>_(sem claro)_ → `dark:border-purpura-800` | — |
+| 883 | `span` | — | `text-gray-800` → `dark:text-gray-200` | — |
+| 886 | `button` | — | `text-red-500` → `dark:text-red-400` | — |
+| 906 | `div` | — | `bg-gray-50` → `dark:bg-gray-700/50`<br>`border-gray-200` → `dark:border-gray-700` | — |
+| 917 | `span` | — | `text-gray-700` → `dark:text-gray-200` | — |
+| 920 | `a` | — | _(sem claro)_ → `dark:text-purpura-400` | — |
+| 924 | `button` | — | `text-red-500` → `dark:text-red-400` | — |
+| 1083 | `select` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 1110 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 1163 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 1177 | `input` | — | `text-gray-900` → `dark:text-white`<br>`bg-red-50` → `dark:bg-gray-800`<br>`bg-white` → `dark:bg-gray-800`<br>`bg-red-50` → `dark:bg-red-900/20`<br>`bg-white` → `dark:bg-red-900/20`<br>`border-red-500` → `dark:border-gray-700`<br>`border-gray-300` → `dark:border-gray-700` | — |
+| 1201 | `div` | — | `text-gray-500` → `dark:text-gray-400` | — |
 
 
 ---

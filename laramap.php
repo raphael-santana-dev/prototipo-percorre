@@ -304,7 +304,7 @@ final class PhpAnalyzer
     /** Chamadas ligadas a permissão/feature flag (Spatie, Gates, Pennant). */
     private const GATE_FUNCS = [
         'can', 'cannot', 'hasrole', 'haspermissionto', 'hasanyrole', 'hasallroles',
-        'hasanypermission', 'authorize', 'allows', 'denies', 'feature', 'active',
+        'hasanypermission', 'authorize', 'allows', 'denies',
     ];
 
     public static function analyze(string $rel, string $code): array
@@ -4392,6 +4392,201 @@ final class ExtratorDark
     }
 }
 
+/**
+ * Inventário de verificações de feature flag, lido direto do código-fonte
+ * (independe de estar dentro de método de classe): @feature(...),
+ * @if(feature(...)), {{ feature(...) }}, if (! feature(...)), feature(...),
+ * ->feature(...), Feature::active(...) e middleware 'feature:nome'.
+ */
+final class FeatureScanner
+{
+    private const PENNANT = 'active|inactive|allAreActive|someAreActive|allAreInactive|someAreInactive';
+
+    /**
+     * @return array<int,array{nome:string,linha:int,forma:string,dinamico:bool}>
+     */
+    public static function extrair(string $rel, string $code): array
+    {
+        if (str_starts_with($rel, 'tests/') || ! str_ends_with($rel, '.php')) {
+            return [];
+        }
+
+        $src = Textos::utf8($code);
+        $src = str_ends_with($rel, '.blade.php')
+            ? ExtratorHtml::apagar('/\{\{--.*?--\}\}|<!--.*?-->/s', $src)
+            : self::semComentarios($src);
+
+        if (stripos($src, 'feature') === false) {
+            return [];
+        }
+
+        $achados = []; // [offset, nome, forma, dinâmico]
+
+        // 1. diretiva Blade: @feature('x'), @elsefeature('x'), @unlessfeature('x')
+        if (preg_match_all('/(?<![\w@.\-])@(?:feature|elsefeature|unlessfeature)\s*\(/i', $src, $m, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($m[0] as [$txt, $off]) {
+                self::chamada($src, $off, $off + strlen($txt) - 1, '@feature', $achados);
+            }
+        }
+
+        // 2. feature('x') em qualquer contexto: PHP, @if(feature(...)), {{ feature(...) }}, if (! feature(...)), closures de rota
+        if (preg_match_all('/(?<![\w$>:@])feature\s*\(/', $src, $m, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($m[0] as [$txt, $off]) {
+                $antes = substr($src, max(0, $off - 30), min(30, $off));
+                if (preg_match('/function\s*&?\s*$/i', $antes) === 1) {
+                    continue; // definição do helper, não uma verificação
+                }
+                self::chamada($src, $off, $off + strlen($txt) - 1, 'feature()', $achados);
+            }
+        }
+
+        // 3. método: $this->feature('x'), $user->feature('x')
+        if (preg_match_all('/->\s*feature\s*\(/', $src, $m, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($m[0] as [$txt, $off]) {
+                self::chamada($src, $off, $off + strlen($txt) - 1, '->feature()', $achados);
+            }
+        }
+
+        // 4. Laravel Pennant: Feature::active('x') e Feature::for($u)->active('x')
+        if (preg_match_all('/\bFeature::(' . self::PENNANT . ')\s*\(/', $src, $m, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) > 0) {
+            foreach ($m as $hit) {
+                self::chamada($src, $hit[0][1], $hit[0][1] + strlen($hit[0][0]) - 1, 'Feature::' . $hit[1][0] . '()', $achados);
+            }
+        }
+        if (preg_match_all('/\bFeature::for\s*\(/', $src, $m, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($m[0] as [$txt, $off]) {
+                $fecha = ExtratorHtml::fechar($src, $off + strlen($txt) - 1);
+                if (preg_match('/\G\s*->\s*(' . self::PENNANT . ')\s*\(/', $src, $mm, PREG_OFFSET_CAPTURE, $fecha + 1) === 1) {
+                    self::chamada($src, $off, $mm[0][1] + strlen($mm[0][0]) - 1, 'Feature::for()->' . $mm[1][0] . '()', $achados);
+                }
+            }
+        }
+
+        // 5. middleware: ->middleware('feature:x'), ['auth', 'feature:a,b']
+        if (preg_match_all('/([\'"])([\w.\-]*feature[\w.\-]*):([^\'"\s]+)\1/i', $src, $m, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) > 0) {
+            foreach ($m as $hit) {
+                $off = $hit[0][1];
+                $contexto = substr($src, max(0, $off - 300), min(300, $off));
+                if (stripos($contexto, 'middleware') === false) {
+                    continue;
+                }
+                foreach (explode(',', $hit[3][0]) as $nome) {
+                    $nome = trim($nome);
+                    if ($nome !== '') {
+                        $achados[] = [$off, $nome, 'middleware', false];
+                    }
+                }
+            }
+        }
+
+        usort($achados, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+        $out = [];
+        $linha = 1;
+        $pos = 0;
+        foreach ($achados as [$off, $nome, $forma, $dinamico]) {
+            if ($off > $pos) {
+                $linha += substr_count($src, "\n", $pos, $off - $pos);
+                $pos = $off;
+            }
+            $out[] = ['nome' => $nome, 'linha' => $linha, 'forma' => $forma, 'dinamico' => $dinamico];
+        }
+
+        return $out;
+    }
+
+    private static function chamada(string $src, int $inicio, int $abre, string $forma, array &$achados): void
+    {
+        $fecha = ExtratorHtml::fechar($src, $abre);
+        $args = substr($src, $abre + 1, $fecha - $abre - 1);
+        foreach (self::nomes($args) as [$nome, $dinamico]) {
+            $achados[] = [$inicio, $nome, $forma, $dinamico];
+        }
+    }
+
+    /**
+     * Nomes de feature no primeiro argumento. Literal vira nome fixo; qualquer outra
+     * coisa ($var, 'a.' . $x, "a.$x") é registrada como dinâmica, para não sumir da contagem.
+     *
+     * @return array<int,array{0:string,1:bool}>
+     */
+    private static function nomes(string $args): array
+    {
+        $arg = trim(self::primeiroArgumento($args));
+        if ($arg === '') {
+            return [];
+        }
+
+        if ($arg[0] === '[') {
+            $out = [];
+            if (preg_match_all('/([\'"])((?:\\\\.|(?!\1).)*)\1/s', $arg, $ms, PREG_SET_ORDER) > 0) {
+                foreach ($ms as $m) {
+                    $out[] = [stripcslashes($m[2]), false];
+                }
+            }
+
+            return $out !== [] ? $out : [[self::dinamico($arg), true]];
+        }
+
+        if (preg_match('/^([\'"])((?:\\\\.|(?!\1).)*)\1$/s', $arg, $m) === 1) {
+            $interpolado = $m[1] === '"' && preg_match('/(?<!\\\\)\$|\{\$/', $m[2]) === 1;
+            if (! $interpolado) {
+                return [[stripcslashes($m[2]), false]];
+            }
+        }
+
+        return [[self::dinamico($arg), true]];
+    }
+
+    private static function dinamico(string $expr): string
+    {
+        return '⟨dinâmico⟩ ' . Textos::cortar(Textos::normalizar($expr), 60);
+    }
+
+    /** Texto do primeiro argumento (até a primeira vírgula fora de parênteses, colchetes e strings). */
+    private static function primeiroArgumento(string $args): string
+    {
+        $len = strlen($args);
+        $depth = 0;
+        $aspas = null;
+        for ($i = 0; $i < $len; $i++) {
+            $c = $args[$i];
+            if ($aspas !== null) {
+                if ($c === '\\') {
+                    $i++;
+                } elseif ($c === $aspas) {
+                    $aspas = null;
+                }
+                continue;
+            }
+            if ($c === "'" || $c === '"') {
+                $aspas = $c;
+            } elseif ($c === '(' || $c === '[' || $c === '{') {
+                $depth++;
+            } elseif ($c === ')' || $c === ']' || $c === '}') {
+                $depth--;
+            } elseif ($c === ',' && $depth === 0) {
+                return substr($args, 0, $i);
+            }
+        }
+
+        return $args;
+    }
+
+    /** Apaga comentários PHP (mantendo as quebras de linha) para não contar feature() comentado. */
+    private static function semComentarios(string $src): string
+    {
+        $out = '';
+        foreach (\PhpToken::tokenize($src) as $t) {
+            $out .= ($t->id === T_COMMENT || $t->id === T_DOC_COMMENT)
+                ? (string) preg_replace('/[^\n]/', ' ', $t->text)
+                : $t->text;
+        }
+
+        return $out;
+    }
+}
+
 final class Indexer
 {
     /** Métodos do framework que não precisam existir na própria classe. */
@@ -4427,6 +4622,7 @@ final class Indexer
     public array $edges = [];        // [origem, destino, tipo]
     public array $gatilhos = [];     // todo dispatch/event/job disparado, com origem e parametros
     public array $tabelas = [];      // tabela => ['colunas'=>[nome=>info], 'origem'=>[arquivos]]
+    public array $features = [];      // verificações de feature flag: nome, linha, forma, dinamico, arquivo
     public array $darkTags = [];      // tags/regras com dark: ou cor só-claro (arquivo, linha, tag, principal, dark, luz)
     public array $darkAtivacoes = []; // tags que ligam o tema (class="dark", data-theme...)
     public array $darkCitacoes = [];  // linhas que citam o tema escuro fora de classes (config, JS, CSS, nomes)
@@ -4467,6 +4663,15 @@ final class Indexer
     {
         $this->classes[$class['fqcn']] = $class;
         $this->viewOwner[$view] = $class['fqcn'];
+    }
+
+    /** Acumula as verificações de feature flag de um arquivo. */
+    public function addFeatures(string $rel, array $lista): void
+    {
+        foreach ($lista as $f) {
+            $f['arquivo'] = $rel;
+            $this->features[] = $f;
+        }
     }
 
     /** Acumula o que o extrator de tema escuro achou em um arquivo. */
@@ -6035,9 +6240,7 @@ final class MarkdownWriter
             foreach ($class['metodos'] as $metodo) {
                 $origem = $fqcn . '::' . $metodo['nome'];
                 foreach ($metodo['refs']['permissoes'] as $p) {
-                    if (str_starts_with($p, 'feature:')) {
-                        $features[substr($p, 8)][] = $origem;
-                    } else {
+                    if (! str_starts_with($p, 'feature:')) { // features vêm do FeatureScanner (tabelaFeatures)
                         $permissoes[$p][] = $origem;
                     }
                 }
@@ -6050,13 +6253,99 @@ final class MarkdownWriter
         }
 
         ksort($permissoes);
-        ksort($features);
 
         $out = ["## Permissões e Feature Flags\n"];
         $out[] = $this->tabelaPermissoes('Permissões / Roles (`can`, `hasRole`, `@can`...)', $permissoes);
-        $out[] = $this->tabelaPermissoes('Feature Flags (`feature()`)', $features);
+        $out[] = $this->tabelaFeatures();
 
         return implode("\n", $out) . "\n---\n";
+    }
+
+    /** Todas as verificações de feature: nome, quantas vezes, de que forma e onde. */
+    private function tabelaFeatures(): string
+    {
+        $out = ["### Feature Flags (`@feature`, `feature()`, `@if(feature(...))`, `Feature::active()`, middleware)\n"];
+        $lista = $this->index->features;
+        if ($lista === []) {
+            return implode("\n", $out) . "_Nenhuma verificação de feature encontrada._\n";
+        }
+
+        // contexto de cada ocorrência: Classe::metodo() (PHP) ou a view (Blade)
+        $metodos = [];
+        foreach ($this->index->classes as $fqcn => $class) {
+            foreach ($class['metodos'] as $m) {
+                $metodos[$class['arquivo']][] = [$m['linha'], $this->curto($fqcn) . '::' . $m['nome'] . '()'];
+            }
+        }
+        foreach ($metodos as &$l) {
+            usort($l, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+        }
+        unset($l);
+        $contexto = function (array $f) use ($metodos): string {
+            $rel = $f['arquivo'];
+            if (str_ends_with($rel, '.blade.php')) {
+                return 'view `' . BladeAnalyzer::viewName($rel) . '`';
+            }
+            $melhor = null;
+            foreach ($metodos[$rel] ?? [] as [$ln, $rot]) {
+                if ($ln > $f['linha']) {
+                    break;
+                }
+                $melhor = $rot;
+            }
+            if ($melhor !== null) {
+                return '`' . $melhor . '`';
+            }
+
+            return str_starts_with($rel, 'routes/') ? 'rota' : '(nível do arquivo)';
+        };
+
+        $nomes = [];
+        $dinamicas = [];
+        $porForma = [];
+        $arquivos = [];
+        foreach ($lista as $f) {
+            $porForma[$f['forma']] = ($porForma[$f['forma']] ?? 0) + 1;
+            $arquivos[$f['arquivo']] = true;
+            $local = $contexto($f) . ' — `' . $f['arquivo'] . ':' . $f['linha'] . '`';
+            if ($f['dinamico']) {
+                $dinamicas[] = [$f, $local];
+                continue;
+            }
+            $nomes[$f['nome']]['qtd'] = ($nomes[$f['nome']]['qtd'] ?? 0) + 1;
+            $nomes[$f['nome']]['formas'][$f['forma']] = true;
+            $nomes[$f['nome']]['locais'][] = $local;
+        }
+        ksort($nomes);
+        arsort($porForma);
+
+        $estaticas = array_sum(array_column($nomes, 'qtd'));
+        $out[] = '_' . count($nomes) . ' features distintas · ' . $estaticas . ' verificações · ' . count($arquivos) . ' arquivos'
+            . (count($dinamicas) > 0 ? ' · ' . count($dinamicas) . ' verificações com nome dinâmico (tabela abaixo)' : '') . '. '
+            . 'Por forma: ' . implode(', ', array_map(fn ($f, $n) => '`' . $f . '` ×' . $n, array_keys($porForma), $porForma)) . '. '
+            . "Cada verificação conta uma vez, em PHP ou em view._\n";
+
+        $out[] = '| Feature | Qtd | Formas | Verificada em |';
+        $out[] = '| --- | ---: | --- | --- |';
+        foreach ($nomes as $nome => $d) {
+            $locais = $d['locais'];
+            $extra = count($locais) > 15 ? '<br>…+' . (count($locais) - 15) . ' (lista completa no `--json`)' : '';
+            $out[] = '| `' . str_replace('|', '\\|', (string) $nome) . '` | ' . $d['qtd'] . ' | '
+                . implode(', ', array_map(fn ($f) => '`' . $f . '`', array_keys($d['formas']))) . ' | '
+                . implode('<br>', array_slice($locais, 0, 15)) . $extra . ' |';
+        }
+
+        if ($dinamicas !== []) {
+            $out[] = "\n#### Verificações com nome dinâmico\n";
+            $out[] = '_O nome da feature não é um texto fixo (variável ou concatenação), então não dá para saber qual é só lendo o código. Confira cada uma._' . "\n";
+            $out[] = '| Local | Forma | Expressão |';
+            $out[] = '| --- | --- | --- |';
+            foreach ($dinamicas as [$f, $local]) {
+                $out[] = '| ' . $local . ' | `' . $f['forma'] . '` | `' . str_replace('|', '\\|', $f['nome']) . '` |';
+            }
+        }
+
+        return implode("\n", $out) . "\n";
     }
 
     private function tabelaPermissoes(string $titulo, array $mapa): string
@@ -6929,6 +7218,14 @@ final class Main
                 continue;
             }
 
+            if (str_ends_with($rel, '.php')) {
+                try {
+                    $index->addFeatures($rel, FeatureScanner::extrair($rel, $code));
+                } catch (\Throwable $e) {
+                    $index->avisos[] = "Features: falha ao analisar {$rel}: " . $e->getMessage();
+                }
+            }
+
             if (! $opts['no-dark']) {
                 try {
                     $index->addDark($rel, ExtratorDark::extrair($rel, $code));
@@ -6998,6 +7295,7 @@ final class Main
         $log('  Classes mapeadas              : ' . count($index->classes));
         $log('  Views mapeadas                : ' . count($index->blades));
         $log('  Rotas mapeadas                : ' . count($index->rotas));
+        $log('  Verificações de feature       : ' . count($index->features));
         if (! $opts['no-strings']) {
             $log('  Textos únicos                 : ' . count($index->textos));
         }
@@ -7050,6 +7348,7 @@ final class Main
                 'models' => $index->modelUsage,
                 'eventos' => $index->eventos,
                 'textos' => $index->textos,
+                'features' => $index->features,
                 'dark' => [
                     'tags' => $index->darkTags,
                     'ativacoes' => $index->darkAtivacoes,
