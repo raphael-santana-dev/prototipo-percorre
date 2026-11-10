@@ -19,8 +19,12 @@ return [
     'google'  => ['gtag_id' => env('GOOGLE_GTAG_ID')],
 
     'suri' => [
-        'webhook_token' => env('SURI_WEBHOOK_TOKEN'),
+        'base_url'      => env('SURI_API_URL', ''),
+        'token'         => env('SURI_API_TOKEN', ''),
+        'channel_id'    => env('SURI_CHANNEL_ID', ''),
+        'webhook_token' => env('SURI_WEBHOOK_TOKEN', ''),
         'webhook_async' => env('SURI_WEBHOOK_ASYNC', true),
+        'test_user_id'  => env('SURI_TEST_USER_ID', ''),
     ],
 
     'postmark' => [

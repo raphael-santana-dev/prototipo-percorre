@@ -32,6 +32,7 @@ Route::post('/webhooks/suri/{token?}', [SuriWebhookController::class, 'handle'])
     ->withoutMiddleware([
         \Illuminate\Foundation\Http\Middleware\ValidateCsrfTokens::class,
         \App\Http\Middleware\ForcePasswordChange::class,
+        \App\Http\Middleware\CheckSessionInactivity::class,
     ])
     ->name('webhooks.suri');
 
