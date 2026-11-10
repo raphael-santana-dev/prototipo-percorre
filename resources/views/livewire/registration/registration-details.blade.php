@@ -27,6 +27,13 @@
         itemDescription="CPF: {{ $inscricao->cpf }} • {{ $inscricao->email }}">
         
         <x-slot name="badge">
+            @if($inscricao->legado)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
+                        title="Registro Legado: alterações e movimentações estão desativadas">
+                    <i class="ph-fill ph-lock-key text-sm text-amber-600"></i>
+                    <span>Legado (Somente Leitura)</span>
+                </span>
+            @endif
             <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2.5 flex-wrap justify-end">
                 @if($ultimoAtendimentoParticipante || $inscricao->origem === 'manual')
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs"
@@ -935,10 +942,66 @@
                 @endif
             </div>
 
+            {{-- HISTÓRICO DE MENSAGENS DO WHATSAPP (SURI WEBHOOK: ENVIADAS, ENTREGUES, LIDAS E RECEBIDAS) --}}
+            @if(count($this->mensagensWhatsappSuri) > 0)
+                <div class="card !p-0 overflow-hidden w-full block">
+                    <div class="p-6 border-b border-gray-100 flex items-center justify-between w-full bg-emerald-50/40">
+                        <h3 class="t-label-12-semibold tracking-wider text-emerald-800 uppercase flex items-center gap-2">
+                            <i class="ph-fill ph-whatsapp-logo text-lg text-emerald-600"></i> Mensagens WhatsApp Sincronizadas (Webhook Suri)
+                        </h3>
+                        <span class="text-xs font-bold text-emerald-700">{{ count($this->mensagensWhatsappSuri) }} mensagem(ns)</span>
+                    </div>
+
+                    <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto custom-scrollbar">
+                        @foreach($this->mensagensWhatsappSuri as $msgSuri)
+                            <div class="p-4 flex items-start justify-between gap-4 hover:bg-gray-50/60">
+                                <div class="flex items-start gap-3">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase {{ $msgSuri->direcao === 'in' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800' }}">
+                                        {{ $msgSuri->direcao === 'in' ? 'Recebida do Candidato' : 'Enviada p/ Candidato' }}
+                                    </span>
+                                    <div>
+                                        <p class="text-xs font-semibold text-gray-900 whitespace-pre-line">{{ $msgSuri->texto ?: '(Template / Anexo)' }}</p>
+                                        @if($msgSuri->error_reason)
+                                            <p class="text-[11px] text-red-600 font-bold mt-1">Erro ({{ $msgSuri->error_code }}): {{ $msgSuri->error_reason }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    @if($msgSuri->status === 'read')
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1" title="Lida em {{ $msgSuri->read_at?->format('d/m/Y H:i:s') }}">
+                                            <i class="ph-bold ph-checks text-blue-600"></i> Lida
+                                        </span>
+                                    @elseif($msgSuri->status === 'delivered')
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1" title="Entregue em {{ $msgSuri->delivered_at?->format('d/m/Y H:i:s') }}">
+                                            <i class="ph-bold ph-checks"></i> Entregue
+                                        </span>
+                                    @elseif($msgSuri->status === 'error')
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200">
+                                            Falha no Envio
+                                        </span>
+                                    @elseif($msgSuri->direcao === 'in')
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Recebida
+                                        </span>
+                                    @else
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-100 text-gray-700 border border-gray-200">
+                                            Enviada
+                                        </span>
+                                    @endif
+                                    <span class="text-[11px] font-mono text-gray-400">{{ $msgSuri->created_at?->format('d/m/Y H:i') }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- TABELA UNIFICADA DE E-MAILS E WHATSAPP DISPARADOS --}}
             <div class="card !p-0 overflow-hidden w-full block">
                 <div class="p-6 border-b border-gray-100 flex items-center justify-between w-full">
                     <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
-                        <i class="ph-fill ph-envelope-simple text-lg text-purpura-500"></i> Histórico de E-mails Disparados
+                        <i class="ph-fill ph-paper-plane-tilt text-lg text-purpura-500"></i> Histórico de Comunicações Disparadas (E-mail & WhatsApp)
                     </h3>
                     <span class="text-xs font-bold text-gray-400">{{ count($this->logsComunicacao) }} disparo(s)</span>
                 </div>
@@ -948,10 +1011,10 @@
                         <table class="w-full min-w-full text-left whitespace-nowrap">
                             <thead class="bg-gray-50 border-b border-gray-200">
                                 <tr>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Canal</th>
                                     <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Assunto / Template</th>
-                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Origem</th>
                                     <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Gatilho</th>
-                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Engajamento</th>
+                                    <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Recebimento / Leitura</th>
                                     <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase">Data de Envio</th>
                                     <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Status</th>
                                     <th class="px-6 py-3 font-semibold text-xs text-gray-500 uppercase text-center">Ação</th>
@@ -959,21 +1022,48 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 @foreach($this->logsComunicacao as $log)
+                                    @php
+                                        $isWppLog = ($log->canal ?? '') === 'whatsapp' || str_contains(strtolower((string) $log->template_nome), 'whatsapp');
+                                    @endphp
                                     <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="px-6 py-4">
+                                            @if($isWppLog)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full uppercase">
+                                                    <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 rounded-full uppercase">
+                                                    <i class="ph-fill ph-envelope-simple"></i> E-mail
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4">
                                             <div class="font-bold text-sm text-gray-900">{{ \Illuminate\Support\Str::limit($log->assunto, 45) }}</div>
                                             <div class="text-xs text-gray-500 mt-0.5">Template: {{ $log->template_nome ?? 'N/A' }}</div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="px-2.5 py-1 text-[10px] font-bold text-purpura-700 bg-purpura-100 border border-purpura-200 rounded-full uppercase">
-                                                {{ $log->origem ?? 'Automação' }}
-                                            </span>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-600">
                                             {{ $log->gatilho ? str_replace('inscricao.status.', 'Status: ', $log->gatilho) : '-' }}
                                         </td>
                                         <td class="px-6 py-4">
-                                            <div class="flex items-center gap-1.5">
+                                            @if($isWppLog)
+                                                @if($log->status === 'lido' || ($log->aberturas_count ?? 0) > 0)
+                                                    <span class="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+                                                        <i class="ph-bold ph-checks"></i> Lida pelo Contato
+                                                    </span>
+                                                @elseif($log->status === 'entregue' || !empty($log->entregue_em))
+                                                    <span class="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                                                        <i class="ph-bold ph-checks"></i> Entregue no Aparelho
+                                                    </span>
+                                                @elseif($log->status === 'erro')
+                                                    <span class="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-red-50 text-red-700 border border-red-200">
+                                                        Falha na Entrega
+                                                    </span>
+                                                @else
+                                                    <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                                                        Enviada (Aguardando Confirmação)
+                                                    </span>
+                                                @endif
+                                            @else
                                                 @if(($log->aberturas_count ?? 0) > 0)
                                                     <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                         Aberto ({{ $log->aberturas_count }}x)
@@ -983,13 +1073,13 @@
                                                         Não aberto
                                                     </span>
                                                 @endif
-                                            </div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-600">
                                             {{ $log->data_envio ? \Carbon\Carbon::parse($log->data_envio)->format('d/m/Y H:i') : $log->created_at->format('d/m/Y H:i') }}
                                         </td>
                                         <td class="px-6 py-4 text-center">
-                                            <span class="px-2.5 py-1 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 rounded-full uppercase">
+                                            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase border {{ $log->status === 'erro' ? 'text-red-700 bg-red-50 border-red-200' : 'text-green-700 bg-green-100 border-green-200' }}">
                                                 {{ $log->status }}
                                             </span>
                                         </td>
@@ -1005,7 +1095,7 @@
                     </div>
                 @else
                     <div class="py-16 text-center text-gray-500 w-full">
-                        <p class="font-medium text-sm">Nenhum e-mail disparado para este candidato.</p>
+                        <p class="font-medium text-sm">Nenhuma comunicação disparada para este candidato.</p>
                     </div>
                 @endif
             </div>

@@ -14,13 +14,14 @@ class ComunicacaoLog extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'anexos' => 'array',
-        'data_agendamento' => 'datetime',
-        'data_envio' => 'datetime',
-        'aberto_em' => 'datetime',
+        'anexos'             => 'array',
+        'data_agendamento'   => 'datetime',
+        'data_envio'         => 'datetime',
+        'entregue_em'        => 'datetime',
+        'aberto_em'          => 'datetime',
         'ultima_abertura_em' => 'datetime',
-        'clicado_em' => 'datetime',
-        'ultimo_clique_em' => 'datetime',
+        'clicado_em'         => 'datetime',
+        'ultimo_clique_em'   => 'datetime',
     ];
 
     public function comunicado()

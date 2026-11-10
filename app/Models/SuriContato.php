@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Modules\Student\Domain\Models\Student;
 
 class SuriContato extends Model
 {
@@ -11,6 +12,7 @@ class SuriContato extends Model
     protected $fillable = [
         'suri_user_id',
         'inscricao_id',
+        'student_id',
         'nome',
         'telefone',
         'email',
@@ -36,6 +38,11 @@ class SuriContato extends Model
     public function inscricao()
     {
         return $this->belongsTo(Inscricao::class, 'inscricao_id');
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'student_id');
     }
 
     public function mensagens()

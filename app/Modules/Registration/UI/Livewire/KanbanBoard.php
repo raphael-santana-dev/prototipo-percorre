@@ -286,6 +286,11 @@ class KanbanBoard extends Component
         //abort_if(!feature('inscricao.editar'), 403);
 
         $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
+
+        if ($inscricao->legado) {
+            $this->dispatch('erro', msg: 'Ação bloqueada: Inscrições marcadas como Legado não podem ser movidas.');
+            return;
+        }
         
         if (!$inscricao || $inscricao->status_inscricao_id == $statusId) {
             return;
@@ -387,6 +392,12 @@ class KanbanBoard extends Component
     public function quickChangeStatus($id, $status)
     {
         $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->find($id);
+
+        if ($inscricao->legado) {
+            $this->dispatch('erro', msg: 'Ação bloqueada: Inscrições marcadas como Legado não podem ser movidas.');
+            return;
+        }
+
         if ($inscricao && $inscricao->status_inscricao_id == $status) {
             $this->dispatch('erro', msg: 'O candidato já está nesta etapa!');
             return;
@@ -417,6 +428,7 @@ class KanbanBoard extends Component
         $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])
             ->whereIn('id', $this->selecionados)
             ->where('status_inscricao_id', '!=', $statusDestinoId)
+            ->where('legado', false)
             ->get();
 
         if ($inscricoesValidas->isEmpty()) {

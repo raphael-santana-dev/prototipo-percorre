@@ -1,4 +1,15 @@
 @php
+    @if($isEmbed ?? request()->boolean('embed'))
+        <style>
+            header, footer, nav, aside, .navbar, .site-header, .site-footer, .js-topnav, .js-sidebar {
+                display: none !important;
+            }
+            body, main {
+                padding-top: 0 !important;
+                margin-top: 0 !important;
+            }
+        </style>
+    @endif
     $formBgUrl = !empty($formSettings['bg_image']) ? asset($formSettings['bg_image']) : null;
     $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6'; 
     $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
@@ -612,9 +623,11 @@
                             <i class="ph-bold ph-spinner animate-spin text-lg" wire:loading wire:target="baixarFichaPdf"></i>
                             <span>Baixar Ficha de Inscrição (PDF)</span>
                         </button>
-                        <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">
-                            Voltar ao Início
-                        </button>
+                        @if(!($isEmbed ?? false))
+                            <button type="button" onclick="window.location.reload()" class="bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200">
+                                Voltar ao Início
+                            </button>
+                        @endif
                     </div>
                 </div>
                 @endif

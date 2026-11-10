@@ -7,10 +7,11 @@ use App\Traits\RegistraAuditoria;
 
 class Automacao extends Model
 {
-    
     use RegistraAuditoria;
+
     protected $table = 'automacoes';
     protected $guarded = [];
+
     protected $casts = [
         'status' => 'boolean',
     ];
@@ -19,8 +20,9 @@ class Automacao extends Model
         'nome',
         'evento_gatilho',
         'template_id',
+        'canal_disparo',
         'tipo_acao',
-        'status'
+        'status',
     ];
 
     public function template()

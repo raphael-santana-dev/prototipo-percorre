@@ -58,6 +58,7 @@ class Inscricao extends Model
         'curso_interesse_id',
         'turno_interesse_id',
         'data_inscricao',
+        'legado',
     ];
 
     protected $casts = [
@@ -67,6 +68,7 @@ class Inscricao extends Model
         'data_nascimento' => 'date',
         'status' => 'boolean',
         'data_inscricao' => 'datetime',
+        'legado' => 'boolean'
     ];
 
     public function student()

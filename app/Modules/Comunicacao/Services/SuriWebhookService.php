@@ -320,6 +320,8 @@ class SuriWebhookService
                 dataContato: $timestamp
             );
         }
+
+        $this->sincronizarLogComunicacaoInscricao($contato?->inscricao_id, $msgId, 'sent', $timestamp);
     }
 
     // =========================================================================
@@ -548,6 +550,66 @@ class SuriWebhookService
         $contato->save();
 
         return $contato;
+    }
+
+    protected function sincronizarLogComunicacaoInscricao(
+        ?int $inscricaoId,
+        ?string $externalMessageId,
+        string $novoStatusWebhook,
+        Carbon $timestamp,
+        ?string $erroMotivo = null
+    ): void {
+        if (!$inscricaoId && !$externalMessageId) {
+            return;
+        }
+
+        $query = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::query()
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('comunicacao_logs', 'canal'), fn($q) => $q->where('canal', 'whatsapp'));
+
+        $log = null;
+        if ($externalMessageId && \Illuminate\Support\Facades\Schema::hasColumn('comunicacao_logs', 'suri_message_id')) {
+            $log = (clone $query)->where('suri_message_id', $externalMessageId)->latest('id')->first();
+        }
+
+        if (!$log && $inscricaoId) {
+            $log = (clone $query)->where('inscricao_id', $inscricaoId)->latest('id')->first();
+        }
+
+        if (!$log) {
+            return;
+        }
+
+        $updates = [];
+        if ($externalMessageId && empty($log->suri_message_id)) {
+            $updates['suri_message_id'] = $externalMessageId;
+        }
+
+        if ($novoStatusWebhook === 'sent' && $log->status === 'pendente') {
+            $updates['status']     = 'enviado';
+            $updates['data_envio'] = $log->data_envio ?: $timestamp;
+        } elseif ($novoStatusWebhook === 'delivered') {
+            if ($log->status !== 'lido') {
+                $updates['status'] = 'entregue';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('comunicacao_logs', 'entregue_em') && !$log->entregue_em) {
+                $updates['entregue_em'] = $timestamp;
+            }
+        } elseif ($novoStatusWebhook === 'read') {
+            $updates['status']             = 'lido';
+            $updates['aberturas_count']    = max(1, ((int) $log->aberturas_count) + 1);
+            $updates['aberto_em']          = $log->aberto_em ?: $timestamp;
+            $updates['ultima_abertura_em'] = $timestamp;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('comunicacao_logs', 'entregue_em') && !$log->entregue_em) {
+                $updates['entregue_em'] = $timestamp;
+            }
+        } elseif ($novoStatusWebhook === 'error') {
+            $updates['status']        = 'erro';
+            $updates['erro_mensagem'] = $erroMotivo ?: $log->erro_mensagem;
+        }
+
+        if (!empty($updates)) {
+            $log->update($updates);
+        }
     }
 
     /**

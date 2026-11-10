@@ -69,10 +69,32 @@ class EsteiraManager extends Component
             ['key' => 'id', 'label' => '#ID', 'sortable' => true, 'class' => 'w-16'],
             ['key' => 'nome', 'label' => 'Esteira & Público-Alvo', 'sortable' => true],
             ['key' => 'etapas', 'label' => 'Cadência / Etapas', 'sortable' => false],
+            ['key' => 'progresso_etapa', 'label' => 'Etapa Atual / Situação', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'disparos', 'label' => 'Disparos Realizados', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'class' => 'text-center w-28'],
             ['key' => 'acoes', 'label' => 'Ações', 'sortable' => false, 'class' => 'text-right w-32'],
         ];
+    }
+
+    public function previewTemplate(int $templateId): void
+    {
+        $template = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($templateId);
+        if (!$template) {
+            $this->dispatch('erro', msg: 'Template não encontrado.');
+            return;
+        }
+
+        $canal = strtoupper($template->canal ?? 'email');
+        $this->dispatch('load-quick-view', [
+            'title'    => 'Pré-visualização: ' . $template->nome,
+            'subtitle' => "Canal: {$canal}",
+            'icon'     => 'ph-eye',
+            'maxWidth' => '2xl',
+            'data'     => [
+                'Assunto'  => '<span class="font-bold text-sm">' . e($template->assunto ?: $template->nome) . '</span>',
+                'Mensagem' => '<div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl prose prose-sm max-w-none">' . $template->corpo . '</div>',
+            ],
+        ]);
     }
 
     public function render()

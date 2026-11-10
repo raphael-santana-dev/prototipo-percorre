@@ -104,6 +104,10 @@ class RegistrationDetails extends Component
         $user = auth()->user();
         if (!$user) return false;
 
+        if ($this->inscricao->legado) {
+            return false;
+        }
+
         return $user->hasAnyRole(['dev', 'admin'])
             || $user->can('inscricao.editar')
             || $user->can('inscricao.criar');
@@ -758,6 +762,18 @@ class RegistrationDetails extends Component
     }
 
     #[Computed]
+    public function mensagensWhatsappSuri()
+    {
+        if (!Schema::hasTable('suri_mensagens')) {
+            return collect();
+        }
+
+        return \App\Models\SuriMensagem::where('inscricao_id', $this->inscricao->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    #[Computed]
     public function logsComunicacao()
     {
         $temColunaInscricao = Schema::hasColumn('comunicacao_logs', 'inscricao_id');
@@ -806,6 +822,11 @@ class RegistrationDetails extends Component
     {
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
+            return;
+        }
+
+        if ($this->inscricao->legado) {
+            $this->dispatch('erro', msg: 'Inscrições legadas são somente leitura e não podem ser movidas de status.');
             return;
         }
 

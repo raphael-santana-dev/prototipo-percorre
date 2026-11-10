@@ -15,23 +15,27 @@ class AutomacaoForm extends Component
     public ?int $automacaoId = null;
     public $nome = '';
     public $evento_gatilho = '';
+    public string $canal_disparo = 'email'; // 'email', 'whatsapp', 'ambos'
     public $template_id = '';
     public $tipo_acao = 'enviar_email';
     public bool $status = true;
+    public string $abaPreview = 'email';
 
     public array $eventosDisponiveis = [];
     public array $breadcrumbs = [];
 
     public function mount($id = null)
     {
+        $this->eventosDisponiveis['inscricao.primeiro_contato'] = 'Inscrição: 1º Contato Manual (Botão na Listagem de Inscrições)';
+        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
+        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
+
         $statusInscricoes = StatusInscricao::orderBy('nome')->get();
         foreach ($statusInscricoes as $st) {
             $slug = Str::slug($st->nome, '_');
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
 
-        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
-        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
         $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Coordenação: Solicitação de Cadastro de Inscrição';
         $this->eventosDisponiveis['inscricao.solicitacao_alteracao'] = 'Coordenação: Solicitação de Alteração em Ciclo Bloqueado';
         $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Avaliação: Aluno solicita reabertura de fase';
@@ -43,27 +47,55 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
 
         $this->eventosDisponiveis = array_merge(
-            $this->eventosDisponiveis, 
+            $this->eventosDisponiveis,
             $this->listarGatilhosDeFasesDisponiveis()
         );
 
         if ($id) {
-            //abort_if(!feature('automacao.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
-
-            $automacao = Automacao::findOrFail($id);
+            $automacao = Automacao::with('template')->findOrFail($id);
             $this->automacaoId = $automacao->id;
             $this->nome = $automacao->nome;
             $this->evento_gatilho = $automacao->evento_gatilho;
             $this->template_id = $automacao->template_id;
+            $this->canal_disparo = $automacao->canal_disparo ?: ($automacao->template->canal ?? 'email');
             $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
             $this->status = (bool) $automacao->status;
-        } else {
-            //abort_if(!feature('automacao.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
         }
 
+        $this->abaPreview = $this->canal_disparo === 'whatsapp' ? 'whatsapp' : 'email';
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    public function updatedCanalDisparo(string $novoCanal): void
+    {
+        $this->abaPreview = $novoCanal === 'whatsapp' ? 'whatsapp' : 'email';
+
+        if ($this->template_id) {
+            $tpl = EmailTemplate::find($this->template_id);
+            if ($tpl && !$this->templateCompativelComCanal($tpl, $novoCanal)) {
+                $this->template_id = '';
+            }
+        }
+    }
+
+    public function templateCompativelComCanal(EmailTemplate $tpl, string $canalDisparo): bool
+    {
+        $canalTpl = $tpl->canal ?? 'email';
+
+        return match ($canalDisparo) {
+            'email'    => in_array($canalTpl, ['email', 'ambos'], true),
+            'whatsapp' => in_array($canalTpl, ['whatsapp', 'ambos'], true),
+            'ambos'    => $canalTpl === 'ambos',
+            default    => false,
+        };
+    }
+
+    #[Computed]
+    public function templatesCompativeis()
+    {
+        return EmailTemplate::orderBy('nome')->get()->filter(function (EmailTemplate $tpl) {
+            return $this->templateCompativelComCanal($tpl, $this->canal_disparo);
+        })->values();
     }
 
     #[Computed]
@@ -75,9 +107,26 @@ class AutomacaoForm extends Component
         return EmailTemplate::find($this->template_id);
     }
 
-    /**
-     * Retorna a lista de gatilhos de Fases de Formulários/Ciclos disponíveis para criar automações.
-     */
+    public function abrirQuickViewTemplate(): void
+    {
+        $tpl = $this->templateSelecionado;
+        if (!$tpl) return;
+
+        $canal = strtoupper($tpl->canal ?? 'email');
+        $suriInfo = $tpl->suri_template_id ? "<span class='font-mono text-xs text-emerald-600'>Suri ID: {$tpl->suri_template_id}</span>" : '';
+
+        $this->dispatch('load-quick-view', [
+            'title'    => 'Pré-visualização: ' . $tpl->nome,
+            'subtitle' => "Canal do Template: {$canal}",
+            'icon'     => 'ph-eye',
+            'maxWidth' => '2xl',
+            'data'     => [
+                'Assunto / Identificação' => "<div class='flex items-center justify-between'><span class='font-bold'>".e($tpl->assunto ?: $tpl->nome)."</span>{$suriInfo}</div>",
+                'Conteúdo da Mensagem'    => "<div class='p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 prose prose-sm max-w-none'>{$tpl->corpo}</div>",
+            ],
+        ]);
+    }
+
     public function listarGatilhosDeFasesDisponiveis(): array
     {
         $gatilhos = [
@@ -97,7 +146,7 @@ class AutomacaoForm extends Component
 
                 $gatilhos["formulario.fase_liberada.{$fase->id}"] = "Fase Liberada: {$fase->nome} ({$contexto})";
 
-                $slugFase = \Illuminate\Support\Str::slug($fase->nome, '_');
+                $slugFase = Str::slug($fase->nome, '_');
                 if ($fase->ciclo_id) {
                     $gatilhos["inscricao.fase.{$slugFase}"] = "Inscrição - Fase Liberada: {$fase->nome}";
                 } elseif ($fase->formulario_id) {
@@ -111,28 +160,35 @@ class AutomacaoForm extends Component
 
     public function salvar()
     {
-        if ($this->automacaoId) {
-            //abort_if(!feature('automacao.editar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.editar'), 403);
-        } else {
-            //abort_if(!feature('automacao.criar'), 403);
-            //abort_if(!auth()->user()->hasRole('dev') && !auth()->user()->can('automacao.criar'), 403);
-        }
-
         $this->validate([
             'nome'           => 'required|string|min:3|max:255',
             'evento_gatilho' => 'required|string',
+            'canal_disparo'  => 'required|in:email,whatsapp,ambos',
             'template_id'    => 'required|exists:email_templates,id',
             'tipo_acao'      => 'required|string',
         ], [
             'nome.required'           => 'Defina um nome identificador para esta regra.',
             'evento_gatilho.required' => 'Selecione qual evento do sistema disparará esta automação.',
-            'template_id.required'    => 'Selecione o template de mensagem que será enviado.',
+            'template_id.required'    => 'Selecione um template compatível com o canal escolhido.',
         ]);
+
+        $template = EmailTemplate::findOrFail($this->template_id);
+
+        // Validação cruzada estrita entre Canal de Disparo e Tipo do Template
+        if (!$this->templateCompativelComCanal($template, $this->canal_disparo)) {
+            $this->addError('template_id', "O template '{$template->nome}' é do tipo [" . strtoupper($template->canal ?? 'email') . "] e não pode ser usado para disparo [" . strtoupper($this->canal_disparo) . "].");
+            return;
+        }
+
+        if (in_array($this->canal_disparo, ['whatsapp', 'ambos'], true) && empty($template->suri_template_id)) {
+            $this->addError('template_id', "O template selecionado ainda não possui ID sincronizado na Suri (suri_template_id). Sincronize-o antes de ativar o disparo via WhatsApp.");
+            return;
+        }
 
         $dados = [
             'nome'           => $this->nome,
             'evento_gatilho' => $this->evento_gatilho,
+            'canal_disparo'  => $this->canal_disparo,
             'template_id'    => $this->template_id,
             'tipo_acao'      => $this->tipo_acao,
             'status'         => (bool) $this->status,
@@ -152,7 +208,7 @@ class AutomacaoForm extends Component
     public function render()
     {
         return view('livewire.comunicacao.automacao.automacao-form', [
-            'templates' => EmailTemplate::orderBy('nome')->get()
+            'templates' => $this->templatesCompativeis,
         ])->layout('components.layouts.app', [
             'title' => $this->automacaoId ? 'Editar Automação' : 'Nova Automação'
         ]);

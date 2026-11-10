@@ -29,6 +29,90 @@ class SuriApiService
         ];
     }
 
+    public function getChannelId(): string
+    {
+        return $this->channelId;
+    }
+
+    /**
+     * Limpa o telefone e garante o prefixo 55 (DDI Brasil) no início.
+     */
+    public function normalizarTelefoneComDdi(?string $telefone): ?string
+    {
+        if (empty($telefone) || str_contains($telefone, '*')) {
+            return null;
+        }
+
+        $digitos = preg_replace('/\D/', '', $telefone);
+        if (strlen($digitos) < 10) {
+            return null;
+        }
+
+        if (!str_starts_with($digitos, '55') && in_array(strlen($digitos), [10, 11], true)) {
+            $digitos = '55' . $digitos;
+        }
+
+        return $digitos;
+    }
+
+    /**
+     * Resolve qual userId da Suri deve receber o Disparo Simples:
+     * 1. Se SURI_TEST_USER_ID estiver preenchido no .env, retorna o ID fixo de teste.
+     * 2. Caso contrário, busca na tabela suri_contatos (por inscricao_id, student_id ou telefone)
+     *    ou importa na hora caso ainda não esteja sincronizado.
+     */
+    public function resolverUserIdParaDisparo($inscricao = null, array $dadosExtras = []): ?string
+    {
+        $testUserId = trim((string) config('services.suri.test_user_id', env('SURI_TEST_USER_ID', '')));
+        if ($testUserId !== '') {
+            return $testUserId;
+        }
+
+        $inscricaoId = $inscricao->id ?? ($dadosExtras['inscricao_id'] ?? null);
+        $studentId   = $inscricao->student_id ?? ($dadosExtras['student_id'] ?? null);
+        $foneBruto   = $inscricao->celular ?? $dadosExtras['celular'] ?? $dadosExtras['telefone'] ?? null;
+        $foneCom55   = $this->normalizarTelefoneComDdi($foneBruto);
+
+        $contato = \App\Models\SuriContato::query()
+            ->when($inscricaoId, fn($q) => $q->orWhere('inscricao_id', $inscricaoId))
+            ->when($studentId, fn($q) => $q->orWhere('student_id', $studentId))
+            ->when($foneCom55, fn($q) => $q->orWhere('telefone', $foneCom55))
+            ->latest('id')
+            ->first();
+
+        if ($contato && !empty($contato->suri_user_id)) {
+            return $contato->suri_user_id;
+        }
+
+        // Fallback: se o candidato ainda não estava em suri_contatos, importa agora com 55 no início
+        if ($foneCom55) {
+            $nome = trim((string) ($inscricao->nome ?? $dadosExtras['nome'] ?? 'Candidato'));
+            $res  = $this->importarContato($nome, $foneCom55);
+
+            $suriUserId = data_get($res, 'resposta.data.id')
+                ?? data_get($res, 'resposta.id')
+                ?? ($this->channelId ? "{$this->channelId}:{$foneCom55}" : $foneCom55);
+
+            \App\Models\SuriContato::updateOrCreate(
+                ['suri_user_id' => (string) $suriUserId],
+                [
+                    'inscricao_id'        => $inscricaoId,
+                    'student_id'          => $studentId,
+                    'nome'                => $nome,
+                    'telefone'            => $foneCom55,
+                    'email'               => $inscricao->email ?? ($dadosExtras['email'] ?? null),
+                    'channel_id'          => $this->channelId ?: null,
+                    'channel_type'        => 1,
+                    'ultima_interacao_em' => now(),
+                ]
+            );
+
+            return (string) $suriUserId;
+        }
+
+        return null;
+    }
+
     // =========================================================================
     // MONTAGEM DO PAYLOAD E SINCRONIZAÇÃO DE TEMPLATES
     // =========================================================================

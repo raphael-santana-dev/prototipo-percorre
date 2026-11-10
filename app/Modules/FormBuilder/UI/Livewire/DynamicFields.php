@@ -782,47 +782,7 @@ class DynamicFields extends Component
         ];
     }
 
-    public function getCamposDisponiveisParaCondicaoProperty(): array
-    {
-        $lista = [];
-
-        // Se for Ciclo, inclui também os campos fixos nativos da 1ª etapa
-        if ($this->contextoTipo === 'ciclo') {
-            $fixosCiclo = [
-                'possui_nome_social'   => '[Fixo] Possui Nome Social? (sim/nao)',
-                'possui_deficiencia'   => '[Fixo] Pessoa com Deficiência PcD? (sim/nao)',
-                'natureza_deficiencia' => '[Fixo] Natureza da Deficiência',
-                'estado'               => '[Fixo] Estado (UF)',
-                'cidade'               => '[Fixo] Cidade',
-                'regiao'               => '[Fixo] Região (centro, norte, sul, leste, oeste)',
-                'unidade'              => '[Fixo] Unidade Selecionada (ID)',
-                'curso'                => '[Fixo] Curso Selecionado (ID)',
-                'turno'                => '[Fixo] Turno Selecionado (ID)',
-            ];
-            foreach ($fixosCiclo as $k => $label) {
-                $lista[$k] = $label;
-            }
-        }
-
-        $campos = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
-            ->where('tipo', '!=', 'config')
-            ->orderBy('etapa')
-            ->orderBy('ordem')
-            ->get();
-
-        foreach ($campos as $c) {
-            if ($this->campoId && (int) $c->id === (int) $this->campoId) {
-                continue; // Um campo não deve depender dele mesmo
-            }
-            if (in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link'], true)) {
-                continue;
-            }
-            $limpo = trim(strip_tags((string) $c->label)) ?: $c->name;
-            $lista[$c->name] = "Pág. #{$c->etapa} — " . Str::limit($limpo, 40) . " ({$c->name})";
-        }
-
-        return $lista;
-    }
+    
 
     public function updatedModoCondicional(string $modo): void
     {
@@ -921,6 +881,70 @@ class DynamicFields extends Component
         }
     }
 
+    public function getCamposDisponiveisParaCondicaoProperty(): array
+    {
+        $lista = [];
+
+        // Se for Ciclo, inclui também os campos fixos nativos da 1ª etapa
+        if ($this->contextoTipo === 'ciclo') {
+            $fixosCiclo = [
+                'data_nascimento'      => '[Fixo] Data de Nascimento',
+                'possui_nome_social'   => '[Fixo] Possui Nome Social? (sim/nao)',
+                'possui_deficiencia'   => '[Fixo] Pessoa com Deficiência PcD? (sim/nao)',
+                'natureza_deficiencia' => '[Fixo] Natureza da Deficiência',
+                'estado'               => '[Fixo] Estado (UF)',
+                'cidade'               => '[Fixo] Cidade',
+                'regiao'               => '[Fixo] Região (centro, norte, sul, leste, oeste)',
+                'unidade'              => '[Fixo] Unidade Selecionada (ID)',
+                'curso'                => '[Fixo] Curso Selecionado (ID)',
+                'turno'                => '[Fixo] Turno Selecionado (ID)',
+            ];
+            foreach ($fixosCiclo as $k => $label) {
+                $lista[$k] = $label;
+            }
+        }
+
+        $campos = CampoFormulario::where($this->getContextColumn(), $this->contextoId)
+            ->where('tipo', '!=', 'config')
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->get();
+
+        foreach ($campos as $c) {
+            if ($this->campoId && (int) $c->id === (int) $this->campoId) {
+                continue; // Um campo não deve depender dele mesmo
+            }
+            if (in_array($c->tipo, ['html', 'divider', 'media', 'spacer', 'link'], true)) {
+                continue;
+            }
+            $limpo = trim(strip_tags((string) $c->label)) ?: $c->name;
+            $lista[$c->name] = "Pág. #{$c->etapa} — " . Str::limit($limpo, 40) . " ({$c->name})";
+        }
+
+        return $lista;
+    }
+
+    /**
+     * Converte strings de data (YYYY-MM-DD ou DD/MM/YYYY, com ou sem hora) em Timestamp UTC.
+     */
+    protected function converterParaTimestampSeData($valor): ?int
+    {
+        $s = trim((string) $valor);
+        if ($s === '') return null;
+
+        // ISO: YYYY-MM-DD ou YYYY-MM-DDTHH:MM
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/', $s, $m)) {
+            return gmmktime((int) ($m[4] ?? 0), (int) ($m[5] ?? 0), 0, (int) $m[2], (int) $m[3], (int) $m[1]);
+        }
+
+        // BR: DD/MM/YYYY ou DD/MM/YYYY HH:MM
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/', $s, $m)) {
+            return gmmktime((int) ($m[4] ?? 0), (int) ($m[5] ?? 0), 0, (int) $m[2], (int) $m[1], (int) $m[3]);
+        }
+
+        return null;
+    }
+
     /**
      * Avalia individualmente uma regra de visibilidade para o Simulador em Tempo Real.
      */
@@ -954,9 +978,33 @@ class DynamicFields extends Component
             return $valNorm !== '';
         }
 
-        // Para qualquer outro operador, se o campo de origem ainda estiver vazio, retorna false
         if ($valNorm === '') {
             return false;
+        }
+
+        // Comparação inteligente de Datas (aceita YYYY-MM-DD e DD/MM/YYYY indiferentemente)
+        $dtVal = $this->converterParaTimestampSeData($valNorm);
+        $dtTgt = $this->converterParaTimestampSeData($alvoNorm);
+        $dtMax = $this->converterParaTimestampSeData($maxNorm);
+
+        if ($dtVal !== null && ($dtTgt !== null || in_array($op, ['in', 'not_in'], true))) {
+            $alvosDatas = array_values(array_filter(
+                array_map(fn($v) => $this->converterParaTimestampSeData($v), explode(',', $alvoNorm)),
+                fn($v) => $v !== null
+            ));
+
+            return match ($op) {
+                '='       => $dtTgt !== null && $dtVal === $dtTgt,
+                '!='      => $dtTgt !== null && $dtVal !== $dtTgt,
+                '>'       => $dtTgt !== null && $dtVal > $dtTgt,
+                '>='      => $dtTgt !== null && $dtVal >= $dtTgt,
+                '<'       => $dtTgt !== null && $dtVal < $dtTgt,
+                '<='      => $dtTgt !== null && $dtVal <= $dtTgt,
+                'between' => $dtTgt !== null && $dtMax !== null && $dtVal >= min($dtTgt, $dtMax) && $dtVal <= max($dtTgt, $dtMax),
+                'in'      => in_array($dtVal, $alvosDatas, true),
+                'not_in'  => !in_array($dtVal, $alvosDatas, true),
+                default   => false,
+            };
         }
 
         // Suporte a múltiplas respostas simuladas separadas por vírgula

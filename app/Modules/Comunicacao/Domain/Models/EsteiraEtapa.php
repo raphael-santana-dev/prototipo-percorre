@@ -13,6 +13,7 @@ class EsteiraEtapa extends Model
         'ordem',
         'nome',
         'template_id',
+        'canal_disparo',
         'tipo_acao',
         'tipo_agendamento',
         'data_disparo',
