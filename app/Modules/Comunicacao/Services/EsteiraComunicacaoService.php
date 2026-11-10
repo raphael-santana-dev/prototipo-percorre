@@ -343,6 +343,84 @@ class EsteiraComunicacaoService
     }
 
     /**
+     * Calcula em qual etapa a esteira se encontra no momento ou se já foi finalizada,
+     * retornando os dados prontos para o Badge na listagem de Esteiras (EsteiraManager).
+     */
+    public static function obterResumoProgressoEsteira(EsteiraComunicacao $esteira): array
+    {
+        $etapas = $esteira->etapas->sortBy('ordem')->values();
+        $totalEtapas = $etapas->count();
+
+        if ($totalEtapas === 0) {
+            return [
+                'estado' => 'sem_etapas',
+                'label'  => 'Sem Etapas',
+                'detalhe'=> 'Nenhuma etapa configurada',
+                'cor'    => 'bg-gray-100 text-gray-600 border-gray-200',
+                'icone'  => 'ph-minus-circle',
+            ];
+        }
+
+        // Conta disparos enviados por etapa
+        $disparosPorEtapa = EsteiraDisparo::where('esteira_id', $esteira->id)
+            ->selectRaw('etapa_id, count(*) as total, sum(case when status = \'enviado\' then 1 else 0 end) as enviados')
+            ->groupBy('etapa_id')
+            ->get()
+            ->keyBy('etapa_id');
+
+        $totalProcessadosGeral = $disparosPorEtapa->sum('total');
+        $ultimaEtapa = $etapas->last();
+        $processadosUltimaEtapa = (int) ($disparosPorEtapa[$ultimaEtapa->id]->total ?? 0);
+
+        // Verifica quantos destinatários elegíveis existem no universo hoje
+        $elegiveisAtuais = self::contarPublicoElegivel($esteira);
+
+        // Se a última etapa já foi processada para todos os elegíveis (ou se a data fixa da última etapa já passou e já houve disparos)
+        $ultimaDataFixaPassou = $ultimaEtapa->tipo_agendamento === 'data_fixa'
+            && $ultimaEtapa->data_disparo
+            && now()->gt($ultimaEtapa->data_disparo);
+
+        if ($processadosUltimaEtapa > 0 && ($processadosUltimaEtapa >= $elegiveisAtuais || $ultimaDataFixaPassou)) {
+            return [
+                'estado'  => 'finalizada',
+                'label'   => 'Esteira Finalizada',
+                'detalhe' => "Todas as {$totalEtapas} etapa(s) concluídas",
+                'cor'     => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+                'icone'   => 'ph-check-circle',
+            ];
+        }
+
+        // Descobre qual é a etapa atual em andamento (a primeira etapa que ainda possui destinatários pendentes)
+        $etapaAtualObj = $etapas->first();
+        foreach ($etapas as $et) {
+            $procEtapa = (int) ($disparosPorEtapa[$et->id]->total ?? 0);
+            if ($procEtapa === 0 || ($elegiveisAtuais > 0 && $procEtapa < $elegiveisAtuais)) {
+                $etapaAtualObj = $et;
+                break;
+            }
+            $etapaAtualObj = $et;
+        }
+
+        if ($totalProcessadosGeral === 0) {
+            return [
+                'estado'  => 'aguardando',
+                'label'   => "Na 1ª Etapa (1/{$totalEtapas})",
+                'detalhe' => 'Aguardando 1º disparo: ' . $etapaAtualObj->nome,
+                'cor'     => 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+                'icone'   => 'ph-clock-countdown',
+            ];
+        }
+
+        return [
+            'estado'  => 'em_andamento',
+            'label'   => "Etapa {$etapaAtualObj->ordem} de {$totalEtapas}",
+            'detalhe' => $etapaAtualObj->nome,
+            'cor'     => 'bg-purpura-50 text-purpura-700 border-purpura-200 dark:bg-purpura-900/30 dark:text-purpura-300 dark:border-purpura-800',
+            'icone'   => 'ph-spinner',
+        ];
+    }
+
+    /**
      * Verifica se o comportamento do usuário no e-mail da etapa anterior permite o envio da etapa atual.
      */
     private static function atendeFiltroEngajamentoAnterior(EsteiraEtapa $etapaAtual, EsteiraDisparo $disparoAnterior): bool
@@ -428,12 +506,15 @@ class EsteiraComunicacaoService
         $eventoGatilho = "esteira.{$esteira->id}.etapa.{$etapa->ordem}";
 
         // Enfileira o disparo utilizando a estrutura existente de comunicação
+        $canalEtapa = $etapa->canal_disparo ?? ($etapa->template->canal ?? 'email');
+
         DispararAutomacaoJob::dispatch(
             $etapa->template,
             $email,
             $inscricao,
             $contextoEnvio,
-            $eventoGatilho
+            $eventoGatilho,
+            $canalEtapa
         );
 
         // Registra o disparo na tabela da esteira para controle de cadência e exibição na tela de Detalhes

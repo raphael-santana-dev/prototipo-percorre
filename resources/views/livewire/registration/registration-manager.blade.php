@@ -402,6 +402,13 @@
                                     </a>
                                 @endif
 
+                                <button type="button"
+                                        wire:click="abrirModalPrimeiroContato({{ $inscricao->id }})"
+                                        class="p-1.5 text-emerald-600 transition-colors rounded hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-gray-600"
+                                        title="Disparar 1ª Mensagem de Contato (E-mail / WhatsApp Suri)">
+                                    <i class="text-lg ph-bold ph-paper-plane-tilt"></i>
+                                </button>
+
                                 @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
                                     <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph-bold ph-trash"></i>
@@ -1011,6 +1018,79 @@
                     <button type="button" wire:click="$set('modalContatoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
                     <button type="button" wire:click="salvarContato" class="btn btn--primary btn--medium bg-purpura-600 hover:bg-purpura-700 border-none">
                         <i class="ph-bold ph-floppy-disk"></i> {{ $contatoRegistroId ? 'Atualizar Contato' : 'Registrar Contato' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL DE DISPARO DA 1ª MENSAGEM DE CONTATO (COM PREVIEW DO TEMPLATE) --}}
+    @if($modalPrimeiroContatoAberto)
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/65 backdrop-blur-sm px-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                            <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wider">Disparar 1ª Mensagem de Contato</h3>
+                            <p class="text-xs text-gray-300">Candidato: <b>{{ $primeiroContatoNome }}</b></p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="$set('modalPrimeiroContatoAberto', false)" class="text-gray-400 hover:text-white">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">1. Escolha o Canal de Envio</label>
+                        <div class="grid grid-cols-3 gap-2.5">
+                            <button type="button" wire:click="$set('primeiroContatoCanal', 'whatsapp')" class="py-2.5 px-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition {{ $primeiroContatoCanal === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500' : 'border-gray-200 text-gray-600' }}">
+                                <i class="ph-fill ph-whatsapp-logo text-base"></i> Apenas WhatsApp
+                            </button>
+                            <button type="button" wire:click="$set('primeiroContatoCanal', 'email')" class="py-2.5 px-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition {{ $primeiroContatoCanal === 'email' ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500' : 'border-gray-200 text-gray-600' }}">
+                                <i class="ph-fill ph-envelope-simple text-base"></i> Apenas E-mail
+                            </button>
+                            <button type="button" wire:click="$set('primeiroContatoCanal', 'ambos')" class="py-2.5 px-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition {{ $primeiroContatoCanal === 'ambos' ? 'border-purpura-500 bg-purpura-50 text-purpura-700 ring-1 ring-purpura-500' : 'border-gray-200 text-gray-600' }}">
+                                <i class="ph-fill ph-intersect text-base"></i> E-mail + WhatsApp
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1.5">2. Template Compatível *</label>
+                        <select wire:model.live="primeiroContatoTemplateId" class="w-full rounded-xl border-gray-300 dark:bg-gray-900 dark:text-white text-xs font-semibold py-2.5 px-3">
+                            <option value="">-- Selecione o Template --</option>
+                            @foreach($this->templatesPrimeiroContato as $tpl)
+                                <option value="{{ $tpl->id }}">[{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }}</option>
+                            @endforeach
+                        </select>
+                        @error('primeiroContatoTemplateId') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    {{-- PRÉ-VISUALIZAÇÃO DO TEMPLATE SELECIONADO --}}
+                    @if($this->templatePrimeiroContatoSelecionado)
+                        @php $tplPv = $this->templatePrimeiroContatoSelecionado; @endphp
+                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
+                            <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+                                <span class="text-[10px] font-extrabold uppercase text-purpura-600 flex items-center gap-1">
+                                    <i class="ph-fill ph-eye"></i> Pré-visualização do Template
+                                </span>
+                                <span class="text-[10px] font-mono text-gray-500">{{ $tplPv->assunto }}</span>
+                            </div>
+                            <div class="prose prose-sm max-w-none text-xs text-gray-700 dark:text-gray-200 max-h-48 overflow-y-auto custom-scrollbar">
+                                {!! $tplPv->corpo !!}
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                    <button type="button" wire:click="$set('modalPrimeiroContatoAberto', false)" class="btn btn--secondary btn--medium">Cancelar</button>
+                    <button type="button" wire:click="dispararPrimeiroContato" class="btn btn--primary btn--medium bg-emerald-600 hover:bg-emerald-700 border-none flex items-center gap-1.5">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Confirmar e Disparar
                     </button>
                 </div>
             </div>

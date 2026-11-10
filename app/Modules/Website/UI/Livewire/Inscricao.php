@@ -31,6 +31,7 @@ class Inscricao extends Component
     public $inscricaoId = null;
     public $cicloAtivoId = null;
     public bool $inscricoesAbertas = false;
+    public string $ultimoHashSuriSincronizado = '';
 
     public $nome, $nome_social, $cpf, $email, $celular, $data_nascimento, $cep, $logradouro, $bairro, $cidade, $estado, $regiao, $numero, $complemento, $unidade, $turno, $curso, $natureza_deficiencia;
     public $possui_deficiencia = 'nao';
@@ -66,6 +67,9 @@ class Inscricao extends Component
     public bool $exibirEnderecoFixo = true;
     public bool $exibirSelecaoCursoFixo = true;
 
+    public bool $isEmbed = false;
+    public bool $isAssistido = false;
+
     public function mount(?string $slug_projeto = null)
     {
         $this->slugProjeto = $slug_projeto;
@@ -86,11 +90,21 @@ class Inscricao extends Component
         $this->isPreview = $querPreview;
         $this->isTeste   = $querTeste;
 
+        $this->isEmbed     = filter_var(request()->query('embed', false), FILTER_VALIDATE_BOOLEAN);
+        $this->isAssistido = filter_var(request()->query('assistido', false), FILTER_VALIDATE_BOOLEAN);
+
+        if (request()->filled('retomar_token')) {
+            try {
+                $idDecriptado = \Illuminate\Support\Facades\Crypt::decrypt(request()->query('retomar_token'));
+                session(['inscricao_retomada_id' => $idDecriptado]);
+            } catch (\Throwable $e) {}
+        }
+
         $queryCiclo = Ciclo::with(['campos' => function($query) {
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc')->orderBy('id', 'asc');
         }]);
 
-        if ($this->isPreview || $this->isTeste) {
+        if ($this->isPreview || $this->isTeste || $this->isAssistido) {
             $cicloPreviewId = request()->query('ciclo_id');
             if ($cicloPreviewId) {
                 $ciclo = $queryCiclo->find($cicloPreviewId);
@@ -181,6 +195,38 @@ class Inscricao extends Component
                     ['id', 'asc'],
                 ])
                 ->values();
+        }
+    }
+
+    private function sincronizarContatoSuriEmBackground(): void
+    {
+        if ($this->isPreview || $this->isTeste || !$this->inscricaoId) {
+            return;
+        }
+
+        $nomeLimpo = trim((string) $this->nome);
+        $celularReal = (!$this->editarCelular && $this->celularOriginal && str_contains((string) $this->celular, '*'))
+            ? $this->celularOriginal
+            : (string) $this->celular;
+
+        $digitosFone = preg_replace('/\D/', '', $celularReal);
+
+        if (strlen($nomeLimpo) >= 3 && $nomeLimpo !== 'Candidato em Preenchimento' && strlen($digitosFone) >= 10) {
+            $hashAtual = md5($this->inscricaoId . '|' . $nomeLimpo . '|' . $digitosFone);
+            if ($this->ultimoHashSuriSincronizado === $hashAtual) {
+                return;
+            }
+
+            $this->ultimoHashSuriSincronizado = $hashAtual;
+
+            \App\Jobs\SincronizarContatoSuriJob::dispatch(
+                inscricaoId: (int) $this->inscricaoId,
+                studentId: null,
+                nomeManual: $nomeLimpo,
+                telefoneManual: $digitosFone,
+                emailManual: $this->emailOriginal ?: $this->email,
+                cpfManual: $this->cpf
+            )->afterResponse();
         }
     }
 
@@ -350,6 +396,7 @@ class Inscricao extends Component
 
         $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
         $this->inscricaoId = $inscricao->id;
+        $this->sincronizarContatoSuriEmBackground();
     }
 
     public function tentarRecuperarRascunho()
@@ -389,6 +436,9 @@ class Inscricao extends Component
         if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
             $this->etapaAtual = $inscricaoRetomada->etapa_atual; 
             return;
+        }
+        if ($this->isAssistido && in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
+            $this->etapaAtual = 1;
         }
 
         $this->nome = $inscricaoRetomada->nome !== 'Candidato em Preenchimento' ? $inscricaoRetomada->nome : $this->nome;
@@ -1026,6 +1076,8 @@ class Inscricao extends Component
         if (!$this->inscricaoId) {
             $this->inscricaoId = $inscricao->id;
         }
+
+        $this->sincronizarContatoSuriEmBackground();
     }
 
     public function restaurarDeDadosSalvos()

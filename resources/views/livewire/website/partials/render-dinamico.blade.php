@@ -988,7 +988,7 @@
                     @enderror
                 </div>
                 
-           @elseif($campo->tipo === 'system')
+            @elseif($campo->tipo === 'system')
                 @php
                     $opcoesSistema = [];
                     $filtrarPorUf = filter_var($config['filtrar_por_uf'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -1147,81 +1147,15 @@
                 </select>
                 
             @else
-                {{-- SUBTIPOS DE TEXTO: MOEDA, CEP (COM VIACEP), CPF, CNPJ, TELEFONE, DATAS E TEXTO SIMPLES --}}
-                @if($campo->subtipo === 'money')
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 font-bold sm:text-sm">R$</span>
-                        </div>
-                        <input type="text" 
-                            wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
-                            x-mask:dynamic="$money($input, ',', '.')" 
-                            class="w-full rounded-md border pl-10 pr-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror"
-                            placeholder="0,00">
-                    </div>
-
-                @elseif($campo->subtipo === 'cep')
                     @php
-                        $usaViaCep = filter_var($config['viacep'] ?? false, FILTER_VALIDATE_BOOLEAN);
-                        $mapaViaCep =$config['viacep_map'] ?? [
-                            'logradouro'  => $campo->name . '_logradouro',
-                            'numero'      => $campo->name . '_numero',
-                            'complemento' => $campo->name . '_complemento',
-                            'bairro'      => $campo->name . '_bairro',
-                            'cidade'      => $campo->name . '_cidade',
-                            'uf'          => $campo->name . '_uf',
-                        ];
+                        $isInputDataHora = in_array($campo->subtipo, ['date', 'datetime-local', 'time'], true);
                     @endphp
-                    <div x-data="{
-                            buscandoCep: false,
-                            erroCep: '',
-                            async consultarViaCep(valor) {
-                                @if(!$usaViaCep) return; @endif
-                                let cepLimpo = String(valor || '').replace(/\D/g, '');
-                                this.erroCep = '';
-                                if (cepLimpo.length !== 8) return;
-
-                                this.buscandoCep = true;
-                                try {
-                                    const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-                                    const data = await res.json();
-                                    if (data.erro) {
-                                        this.erroCep = 'CEP não encontrado.';
-                                    } else {
-                                        $wire.set('respostas.{{$mapaViaCep['logradouro'] }}', data.logradouro || '');
-                                        $wire.set('respostas.{{$mapaViaCep['bairro'] }}', data.bairro || '');
-                                        $wire.set('respostas.{{$mapaViaCep['cidade'] }}', data.localidade || '');
-                                        $wire.set('respostas.{{$mapaViaCep['uf'] }}', data.uf || '');
-                                        if (data.complemento) {
-                                            $wire.set('respostas.{{$mapaViaCep['complemento'] }}', data.complemento);
-                                        }
-                                        setTimeout(() => $el.dispatchEvent(new CustomEvent('input', { bubbles: true })), 300);
-                                    }
-                                } catch (e) {
-                                    this.erroCep = 'Erro ao consultar o ViaCEP.';
-                                } finally {
-                                    this.buscandoCep = false;
-                                }
-                            }
-                         }"
-                         class="w-full">
-                        <div class="relative">
-                            <input type="text"
-                                   wire:model.live.debounce.500ms="respostas.{{ $campo->name }}"
-                                   x-mask="99999-999"
-                                   @input.debounce.400ms="consultarViaCep($event.target.value)"
-                                   placeholder="00000-000"
-                                   class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
-                            <div x-show="buscandoCep" x-cloak class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <i class="ph-bold ph-spinner animate-spin text-purpura-600"></i>
-                            </div>
-                        </div>
-                        <span x-show="erroCep" x-cloak x-text="erroCep" class="text-xs text-red-500 font-bold mt-1 block"></span>
-                    </div>
-
-                @else
-                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ?$campo->subtipo : 'text' }}" 
-                        wire:model.live.debounce.500ms="respostas.{{ $campo->name }}" 
+                    <input type="{{ in_array($campo->subtipo, ['date', 'datetime-local', 'time', 'text', 'email', 'number', 'password', 'tel']) ? $campo->subtipo : 'text' }}" 
+                        @if($isInputDataHora)
+                            wire:model.live="respostas.{{ $campo->name }}"
+                        @else
+                            wire:model.live.debounce.500ms="respostas.{{ $campo->name }}"
+                        @endif
                         
                         @if($campo->subtipo === 'tel')
                             x-mask:dynamic="$input.length > 14 ? '(99) 99999-9999' : '(99) 9999-9999'"
@@ -1241,7 +1175,6 @@
 
                         class="w-full rounded-md border px-3 py-2 focus:ring-purpura-500 focus:border-purpura-500 text-gray-900 dark:text-white dark:bg-gray-800 @error('respostas.'.$campo->name) border-red-500 bg-red-50 dark:bg-red-900/20 @else border-gray-300 dark:border-gray-700 bg-white @enderror">
                 @endif
-            @endif
 
             @if(!empty($legendaTexto))
                 <div class="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">

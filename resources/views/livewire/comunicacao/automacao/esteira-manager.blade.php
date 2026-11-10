@@ -102,7 +102,7 @@
                 <td class="px-4 py-3">
                     <div class="flex flex-wrap items-center gap-1.5">
                         @foreach($esteira->etapas as $et)
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                            <span wire:click="previewTemplate({{ $et->template_id }})" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
                                   title="{{ $et->nome }} ({{ $et->template->nome ?? 'Sem template' }})">
                                 <span class="w-4 h-4 rounded-full bg-purpura-600 text-white text-[9px] flex items-center justify-center font-black">{{ $et->ordem }}</span>
                                 @if($et->tipo_agendamento === 'data_fixa' && $et->data_disparo)
@@ -117,6 +117,22 @@
                                 <i class="ph-bold ph-arrow-right text-[10px] text-gray-400"></i>
                             @endif
                         @endforeach
+                    </div>
+                </td>
+
+                {{-- NOVA COLUNA: BADGE DE PROGRESSO / ETAPA ATUAL OU FINALIZADA --}}
+                <td class="px-4 py-3 whitespace-nowrap text-center">
+                    @php
+                        $progresso = \App\Modules\Comunicacao\Services\EsteiraComunicacaoService::obterResumoProgressoEsteira($esteira);
+                    @endphp
+                    <div class="inline-flex flex-col items-center">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold border {{ $progresso['cor'] }}">
+                            <i class="ph-bold {{ $progresso['icone'] }}"></i>
+                            <span>{{ $progresso['label'] }}</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 font-medium mt-0.5 truncate max-w-[160px]" title="{{ $progresso['detalhe'] }}">
+                            {{ $progresso['detalhe'] }}
+                        </span>
                     </div>
                 </td>
 

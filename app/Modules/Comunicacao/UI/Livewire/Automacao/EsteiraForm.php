@@ -104,6 +104,7 @@ class EsteiraForm extends Component
                     'atraso_valor'                => $et->atraso_valor ?? 7,
                     'atraso_unidade'              => $et->atraso_unidade ?? 'dias',
                     'filtro_engajamento_anterior' => $et->filtro_engajamento_anterior ?? 'todos',
+                    'canal_disparo'               => $et->canal_disparo ?? ($et->template->canal ?? 'email')
                 ];
             }
         } else {
@@ -236,6 +237,7 @@ class EsteiraForm extends Component
             'atraso_valor'                => 7,
             'atraso_unidade'              => 'dias',
             'filtro_engajamento_anterior' => $num === 1 ? 'todos' : 'nao_clicou',
+            'canal_disparo' => 'email'
         ];
     }
 
@@ -320,6 +322,27 @@ class EsteiraForm extends Component
         ];
     }
 
+    public function previewTemplate(int $templateId): void
+    {
+        $template = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($templateId);
+        if (!$template) {
+            $this->dispatch('erro', msg: 'Template não encontrado.');
+            return;
+        }
+
+        $canal = strtoupper($template->canal ?? 'email');
+        $this->dispatch('load-quick-view', [
+            'title'    => 'Pré-visualização: ' . $template->nome,
+            'subtitle' => "Canal: {$canal}",
+            'icon'     => 'ph-eye',
+            'maxWidth' => '2xl',
+            'data'     => [
+                'Assunto'  => '<span class="font-bold text-sm">' . e($template->assunto ?: $template->nome) . '</span>',
+                'Mensagem' => '<div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl prose prose-sm max-w-none">' . $template->corpo . '</div>',
+            ],
+        ]);
+    }
+
     public function salvar()
     {
         $this->validate([
@@ -346,6 +369,32 @@ class EsteiraForm extends Component
             }
         }
 
+        foreach ($this->etapas as $idx => $et) {
+            $numEtapa = $idx + 1;
+            $canalEtapa = $et['canal_disparo'] ?? 'email';
+            $tpl = EmailTemplate::find($et['template_id']);
+
+            if ($tpl) {
+                $canalTpl = $tpl->canal ?? 'email';
+                $compativel = match ($canalEtapa) {
+                    'email'    => in_array($canalTpl, ['email', 'ambos'], true),
+                    'whatsapp' => in_array($canalTpl, ['whatsapp', 'ambos'], true),
+                    'ambos'    => $canalTpl === 'ambos',
+                    default    => false,
+                };
+
+                if (!$compativel) {
+                    $this->addError("etapas.{$idx}.template_id", "Etapa #{$numEtapa}: O template '{$tpl->nome}' ({$canalTpl}) não é compatível com o disparo '{$canalEtapa}'.");
+                    return;
+                }
+
+                if (in_array($canalEtapa, ['whatsapp', 'ambos'], true) && empty($tpl->suri_template_id)) {
+                    $this->addError("etapas.{$idx}.template_id", "Etapa #{$numEtapa}: O template '{$tpl->nome}' não está sincronizado na Suri.");
+                    return;
+                }
+            }
+        }
+
         DB::transaction(function () {
             $dadosEsteira = [
                 'nome'                         => $this->nome,
@@ -362,6 +411,7 @@ class EsteiraForm extends Component
                 'revalidar_condicoes_no_envio' => $this->revalidar_condicoes_no_envio,
                 'apenas_horario_comercial'     => $this->apenas_horario_comercial,
                 'criado_por'                   => auth()->id(),
+                'canal_disparo' => $et['canal_disparo'] ?? 'email',
             ];
 
             if ($this->esteiraId) {

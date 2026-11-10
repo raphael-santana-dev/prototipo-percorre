@@ -758,6 +758,18 @@ class RegistrationDetails extends Component
     }
 
     #[Computed]
+    public function mensagensWhatsappSuri()
+    {
+        if (!Schema::hasTable('suri_mensagens')) {
+            return collect();
+        }
+
+        return \App\Models\SuriMensagem::where('inscricao_id', $this->inscricao->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    #[Computed]
     public function logsComunicacao()
     {
         $temColunaInscricao = Schema::hasColumn('comunicacao_logs', 'inscricao_id');

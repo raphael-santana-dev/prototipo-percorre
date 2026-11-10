@@ -245,22 +245,50 @@
                                     @endif
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Template de E-mail <span class="text-red-500">*</span></label>
-                                        <select wire:model="etapas.{{ $index }}.template_id" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:text-white text-xs font-semibold py-2 px-3">
+                                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                    <div class="md:col-span-3">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Canal de Disparo *</label>
+                                        <select wire:model.live="etapas.{{ $index }}.canal_disparo" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:text-white text-xs font-bold py-2 px-3">
+                                            <option value="email">Apenas E-mail</option>
+                                            <option value="whatsapp">Apenas WhatsApp</option>
+                                            <option value="ambos">E-mail + WhatsApp</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="md:col-span-5">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Template da Etapa *</label>
+                                            @if(!empty($etapa['template_id']))
+                                                <button type="button" wire:click="previewTemplate({{ (int) $etapa['template_id'] }})" class="text-[10px] font-bold text-purpura-600 hover:underline flex items-center gap-1">
+                                                    <i class="ph-bold ph-eye"></i> Pré-visualizar
+                                                </button>
+                                            @endif
+                                        </div>
+                                        @php
+                                            $canalEtapaAtual = $etapa['canal_disparo'] ?? 'email';
+                                            $templatesEtapa = $templates->filter(function($t) use ($canalEtapaAtual) {
+                                                $ct = $t->canal ?? 'email';
+                                                return match($canalEtapaAtual) {
+                                                    'email'    => in_array($ct, ['email', 'ambos'], true),
+                                                    'whatsapp' => in_array($ct, ['whatsapp', 'ambos'], true),
+                                                    'ambos'    => $ct === 'ambos',
+                                                    default    => true,
+                                                };
+                                            });
+                                        @endphp
+                                        <select wire:model.live="etapas.{{ $index }}.template_id" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:text-white text-xs font-semibold py-2 px-3">
                                             <option value="">-- Selecione o Template --</option>
-                                            @foreach($templates as $tpl)
+                                            @foreach($templatesEtapa as $tpl)
                                                 <option value="{{ $tpl->id }}">[{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }}</option>
                                             @endforeach
                                         </select>
                                         @error("etapas.{$index}.template_id") <span class="text-[11px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                     </div>
 
-                                    <div>
+                                    <div class="md:col-span-4">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Quando Disparar?</label>
                                         <select wire:model.live="etapas.{{ $index }}.tipo_agendamento" class="w-full rounded-lg border-gray-300 dark:bg-gray-800 dark:text-white text-xs font-semibold py-2 px-3">
-                                            <option value="data_fixa">Em uma Data e Hora específica (dd/mm/yyyy HH:mm)</option>
+                                            <option value="data_fixa">Em Data e Hora específica</option>
                                             @if($index > 0)
                                                 <option value="apos_etapa_anterior">Após X dias/horas da Etapa #{{ $index }}</option>
                                             @endif

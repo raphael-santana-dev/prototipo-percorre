@@ -81,6 +81,100 @@ class RegistrationManager extends Component
     use \App\Traits\WithFichaPdfDownload;
 
     public bool $selecionarTudo = false;
+
+    // Controle do Modal de Disparo de 1º Contato (E-mail / WhatsApp Suri)
+    public bool $modalPrimeiroContatoAberto = false;
+    public ?int $primeiroContatoInscricaoId = null;
+    public string $primeiroContatoNome = '';
+    public string $primeiroContatoCanal = 'whatsapp'; // 'email', 'whatsapp', 'ambos'
+    public $primeiroContatoTemplateId = '';
+
+    public function abrirModalPrimeiroContato(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+        $this->primeiroContatoInscricaoId = $insc->id;
+        $this->primeiroContatoNome = $insc->nome;
+
+        // Se existir uma automação ativa configurada para 'inscricao.primeiro_contato', já carrega o canal e template dela como padrão
+        $autoPadrao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', 'inscricao.primeiro_contato')
+            ->where('status', true)
+            ->first();
+
+        if ($autoPadrao) {
+            $this->primeiroContatoCanal = $autoPadrao->canal_disparo ?: 'whatsapp';
+            $this->primeiroContatoTemplateId = (string) $autoPadrao->template_id;
+        } else {
+            $this->primeiroContatoCanal = 'whatsapp';
+            $this->primeiroContatoTemplateId = '';
+        }
+
+        $this->modalPrimeiroContatoAberto = true;
+    }
+
+    public function getTemplatesPrimeiroContatoProperty()
+    {
+        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')
+            ->get()
+            ->filter(function ($tpl) {
+                $c = $tpl->canal ?? 'email';
+                return match ($this->primeiroContatoCanal) {
+                    'email'    => in_array($c, ['email', 'ambos'], true),
+                    'whatsapp' => in_array($c, ['whatsapp', 'ambos'], true),
+                    'ambos'    => $c === 'ambos',
+                    default    => false,
+                };
+            })->values();
+    }
+
+    public function getTemplatePrimeiroContatoSelecionadoProperty()
+    {
+        if (empty($this->primeiroContatoTemplateId)) return null;
+        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($this->primeiroContatoTemplateId);
+    }
+
+    public function dispararPrimeiroContato(): void
+    {
+        $this->validate([
+            'primeiroContatoCanal'      => 'required|in:email,whatsapp,ambos',
+            'primeiroContatoTemplateId' => 'required|exists:email_templates,id',
+        ], [
+            'primeiroContatoTemplateId.required' => 'Selecione um template compatível para realizar o disparo.',
+        ]);
+
+        $inscricao = Inscricao::with(['curso', 'unidade', 'turno', 'ciclo'])->findOrFail($this->primeiroContatoInscricaoId);
+        $template  = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::findOrFail($this->primeiroContatoTemplateId);
+
+        if (in_array($this->primeiroContatoCanal, ['whatsapp', 'ambos'], true) && empty($template->suri_template_id)) {
+            $this->addError('primeiroContatoTemplateId', 'Este template não possui ID sincronizado na Suri.');
+            return;
+        }
+
+        \App\Modules\Comunicacao\Jobs\DispararAutomacaoJob::dispatch(
+            $template,
+            (string) $inscricao->email,
+            $inscricao,
+            ['disparado_por_nome' => auth()->user()->name ?? 'Equipe'],
+            'inscricao.primeiro_contato',
+            $this->primeiroContatoCanal
+        );
+
+        // Registra tentativa de contato na tabela inscricao_contatos para acender os ícones da listagem
+        $canaisRegistrar = $this->primeiroContatoCanal === 'ambos' ? ['email', 'whatsapp'] : [$this->primeiroContatoCanal];
+        foreach ($canaisRegistrar as $cReg) {
+            \App\Models\InscricaoContato::create([
+                'inscricao_id'   => $inscricao->id,
+                'canal'          => $cReg,
+                'data_contato'   => now(),
+                'conteudo'       => "1º Contato disparado usando o template '{$template->nome}'.",
+                'houve_resposta' => false,
+                'user_id'        => auth()->id(),
+                'user_nome'      => auth()->user()->name ?? 'Sistema',
+            ]);
+        }
+
+        $this->modalPrimeiroContatoAberto = false;
+        $this->dispatch('sucesso', msg: "1º Contato ({$this->primeiroContatoCanal}) enviado para a fila de disparo!");
+    }
     
     public function mount()
     {
@@ -325,6 +419,8 @@ class RegistrationManager extends Component
             $inscricao = Inscricao::create($payload);
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
             $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
+
+            
         } else {
             $solicitacao = Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
@@ -344,6 +440,15 @@ class RegistrationManager extends Component
 
             $this->dispatch('sucesso', msg: 'A solicitação de cadastro foi encaminhada para aprovação da coordenação.');
         }
+
+        \App\Jobs\SincronizarContatoSuriJob::dispatch(
+                inscricaoId: (int) $this->inscricaoId,
+                studentId: null,
+                nomeManual: $nomeLimpo,
+                telefoneManual: $digitosFone,
+                emailManual: $this->emailOriginal ?: $this->email,
+                cpfManual: $this->cpf
+            )->afterResponse();
 
         $this->fecharModal();
     }
@@ -538,36 +643,85 @@ class RegistrationManager extends Component
         $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
         $botoesAcao .= '</div>';
 
-        // Renderização Inteligente dos Dados Dinâmicos com Suporte a Arquivos e Anexos
+        // Renderização Inteligente dos Dados Dinâmicos (Suporta Arrays Multidimensionais, Matrizes e Anexos)
         $detalhesDinamicos = '';
-        if ($inscricao->dados_dinamicos && is_array($inscricao->dados_dinamicos)) {
+        $dadosDinamicosArray = is_string($inscricao->dados_dinamicos)
+            ? (json_decode($inscricao->dados_dinamicos, true) ?: [])
+            : ($inscricao->dados_dinamicos ?? []);
+
+        if (!empty($dadosDinamicosArray) && is_array($dadosDinamicosArray)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-            
-            $renderValor = function($v) {
-                if (is_string($v) && (str_starts_with($v, 'inscricoes/') || str_starts_with($v, 'formularios/') || str_starts_with($v, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $v))) {
-                    $url = asset('storage/' . $v);
-                    $nomeArquivo = basename($v);
-                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $v);
-                    
-                    if ($isImagem) {
-                        return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
-                    }
-                    return '<a href="'.$url.'" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
+
+            $renderValor = null;
+            $renderValor = function ($v) use (&$renderValor): string {
+                if ($v === null || $v === '') {
+                    return '-';
                 }
-                return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+
+                if (is_bool($v)) {
+                    return $v ? 'Sim' : 'Não';
+                }
+
+                if (is_array($v)) {
+                    $partes = [];
+                    foreach ($v as $subKey => $subVal) {
+                        if ($subVal === null || $subVal === '' || $subVal === []) continue;
+                        $subRenderizado = $renderValor($subVal);
+                        if (is_string($subKey) && !is_numeric($subKey)) {
+                            $rotuloSub = ucfirst(str_replace('_', ' ', $subKey));
+                            $partes[] = "<div><span class='text-xs text-gray-500 font-semibold'>{$rotuloSub}:</span> {$subRenderizado}</div>";
+                        } else {
+                            $partes[] = "<div>{$subRenderizado}</div>";
+                        }
+                    }
+                    return !empty($partes) ? '<div class="flex flex-col gap-1">' . implode('', $partes) . '</div>' : '-';
+                }
+
+                if (is_object($v)) {
+                    return htmlspecialchars(json_encode($v, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+                }
+
+                $strVal = (string) $v;
+
+                if (str_starts_with($strVal, 'data:image/')) {
+                    return '<img src="' . $strVal . '" class="max-h-16 rounded border border-gray-200 bg-white p-1 mt-1">';
+                }
+
+                if (
+                    str_starts_with($strVal, 'inscricoes/') ||
+                    str_starts_with($strVal, 'formularios/') ||
+                    str_starts_with($strVal, 'pre_inscricoes/') ||
+                    preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $strVal)
+                ) {
+                    $url = asset('storage/' . $strVal);
+                    $nomeArquivo = basename($strVal);
+                    $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $strVal);
+
+                    if ($isImagem) {
+                        return '<div class="flex items-center gap-2 mt-1"><img src="' . $url . '" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="' . $url . '" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">' . $nomeArquivo . ' ↗</a></div>';
+                    }
+                    return '<a href="' . $url . '" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> ' . $nomeArquivo . ' ↗</a>';
+                }
+
+                return htmlspecialchars($strVal, ENT_QUOTES, 'UTF-8');
             };
 
-            foreach ($inscricao->dados_dinamicos as $chave => $valor) {
-                $htmlConteudo = '';
-                if (is_array($valor)) {
-                    $itens = array_map($renderValor, $valor);
-                    $htmlConteudo = '<div class="flex flex-col gap-1">' . implode('', $itens) . '</div>';
-                } else {
-                    $htmlConteudo = $renderValor($valor);
+            foreach ($dadosDinamicosArray as $chave => $valor) {
+                $chaveStr = (string) $chave;
+                // Ignora chaves técnicas/internas do sistema (_preenchido_por_participante, _formularios_assistidos, _form_config, etc.)
+                if (
+                    str_starts_with($chaveStr, '_') ||
+                    str_starts_with(strtolower($chaveStr), 'ui_') ||
+                    str_contains(strtolower($chaveStr), 'form_config') ||
+                    in_array(strtolower(trim($chaveStr)), ['submission started', 'last updated'], true)
+                ) {
+                    continue;
                 }
 
+                $htmlConteudo = $renderValor($valor);
+
                 $detalhesDinamicos .= '<div class="bg-gray-50 dark:bg-gray-800 p-2.5 rounded border border-gray-100 dark:border-gray-700">'
-                    . '<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">' . str_replace('_', ' ', $chave) . '</span>'
+                    . '<span class="block text-[10px] uppercase text-gray-500 font-bold mb-0.5">' . htmlspecialchars(str_replace('_', ' ', $chaveStr), ENT_QUOTES, 'UTF-8') . '</span>'
                     . '<span class="text-sm font-medium text-gray-900 dark:text-gray-200">' . ($htmlConteudo ?: '-') . '</span>'
                     . '</div>';
             }
