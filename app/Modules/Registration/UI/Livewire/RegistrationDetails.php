@@ -104,6 +104,10 @@ class RegistrationDetails extends Component
         $user = auth()->user();
         if (!$user) return false;
 
+        if ($this->inscricao->legado) {
+            return false;
+        }
+
         return $user->hasAnyRole(['dev', 'admin'])
             || $user->can('inscricao.editar')
             || $user->can('inscricao.criar');
@@ -818,6 +822,11 @@ class RegistrationDetails extends Component
     {
         if ($this->inscricao->status_inscricao_id == $this->status_selecionado) {
             $this->dispatch('erro', msg: 'O candidato já se encontra neste status!');
+            return;
+        }
+
+        if ($this->inscricao->legado) {
+            $this->dispatch('erro', msg: 'Inscrições legadas são somente leitura e não podem ser movidas de status.');
             return;
         }
 

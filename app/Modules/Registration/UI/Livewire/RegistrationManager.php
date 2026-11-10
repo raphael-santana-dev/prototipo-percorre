@@ -269,6 +269,18 @@ class RegistrationManager extends Component
                 'section' => 'Filtros Principais',
             ],
             [
+                'key'     => 'legado',
+                'column'  => 'legado',
+                'label'   => 'Registro Legado',
+                'icon'    => 'ph-archive',
+                'type'    => 'select',
+                'options' => [
+                    '0' => 'Não (Atuais)',
+                    '1' => 'Sim (Somente Leitura)',
+                ],
+                'section' => 'Filtros Principais',
+            ],
+            [
                 'key'     => 'etapa_atual',
                 'column'  => 'etapa_atual',
                 'label'   => 'Etapa do Funil',
@@ -338,7 +350,7 @@ class RegistrationManager extends Component
 
         $this->validate(['cicloDestinoId' => 'required|exists:ciclos,id']);
         
-        Inscricao::whereIn('id', $this->selecionadas)->update(['ciclo_id' => $this->cicloDestinoId]);
+        Inscricao::whereIn('id', $this->selecionadas)->where('legado', false)->update(['ciclo_id' => $this->cicloDestinoId]);
         
         $this->modalMoverCicloAberto = false;
         $this->desmarcarTodas();
@@ -459,7 +471,12 @@ class RegistrationManager extends Component
             return;
         }
 
-        Inscricao::findOrFail($id)->delete();
+        $insc = Inscricao::findOrFail($id);
+        if ($insc->legado) {
+            $this->dispatch('erro', msg: 'Inscrições marcadas como Legado não podem ser excluídas ou alteradas.');
+            return;
+        }
+        $insc->delete();
 
         if (($key = array_search((string)$id, $this->selecionadas)) !== false || ($key = array_search((int)$id, $this->selecionadas)) !== false) {
             unset($this->selecionadas[$key]);
@@ -639,9 +656,23 @@ class RegistrationManager extends Component
             $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
         }
         
-        $botoesAcao .= '</select>';
-        $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
-        $botoesAcao .= '</div>';
+        if ($inscricao->legado) {
+         $botoesAcao = '<div class="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center gap-2">'
+             . '<i class="ph-fill ph-lock-key text-base text-amber-600"></i>'
+             . '<span>REGISTRO LEGADO (' . mb_strtoupper($inscricao->statusInscricao->nome ?? ' Fixo', 'UTF-8') . ') — Somente Visualização</span>'
+             . '</div>';
+        } else {
+            $botoesAcao = '<div class="mt-2 relative">';
+            $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
+            foreach ($statusDisponiveis as $st) {
+                $selected = $st->id == $inscricao->status_inscricao_id ? 'selected' : '';
+                $prefix = $selected ? 'ATUAL: ' : '';
+                $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
+            }
+            $botoesAcao .= '</select>';
+            $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
+            $botoesAcao .= '</div>';
+        }
 
         // Renderização Inteligente dos Dados Dinâmicos (Suporta Arrays Multidimensionais, Matrizes e Anexos)
         $detalhesDinamicos = '';
@@ -826,6 +857,11 @@ class RegistrationManager extends Component
         }
 
         $insc = Inscricao::find($id);
+        if ($insc && $insc->legado) {
+            $this->dispatch('erro', msg: 'Esta inscrição é um registro Legado e permite apenas visualização.');
+            return;
+        }
+
         if ($insc && $insc->ciclo && $insc->ciclo->bloqueado) {
             $this->dispatch('erro', msg: 'O ciclo desta inscrição está bloqueado para edições diretas.');
             return;
@@ -929,7 +965,7 @@ class RegistrationManager extends Component
         }
 
         $this->resetPage();
-        $this->selecionadas = $query->take((int) $quantidade)->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->selecionadas = $query->take((int) $quantidade)->where('legado', false)->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->dispatch('sucesso', msg: count($this->selecionadas) . ' inscrições selecionadas e a tabela foi reordenada.');
     }
 
@@ -1024,6 +1060,7 @@ class RegistrationManager extends Component
             $idsPagina = $this->obterQueryFiltrada()
                 ->apenasVinculosPermitidos()
                 ->paginate($this->porPagina)
+                ->where('legado', false)
                 ->pluck('id')
                 ->map(fn($id) => (string) $id)
                 ->toArray();
@@ -1126,7 +1163,12 @@ class RegistrationManager extends Component
 
         if (count($this->selecionadas) === 0) return;
         
-        $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])->whereIn('id', $this->selecionadas)->where('status_inscricao_id', '!=', $statusId)->get();
+        $inscricoesValidas = Inscricao::with(['curso', 'ciclo.statusPipeline'])
+            ->whereIn('id', $this->selecionadas)
+            ->where('legado', false)
+            ->where('status_inscricao_id', '!=', $statusId)
+            ->get();
+            
         if ($inscricoesValidas->isEmpty()) {
             $this->dispatch('erro', msg: 'Todas as inscrições selecionadas já estão neste status!');
             return;
@@ -1357,6 +1399,7 @@ class RegistrationManager extends Component
         return [
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
+            ['key' => 'legado', 'label' => 'Legado', 'sortable' => true, 'class' => 'text-center w-24'],
             ['key' => 'possui_deficiencia', 'label' => 'PcD', 'sortable' => true, 'class' => 'text-center w-24'],
             ['key' => 'contatos', 'label' => 'Contatos', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'origem', 'label' => 'Origem', 'sortable' => true],
@@ -1468,6 +1511,7 @@ class RegistrationManager extends Component
         $ids = $query->orderByRaw('posicao_ranking_geral ASC NULLS LAST')
                      ->orderBy('pontuacao_total', 'desc')
                      ->limit($quantidade)
+                     ->where('legado', false)
                      ->pluck('id')
                      ->toArray();
                      
@@ -1479,6 +1523,15 @@ class RegistrationManager extends Component
         if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
             return;
         }
+
+        $idsNaoLegados = Inscricao::whereIn('id', $this->selecionadas)->where('legado', false)->pluck('id')->map(fn($i) => (string) $i)->toArray();
+        
+        if (empty($idsNaoLegados)) {
+            $this->dispatch('erro', msg: 'As inscrições selecionadas são registros Legados e não podem ser avançadas.');
+            return;
+        }
+
+        $this->selecionadas = $idsNaoLegados;
 
         $cicloRef = !empty($this->filtroCiclo) ? Ciclo::find($this->filtroCiclo) : null;
         if ($cicloRef && $cicloRef->bloqueado) {

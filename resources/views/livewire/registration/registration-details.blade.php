@@ -27,6 +27,13 @@
         itemDescription="CPF: {{ $inscricao->cpf }} • {{ $inscricao->email }}">
         
         <x-slot name="badge">
+            @if($inscricao->legado)
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
+                        title="Registro Legado: alterações e movimentações estão desativadas">
+                    <i class="ph-fill ph-lock-key text-sm text-amber-600"></i>
+                    <span>Legado (Somente Leitura)</span>
+                </span>
+            @endif
             <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2.5 flex-wrap justify-end">
                 @if($ultimoAtendimentoParticipante || $inscricao->origem === 'manual')
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs"

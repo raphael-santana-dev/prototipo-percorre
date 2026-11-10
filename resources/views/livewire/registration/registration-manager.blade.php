@@ -238,7 +238,11 @@
                     <tr wire:key="linha-inscricao-{{ $inscricao->id }}" class="bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/50 transition-colors">
                         
                         <td class="px-4 py-1.5 text-center whitespace-nowrap w-12">
-                            <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
+                            @if($inscricao->legado)
+                                <i class="ph-fill ph-lock-key text-amber-500 text-sm" title="Registro Legado (Somente Visualização)"></i>
+                            @else
+                                <input type="checkbox" wire:model.live="selecionadas" value="{{ $inscricao->id }}" wire:key="checkbox-lista-{{ $inscricao->id }}">
+                            @endif
                         </td>
                         
                         <td class="px-4 py-1.5 whitespace-nowrap min-w-[200px]">
@@ -249,6 +253,17 @@
                                     <span class="text-xs text-gray-500 leading-tight truncate max-w-[200px]">{{ $inscricao->email ?? $inscricao->cpf }}</span>
                                 </div>
                             </div>
+                        </td>
+
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @if($inscricao->legado)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800"
+                                    title="Registro histórico legado: bloqueado para edições e movimentações">
+                                    <i class="ph-fill ph-archive text-xs"></i> Legado
+                                </span>
+                            @else
+                                <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
+                            @endif
                         </td>
 
                         <td class="px-4 py-1.5 text-center whitespace-nowrap">
@@ -409,7 +424,7 @@
                                     <i class="text-lg ph-bold ph-paper-plane-tilt"></i>
                                 </button>
 
-                                @if(feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
+                                @if(!$inscricao->legado && feature('inscricao.excluir') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.excluir')))
                                     <button wire:click="excluirInscricao({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-red-600 transition" title="Excluir" onclick="confirm('Excluir permanentemente essa inscrição do sistema?') || event.stopImmediatePropagation()">
                                         <i class="text-lg ph-bold ph-trash"></i>
                                     </button>
