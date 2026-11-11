@@ -13,6 +13,7 @@ class EmailTemplate extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'botoes' => 'array',
+        'botoes'             => 'array',
+        'configuracoes_suri' => 'array',
     ];
 }

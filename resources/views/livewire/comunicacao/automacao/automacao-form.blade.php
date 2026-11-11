@@ -70,13 +70,13 @@
                 </div>
             </div>
 
-            <!-- PASSO 3: AÇÃO EXECUTADA E TEMPLATE -->
+            <!-- PASSO 3: AÇÃO EXECUTADA, CANAL E TEMPLATE -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
                 <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
                     <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-200 dark:border-emerald-800">3</span>
                     <div>
-                        <h3 class="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Ação e Template de Mensagem</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Defina o que o sistema fará e qual modelo de comunicação será enviado.</p>
+                        <h3 class="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Ação, Canal e Template de Mensagem</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Defina o que o sistema fará, o canal de envio e qual modelo de comunicação será disparado.</p>
                     </div>
                 </div>
 
@@ -110,89 +110,104 @@
                     @endif
                 </div>
 
+                {{-- SELETOR DO CANAL DE DISPARO COM VALIDAÇÃO DE TEMPLATE --}}
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Canal de Disparo da Mensagem <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button type="button"
+                                wire:click="$set('canal_disparo', 'email')"
+                                class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'email' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-envelope-simple text-2xl text-blue-600"></i>
+                            <div>
+                                <span class="text-xs font-extrabold text-gray-900 dark:text-white block">Apenas E-mail</span>
+                                <span class="text-[10px] text-gray-500 block">Templates E-mail ou Ambos</span>
+                            </div>
+                        </button>
+
+                        <button type="button"
+                                wire:click="$set('canal_disparo', 'whatsapp')"
+                                class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'whatsapp' ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 ring-1 ring-emerald-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-whatsapp-logo text-2xl text-emerald-600"></i>
+                            <div>
+                                <span class="text-xs font-extrabold text-gray-900 dark:text-white block">Apenas WhatsApp</span>
+                                <span class="text-[10px] text-gray-500 block">Disparo via Suri API</span>
+                            </div>
+                        </button>
+
+                        <button type="button"
+                                wire:click="$set('canal_disparo', 'ambos')"
+                                class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'ambos' ? 'border-purpura-500 bg-purpura-50/50 dark:bg-purpura-900/20 ring-1 ring-purpura-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+                            <i class="ph-fill ph-intersect text-2xl text-purpura-600"></i>
+                            <div>
+                                <span class="text-xs font-extrabold text-gray-900 dark:text-white block">E-mail + WhatsApp</span>
+                                <span class="text-[10px] text-gray-500 block">Exige Template Multicanal</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Template de Comunicação Alvo <span class="text-red-500">*</span>
+                            Template Compatível ({{ count($templates) }} disponível/is) <span class="text-red-500">*</span>
                         </label>
-                        <a href="{{ route('templates.create') }}" target="_blank" class="text-xs font-bold text-purpura-600 hover:underline flex items-center gap-1">
-                            <i class="ph-bold ph-plus"></i> Criar novo template
-                        </a>
-                    </div>
-                    {{-- SELETOR DO CANAL DE DISPARO COM VALIDAÇÃO DE TEMPLATE --}}
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-                            Canal de Disparo da Mensagem <span class="text-red-500">*</span>
-                        </label>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <button type="button"
-                                    wire:click="$set('canal_disparo', 'email')"
-                                    class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'email' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
-                                <i class="ph-fill ph-envelope-simple text-2xl text-blue-600"></i>
-                                <div>
-                                    <span class="text-xs font-extrabold text-gray-900 dark:text-white block">Apenas E-mail</span>
-                                    <span class="text-[10px] text-gray-500 block">Templates E-mail ou Ambos</span>
-                                </div>
-                            </button>
-
-                            <button type="button"
-                                    wire:click="$set('canal_disparo', 'whatsapp')"
-                                    class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'whatsapp' ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 ring-1 ring-emerald-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
-                                <i class="ph-fill ph-whatsapp-logo text-2xl text-emerald-600"></i>
-                                <div>
-                                    <span class="text-xs font-extrabold text-gray-900 dark:text-white block">Apenas WhatsApp</span>
-                                    <span class="text-[10px] text-gray-500 block">Disparo Simples Suri</span>
-                                </div>
-                            </button>
-
-                            <button type="button"
-                                    wire:click="$set('canal_disparo', 'ambos')"
-                                    class="p-3.5 rounded-xl border text-left transition flex items-center gap-3 {{ $canal_disparo === 'ambos' ? 'border-purpura-500 bg-purpura-50/50 dark:bg-purpura-900/20 ring-1 ring-purpura-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
-                                <i class="ph-fill ph-intersect text-2xl text-purpura-600"></i>
-                                <div>
-                                    <span class="text-xs font-extrabold text-gray-900 dark:text-white block">E-mail + WhatsApp</span>
-                                    <span class="text-[10px] text-gray-500 block">Exige Template Multicanal</span>
-                                </div>
-                            </button>
+                        <div class="flex items-center gap-3">
+                            @if($this->templateSelecionado)
+                                <button type="button" wire:click="abrirQuickViewTemplate" class="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
+                                    <i class="ph-bold ph-eye"></i> Pré-visualizar em Modal
+                                </button>
+                            @endif
+                            <a href="{{ route('templates.create') }}" target="_blank" class="text-xs font-bold text-purpura-600 hover:underline flex items-center gap-1">
+                                <i class="ph-bold ph-plus"></i> Criar novo template
+                            </a>
                         </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between mb-1.5">
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                Template Compatível ({{ count($templates) }} disponível/is) <span class="text-red-500">*</span>
-                            </label>
-                            <div class="flex items-center gap-3">
-                                @if($this->templateSelecionado)
-                                    <button type="button" wire:click="abrirQuickViewTemplate" class="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
-                                        <i class="ph-bold ph-eye"></i> Pré-visualizar em Modal
-                                    </button>
-                                @endif
-                                <a href="{{ route('templates.create') }}" target="_blank" class="text-xs font-bold text-purpura-600 hover:underline flex items-center gap-1">
-                                    <i class="ph-bold ph-plus"></i> Criar novo template
-                                </a>
-                            </div>
-                        </div>
-                        <select wire:model.live="template_id" class="w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white px-4 py-2.5 text-sm font-semibold focus:ring-purpura-500 focus:border-purpura-500 shadow-2xs">
-                            <option value="">-- Selecione o Template que será enviado --</option>
-                            @foreach($templates as $tpl)
-                                <option value="{{ $tpl->id }}">
-                                    [{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }} {{ $tpl->suri_template_id ? '• Suri ID: ' . $tpl->suri_template_id : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('template_id') <span class="text-xs text-red-500 font-bold block mt-1.5">{{ $message }}</span> @enderror
                     </div>
                     <select wire:model.live="template_id" class="w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white px-4 py-2.5 text-sm font-semibold focus:ring-purpura-500 focus:border-purpura-500 shadow-2xs">
                         <option value="">-- Selecione o Template que será enviado --</option>
                         @foreach($templates as $tpl)
                             <option value="{{ $tpl->id }}">
-                                [{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }}
+                                [{{ strtoupper($tpl->canal ?? 'EMAIL') }}] {{ $tpl->nome }} {{ $tpl->suri_template_id ? '• Suri ID: ' . $tpl->suri_template_id : '' }}
                             </option>
                         @endforeach
                     </select>
                     @error('template_id') <span class="text-xs text-red-500 font-bold block mt-1.5">{{ $message }}</span> @enderror
                 </div>
+
+                {{-- MAPEAMENTO DE COLUNAS DO BANCO PARA AS VARIÁVEIS DO TEMPLATE --}}
+                @if(count($variaveisTemplateMap) > 0)
+                    <div class="p-4 rounded-xl bg-purpura-50/50 dark:bg-purpura-900/20 border border-purpura-200 dark:border-purpura-800 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-purpura-900 dark:text-purpura-300 uppercase flex items-center gap-1.5">
+                                <i class="ph-fill ph-brackets-curly text-purpura-600 text-base"></i>
+                                Mapeamento de Variáveis ({{ count($variaveisTemplateMap) }}) — Qual Coluna do Banco Substituirá no Envio?
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach($variaveisTemplateMap as $varNome => $colSelecionada)
+                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white dark:bg-gray-900 p-2.5 rounded-lg border border-purpura-100 dark:border-gray-700">
+                                    <div class="sm:col-span-4">
+                                        <span class="px-2 py-1 bg-purpura-100 text-purpura-800 rounded font-mono text-xs font-bold">
+                                            Parâmetro #{{ $loop->iteration }} (&#123;&#123;{{ $varNome }}&#125;&#125;)
+                                        </span>
+                                    </div>
+                                    <div class="sm:col-span-8">
+                                        <select wire:model="variaveisTemplateMap.{{ $varNome }}" class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:bg-gray-800 dark:text-white py-1.5 px-2.5">
+                                            @foreach($colunasBanco as $grupoCol => $listaCols)
+                                                <optgroup label="{{ $grupoCol }}">
+                                                    @foreach($listaCols as $colKey => $colLabel)
+                                                        <option value="{{ $colKey }}">{{ $colLabel }}</option>
+                                                    @endforeach
+                                                </optgroup>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <a href="{{ route('automacoes.index') }}" class="btn btn--secondary btn--medium">Cancelar</a>

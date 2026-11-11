@@ -17,7 +17,6 @@ use App\Modules\Comunicacao\Services\EmailParserService;
 use App\Modules\Comunicacao\Services\EmailTrackingService;
 use App\Modules\Teste\Suri\Services\SuriApiService;
 use App\Models\AuditoriaLog;
-use App\Models\InscricaoContato;
 use App\Models\SuriContato;
 use App\Models\SuriMensagem;
 
@@ -53,12 +52,10 @@ class DispararAutomacaoJob implements ShouldQueue
         $canalTemplate = $this->template->canal ?? 'email';
         $canalDesejado = $this->canalForcado ?: $canalTemplate;
 
-        // Só dispara E-mail se a regra pediu ('email' ou 'ambos') E o template suporta ('email' ou 'ambos')
         $enviarEmail = in_array($canalDesejado, ['email', 'ambos'], true)
             && in_array($canalTemplate, ['email', 'ambos'], true)
             && filter_var($this->emailDestino, FILTER_VALIDATE_EMAIL);
 
-        // Só dispara WhatsApp se a regra pediu ('whatsapp' ou 'ambos') E o template suporta ('whatsapp' ou 'ambos')
         $enviarWpp = in_array($canalDesejado, ['whatsapp', 'ambos'], true)
             && in_array($canalTemplate, ['whatsapp', 'ambos'], true)
             && !empty($this->template->suri_template_id);
@@ -75,7 +72,7 @@ class DispararAutomacaoJob implements ShouldQueue
         ]);
 
         // =====================================================================
-        // 1. DISPARO DE E-MAIL (Mantido com Mailpit / Tracking Padrão)
+        // 1. DISPARO DE E-MAIL
         // =====================================================================
         if ($enviarEmail) {
             $dadosLogEmail = [
@@ -135,38 +132,83 @@ class DispararAutomacaoJob implements ShouldQueue
         }
 
         // =====================================================================
-        // 2. DISPARO DE WHATSAPP PELA SURI API (USANDO DISPARO SIMPLES)
+        // 2. DISPARO DE WHATSAPP PELA SURI API (COM VARIÁVEIS MAPEADAS DO BANCO)
         // =====================================================================
         if ($enviarWpp) {
             $suriService = app(SuriApiService::class);
-            $userIdSuri  = $suriService->resolverUserIdParaDisparo($this->inscricao, $this->dadosExtras);
+            $dest        = $suriService->resolverDestinatarioParaDisparo($this->inscricao, $this->dadosExtras);
 
-            if ($userIdSuri) {
-                // Usa exclusivamente o Disparo Simples (userId + templateId)
-                $resWpp = $suriService->enviarTemplateSimples(
-                    userId: $userIdSuri,
-                    templateId: (string) $this->template->suri_template_id
+            $mapaSobrescrito = is_array($this->dadosExtras['variaveis_mapeadas'] ?? null)
+                ? $this->dadosExtras['variaveis_mapeadas']
+                : [];
+
+            // Monta o array bodyParameters substituindo cada variável pela coluna do banco escolhida
+            $bodyParameters = EmailParserService::montarBodyParametersSuri(
+                $this->template,
+                $this->inscricao,
+                $this->dadosExtras,
+                $mapaSobrescrito
+            );
+
+            $buttonsParameters = [];
+            $botoesRaw = is_string($this->template->botoes)
+                ? (json_decode($this->template->botoes, true) ?? [])
+                : ($this->template->botoes ?? []);
+
+            foreach ($botoesRaw as $btn) {
+                $tipoBtn = isset($btn['suri_type']) ? (int) $btn['suri_type'] : (empty($btn['url']) ? 2 : 0);
+                if ($tipoBtn === 0 && str_contains($btn['url'] ?? '', '{{')) {
+                    $colBtn = $btn['coluna_banco'] ?? 'link_assinatura';
+                    $buttonsParameters[] = EmailParserService::resolverValorColuna($colBtn, $this->inscricao, $this->dadosExtras);
+                } elseif ($tipoBtn === 3) {
+                    $buttonsParameters[] = (string) ($btn['example'] ?? 'CODIGO');
+                }
+            }
+
+            $resWpp = null;
+            $identificadorDestinoLog = $dest['phone'] ?: $dest['user_id'];
+
+            if (!empty($dest['phone'])) {
+                $resWpp = $suriService->enviarTemplateComVariaveis(
+                    userName: $dest['name'],
+                    userPhone: $dest['phone'],
+                    templateId: (string) $this->template->suri_template_id,
+                    bodyParameters: $bodyParameters,
+                    flowId: null,
+                    ignorePortfolio: false,
+                    responseActionType: 1,
+                    email: $dest['email'],
+                    gender: 0,
+                    channelId: null,
+                    channelType: 1,
+                    defaultDepartmentId: null,
+                    buttonsParameters: $buttonsParameters
                 );
+            } elseif (!empty($dest['user_id'])) {
+                $resWpp = $suriService->enviarTemplateSimples(
+                    userId: $dest['user_id'],
+                    templateId: (string) $this->template->suri_template_id,
+                    flowId: null,
+                    ignorePortfolio: false,
+                    responseActionType: 1,
+                    bodyParameters: $bodyParameters,
+                    buttonsParameters: $buttonsParameters
+                );
+            }
 
-                /*
-                 * [MANTIDO PARA TESTES FUTUROS CONFORME SOLICITADO]
-                 * Disparo com variáveis e parâmetros de botões:
-                 * $resWpp = $suriService->enviarTemplateComVariaveis(
-                 *     $nomeCandidato, $telefoneLimpo, $this->template->suri_template_id,
-                 *     $bodyParameters, null, false, 1, $this->emailDestino, 0, null, 1, null, $buttonsParameters
-                 * );
-                 */
-
+            if ($resWpp) {
                 $suriMessageId = data_get($resWpp, 'resposta.data.messageId')
                     ?? data_get($resWpp, 'resposta.data.id')
                     ?? data_get($resWpp, 'resposta.messageId')
                     ?? data_get($resWpp, 'resposta.id');
 
-                $contatoLocal = SuriContato::where('suri_user_id', $userIdSuri)
+                $contatoLocal = SuriContato::query()
+                    ->when($dest['user_id'], fn($q) => $q->orWhere('suri_user_id', $dest['user_id']))
+                    ->when($dest['phone'], fn($q) => $q->orWhere('telefone', $dest['phone']))
                     ->when($this->inscricao, fn($q) => $q->orWhere('inscricao_id', $this->inscricao->id))
                     ->first();
 
-                if ($suriMessageId && $SchemaHasSuriMsg = Schema::hasTable('suri_mensagens')) {
+                if ($suriMessageId && Schema::hasTable('suri_mensagens')) {
                     SuriMensagem::updateOrCreate(
                         ['external_id' => (string) $suriMessageId, 'direcao' => 'out'],
                         [
@@ -190,7 +232,7 @@ class DispararAutomacaoJob implements ShouldQueue
                     'gatilho'          => $this->gatilho,
                     'template_nome'    => $this->template->nome . ' (WhatsApp)',
                     'usuario_nome'     => $this->dadosExtras['disparado_por_nome'] ?? 'Sistema (Automático)',
-                    'destinatario'     => $userIdSuri,
+                    'destinatario'     => (string) $identificadorDestinoLog,
                     'assunto'          => 'WhatsApp: ' . $this->template->nome,
                     'corpo'            => $corpoMiolo,
                     'data_agendamento' => now(),
@@ -217,7 +259,8 @@ class DispararAutomacaoJob implements ShouldQueue
                             'template_utilizado' => $this->template->nome,
                             'suri_template_id'   => $this->template->suri_template_id,
                             'gatilho_disparo'    => $this->gatilho,
-                            'destinatario_suri'  => $userIdSuri,
+                            'destinatario_suri'  => $identificadorDestinoLog,
+                            'body_parameters'    => $bodyParameters,
                             'status'             => $resWpp['sucesso'] ? 'Enviado com sucesso' : 'Erro no envio',
                         ],
                         'usuario_nome' => $this->dadosExtras['disparado_por_nome'] ?? 'Sistema (Automação)',

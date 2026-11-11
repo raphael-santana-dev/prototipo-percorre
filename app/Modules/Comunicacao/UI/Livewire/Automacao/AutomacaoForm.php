@@ -6,9 +6,11 @@ use Livewire\Component;
 use Livewire\Attributes\Computed;
 use App\Modules\Comunicacao\Domain\Models\Automacao;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
+use App\Modules\Comunicacao\Services\EmailParserService;
 use App\Models\StatusInscricao;
 use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class AutomacaoForm extends Component
 {
@@ -21,6 +23,7 @@ class AutomacaoForm extends Component
     public bool $status = true;
     public string $abaPreview = 'email';
 
+    public array $variaveisTemplateMap = [];
     public array $eventosDisponiveis = [];
     public array $breadcrumbs = [];
 
@@ -60,6 +63,8 @@ class AutomacaoForm extends Component
             $this->canal_disparo = $automacao->canal_disparo ?: ($automacao->template->canal ?? 'email');
             $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
             $this->status = (bool) $automacao->status;
+
+            $this->carregarMapaVariaveisDoTemplate($this->template_id);
         }
 
         $this->abaPreview = $this->canal_disparo === 'whatsapp' ? 'whatsapp' : 'email';
@@ -74,7 +79,33 @@ class AutomacaoForm extends Component
             $tpl = EmailTemplate::find($this->template_id);
             if ($tpl && !$this->templateCompativelComCanal($tpl, $novoCanal)) {
                 $this->template_id = '';
+                $this->variaveisTemplateMap = [];
             }
+        }
+    }
+
+    public function updatedTemplateId($id): void
+    {
+        $this->carregarMapaVariaveisDoTemplate($id);
+    }
+
+    public function carregarMapaVariaveisDoTemplate($id): void
+    {
+        $this->variaveisTemplateMap = [];
+        if (!$id) return;
+
+        $tpl = EmailTemplate::find($id);
+        if (!$tpl) return;
+
+        $vars = EmailParserService::extrairVariaveisDoCorpo($tpl->corpo);
+        $cfg  = is_array($tpl->configuracoes_suri)
+            ? $tpl->configuracoes_suri
+            : (json_decode($tpl->configuracoes_suri ?? '{}', true) ?: []);
+
+        $mapaSalvo = is_array($cfg['variable_map'] ?? null) ? $cfg['variable_map'] : [];
+
+        foreach ($vars as $v) {
+            $this->variaveisTemplateMap[$v] = $mapaSalvo[$v] ?? (is_numeric($v) ? 'nome' : strtolower($v));
         }
     }
 
@@ -174,7 +205,6 @@ class AutomacaoForm extends Component
 
         $template = EmailTemplate::findOrFail($this->template_id);
 
-        // Validação cruzada estrita entre Canal de Disparo e Tipo do Template
         if (!$this->templateCompativelComCanal($template, $this->canal_disparo)) {
             $this->addError('template_id', "O template '{$template->nome}' é do tipo [" . strtoupper($template->canal ?? 'email') . "] e não pode ser usado para disparo [" . strtoupper($this->canal_disparo) . "].");
             return;
@@ -183,6 +213,15 @@ class AutomacaoForm extends Component
         if (in_array($this->canal_disparo, ['whatsapp', 'ambos'], true) && empty($template->suri_template_id)) {
             $this->addError('template_id', "O template selecionado ainda não possui ID sincronizado na Suri (suri_template_id). Sincronize-o antes de ativar o disparo via WhatsApp.");
             return;
+        }
+
+        // Salva o mapeamento de colunas do banco escolhido para as variáveis do template
+        if (!empty($this->variaveisTemplateMap) && Schema::hasColumn('email_templates', 'configuracoes_suri')) {
+            $cfgSuri = is_array($template->configuracoes_suri)
+                ? $template->configuracoes_suri
+                : (json_decode($template->configuracoes_suri ?? '{}', true) ?: []);
+            $cfgSuri['variable_map'] = $this->variaveisTemplateMap;
+            $template->update(['configuracoes_suri' => $cfgSuri]);
         }
 
         $dados = [
@@ -208,7 +247,8 @@ class AutomacaoForm extends Component
     public function render()
     {
         return view('livewire.comunicacao.automacao.automacao-form', [
-            'templates' => $this->templatesCompativeis,
+            'templates'    => $this->templatesCompativeis,
+            'colunasBanco' => EmailParserService::getColunasBancoDisponiveis(),
         ])->layout('components.layouts.app', [
             'title' => $this->automacaoId ? 'Editar Automação' : 'Nova Automação'
         ]);

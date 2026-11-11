@@ -8,13 +8,13 @@ use App\Modules\Comunicacao\Domain\Models\EsteiraComunicacao;
 use App\Modules\Comunicacao\Domain\Models\EsteiraEtapa;
 use App\Modules\Comunicacao\Domain\Models\EmailTemplate;
 use App\Modules\Comunicacao\Services\EsteiraComunicacaoService;
+use App\Modules\Comunicacao\Services\EmailParserService;
 use App\Models\Ciclo;
 use App\Models\Formulario;
 use App\Models\StatusInscricao;
 use App\Models\Curso;
 use App\Modules\Unidade\Domain\Models\Unidade;
 use App\Models\CampoFormulario;
-use App\Helpers\BreadcrumbHelper;
 use Illuminate\Support\Facades\DB;
 
 class EsteiraForm extends Component
@@ -24,12 +24,10 @@ class EsteiraForm extends Component
     public string $descricao = '';
     public bool $status = true;
 
-    // Público-Alvo e Contexto
     public string $publico_alvo = 'inscricoes';
     public $ciclo_id = '';
     public $formulario_id = '';
 
-    // Condições de Segmentação
     public array $status_ids = [];
     public array $unidades_ids = [];
     public array $cursos_ids = [];
@@ -38,7 +36,6 @@ class EsteiraForm extends Component
     public array $regras_dinamicas = [];
     public string $emails_manuais_texto = '';
 
-    // Modal de Configuração Hierárquica Unidade -> Curso -> Turno (mesmo padrão do Form Builder)
     public bool $modalConfigComboAberto = false;
     public array $comboUnidadesSelecionadas = [];
     public array $comboCursosSelecionados = [];
@@ -46,17 +43,13 @@ class EsteiraForm extends Component
     public $comboActiveUnidadeId = null;
     public $comboActiveCursoId = null;
 
-    // Condições de Saída (Conversão)
     public bool $sair_ao_concluir_formulario = false;
     public array $status_saida_ids = [];
 
-    // Opções de Cadência
     public bool $revalidar_condicoes_no_envio = true;
     public bool $apenas_horario_comercial = false;
 
-    // Etapas da Esteira
     public array $etapas = [];
-
     public array $breadcrumbs = [];
 
     public function mount($id = null)
@@ -68,7 +61,7 @@ class EsteiraForm extends Component
         ];
 
         if ($id) {
-            $esteira = EsteiraComunicacao::with('etapas')->findOrFail($id);
+            $esteira = EsteiraComunicacao::with('etapas.template')->findOrFail($id);
             $this->esteiraId = $esteira->id;
             $this->nome = $esteira->nome;
             $this->descricao = $esteira->descricao ?? '';
@@ -94,17 +87,19 @@ class EsteiraForm extends Component
             $this->apenas_horario_comercial = (bool) $esteira->apenas_horario_comercial;
 
             foreach ($esteira->etapas as $et) {
+                $condEtapa = is_array($et->condicoes_etapa) ? $et->condicoes_etapa : [];
                 $this->etapas[] = [
                     'id'                          => $et->id,
                     'nome'                        => $et->nome,
                     'template_id'                 => (string) $et->template_id,
+                    'canal_disparo'               => $et->canal_disparo ?? ($et->template->canal ?? 'email'),
                     'tipo_acao'                   => $et->tipo_acao ?? 'enviar_email',
                     'tipo_agendamento'            => $et->tipo_agendamento ?? 'data_fixa',
                     'data_disparo'                => $et->data_disparo ? $et->data_disparo->format('Y-m-d\TH:i') : '',
                     'atraso_valor'                => $et->atraso_valor ?? 7,
                     'atraso_unidade'              => $et->atraso_unidade ?? 'dias',
                     'filtro_engajamento_anterior' => $et->filtro_engajamento_anterior ?? 'todos',
-                    'canal_disparo'               => $et->canal_disparo ?? ($et->template->canal ?? 'email')
+                    'variaveis_map'               => $condEtapa['variaveis_map'] ?? $this->extrairMapaPadraoDoTemplate($et->template),
                 ];
             }
         } else {
@@ -116,9 +111,29 @@ class EsteiraForm extends Component
         }
     }
 
-    // =========================================================================
-    // MODAL DE CONFIGURAÇÃO UNIDADE / CURSO / TURNO (PADRÃO FORM BUILDER)
-    // =========================================================================
+    private function extrairMapaPadraoDoTemplate(?EmailTemplate $tpl): array
+    {
+        if (!$tpl) return [];
+        $vars = EmailParserService::extrairVariaveisDoCorpo($tpl->corpo);
+        $cfg  = is_array($tpl->configuracoes_suri) ? $tpl->configuracoes_suri : (json_decode($tpl->configuracoes_suri ?? '{}', true) ?: []);
+        $salvo = is_array($cfg['variable_map'] ?? null) ? $cfg['variable_map'] : [];
+
+        $mapa = [];
+        foreach ($vars as $v) {
+            $mapa[$v] = $salvo[$v] ?? (is_numeric($v) ? 'nome' : strtolower($v));
+        }
+        return $mapa;
+    }
+
+    public function updatedEtapas($value, $key): void
+    {
+        // Quando o usuário troca o template_id de uma etapa (ex: etapas.0.template_id), carrega as variáveis dele
+        if (preg_match('/^(\d+)\.template_id$/', (string) $key, $m)) {
+            $idx = (int) $m[1];
+            $tpl = $value ? EmailTemplate::find($value) : null;
+            $this->etapas[$idx]['variaveis_map'] = $this->extrairMapaPadraoDoTemplate($tpl);
+        }
+    }
 
     public function abrirModalConfigCombo(): void
     {
@@ -220,10 +235,6 @@ class EsteiraForm extends Component
         $this->turnos_ids   = [];
     }
 
-    // =========================================================================
-    // ETAPAS E REGRAS DINÂMICAS
-    // =========================================================================
-
     public function adicionarEtapa(): void
     {
         $num = count($this->etapas) + 1;
@@ -231,13 +242,14 @@ class EsteiraForm extends Component
             'id'                          => null,
             'nome'                        => "Etapa {$num} - " . ($num === 1 ? '1º Disparo' : 'Follow-up / Lembrete'),
             'template_id'                 => '',
+            'canal_disparo'               => 'email',
             'tipo_acao'                   => 'enviar_email',
             'tipo_agendamento'            => $num === 1 ? 'data_fixa' : 'apos_etapa_anterior',
             'data_disparo'                => now()->addHours(1)->format('Y-m-d\TH:i'),
             'atraso_valor'                => 7,
             'atraso_unidade'              => 'dias',
             'filtro_engajamento_anterior' => $num === 1 ? 'todos' : 'nao_clicou',
-            'canal_disparo' => 'email'
+            'variaveis_map'               => [],
         ];
     }
 
@@ -324,7 +336,7 @@ class EsteiraForm extends Component
 
     public function previewTemplate(int $templateId): void
     {
-        $template = \App\Modules\Comunicacao\Domain\Models\EmailTemplate::find($templateId);
+        $template = EmailTemplate::find($templateId);
         if (!$template) {
             $this->dispatch('erro', msg: 'Template não encontrado.');
             return;
@@ -355,7 +367,7 @@ class EsteiraForm extends Component
         ], [
             'nome.required'                 => 'Informe o nome da esteira de comunicação.',
             'etapas.*.nome.required'        => 'Informe o título de cada etapa.',
-            'etapas.*.template_id.required' => 'Selecione o template de e-mail em todas as etapas.',
+            'etapas.*.template_id.required' => 'Selecione o template em todas as etapas.',
         ]);
 
         foreach ($this->etapas as $idx => $et) {
@@ -367,9 +379,7 @@ class EsteiraForm extends Component
                 $this->addError("etapas.{$idx}.atraso_valor", 'Informe um intervalo válido (mínimo 1).');
                 return;
             }
-        }
 
-        foreach ($this->etapas as $idx => $et) {
             $numEtapa = $idx + 1;
             $canalEtapa = $et['canal_disparo'] ?? 'email';
             $tpl = EmailTemplate::find($et['template_id']);
@@ -411,7 +421,6 @@ class EsteiraForm extends Component
                 'revalidar_condicoes_no_envio' => $this->revalidar_condicoes_no_envio,
                 'apenas_horario_comercial'     => $this->apenas_horario_comercial,
                 'criado_por'                   => auth()->id(),
-                'canal_disparo' => $et['canal_disparo'] ?? 'email',
             ];
 
             if ($this->esteiraId) {
@@ -429,12 +438,16 @@ class EsteiraForm extends Component
                     'ordem'                       => $idx + 1,
                     'nome'                        => $et['nome'],
                     'template_id'                 => (int) $et['template_id'],
+                    'canal_disparo'               => $et['canal_disparo'] ?? 'email',
                     'tipo_acao'                   => $et['tipo_acao'] ?? 'enviar_email',
                     'tipo_agendamento'            => ($idx === 0 && $et['tipo_agendamento'] === 'apos_etapa_anterior') ? 'data_fixa' : $et['tipo_agendamento'],
                     'data_disparo'                => $et['tipo_agendamento'] === 'data_fixa' ? $et['data_disparo'] : null,
                     'atraso_valor'                => $et['tipo_agendamento'] === 'apos_etapa_anterior' ? (int) $et['atraso_valor'] : null,
                     'atraso_unidade'              => $et['atraso_unidade'] ?? 'dias',
                     'filtro_engajamento_anterior' => $idx === 0 ? 'todos' : ($et['filtro_engajamento_anterior'] ?? 'todos'),
+                    'condicoes_etapa'             => [
+                        'variaveis_map' => $et['variaveis_map'] ?? [],
+                    ],
                 ];
 
                 if (!empty($et['id'])) {
@@ -461,6 +474,7 @@ class EsteiraForm extends Component
     {
         return view('livewire.comunicacao.automacao.esteira-form', [
             'templates'        => EmailTemplate::orderBy('nome')->get(),
+            'colunasBanco'     => EmailParserService::getColunasBancoDisponiveis(),
             'ciclos'           => Ciclo::orderBy('id', 'desc')->get(),
             'formularios'      => Formulario::orderBy('id', 'desc')->get(),
             'statusInscricoes' => StatusInscricao::orderBy('nome')->get(),

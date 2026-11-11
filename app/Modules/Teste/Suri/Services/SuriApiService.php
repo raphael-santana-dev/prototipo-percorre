@@ -34,9 +34,6 @@ class SuriApiService
         return $this->channelId;
     }
 
-    /**
-     * Limpa o telefone e garante o prefixo 55 (DDI Brasil) no início.
-     */
     public function normalizarTelefoneComDdi(?string $telefone): ?string
     {
         if (empty($telefone) || str_contains($telefone, '*')) {
@@ -55,12 +52,6 @@ class SuriApiService
         return $digitos;
     }
 
-    /**
-     * Resolve qual userId da Suri deve receber o Disparo Simples:
-     * 1. Se SURI_TEST_USER_ID estiver preenchido no .env, retorna o ID fixo de teste.
-     * 2. Caso contrário, busca na tabela suri_contatos (por inscricao_id, student_id ou telefone)
-     *    ou importa na hora caso ainda não esteja sincronizado.
-     */
     public function resolverUserIdParaDisparo($inscricao = null, array $dadosExtras = []): ?string
     {
         $testUserId = trim((string) config('services.suri.test_user_id', env('SURI_TEST_USER_ID', '')));
@@ -84,7 +75,6 @@ class SuriApiService
             return $contato->suri_user_id;
         }
 
-        // Fallback: se o candidato ainda não estava em suri_contatos, importa agora com 55 no início
         if ($foneCom55) {
             $nome = trim((string) ($inscricao->nome ?? $dadosExtras['nome'] ?? 'Candidato'));
             $res  = $this->importarContato($nome, $foneCom55);
@@ -111,6 +101,39 @@ class SuriApiService
         }
 
         return null;
+    }
+
+    /**
+     * Resolve name, phone, email e userId do destinatário para montar o nó "user" exigido pela Suri,
+     * respeitando SURI_TEST_USER_ID e WHATSAPP_TEST_NUMBER se estiverem definidos no .env.
+     */
+    public function resolverDestinatarioParaDisparo($inscricao = null, array $dadosExtras = []): array
+    {
+        $testUserId = trim((string) config('services.suri.test_user_id', env('SURI_TEST_USER_ID', '')));
+        $testPhone  = trim((string) env('WHATSAPP_TEST_NUMBER', ''));
+
+        $nomeReal  = trim((string) ($inscricao->nome ?? $dadosExtras['nome'] ?? 'Candidato'));
+        $emailReal = trim((string) ($inscricao->email ?? $dadosExtras['email'] ?? ''));
+        $foneReal  = $this->normalizarTelefoneComDdi($inscricao->celular ?? $dadosExtras['celular'] ?? $dadosExtras['telefone'] ?? null);
+
+        $foneExtraidoDoTestId = null;
+        if ($testUserId !== '' && str_contains($testUserId, ':')) {
+            $partes = explode(':', $testUserId, 2);
+            $foneExtraidoDoTestId = $this->normalizarTelefoneComDdi($partes[1] ?? '');
+        }
+
+        $telefoneFinal = $this->normalizarTelefoneComDdi($testPhone)
+            ?: $foneExtraidoDoTestId
+            ?: $foneReal;
+
+        $userIdFinal = $this->resolverUserIdParaDisparo($inscricao, $dadosExtras);
+
+        return [
+            'user_id' => $userIdFinal,
+            'name'    => $nomeReal ?: 'Candidato',
+            'phone'   => $telefoneFinal,
+            'email'   => $emailReal !== '' ? $emailReal : null,
+        ];
     }
 
     // =========================================================================
@@ -161,7 +184,7 @@ class SuriApiService
             'subject'   => trim((string) ($template->assunto ?: 'TESTE')),
             'channelId' => !empty($cfg['channel_id']) ? $cfg['channel_id'] : $this->channelId,
             'category'  => in_array($cfg['category'] ?? '', ['MARKETING', 'UTILITY'], true) ? $cfg['category'] : 'MARKETING',
-            'language'  => 'pt_BR', // Evita o erro #132001
+            'language'  => 'pt_BR',
         ];
 
         if (!empty(trim((string) ($cfg['footer'] ?? '')))) {
@@ -312,11 +335,23 @@ class SuriApiService
         string $templateId,
         ?string $flowId = null,
         bool $ignorePortfolio = false,
-        int $responseActionType = 1
+        int $responseActionType = 1,
+        array $bodyParameters = [],
+        array $buttonsParameters = []
     ): array {
+        $messageNode = ['templateId' => trim($templateId)];
+
+        if (!empty($bodyParameters)) {
+            $messageNode['bodyParameters'] = array_values(array_map('strval', $bodyParameters));
+        }
+
+        if (!empty($buttonsParameters)) {
+            $messageNode['buttonsParameters'] = array_values(array_map('strval', $buttonsParameters));
+        }
+
         $payload = [
             'userId'  => trim($userId),
-            'message' => ['templateId' => trim($templateId)],
+            'message' => $messageNode,
         ];
 
         if (!empty(trim((string) $flowId))) {
@@ -433,10 +468,6 @@ class SuriApiService
 
         return $this->postEndpoint($path, $payload, $acao);
     }
-
-    // =========================================================================
-    // COMUNICADORES HTTP E GRAVAÇÃO DO LOG EXCLUSIVO
-    // =========================================================================
 
     public function getEndpoint(string $endpoint, array $queryParams = [], string $acao = 'Requisição API'): array
     {

@@ -474,6 +474,7 @@ class EsteiraComunicacaoService
             'nome_etapa'        => $etapa->nome,
             'titulo_formulario' => $item['titulo_formulario'] ?? ($esteira->formulario->titulo ?? ''),
             'url_formulario'    => $item['url_formulario'] ?? '',
+            'variaveis_mapeadas' => $etapa->condicoes_etapa['variaveis_map'] ?? []
         ]);
 
         // Se a ação configurada nesta etapa exigir a criação do acesso ao Portal do Aluno
