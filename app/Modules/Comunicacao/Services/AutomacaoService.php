@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AutomacaoService
 {
-    public static function disparar(string $eventoGatilho, $destinatario, array $dadosExtras = []): int
+    public static function disparar(string $eventoGatilho, $destinatario, array $dadosExtras = [], bool $forcarReenvio = false): int
     {
         $automacoes = Automacao::with('template')
             ->where('evento_gatilho', $eventoGatilho)
@@ -71,7 +71,6 @@ class AutomacaoService
                     $contextoEnvio['link_login']       = url('/aluno/login');
                 }
 
-                // Garante o vínculo do student_id na tabela suri_contatos
                 if ($inscricao->student_id) {
                     SuriContato::where('inscricao_id', $inscricao->id)
                         ->update(['student_id' => $inscricao->student_id]);
@@ -86,7 +85,8 @@ class AutomacaoService
                 $inscricao,
                 $contextoEnvio,
                 $automacao->evento_gatilho,
-                $canalDisparo
+                $canalDisparo,
+                $forcarReenvio
             );
 
             $disparosEnfileirados++;

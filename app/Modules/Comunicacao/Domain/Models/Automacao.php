@@ -13,12 +13,14 @@ class Automacao extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'status' => 'boolean',
+        'status'         => 'boolean',
+        'parametro_dias' => 'integer',
     ];
 
     protected $fillable = [
         'nome',
         'evento_gatilho',
+        'parametro_dias',
         'template_id',
         'canal_disparo',
         'tipo_acao',

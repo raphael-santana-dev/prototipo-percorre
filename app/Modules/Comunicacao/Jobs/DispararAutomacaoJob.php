@@ -15,6 +15,7 @@ use App\Modules\Comunicacao\Domain\Models\Comunicado;
 use App\Modules\Comunicacao\Domain\Models\ComunicacaoLog;
 use App\Modules\Comunicacao\Services\EmailParserService;
 use App\Modules\Comunicacao\Services\EmailTrackingService;
+use App\Modules\Comunicacao\Services\AntiSpamComunicacaoService;
 use App\Modules\Teste\Suri\Services\SuriApiService;
 use App\Models\AuditoriaLog;
 use App\Models\SuriContato;
@@ -30,6 +31,7 @@ class DispararAutomacaoJob implements ShouldQueue
     public $dadosExtras;
     public $gatilho;
     public ?string $canalForcado;
+    public bool $forcarReenvio;
 
     public function __construct(
         EmailTemplate $template,
@@ -37,18 +39,26 @@ class DispararAutomacaoJob implements ShouldQueue
         $inscricao = null,
         array $dadosExtras = [],
         ?string $gatilho = null,
-        ?string $canalForcado = null
+        ?string $canalForcado = null,
+        bool $forcarReenvio = false
     ) {
-        $this->template     = $template;
-        $this->emailDestino = $emailDestino;
-        $this->inscricao    = $inscricao;
-        $this->dadosExtras  = $dadosExtras;
-        $this->gatilho      = $gatilho;
-        $this->canalForcado = $canalForcado;
+        $this->template      = $template;
+        $this->emailDestino  = $emailDestino;
+        $this->inscricao     = $inscricao;
+        $this->dadosExtras   = $dadosExtras;
+        $this->gatilho       = $gatilho;
+        $this->canalForcado  = $canalForcado;
+        $this->forcarReenvio = $forcarReenvio;
     }
 
     public function handle()
     {
+        $this->template = EmailTemplate::find($this->template->id) ?? $this->template;
+
+        if ($this->inscricao && method_exists($this->inscricao, 'loadMissing')) {
+            $this->inscricao->loadMissing(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
+        }
+
         $canalTemplate = $this->template->canal ?? 'email';
         $canalDesejado = $this->canalForcado ?: $canalTemplate;
 
@@ -60,8 +70,32 @@ class DispararAutomacaoJob implements ShouldQueue
             && in_array($canalTemplate, ['whatsapp', 'ambos'], true)
             && !empty($this->template->suri_template_id);
 
-        $corpoMiolo = EmailParserService::parseTexto($this->template->corpo, $this->inscricao, $this->dadosExtras);
-        $assuntoFormatado = EmailParserService::parseTexto($this->template->assunto ?: $this->template->nome, $this->inscricao, $this->dadosExtras);
+        // =====================================================================
+        // FILTRO ANTI-SPAM MULTICANAL (E-MAIL E WHATSAPP SURI)
+        // =====================================================================
+        if (!$this->forcarReenvio && empty($this->dadosExtras['forcar_reenvio'])) {
+            $diagSpam = AntiSpamComunicacaoService::diagnosticarEnviosCandidato(
+                $this->inscricao?->id,
+                $this->emailDestino,
+                $this->template->id,
+                $this->gatilho
+            );
+
+            if ($diagSpam['ja_recebeu_email']) {
+                $enviarEmail = false;
+            }
+            if ($diagSpam['ja_recebeu_whatsapp']) {
+                $enviarWpp = false;
+            }
+        }
+
+        // Se ambos os canais foram bloqueados pelo Anti-Spam (ou não aplicáveis), encerra sem duplicar
+        if (!$enviarEmail && !$enviarWpp) {
+            return;
+        }
+
+        $corpoMiolo = EmailParserService::parseTexto($this->template->corpo, $this->inscricao, $this->dadosExtras, $this->template);
+        $assuntoFormatado = EmailParserService::parseTexto($this->template->assunto ?: $this->template->nome, $this->inscricao, $this->dadosExtras, $this->template);
 
         $comunicado = Comunicado::create([
             'template_id'      => $this->template->id,
@@ -132,7 +166,7 @@ class DispararAutomacaoJob implements ShouldQueue
         }
 
         // =====================================================================
-        // 2. DISPARO DE WHATSAPP PELA SURI API (COM VARIÁVEIS MAPEADAS DO BANCO)
+        // 2. DISPARO DE WHATSAPP PELA SURI API
         // =====================================================================
         if ($enviarWpp) {
             $suriService = app(SuriApiService::class);
@@ -142,7 +176,6 @@ class DispararAutomacaoJob implements ShouldQueue
                 ? $this->dadosExtras['variaveis_mapeadas']
                 : [];
 
-            // Monta o array bodyParameters substituindo cada variável pela coluna do banco escolhida
             $bodyParameters = EmailParserService::montarBodyParametersSuri(
                 $this->template,
                 $this->inscricao,

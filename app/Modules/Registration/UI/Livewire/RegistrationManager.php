@@ -89,6 +89,78 @@ class RegistrationManager extends Component
     public string $primeiroContatoCanal = 'whatsapp'; // 'email', 'whatsapp', 'ambos'
     public $primeiroContatoTemplateId = '';
 
+    // Navigation Drawer de Histórico de Comunicações (3 Colunas: Todas, WhatsApp, E-mail)
+    public bool $drawerComunicacoesAberto = false;
+    public ?int $comunicacoesInscricaoId = null;
+    public string $comunicacoesInscricaoNome = '';
+    public string $comunicacoesInscricaoEmail = '';
+    public string $comunicacoesInscricaoCelular = '';
+    public array $comunicacoesListaTodas = [];
+    public array $comunicacoesListaWhatsapp = [];
+    public array $comunicacoesListaEmail = [];
+
+    public function abrirDrawerComunicacoes(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+        $this->comunicacoesInscricaoId      = $insc->id;
+        $this->comunicacoesInscricaoNome    = (string) $insc->nome;
+        $this->comunicacoesInscricaoEmail   = (string) ($insc->email ?? '');
+        $this->comunicacoesInscricaoCelular = (string) ($insc->celular ?? '');
+
+        $temColunaCanal = \Illuminate\Support\Facades\Schema::hasColumn('comunicacao_logs', 'canal');
+
+        $logs = \App\Modules\Comunicacao\Domain\Models\ComunicacaoLog::query()
+            ->where(function ($q) use ($insc) {
+                $q->where('inscricao_id', $insc->id);
+                if (!empty($insc->email)) {
+                    $q->orWhereRaw('LOWER(destinatario) = ?', [strtolower(trim($insc->email))]);
+                }
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $todas = [];
+        $wpp   = [];
+        $email = [];
+
+        foreach ($logs as $log) {
+            $isWpp = ($temColunaCanal && $log->canal === 'whatsapp')
+                || str_contains(strtolower((string) $log->template_nome), 'whatsapp')
+                || str_starts_with(strtolower((string) $log->assunto), 'whatsapp:');
+
+            $item = [
+                'id'            => $log->id,
+                'canal'         => $isWpp ? 'whatsapp' : 'email',
+                'template_nome' => $log->template_nome ?: 'Comunicação',
+                'assunto'       => $log->assunto ?: '-',
+                'gatilho'       => $log->gatilho ?: 'manual',
+                'destinatario'  => $log->destinatario,
+                'status'        => $log->status ?: 'enviado',
+                'aberturas'     => (int) ($log->aberturas_count ?? 0),
+                'cliques'       => (int) ($log->cliques_count ?? 0),
+                'data'          => ($log->data_envio ?? $log->created_at)?->format('d/m/Y H:i') ?? '-',
+                'resumo_corpo'  => \Illuminate\Support\Str::limit(trim(strip_tags((string) $log->corpo)), 140),
+            ];
+
+            $todas[] = $item;
+            if ($isWpp) {
+                $wpp[] = $item;
+            } else {
+                $email[] = $item;
+            }
+        }
+
+        $this->comunicacoesListaTodas    = $todas;
+        $this->comunicacoesListaWhatsapp = $wpp;
+        $this->comunicacoesListaEmail    = $email;
+        $this->drawerComunicacoesAberto  = true;
+    }
+
+    public function fecharDrawerComunicacoes(): void
+    {
+        $this->drawerComunicacoesAberto = false;
+    }
+
     public function abrirModalPrimeiroContato(int $inscricaoId): void
     {
         $insc = Inscricao::findOrFail($inscricaoId);

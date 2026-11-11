@@ -68,6 +68,25 @@
                     </select>
                     @error('evento_gatilho') <span class="text-xs text-red-500 font-bold block mt-1.5">{{ $message }}</span> @enderror
                 </div>
+
+                @if($this->exigeParametroDias)
+                    <div class="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 space-y-2">
+                        <label class="block text-xs font-extrabold text-blue-900 dark:text-blue-300 uppercase">
+                            @if($evento_gatilho === 'inscricao.fim_proximo')
+                                <i class="ph-bold ph-calendar-countdown"></i> Quantos dias antes do fim da inscrição deseja disparar? (N dias) *
+                            @else
+                                <i class="ph-bold ph-clock-countdown"></i> Disparar após quantos dias sem finalizar o formulário (com todas as fases liberadas)? *
+                            @endif
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" min="1" max="365" wire:model="parametro_dias" class="w-28 rounded-xl border-gray-300 dark:bg-gray-900 dark:text-white text-sm font-black text-center py-2">
+                            <span class="text-xs font-bold text-blue-800 dark:text-blue-200">
+                                {{ $evento_gatilho === 'inscricao.fim_proximo' ? 'dia(s) antes do encerramento do Ciclo' : 'dia(s) de inatividade após iniciar o preenchimento' }}
+                            </span>
+                        </div>
+                        @error('parametro_dias') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    </div>
+                @endif
             </div>
 
             <!-- PASSO 3: AÇÃO EXECUTADA, CANAL E TEMPLATE -->

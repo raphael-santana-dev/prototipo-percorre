@@ -17,6 +17,7 @@ class AutomacaoForm extends Component
     public ?int $automacaoId = null;
     public $nome = '';
     public $evento_gatilho = '';
+    public $parametro_dias = 3;
     public string $canal_disparo = 'email'; // 'email', 'whatsapp', 'ambos'
     public $template_id = '';
     public $tipo_acao = 'enviar_email';
@@ -30,8 +31,11 @@ class AutomacaoForm extends Component
     public function mount($id = null)
     {
         $this->eventosDisponiveis['inscricao.primeiro_contato'] = 'Inscrição: 1º Contato Manual (Botão na Listagem de Inscrições)';
-        $this->eventosDisponiveis['inscricao.criada'] = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
-        $this->eventosDisponiveis['inscricao.finalizada'] = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
+        $this->eventosDisponiveis['inscricao.criada']           = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
+        $this->eventosDisponiveis['inscricao.finalizada']       = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
+        $this->eventosDisponiveis['inscricao.abandono']         = 'Inscrição: Abandono de Formulário (Todas as fases liberadas e não finalizado)';
+        $this->eventosDisponiveis['formulario.abandono']        = 'Formulário Público: Abandono de Preenchimento (Não finalizado)';
+        $this->eventosDisponiveis['inscricao.fim_proximo']      = 'Inscrição: Quando faltar N dias para o fim do processo de inscrição';
 
         $statusInscricoes = StatusInscricao::orderBy('nome')->get();
         foreach ($statusInscricoes as $st) {
@@ -39,15 +43,15 @@ class AutomacaoForm extends Component
             $this->eventosDisponiveis["inscricao.status.{$slug}"] = "Inscrição: Status alterado para '{$st->nome}'";
         }
 
-        $this->eventosDisponiveis['inscricao.solicitacao_cadastro'] = 'Coordenação: Solicitação de Cadastro de Inscrição';
-        $this->eventosDisponiveis['inscricao.solicitacao_alteracao'] = 'Coordenação: Solicitação de Alteração em Ciclo Bloqueado';
-        $this->eventosDisponiveis['avaliacao.solicitacao_aluno'] = 'Avaliação: Aluno solicita reabertura de fase';
-        $this->eventosDisponiveis['avaliacao.solicitacao_admin'] = 'Avaliação: Professor solicita reabertura de matriz';
-        $this->eventosDisponiveis['usuario.criado'] = 'Corporativo: Novo Cadastro de Usuário';
-        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_equipe'] = 'Aprendizagem: Nova Avaliação (Notificar Equipe)';
+        $this->eventosDisponiveis['inscricao.solicitacao_cadastro']    = 'Coordenação: Solicitação de Cadastro de Inscrição';
+        $this->eventosDisponiveis['inscricao.solicitacao_alteracao']   = 'Coordenação: Solicitação de Alteração em Ciclo Bloqueado';
+        $this->eventosDisponiveis['avaliacao.solicitacao_aluno']       = 'Avaliação: Aluno solicita reabertura de fase';
+        $this->eventosDisponiveis['avaliacao.solicitacao_admin']       = 'Avaliação: Professor solicita reabertura de matriz';
+        $this->eventosDisponiveis['usuario.criado']                    = 'Corporativo: Novo Cadastro de Usuário';
+        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_equipe']= 'Aprendizagem: Nova Avaliação (Notificar Equipe)';
         $this->eventosDisponiveis['aprendizagem.nova_avaliacao_aluno'] = 'Aprendizagem: Nova Avaliação (Notificar Aluno)';
-        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa'] = 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
-        $this->eventosDisponiveis['solicitacao.alteracao_academica'] = 'Solicitações: Resposta de Alteração Acadêmica';
+        $this->eventosDisponiveis['aprendizagem.nova_avaliacao_empresa']= 'Aprendizagem: Nova Avaliação (Notificar Empresa/Gestor)';
+        $this->eventosDisponiveis['solicitacao.alteracao_academica']   = 'Solicitações: Resposta de Alteração Acadêmica';
 
         $this->eventosDisponiveis = array_merge(
             $this->eventosDisponiveis,
@@ -56,19 +60,30 @@ class AutomacaoForm extends Component
 
         if ($id) {
             $automacao = Automacao::with('template')->findOrFail($id);
-            $this->automacaoId = $automacao->id;
-            $this->nome = $automacao->nome;
+            $this->automacaoId    = $automacao->id;
+            $this->nome           = $automacao->nome;
             $this->evento_gatilho = $automacao->evento_gatilho;
-            $this->template_id = $automacao->template_id;
-            $this->canal_disparo = $automacao->canal_disparo ?: ($automacao->template->canal ?? 'email');
-            $this->tipo_acao = $automacao->tipo_acao ?? 'enviar_email';
-            $this->status = (bool) $automacao->status;
+            $this->parametro_dias = $automacao->parametro_dias ?? 3;
+            $this->template_id    = $automacao->template_id;
+            $this->canal_disparo  = $automacao->canal_disparo ?: ($automacao->template->canal ?? 'email');
+            $this->tipo_acao      = $automacao->tipo_acao ?? 'enviar_email';
+            $this->status         = (bool) $automacao->status;
 
             $this->carregarMapaVariaveisDoTemplate($this->template_id);
         }
 
         $this->abaPreview = $this->canal_disparo === 'whatsapp' ? 'whatsapp' : 'email';
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    #[Computed]
+    public function exigeParametroDias(): bool
+    {
+        return in_array($this->evento_gatilho, [
+            'inscricao.fim_proximo',
+            'inscricao.abandono',
+            'formulario.abandono',
+        ], true);
     }
 
     public function updatedCanalDisparo(string $novoCanal): void
@@ -191,16 +206,23 @@ class AutomacaoForm extends Component
 
     public function salvar()
     {
-        $this->validate([
+        $regras = [
             'nome'           => 'required|string|min:3|max:255',
             'evento_gatilho' => 'required|string',
             'canal_disparo'  => 'required|in:email,whatsapp,ambos',
             'template_id'    => 'required|exists:email_templates,id',
             'tipo_acao'      => 'required|string',
-        ], [
+        ];
+
+        if ($this->exigeParametroDias) {
+            $regras['parametro_dias'] = 'required|integer|min:1|max:365';
+        }
+
+        $this->validate($regras, [
             'nome.required'           => 'Defina um nome identificador para esta regra.',
             'evento_gatilho.required' => 'Selecione qual evento do sistema disparará esta automação.',
             'template_id.required'    => 'Selecione um template compatível com o canal escolhido.',
+            'parametro_dias.required' => 'Informe a quantidade de dias (N dias) para acionar este gatilho.',
         ]);
 
         $template = EmailTemplate::findOrFail($this->template_id);
@@ -215,7 +237,6 @@ class AutomacaoForm extends Component
             return;
         }
 
-        // Salva o mapeamento de colunas do banco escolhido para as variáveis do template
         if (!empty($this->variaveisTemplateMap) && Schema::hasColumn('email_templates', 'configuracoes_suri')) {
             $cfgSuri = is_array($template->configuracoes_suri)
                 ? $template->configuracoes_suri
@@ -232,6 +253,10 @@ class AutomacaoForm extends Component
             'tipo_acao'      => $this->tipo_acao,
             'status'         => (bool) $this->status,
         ];
+
+        if (Schema::hasColumn('automacoes', 'parametro_dias')) {
+            $dados['parametro_dias'] = $this->exigeParametroDias ? (int) $this->parametro_dias : null;
+        }
 
         if ($this->automacaoId) {
             Automacao::findOrFail($this->automacaoId)->update($dados);

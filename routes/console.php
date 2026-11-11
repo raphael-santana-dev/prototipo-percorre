@@ -29,6 +29,7 @@ Schedule::command('aprendizagem:processar-fechamentos')->dailyAt('00:05');
 Schedule::command('fases:processar')->everyMinute()->withoutOverlapping();
 Schedule::command('formularios:processar-fases-liberadas')->everyMinute()->withoutOverlapping();
 Schedule::command('comunicacao:processar-esteiras')->everyMinute()->withoutOverlapping();
+Schedule::command('automacoes:processar-gatilhos-temporais')->hourly()->withoutOverlapping();
 
 Schedule::job(new RevogarPermissoesExpiradasJob)->dailyAt('00:00');
 

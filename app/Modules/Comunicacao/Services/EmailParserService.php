@@ -102,14 +102,15 @@ class EmailParserService
     }
 
     /**
-     * Extrai na ordem exata todas as variáveis presentes no corpo do template (ex: {{1}}, {{nome}}).
+     * Extrai na ordem exata todas as variáveis presentes no corpo do template (ex: {{1}}, {{nome}}, [nome]).
      */
     public static function extrairVariaveisDoCorpo(?string $corpo): array
     {
         if (empty($corpo)) return [];
 
-        $clean = strip_tags(html_entity_decode($corpo, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        preg_match_all('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/u', $clean, $matches);
+        $textoLimpo = str_replace("\xE2\x80\x8B", "", $corpo);
+        $clean = strip_tags(html_entity_decode($textoLimpo, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        preg_match_all('/(?:\{\{|\[)\s*([a-zA-Z0-9_]+)\s*(?:\}\}|\])/u', $clean, $matches);
 
         $variaveis = [];
         foreach ($matches[1] ?? [] as $v) {
@@ -126,7 +127,7 @@ class EmailParserService
      */
     public static function resolverValorColuna(string $coluna, $inscricao = null, array $dadosExtras = []): string
     {
-        $coluna = trim($coluna, "{} \t\n\r\0\x0B");
+        $coluna = trim($coluna, "{}[] \t\n\r\0\x0B");
 
         if (str_starts_with($coluna, 'dinamico:')) {
             $chaveDin = substr($coluna, 9);
@@ -156,7 +157,7 @@ class EmailParserService
             }
         }
 
-        $parsed = self::parseTexto('{{' . $coluna . '}}', $inscricao, $dadosExtras);
+        $parsed = self::parseTextoInterno('{{' . $coluna . '}}', $inscricao, $dadosExtras);
         $limpo  = trim(strip_tags($parsed));
 
         if ($limpo !== '' && $limpo !== '{{' . $coluna . '}}') {
@@ -183,17 +184,29 @@ class EmailParserService
      */
     public static function montarBodyParametersSuri($template, $inscricao = null, array $dadosExtras = [], array $mapaSobrescrito = []): array
     {
-        $variaveis = self::extrairVariaveisDoCorpo($template->corpo ?? '');
-        if (empty($variaveis)) {
-            return [];
-        }
-
         $cfgSuri = is_array($template->configuracoes_suri)
             ? $template->configuracoes_suri
             : (json_decode($template->configuracoes_suri ?? '{}', true) ?: []);
 
         $mapaTemplate = is_array($cfgSuri['variable_map'] ?? null) ? $cfgSuri['variable_map'] : [];
         $exemplos     = is_array($cfgSuri['body_examples'] ?? null) ? $cfgSuri['body_examples'] : [];
+
+        $variaveis = self::extrairVariaveisDoCorpo($template->corpo ?? '');
+
+        // Fallback: se o corpo não tinha {{...}} legível mas já existia mapeamento ou exemplos salvos no template
+        if (empty($variaveis)) {
+            if (!empty($mapaSobrescrito)) {
+                $variaveis = array_keys($mapaSobrescrito);
+            } elseif (!empty($mapaTemplate)) {
+                $variaveis = array_keys($mapaTemplate);
+            } elseif (!empty($exemplos)) {
+                $variaveis = array_keys($exemplos);
+            }
+        }
+
+        if (empty($variaveis)) {
+            return [];
+        }
 
         $bodyParameters = [];
 
@@ -202,19 +215,39 @@ class EmailParserService
                 ?? $mapaTemplate[$varKey]
                 ?? (is_numeric($varKey) ? 'nome' : $varKey);
 
-            $valorResolvido = trim(self::resolverValorColuna($colunaAlvo, $inscricao, $dadosExtras));
+            $valorResolvido = trim(self::resolverValorColuna((string) $colunaAlvo, $inscricao, $dadosExtras));
 
             if ($valorResolvido === '') {
-                $valorResolvido = $exemplos[$varKey] ?? 'Candidato';
+                $valorResolvido = (string) ($exemplos[$varKey] ?? ($inscricao->nome ?? 'Candidato'));
             }
 
             $bodyParameters[] = $valorResolvido;
         }
 
-        return $bodyParameters;
+        return array_values($bodyParameters);
     }
 
-    public static function parseTexto($texto, $inscricao = null, $dadosExtras = [])
+    public static function parseTexto($texto, $inscricao = null, $dadosExtras = [], $template = null)
+    {
+        if (empty($texto)) return '';
+
+        // Se o template (ou dadosExtras) tiver mapeamento de variáveis (ex: {{1}} -> 'nome'), injeta em $dadosExtras para o E-mail também substituir!
+        $mapa = is_array($dadosExtras['variaveis_mapeadas'] ?? null) ? $dadosExtras['variaveis_mapeadas'] : [];
+        if ($template) {
+            $cfgSuri = is_array($template->configuracoes_suri)
+                ? $template->configuracoes_suri
+                : (json_decode($template->configuracoes_suri ?? '{}', true) ?: []);
+            $mapa = array_merge($cfgSuri['variable_map'] ?? [], $mapa);
+        }
+
+        foreach ($mapa as $varKey => $colunaBanco) {
+            $dadosExtras[strtolower((string) $varKey)] = self::resolverValorColuna((string) $colunaBanco, $inscricao, $dadosExtras);
+        }
+
+        return self::parseTextoInterno($texto, $inscricao, $dadosExtras);
+    }
+
+    private static function parseTextoInterno($texto, $inscricao = null, $dadosExtras = [])
     {
         if (empty($texto)) return '';
 
@@ -280,7 +313,7 @@ class EmailParserService
         if (is_array($dadosExtras)) {
             foreach ($dadosExtras as $chave => $valor) {
                 if (!is_array($valor) && !is_object($valor)) {
-                    $tags[strtolower($chave)] = $valor;
+                    $tags[strtolower((string) $chave)] = $valor;
                 }
             }
         }
