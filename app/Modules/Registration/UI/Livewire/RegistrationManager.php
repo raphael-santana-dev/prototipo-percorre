@@ -430,9 +430,19 @@ class RegistrationManager extends Component
         if (auth()->user()->hasRole('dev|admin') || auth()->user()->can('inscricao.aprovar')) {
             $inscricao = Inscricao::create($payload);
             \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
-            $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
 
-            
+            if (!empty($this->celular)) {
+                \App\Jobs\SincronizarContatoSuriJob::dispatch(
+                    inscricaoId: (int) $inscricao->id,
+                    studentId: null,
+                    nomeManual: trim((string) $this->nome),
+                    telefoneManual: preg_replace('/\D/', '', (string) $this->celular),
+                    emailManual: $this->email,
+                    cpfManual: $cpfLimpo
+                )->afterResponse();
+            }
+
+            $this->dispatch('sucesso', msg: 'Inscrição efetivada e e-mail de acesso enviado ao estudante!');
         } else {
             $solicitacao = Solicitacao::create([
                 'tema' => 'cadastro_nova_inscricao',
@@ -452,15 +462,6 @@ class RegistrationManager extends Component
 
             $this->dispatch('sucesso', msg: 'A solicitação de cadastro foi encaminhada para aprovação da coordenação.');
         }
-
-        \App\Jobs\SincronizarContatoSuriJob::dispatch(
-                inscricaoId: (int) $this->inscricaoId,
-                studentId: null,
-                nomeManual: $nomeLimpo,
-                telefoneManual: $digitosFone,
-                emailManual: $this->emailOriginal ?: $this->email,
-                cpfManual: $this->cpf
-            )->afterResponse();
 
         $this->fecharModal();
     }
@@ -647,28 +648,21 @@ class RegistrationManager extends Component
         
         $statusDisponiveis = StatusInscricao::orderBy('nome')->get();
         
-        $botoesAcao = '<div class="mt-2 relative">';
-        $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
-        
-        foreach($statusDisponiveis as $st) {
-            $selected = $st->id == $inscricao->status_inscricao_id ? 'selected' : '';
-            $prefix = $selected ? 'ATUAL: ' : '';
-            $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
-        }
-        
         if ($inscricao->legado) {
-         $botoesAcao = '<div class="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center gap-2">'
-             . '<i class="ph-fill ph-lock-key text-base text-amber-600"></i>'
-             . '<span>REGISTRO LEGADO (' . mb_strtoupper($inscricao->statusInscricao->nome ?? ' Fixo', 'UTF-8') . ') — Somente Visualização</span>'
-             . '</div>';
+            $botoesAcao = '<div class="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center gap-2">'
+                . '<i class="ph-fill ph-lock-key text-base text-amber-600"></i>'
+                . '<span>REGISTRO LEGADO (' . mb_strtoupper($inscricao->statusInscricao->nome ?? 'Fixo', 'UTF-8') . ') — Somente Visualização</span>'
+                . '</div>';
         } else {
             $botoesAcao = '<div class="mt-2 relative">';
             $botoesAcao .= '<select x-on:change="$dispatch(\'quick-change-status\', { id: '.$id.', statusId: $event.target.value })" class="w-full text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-purpura-500 focus:border-purpura-500 appearance-none cursor-pointer hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">';
-            foreach ($statusDisponiveis as $st) {
+            
+            foreach($statusDisponiveis as $st) {
                 $selected = $st->id == $inscricao->status_inscricao_id ? 'selected' : '';
                 $prefix = $selected ? 'ATUAL: ' : '';
                 $botoesAcao .= '<option value="'.$st->id.'" '.$selected.'>'.$prefix . mb_strtoupper($st->nome, 'UTF-8').'</option>';
             }
+            
             $botoesAcao .= '</select>';
             $botoesAcao .= '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="ph-bold ph-caret-down"></i></div>';
             $botoesAcao .= '</div>';
@@ -682,17 +676,15 @@ class RegistrationManager extends Component
 
         if (!empty($dadosDinamicosArray) && is_array($dadosDinamicosArray)) {
             $detalhesDinamicos .= '<div class="mt-2 grid grid-cols-1 gap-2">';
-
+            
             $renderValor = null;
-            $renderValor = function ($v) use (&$renderValor): string {
+            $renderValor = function($v) use (&$renderValor): string {
                 if ($v === null || $v === '') {
                     return '-';
                 }
-
                 if (is_bool($v)) {
                     return $v ? 'Sim' : 'Não';
                 }
-
                 if (is_array($v)) {
                     $partes = [];
                     foreach ($v as $subKey => $subVal) {
@@ -707,7 +699,6 @@ class RegistrationManager extends Component
                     }
                     return !empty($partes) ? '<div class="flex flex-col gap-1">' . implode('', $partes) . '</div>' : '-';
                 }
-
                 if (is_object($v)) {
                     return htmlspecialchars(json_encode($v, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
                 }
@@ -718,28 +709,21 @@ class RegistrationManager extends Component
                     return '<img src="' . $strVal . '" class="max-h-16 rounded border border-gray-200 bg-white p-1 mt-1">';
                 }
 
-                if (
-                    str_starts_with($strVal, 'inscricoes/') ||
-                    str_starts_with($strVal, 'formularios/') ||
-                    str_starts_with($strVal, 'pre_inscricoes/') ||
-                    preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $strVal)
-                ) {
+                if (str_starts_with($strVal, 'inscricoes/') || str_starts_with($strVal, 'formularios/') || str_starts_with($strVal, 'pre_inscricoes/') || preg_match('/\.(pdf|jpg|jpeg|png|webp|mp4|mov|docx?|xlsx?)$/i', $strVal)) {
                     $url = asset('storage/' . $strVal);
                     $nomeArquivo = basename($strVal);
                     $isImagem = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $strVal);
-
+                    
                     if ($isImagem) {
-                        return '<div class="flex items-center gap-2 mt-1"><img src="' . $url . '" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="' . $url . '" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">' . $nomeArquivo . ' ↗</a></div>';
+                        return '<div class="flex items-center gap-2 mt-1"><img src="'.$url.'" class="w-10 h-10 rounded object-cover border border-gray-200 shrink-0"><a href="'.$url.'" target="_blank" class="text-purpura-600 hover:underline font-bold text-xs truncate max-w-[180px]">'.$nomeArquivo.' ↗</a></div>';
                     }
-                    return '<a href="' . $url . '" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> ' . $nomeArquivo . ' ↗</a>';
+                    return '<a href="'.$url.'" target="_blank" class="inline-flex items-center gap-1.5 text-purpura-600 hover:underline font-bold text-xs mt-1"><i class="ph ph-file-text text-base"></i> '.$nomeArquivo.' ↗</a>';
                 }
-
                 return htmlspecialchars($strVal, ENT_QUOTES, 'UTF-8');
             };
 
             foreach ($dadosDinamicosArray as $chave => $valor) {
                 $chaveStr = (string) $chave;
-                // Ignora chaves técnicas/internas do sistema (_preenchido_por_participante, _formularios_assistidos, _form_config, etc.)
                 if (
                     str_starts_with($chaveStr, '_') ||
                     str_starts_with(strtolower($chaveStr), 'ui_') ||

@@ -585,9 +585,20 @@ class RegistrationDetails extends Component
         $participante = auth()->user();
 
         if ($this->tipoFormularioEmbed === 'inscricao') {
+            if ($this->inscricao->legado) {
+                $this->dispatch('erro', msg: 'Inscrições legadas são somente leitura e não podem ser alteradas.');
+                return;
+            }
+
             $token = Crypt::encrypt($this->inscricao->id);
-            $this->urlEmbedAtiva = route('inscricao.retomar', [
-                'token'             => $token,
+            $ciclo = $this->inscricao->ciclo;
+            $rotaBase = ($ciclo && ($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && !empty($ciclo->slug_projeto))
+                ? url('/inscricao/' . $ciclo->slug_projeto)
+                : url('/inscricao');
+
+            $this->urlEmbedAtiva = $rotaBase . '?' . http_build_query([
+                'retomar_token'     => $token,
+                'ciclo_id'          => $this->inscricao->ciclo_id,
                 'embed'             => 'true',
                 'assistido'         => '1',
                 'participante_id'   => $participante->id,

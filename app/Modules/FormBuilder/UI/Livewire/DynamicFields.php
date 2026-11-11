@@ -945,6 +945,8 @@ class DynamicFields extends Component
         return null;
     }
 
+    
+
     /**
      * Avalia individualmente uma regra de visibilidade para o Simulador em Tempo Real.
      */
@@ -1006,6 +1008,8 @@ class DynamicFields extends Component
                 default   => false,
             };
         }
+
+        
 
         // Suporte a múltiplas respostas simuladas separadas por vírgula
         $listaValoresAtuais = array_values(array_filter(array_map($norm, explode(',', (string) $valorSimulado)), fn($i) => $i !== ''));

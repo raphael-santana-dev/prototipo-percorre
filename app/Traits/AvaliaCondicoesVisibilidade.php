@@ -193,15 +193,22 @@ trait AvaliaCondicoesVisibilidade
         $dtTgt = $this->converterParaTimestampSeData($tgt);
         $dtMax = $this->converterParaTimestampSeData($tgtMax);
 
-        if ($dtVal !== null && $dtTgt !== null) {
+        if ($dtVal !== null && ($dtTgt !== null || in_array($op, ['in', 'not_in'], true))) {
+            $arrayAlvosDatas = array_values(array_filter(
+                array_map(fn($v) => $this->converterParaTimestampSeData($v), explode(',', (string) ($regra['valor'] ?? ''))),
+                fn($v) => $v !== null
+            ));
+
             return match ($op) {
-                '='       => $dtVal === $dtTgt,
-                '!='      => $dtVal !== $dtTgt,
-                '>'       => $dtVal > $dtTgt,
-                '>='      => $dtVal >= $dtTgt,
-                '<'       => $dtVal < $dtTgt,
-                '<='      => $dtVal <= $dtTgt,
-                'between' => $dtMax !== null && $dtVal >= min($dtTgt, $dtMax) && $dtVal <= max($dtTgt, $dtMax),
+                '='       => $dtTgt !== null && $dtVal === $dtTgt,
+                '!='      => $dtTgt !== null && $dtVal !== $dtTgt,
+                '>'       => $dtTgt !== null && $dtVal > $dtTgt,
+                '>='      => $dtTgt !== null && $dtVal >= $dtTgt,
+                '<'       => $dtTgt !== null && $dtVal < $dtTgt,
+                '<='      => $dtTgt !== null && $dtVal <= $dtTgt,
+                'between' => $dtTgt !== null && $dtMax !== null && $dtVal >= min($dtTgt, $dtMax) && $dtVal <= max($dtTgt, $dtMax),
+                'in'      => in_array($dtVal, $arrayAlvosDatas, true),
+                'not_in'  => !in_array($dtVal, $arrayAlvosDatas, true),
                 default   => false,
             };
         }
