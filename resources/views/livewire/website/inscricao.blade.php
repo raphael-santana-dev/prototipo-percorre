@@ -1,15 +1,17 @@
+@if($isEmbed ?? request()->boolean('embed'))
+    <style>
+        header, footer, nav, aside, .navbar, .site-header, .site-footer, .js-topnav, .js-sidebar {
+            display: none !important;
+        }
+        body, main {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            background: transparent !important;
+        }
+    </style>
+@endif
+
 @php
-    @if($isEmbed ?? request()->boolean('embed'))
-        <style>
-            header, footer, nav, aside, .navbar, .site-header, .site-footer, .js-topnav, .js-sidebar {
-                display: none !important;
-            }
-            body, main {
-                padding-top: 0 !important;
-                margin-top: 0 !important;
-            }
-        </style>
-    @endif
     $formBgUrl = !empty($formSettings['bg_image']) ? asset($formSettings['bg_image']) : null;
     $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6'; 
     $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
