@@ -1,4 +1,4 @@
-<div class="w-full font-sans relative" 
+<div class="w-full relative" 
      x-data="{ loteAberto: $wire.entangle('modalLoteAberto'), selecaoAberto: $wire.entangle('modalSelecaoAvancadaAberto'), antiSpamAberto: $wire.entangle('modalAntiSpamAberto'), moverCicloAberto: $wire.entangle('modalMoverCicloAberto') }" 
      x-effect="document.body.classList.toggle('overflow-hidden', loteAberto || selecaoAberto || antiSpamAberto || moverCicloAberto)"> 
     

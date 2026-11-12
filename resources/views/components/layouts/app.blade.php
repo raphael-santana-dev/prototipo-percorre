@@ -386,7 +386,7 @@
                 
                 {{-- TOP HEADER (Z-INDEX 110) --}}
                 <header class="bg-petunia-900 border-b border-white/10 relative z-[110] dark:bg-petunia-1000 transition-colors duration-300 shrink-0 h-16 w-full">
-                    <div class="h-full w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="h-full w-full mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center justify-between h-full w-full">
                             
                             <div class="flex items-center gap-5">
@@ -439,7 +439,7 @@
                 
                 <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-[100] shrink-0 origin-top"
                      :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
-                    <div class="w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="sm:px-6 px-8 mx-auto w-full max-w-8xl">
                         <div class="flex flex-wrap items-center min-h-[3rem] py-1 gap-x-2 gap-y-1">
                             <a href="{{ route('dashboard') }}" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
@@ -589,7 +589,7 @@
 
                 <main class="flex-1 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 custom-scrollbar">
                     <div class="w-full min-h-full pt-6">
-                        <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
+                        <div class="sm:px-6 px-8 mx-auto w-full max-w-8xl">
                             {{ $slot }}
                         </div>
                     </div>

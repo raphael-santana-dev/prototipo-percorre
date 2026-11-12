@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans">
+<div class="w-full relative">
     
     <x-page-header 
         title="{{ $automacaoId ? 'Editar Regra de Automação' : 'Nova Regra de Automação' }}" 
