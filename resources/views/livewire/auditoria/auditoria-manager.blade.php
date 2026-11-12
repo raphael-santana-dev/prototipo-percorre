@@ -1,26 +1,27 @@
-2<div class="w-full relative">
+<div class="w-full relative">
     <x-page-header 
         title="Auditoria de Sistema" 
+        subtitle="Rastreabilidade de alterações no banco de dados e acessos"
         icon="ph ph-magnifying-glass"
         badge=""
         :breadcrumbs="$breadcrumbs" 
         :metricas="$metricas ?? null">
         
         <x-slot name="filters">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end w-full">
                 
                 <div class="md:col-span-4">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-text-aa text-purpura-500"></i> Buscar
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        Buscar
                     </label>
-                    <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Usuário, IP ou ID do Registro..." class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <input type="text" wire:model.live.debounce.300ms="filtro_keyword" placeholder="Usuário, IP ou ID do Registro..." class="w-full">
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-tag text-purpura-500"></i> Ação
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        Ação
                     </label>
-                    <select wire:model.live="filtro_acao" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <select wire:model.live="filtro_acao" class="w-full">
                         <option value="">Todas</option>
                         @foreach($acoesDisponiveis as $acao)
                             <option value="{{ $acao }}">{{ ucfirst($acao) }}</option>
@@ -29,13 +30,13 @@
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-database text-purpura-500"></i> Tabela
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        Tabela
                     </label>
-                    <select wire:model.live="filtro_tabela" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                    <select wire:model.live="filtro_tabela" class="w-full">
                         <option value="">Todas</option>
                         @foreach($tabelasDisponiveis as $tabela)
-                            <option value="{{ $tabela }}">{{ Str::limit($tabela, 15) }}</option>
+                            <option value="{{ $tabela }}">{{ Str::limit($tabela, 18) }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -52,13 +53,13 @@
                         }
                     }
                 }">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-calendar-plus text-purpura-500"></i> De (Período)
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        De (Período)
                     </label>
                     <input type="datetime-local" 
                            wire:model.live="filtro_data_inicio" 
                            @focus="initZero"
-                           class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                           class="w-full">
                 </div>
 
                 <div class="md:col-span-2" x-data="{
@@ -73,19 +74,19 @@
                         }
                     }
                 }">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <i class="ph ph-calendar-check text-purpura-500"></i> Até (Período)
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        Até (Período)
                     </label>
                     <input type="datetime-local" 
                            wire:model.live="filtro_data_fim" 
                            @focus="initEnd"
-                           class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500">
+                           class="w-full">
                 </div>
 
                 @if($filtro_keyword !== '' || $filtro_acao !== '' || $filtro_tabela !== '' || $filtro_data_inicio !== '' || $filtro_data_fim !== '')
-                    <div class="md:col-span-12 flex justify-end mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <button wire:click="limparFiltros" class="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                            <i class="ph-bold ph-x"></i> Limpar Filtros
+                    <div class="md:col-span-12 flex justify-end pt-2">
+                        <button type="button" wire:click="limparFiltros" class="btn btn--secondary btn--small">
+                            <i class="ph ph-x"></i> Limpar Filtros
                         </button>
                     </div>
                 @endif
@@ -94,10 +95,6 @@
         </x-slot>
 
     </x-page-header>
-
-    <div class="mb-6 -mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
-        Rastreabilidade completa de alterações no banco de dados e acessos.
-    </div>
 
     <x-table 
         :headers="$this->headers" 
@@ -108,76 +105,74 @@
         :modoExibicao="$modoExibicao">
         
         @forelse($registros as $log)
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200">
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
+            <tr class="hover:bg-gray-50/70 dark:hover:bg-gray-800/40 transition-colors" wire:key="audit-row-{{ $log->id }}">
+                <td class="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-400">
                     #{{ $log->id }}
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white">
+                <td class="px-4 py-3 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white font-mono">
                     {{ $log->created_at->format('d/m/Y H:i:s') }}
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap">
-                    <div class="text-sm font-bold text-gray-800 dark:text-white">{{ $log->usuario_nome ?? 'Sistema' }}</div>
-                    <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500">{{ $log->ip ?? 'IP Desconhecido' }}</div>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <div class="text-xs font-semibold text-gray-900 dark:text-white">{{ $log->usuario_nome ?? 'Sistema' }}</div>
+                    <div class="text-[11px] font-mono text-gray-400">{{ $log->ip ?? 'IP Desconhecido' }}</div>
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-center">
-                    <span class="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider
-                        @if($log->acao === 'criacao') bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800
-                        @elseif($log->acao === 'atualizacao') bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800
-                        @elseif($log->acao === 'exclusao') bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
-                        @elseif($log->acao === 'login') bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800
-                        @elseif($log->acao === 'acesso_negado') bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
-                        @else bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 @endif">
+                <td class="px-4 py-3 whitespace-nowrap text-center">
+                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border uppercase
+                        @if($log->acao === 'criacao') bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800
+                        @elseif($log->acao === 'atualizacao') bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800
+                        @elseif($log->acao === 'exclusao' || $log->acao === 'acesso_negado') bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
+                        @else bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 @endif">
                         {{ $log->acao }}
                     </span>
                 </td>
-                <td class="px-4 py-2.5 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300 font-mono">
+                <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 font-mono">
                     {{ $log->tabela_alterada }}
-                    @if($log->registro_id) <span class="text-gray-400 ml-1 font-bold">#{{ $log->registro_id }}</span> @endif
+                    @if($log->registro_id) <span class="text-gray-400 ml-1">#{{ $log->registro_id }}</span> @endif
                 </td>
-                <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                <td class="px-4 py-3 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1">
                         @if(feature('auditoria.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('auditoria.visualizar')))
-                            <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded-lg hover:text-purpura-500 hover:bg-purpura-50 dark:hover:bg-gray-600" title="Ver Detalhes do Log">
-                                <i class="text-lg ph ph-info"></i>
+                            <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 transition-colors rounded hover:text-gray-900 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-800" title="Ver Detalhes do Log">
+                                <i class="text-base ph ph-info"></i>
                             </button>
                         @else
-                            <span class="text-[10px] text-gray-400 italic">Restrito</span>
+                            <span class="text-[11px] text-gray-400">Restrito</span>
                         @endif
                     </div>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="6" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    <p class="font-semibold text-gray-500">Nenhum registro de auditoria encontrado com esses filtros.</p>
+                <td colspan="6" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Nenhum registro de auditoria encontrado com esses filtros.
                 </td>
             </tr>
         @endforelse
 
         <x-slot name="gridSlot">
             @foreach($registros as $log)
-                <div class="flex flex-col p-4 bg-white border border-gray-100 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div class="flex flex-col p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300 transition">
                     <div class="flex items-start justify-between mb-2">
-                        <span class="px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider
-                            @if($log->acao === 'criacao') bg-green-100 text-green-800 border border-green-200
-                            @elseif($log->acao === 'atualizacao') bg-blue-100 text-blue-800 border border-blue-200
-                            @elseif($log->acao === 'exclusao') bg-red-100 text-red-800 border border-red-200
-                            @else bg-gray-100 text-gray-800 border border-gray-200 @endif">
+                        <span class="px-2 py-0.5 text-[10px] font-medium rounded border uppercase
+                            @if($log->acao === 'criacao') bg-emerald-50 text-emerald-700 border-emerald-200
+                            @elseif($log->acao === 'atualizacao') bg-blue-50 text-blue-700 border-blue-200
+                            @elseif($log->acao === 'exclusao') bg-red-50 text-red-700 border-red-200
+                            @else bg-gray-100 text-gray-700 border-gray-200 @endif">
                             {{ $log->acao }}
                         </span>
-                        <span class="text-[10px] font-medium text-gray-400">#{{ $log->id }}</span>
+                        <span class="text-[11px] font-mono text-gray-400">#{{ $log->id }}</span>
                     </div>
                     
-                    <div class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $log->tabela_alterada }}</div>
-                    <div class="text-[10px] text-gray-500 font-bold mb-3">{{ $log->created_at->format('d/m/Y H:i') }}</div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white truncate font-mono">{{ $log->tabela_alterada }}</div>
+                    <div class="text-xs text-gray-500 mb-3">{{ $log->created_at->format('d/m/Y H:i') }}</div>
                     
-                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <div class="text-[10px] font-bold text-gray-500 truncate max-w-[120px] flex items-center gap-1.5">
-                            <i class="ph-fill ph-user text-gray-400 text-sm"></i> {{ $log->usuario_nome ?? 'Sistema' }}
+                    <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[140px]">
+                            {{ $log->usuario_nome ?? 'Sistema' }}
                         </div>
                         @if(feature('auditoria.visualizar') && (auth()->user()->hasRole('dev') || auth()->user()->can('auditoria.visualizar')))
-                            <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-purpura-500 rounded-lg dark:hover:bg-gray-600 transition-colors">
-                                <i class="text-lg ph ph-info"></i>
+                            <button wire:click="showQuickView({{ $log->id }})" class="p-1.5 text-gray-400 hover:text-gray-900 rounded transition-colors">
+                                <i class="text-base ph ph-info"></i>
                             </button>
                         @endif
                     </div>
