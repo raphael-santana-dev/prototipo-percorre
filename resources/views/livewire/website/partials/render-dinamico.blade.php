@@ -1108,7 +1108,12 @@
                         if ($vincularTurnoCurso) {
                             if (!empty($cursoEscolhidoId)) {
                                 $cursoObj = \App\Models\Curso::with('turnosVinculados')->find($cursoEscolhidoId);
-                                $turnosCol = $cursoObj ? $cursoObj->turnosVinculados->sortBy('nome') : collect();
+                                $turnosCol = $cursoObj
+                                    ? (method_exists($cursoObj, 'turnosNaUnidade')
+                                        ? $cursoObj->turnosNaUnidade(!empty($unidadeEscolhidaId) ? (int) $unidadeEscolhidaId : null)
+                                        : $cursoObj->turnosVinculados->sortBy('nome'))
+                                    : collect();
+
                                 if ($idsTurnoValidos !== null) {
                                     $turnosCol = $turnosCol->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
                                 }
@@ -1117,7 +1122,7 @@
                                 $opcoesSistema = [];
                             }
                         } else {
-                            $queryTur = \App\Modules\Turno\Domain\Models\Turno::orderBy('nome');
+                            $queryTur = \App\Modules\Turno\Domain\Models\Turno::where('status', true)->orderBy('horario_inicio')->orderBy('nome');
                             if ($idsTurnoValidos !== null) {
                                 $queryTur->whereIn('id', !empty($idsTurnoValidos) ? $idsTurnoValidos : [0]);
                             }

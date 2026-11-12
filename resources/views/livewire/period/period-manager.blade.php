@@ -581,26 +581,25 @@
 
                                         <div class="flex-1 flex flex-col">
                                             <div class="p-2.5 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-medium uppercase text-gray-500">3. Turnos</div>
-                                            <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                                <div class="flex-1 overflow-y-auto p-2 space-y-1">
                                                 @if($activeUnidadeId && $activeCursoId)
                                                     @php
-                                                        $cs = $cursosDb->firstWhere('id', $activeCursoId);
-                                                        $turnosComboWiz = $cs
-                                                            ? (method_exists($cs, 'turnosNaUnidade') ? $cs->turnosNaUnidade((int) $activeUnidadeId) : $cs->turnosVinculados)
-                                                            : collect();
+                                                        $turnosDaCombinacao = $this->obterTurnosDoCursoNaUnidade((int) $activeUnidadeId, (int) $activeCursoId);
                                                     @endphp
-                                                    @forelse($turnosComboWiz as $t)
-                                                        <div wire:key="turno-{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                                    @forelse($turnosDaCombinacao as $t)
+                                                        <div wire:key="turno-{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="flex items-center p-2.5 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition">
                                                             <label class="flex items-center gap-2 cursor-pointer flex-1">
                                                                 <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $activeUnidadeId }}-{{ $activeCursoId }}-{{ $t->id }}" class="w-4 h-4 rounded text-purpura-600">
-                                                                <span class="text-xs text-gray-800 dark:text-gray-200">{{ $t->nome }}</span>
+                                                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
                                                             </label>
                                                         </div>
                                                     @empty
-                                                        <div class="h-full flex items-center justify-center text-gray-400 text-xs p-4 text-center">Nenhum turno vinculado nesta unidade.</div>
+                                                        <div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs p-4 text-center">
+                                                            Nenhum turno habilitado para este curso nesta unidade.
+                                                        </div>
                                                     @endforelse
                                                 @else
-                                                    <div class="h-full flex items-center justify-center text-gray-400 text-xs">Selecione um Curso</div>
+                                                    <div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs font-bold uppercase">Selecione um Curso</div>
                                                 @endif
                                             </div>
                                         </div>

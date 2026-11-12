@@ -1,15 +1,17 @@
+@if($isEmbed ?? request()->boolean('embed'))
+    <style>
+        header, footer, nav, aside, .navbar, .site-header, .site-footer, .js-topnav, .js-sidebar {
+            display: none !important;
+        }
+        body, main {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            background: transparent !important;
+        }
+    </style>
+@endif
+
 @php
-    @if($isEmbed ?? request()->boolean('embed'))
-        <style>
-            header, footer, nav, aside, .navbar, .site-header, .site-footer, .js-topnav, .js-sidebar {
-                display: none !important;
-            }
-            body, main {
-                padding-top: 0 !important;
-                margin-top: 0 !important;
-            }
-        </style>
-    @endif
     $formBgUrl = !empty($formSettings['bg_image']) ? asset($formSettings['bg_image']) : null;
     $formBgColor = $formSettings['bg_color'] ?? '#f3f4f6'; 
     $formBgOpacity = $formSettings['bg_opacity'] ?? '0.0';
@@ -74,7 +76,7 @@
     @endif
     <div class="fixed inset-0 z-0 pointer-events-none" style="background-color: {{ $formBgColor }}; opacity: {{ $formBgOpacity }};"></div>
 
-    <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ request()->query('embed') ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
+    <div class="relative z-10 w-full {{ $formWidth }} mx-auto {{ ($isEmbed ?? request()->boolean('embed')) ? 'py-4' : 'py-12' }} px-4 sm:px-6 flex-1 flex flex-col justify-center">
         @if($isTeste)
             <div class="mb-6 p-4 bg-amber-400 text-amber-900 rounded-xl text-xs font-bold flex items-center justify-between shadow-md ring-2 ring-amber-500 z-50">
                 <span class="flex items-center gap-2">
@@ -102,7 +104,7 @@
                         <a href="{{ route('login') }}" class="mt-8 inline-flex items-center gap-2 bg-purpura-600 hover:bg-purpura-700 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
                             Fazer Login no Portal <i class="ph-bold ph-sign-in"></i>
                         </a>
-                    @else
+                    @elseif(!($isEmbed ?? false))
                         <button type="button" onclick="window.history.back()" class="mt-8 inline-block bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
                             Voltar à página anterior
                         </button>
@@ -127,9 +129,11 @@
                         <span>Baixar Ficha de Respostas (PDF)</span>
                     </button>
 
-                    <button type="button" onclick="window.location.reload()" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
-                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Preencher Novamente
-                    </button>
+                    @if(!($isEmbed ?? false))
+                        <button type="button" onclick="window.location.reload()" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition duration-200">
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i> Preencher Novamente
+                        </button>
+                    @endif
                 </div>
             </div>
         @else

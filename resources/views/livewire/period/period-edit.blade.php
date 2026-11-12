@@ -1,4 +1,4 @@
-<div class="w-full relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
+<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
 
     <x-editing-lock-overlay
        :isLockedByOther="$isLockedByOther"
@@ -45,7 +45,7 @@
                 </button>
                 <button type="button" @click="abaAtiva = 'estrutura'" :class="abaAtiva === 'estrutura' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
                     <i class="ph-bold ph-tree-structure text-base"></i><span>Unidades/Curso/Turno</span>
-                    @if(count($cursosSelecionados) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($cursosSelecionados) }}</span>@endif
+                    @if(count($turnosSelecionados) > 0)<span class="tag tag--small tag--filled tag--purpura !px-1.5 !py-0.5 !text-[9px]">{{ count($turnosSelecionados) }}</span>@endif
                 </button>
                 <button type="button" @click="abaAtiva = 'vagas'" :class="abaAtiva === 'vagas' ? 'border-purpura-600 text-purpura-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-4 border-b-2 t-label-12-semibold flex items-center gap-2 transition-all">
                     <i class="ph-bold ph-users-three text-base"></i><span>Distribuição de Vagas</span>
@@ -141,27 +141,33 @@
                 </div>
             </div>
 
+            <!-- ABA 2: ESTRUTURA ACADÊMICA (CHAVES COMPOSTAS INDEPENDENTES) -->
             <div x-show="abaAtiva === 'estrutura'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
                 <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                            <i class="ph-fill ph-tree-structure text-purpura-500"></i> Unidade/Curso/Turno
+                            <i class="ph-fill ph-tree-structure text-purpura-500"></i> Estrutura Acadêmica (Unidade → Curso → Turno)
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Selecione as Unidades, Cursos e Turnos disponíveis no ciclo.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Selecione a Unidade, depois os Cursos da Unidade e os Turnos específicos. Cada combinação gera automaticamente uma linha na aba de Distribuição de Vagas.</p>
                     </div>
+                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-purpura-50 text-purpura-700 border border-purpura-200 shrink-0">
+                        {{ count($unidadesSelecionadas) }} unidade(s) • {{ count($turnosSelecionados) }} combinação(ões)
+                    </span>
                 </div>
                 
                 <div class="flex flex-col md:flex-row h-[420px] bg-white dark:bg-gray-800 border-t-0 border-gray-200 dark:border-gray-700">
+                    <!-- COLUNA 1: UNIDADES -->
                     <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                             1. Unidades Ofertadas
                         </div>
                         <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                             @foreach($unidadesDb as $u)
-                                <div wire:click="setActiveUnidade({{ $u->id }})" 
-                                    class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                <div wire:key="pedit-uni-{{ $u->id }}"
+                                     wire:click="setActiveUnidade({{ $u->id }})" 
+                                     class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeUnidadeId == $u->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                                     <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                        <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $u->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                        <input type="checkbox" wire:model.live="unidadesSelecionadas" value="{{ $u->id }}" wire:change="setActiveUnidade({{ $u->id }})" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                                         <span class="text-sm font-bold {{ $activeUnidadeId == $u->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $u->nome }}</span>
                                     </label>
                                     <i class="ph ph-caret-right text-lg {{ $activeUnidadeId == $u->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
@@ -170,6 +176,7 @@
                         </div>
                     </div>
 
+                    <!-- COLUNA 2: CURSOS DA UNIDADE -->
                     <div class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/80">
                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
                             2. Cursos da Unidade
@@ -177,13 +184,25 @@
                         <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
                             @if($activeUnidadeId)
                                 @foreach($cursosDb->filter(fn($c) => $c->unidades->contains('id', $activeUnidadeId)) as $c)
-                                    <div wire:click="setActiveCurso({{ $c->id }})" 
-                                        class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-white dark:hover:bg-gray-700' }}">
-                                        <label class="flex items-center gap-2 cursor-pointer flex-1" wire:click.stop>
-                                            <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $c->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                                            <span class="text-sm font-bold {{ $activeCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
+                                    @php
+                                        $chaveCursoEdit = "{$activeUnidadeId}-{$c->id}";
+                                        $qtdTurnosCurso = $this->contarTurnosDoCursoNaUnidade((int) $activeUnidadeId, (int) $c->id);
+                                    @endphp
+                                    <div wire:key="pedit-cur-{{ $chaveCursoEdit }}"
+                                         wire:click="setActiveCurso({{ $c->id }})" 
+                                         class="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition {{ $activeCursoId == $c->id ? 'bg-purpura-50 dark:bg-purpura-900/30 ring-1 ring-purpura-200 dark:ring-purpura-800' : 'hover:bg-white dark:hover:bg-gray-700' }}">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-0" wire:click.stop>
+                                            <input type="checkbox" wire:model.live="cursosSelecionados" value="{{ $chaveCursoEdit }}" wire:change="setActiveCurso({{ $c->id }})" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                            <span class="text-sm font-bold truncate {{ $activeCursoId == $c->id ? 'text-purpura-700 dark:text-purpura-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $c->nome }}</span>
                                         </label>
-                                        <i class="ph ph-caret-right text-lg {{ $activeCursoId == $c->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            @if($qtdTurnosCurso > 0)
+                                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    {{ $qtdTurnosCurso }}
+                                                </span>
+                                            @endif
+                                            <i class="ph ph-caret-right text-lg {{ $activeCursoId == $c->id ? 'text-purpura-500' : 'text-gray-300 dark:text-gray-600' }}"></i>
+                                        </div>
                                     </div>
                                 @endforeach
                             @else
@@ -195,20 +214,30 @@
                         </div>
                     </div>
 
+                    <!-- COLUNA 3: TURNOS DO CURSO NAQUELA UNIDADE -->
                     <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/30">
                         <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                            3. Turnos Vinculados
+                            3. Turnos na Unidade
                         </div>
                         <div class="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-1">
-                            @if($activeCursoId)
-                                @foreach($cursosDb->firstWhere('id', $activeCursoId)->turnosVinculados as $t)
-                                    <div class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
+                            @if($activeUnidadeId && $activeCursoId)
+                                @php
+                                    $cursoSelEdit = $cursosDb->firstWhere('id', $activeCursoId);
+                                    $turnosContextualizados = $cursoSelEdit ? $cursoSelEdit->turnosNaUnidade((int) $activeUnidadeId) : collect();
+                                @endphp
+                                @forelse($turnosContextualizados as $t)
+                                    @php $chaveTurnoEdit = "{$activeUnidadeId}-{$activeCursoId}-{$t->id}"; @endphp
+                                    <div wire:key="pedit-tur-{{ $chaveTurnoEdit }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
                                         <label class="flex items-center gap-2 cursor-pointer flex-1">
-                                            <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $t->id }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                                            <input type="checkbox" wire:model.live="turnosSelecionados" value="{{ $chaveTurnoEdit }}" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
                                             <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $t->nome }}</span>
                                         </label>
                                     </div>
-                                @endforeach
+                                @empty
+                                    <div class="h-full flex flex-col items-center justify-center text-gray-400 p-4 text-center text-xs">
+                                        Nenhum turno habilitado para este curso nesta unidade.
+                                    </div>
+                                @endforelse
                             @else
                                 <div class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60">
                                     <i class="ph ph-graduation-cap text-3xl mb-2"></i>
@@ -220,26 +249,27 @@
                 </div>
             </div>
 
+            <!-- ABA 3: DISTRIBUIÇÃO DE VAGAS -->
             <div x-show="abaAtiva === 'vagas'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
                     <div>
                         <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <i class="ph-fill ph-users-three text-purpura-500"></i> Vagas
+                            <i class="ph-fill ph-users-three text-purpura-500"></i> Distribuição de Vagas
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            Defina a quantidade de vagas por unidade/curso/turno e restrições de idade.
+                            Defina a quantidade de vagas, meta e restrições de idade para cada combinação selecionada.
                         </p>
                     </div>
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
                         <button type="button" wire:click="addOferta" class="px-3.5 py-2 bg-purpura-50 text-purpura-700 hover:bg-purpura-100 border border-purpura-200 dark:bg-purpura-900/40 dark:text-purpura-300 dark:border-purpura-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                            <i class="ph-bold ph-plus text-sm"></i>Adicionar
+                            <i class="ph-bold ph-plus text-sm"></i> Adicionar Linha Manual
                         </button>
                     @endif
                 </div>
 
                 <div class="space-y-3 p-6">
                     @forelse($ofertasVagas as $index => $oferta)
-                        <div class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
+                        <div wire:key="pedit-oferta-{{ $index }}" class="p-3.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col xl:flex-row gap-3 items-end transition-colors hover:border-purpura-300">
                             <div class="flex-1 w-full">
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unidade</label>
                                 <select wire:model.live="ofertasVagas.{{ $index }}.unidade_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500">
@@ -258,7 +288,7 @@
                                     <option value="">Selecione...</option>
                                     @if($oferta['unidade_id'])
                                         @foreach($cursosDb as $c)
-                                            @if(in_array((string)$c->id, $cursosSelecionados) && $c->unidades->contains('id', $oferta['unidade_id']))
+                                            @if((in_array("{$oferta['unidade_id']}-{$c->id}", $cursosSelecionados) || in_array((string)$c->id, $cursosSelecionados)) && $c->unidades->contains('id', $oferta['unidade_id']))
                                                 <option value="{{ $c->id }}">{{ $c->nome }}</option>
                                             @endif
                                         @endforeach
@@ -270,15 +300,16 @@
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Turno</label>
                                 <select wire:model="ofertasVagas.{{ $index }}.turno_id" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white py-2 focus:ring-purpura-500" @if(!$oferta['curso_id']) disabled @endif>
                                     <option value="">Selecione...</option>
-                                    @if($oferta['curso_id'])
-                                        @php $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']); @endphp
-                                        @if($cursoSelecionado)
-                                            @foreach($cursoSelecionado->turnosVinculados as $t)
-                                                @if(in_array((string)$t->id, $turnosSelecionados))
-                                                    <option value="{{ $t->id }}">{{ $t->nome }}</option>
-                                                @endif
-                                            @endforeach
-                                        @endif
+                                    @if($oferta['unidade_id'] && $oferta['curso_id'])
+                                        @php
+                                            $cursoSelecionado = $cursosDb->firstWhere('id', $oferta['curso_id']);
+                                            $turnosDaOferta = $cursoSelecionado ? $cursoSelecionado->turnosNaUnidade((int) $oferta['unidade_id']) : collect();
+                                        @endphp
+                                        @foreach($turnosDaOferta as $t)
+                                            @if(in_array("{$oferta['unidade_id']}-{$oferta['curso_id']}-{$t->id}", $turnosSelecionados) || in_array((string)$t->id, $turnosSelecionados))
+                                                <option value="{{ $t->id }}">{{ $t->nome }}</option>
+                                            @endif
+                                        @endforeach
                                     @endif
                                 </select>
                             </div>
@@ -312,12 +343,13 @@
                         <div class="p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/30">
                             <i class="ph ph-warning-circle text-4xl text-gray-400 mb-2"></i>
                             <p class="text-sm font-bold text-gray-600 dark:text-gray-400">Nenhuma oferta de vaga configurada neste ciclo.</p>
-                            <p class="text-xs text-gray-500 mt-0.5">Adicione ofertas para limitar inscrições ou estipular faixas etárias por curso e unidade.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Marque as combinações na aba Unidades/Curso/Turno para gerar as linhas automaticamente.</p>
                         </div>
                     @endforelse
                 </div>
             </div>
 
+            <!-- ABA 4: ETAPAS DO CICLO (CRM) -->
             <div x-show="abaAtiva === 'crm'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
                 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
@@ -385,6 +417,7 @@
                 </div>
             </div>
 
+            <!-- ABA 5: DOCUMENTOS EXIGIDOS -->
             <div x-show="abaAtiva === 'documentos'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col overflow-hidden">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 p-4 gap-3 bg-gray-50/40 dark:bg-gray-900/20">
                     <div>

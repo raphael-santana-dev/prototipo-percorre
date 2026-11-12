@@ -81,6 +81,81 @@ class PeriodManager extends Component
         }
     }
 
+    public function updatedUnidadesSelecionadas(): void
+    {
+        $ativas = array_map('strval', $this->unidadesSelecionadas);
+
+        $this->cursosSelecionados = array_values(array_filter($this->cursosSelecionados, function ($v) use ($ativas) {
+            [$uId] = explode('-', (string) $v, 2);
+            return in_array($uId, $ativas, true);
+        }));
+
+        $this->turnosSelecionados = array_values(array_filter($this->turnosSelecionados, function ($v) use ($ativas) {
+            [$uId] = explode('-', (string) $v, 3);
+            return in_array($uId, $ativas, true);
+        }));
+    }
+
+    public function updatedCursosSelecionados(): void
+    {
+        $cursosAtivos = array_map('strval', $this->cursosSelecionados);
+
+        foreach ($cursosAtivos as $cKey) {
+            if (str_contains($cKey, '-')) {
+                [$uId] = explode('-', $cKey, 2);
+                if (!in_array($uId, $this->unidadesSelecionadas, true)) {
+                    $this->unidadesSelecionadas[] = $uId;
+                }
+            }
+        }
+
+        $this->turnosSelecionados = array_values(array_filter($this->turnosSelecionados, function ($v) use ($cursosAtivos) {
+            $p = explode('-', (string) $v);
+            return count($p) === 3 && in_array("{$p[0]}-{$p[1]}", $cursosAtivos, true);
+        }));
+    }
+
+    public function updatedTurnosSelecionados(): void
+    {
+        foreach ($this->turnosSelecionados as $tKey) {
+            $p = explode('-', (string) $tKey);
+            if (count($p) === 3) {
+                [$uId, $cId] = $p;
+                $chaveCurso = "{$uId}-{$cId}";
+                if (!in_array($uId, $this->unidadesSelecionadas, true)) {
+                    $this->unidadesSelecionadas[] = $uId;
+                }
+                if (!in_array($chaveCurso, $this->cursosSelecionados, true)) {
+                    $this->cursosSelecionados[] = $chaveCurso;
+                }
+            }
+        }
+    }
+
+    /**
+     * Retorna apenas os turnos habilitados especificamente para o par (Unidade, Curso).
+     */
+    public function obterTurnosDoCursoNaUnidade(int $unidadeId, int $cursoId)
+    {
+        if (\Illuminate\Support\Facades\Schema::hasTable('unidade_curso_turno')) {
+            $idsTurnos = \Illuminate\Support\Facades\DB::table('unidade_curso_turno')
+                ->where('unidade_id', $unidadeId)
+                ->where('curso_id', $cursoId)
+                ->pluck('turno_id')
+                ->toArray();
+
+            if (!empty($idsTurnos)) {
+                return \App\Modules\Turno\Domain\Models\Turno::whereIn('id', $idsTurnos)
+                    ->where('status', true)
+                    ->orderBy('horario_inicio')
+                    ->get();
+            }
+        }
+
+        $curso = Curso::with('turnosVinculados')->find($cursoId);
+        return $curso ? $curso->turnosVinculados : collect();
+    }
+
     public function limparFiltros()
     {
         $this->reset(['filtroNome', 'filtro_ano', 'filtro_semestre', 'filtro_status', 'ordenacao']);
@@ -251,6 +326,7 @@ class PeriodManager extends Component
     {
         $cursosDb = Curso::with('turnosVinculados')->get();
         $unidadesDb = \App\Modules\Unidade\Domain\Models\Unidade::pluck('nome', 'id');
+        $turnosDb = \App\Modules\Turno\Domain\Models\Turno::pluck('nome', 'id');
         
         $ofertasExistentes = [];
         foreach ($this->ofertasVagas as $oferta) {
@@ -263,40 +339,38 @@ class PeriodManager extends Component
         $novasOfertas = [];
 
         foreach ($this->turnosSelecionados as $combo) {
-            $parts = explode('-', $combo);
+            $parts = explode('-', (string) $combo);
             if (count($parts) === 3) {
-                $uId = $parts[0];
-                $cId = $parts[1];
-                $tId = $parts[2];
+                [$uId, $cId, $tId] = $parts;
                 
-                if (!in_array($uId, $this->unidadesSelecionadas)) continue;
-                if (!in_array("{$uId}-{$cId}", $this->cursosSelecionados)) continue;
+                if (!in_array((string) $uId, array_map('strval', $this->unidadesSelecionadas), true)) continue;
+                if (!in_array("{$uId}-{$cId}", array_map('strval', $this->cursosSelecionados), true)) continue;
 
                 $curso = $cursosDb->firstWhere('id', $cId);
-                $turno = $curso ? $curso->turnosVinculados->firstWhere('id', $tId) : null;
+                $nomeTurno = $turnosDb[$tId] ?? null;
                 
-                if (!$curso || !$turno) continue;
+                if (!$curso || !$nomeTurno) continue;
 
                 $key = $combo;
                 
                 if (isset($ofertasExistentes[$key])) {
                     $novasOfertas[] = array_merge($ofertasExistentes[$key], [
                         'unidade_nome' => $unidadesDb[$uId] ?? 'Unidade',
-                        'curso_nome' => $curso->nome,
-                        'turno_nome' => $turno->nome,
+                        'curso_nome'   => $curso->nome,
+                        'turno_nome'   => $nomeTurno,
                     ]);
                 } else {
                     $novasOfertas[] = [
-                        'unidade_id' => (string) $uId,
+                        'unidade_id'   => (string) $uId,
                         'unidade_nome' => $unidadesDb[$uId] ?? 'Unidade',
-                        'curso_id' => (string) $cId,
-                        'curso_nome' => $curso->nome,
-                        'turno_id' => (string) $tId,
-                        'turno_nome' => $turno->nome,
-                        'vagas' => '',
-                        'meta' => '',
-                        'idade_min' => '',
-                        'idade_max' => '',
+                        'curso_id'     => (string) $cId,
+                        'curso_nome'   => $curso->nome,
+                        'turno_id'     => (string) $tId,
+                        'turno_nome'   => $nomeTurno,
+                        'vagas'        => '',
+                        'meta'         => '',
+                        'idade_min'    => '',
+                        'idade_max'    => '',
                     ];
                 }
             }

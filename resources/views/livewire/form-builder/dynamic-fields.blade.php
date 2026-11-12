@@ -2159,7 +2159,7 @@
                             @if($comboActiveUnidadeId && $comboActiveCursoId)
                                 @php $cursoComboObj = $cursosDb->firstWhere('id', $comboActiveCursoId); @endphp
                                 @if($cursoComboObj)
-                                    @foreach($cursoComboObj->turnosVinculados as $t)
+                                    @foreach($cursoComboObj->turnosNaUnidade((int) $comboActiveUnidadeId) as $t)
                                         @php $chaveTurnoCompleta = $comboActiveUnidadeId . '-' . $comboActiveCursoId . '-' . $t->id; @endphp
                                         <div wire:key="combo-tur-{{ $chaveTurnoCompleta }}" class="flex items-center p-2.5 rounded-lg transition hover:bg-white dark:hover:bg-gray-700">
                                             <label class="flex items-center gap-2 cursor-pointer flex-1">
