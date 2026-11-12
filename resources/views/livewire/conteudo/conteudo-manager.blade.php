@@ -1,4 +1,4 @@
-<div class="p-6 max-w-[1400px] mx-auto font-sans relative">
+<div class="w-full relative">
     <x-page-header title="Gestão de Publicações" icon="ph ph-newspaper" badge="Editorial">
         
         <x-slot name="actions">

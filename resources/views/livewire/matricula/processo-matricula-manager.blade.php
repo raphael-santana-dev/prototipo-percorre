@@ -1,4 +1,4 @@
-<div class="p-6 mx-auto font-sans relative max-w-7xl" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
+<div class="w-full relative">
     
     <x-page-header 
         title="Acompanhamento de Matrículas" 

@@ -1,4 +1,4 @@
-<div class="p-6 mx-auto font-sans relative max-w-7xl">
+<div class="w-full relative">
     <div class="mb-6 flex justify-between items-end">
         <div>
             <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2"><i class="ph-bold ph-plugs text-purpura-600"></i> Hub de Integrações (Dicionário de Models)</h1>
