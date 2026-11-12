@@ -2,7 +2,7 @@
     'title' => '',
     'subtitle' => null,
     'maxWidth' => '2xl',
-    'closeMethod' => 'closeModal',
+    'closeMethod' => '$set(\'showModal\', false)',
 ])
 
 @php
@@ -18,18 +18,22 @@
         '6xl'   => 'sm:max-w-6xl',
         default => 'sm:max-w-2xl',
     };
+
+    $acaoFecharAlpine = str_contains($closeMethod, '(')
+        ? '$wire.' . $closeMethod
+        : '$wire.' . $closeMethod . '()';
 @endphp
 
 <div x-data
-     @keydown.escape.window="$wire.{{ $closeMethod }}()"
+     @keydown.escape.window="{{ $acaoFecharAlpine }}"
      x-init="document.body.classList.add('overflow-hidden'); $cleanup(() => document.body.classList.remove('overflow-hidden'))">
     
     <template x-teleport="body">
-        <div class="fixed inset-0 z-[999] flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 z-[999] flex items-center justify-center p-4 overflow-y-auto font-sans" role="dialog" aria-modal="true">
             
             {{-- Backdrop --}}
             <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs transition-opacity"
-                 wire:click="{{ $closeMethod }}"></div>
+                 wire:click="{!! $closeMethod !!}"></div>
 
             {{-- Painel do Modal --}}
             <div class="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full {{ $maxWidthClass }} border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
@@ -43,14 +47,14 @@
                             @endif
                         </div>
                         <button type="button"
-                                wire:click="{{ $closeMethod }}"
+                                wire:click="{!! $closeMethod !!}"
                                 class="text-gray-400 hover:text-gray-700 dark:hover:text-white p-1.5 rounded-lg transition">
                             <i class="ph ph-x text-lg"></i>
                         </button>
                     </div>
                 @endif
 
-                <div class="flex-1 overflow-y-auto p-6 custom-scrollbar font-sans">
+                <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     {{ $slot }}
                 </div>
             </div>
