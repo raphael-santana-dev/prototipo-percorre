@@ -1,4 +1,4 @@
-<div class="font-sans flex flex-col transition-all duration-300 bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden w-full relative"
+<div class="font-sans flex flex-col transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden w-full relative"
      @if($templateId) wire:poll.5s="pingLock" @endif
      x-data="{ modoExpandido: true, navbarOculta: true }"
      x-init="
@@ -23,16 +23,16 @@
         body.navbar-oculta .js-sidebar { display: none !important; }
 
         .template-quill .ql-toolbar.ql-snow {
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
             border-color: #e5e7eb;
             background-color: #f9fafb;
             padding: 8px 12px;
             font-family: inherit;
         }
         .template-quill .ql-container.ql-snow {
-            border-bottom-left-radius: 0.75rem;
-            border-bottom-right-radius: 0.75rem;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
             border-color: #e5e7eb;
             background-color: #ffffff;
             font-family: inherit;
@@ -46,49 +46,44 @@
             line-height: 1.6;
         }
         .template-quill .ql-editor:focus {
-            box-shadow: inset 0 0 0 2px rgba(147, 51, 234, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(147, 51, 234, 0.35);
             outline: none;
         }
     </style>
 
     {{-- CORTINA DE BLOQUEIO: OUTRO UTILIZADOR A EDITAR --}}
     @if($templateId && $isLockedByOther)
-        <div class="absolute inset-0 z-[200] bg-white/60 dark:bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-700 text-center relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-                <div class="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <i class="ph-fill ph-lock-key text-4xl"></i>
-                </div>
-                <h3 class="text-xl font-extrabold text-gray-900 dark:text-white mb-2">Acesso Restrito</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+        <div class="absolute inset-0 z-[200] bg-white/70 dark:bg-gray-900/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700 text-center">
+                <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">Template em Edição</h3>
+                <p class="text-xs text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
                     O utilizador <strong>{{ $lockOwnerName }}</strong> está a editar este template neste momento.
                 </p>
 
                 @if($transferRejected)
-                    <div class="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-bold text-red-700">
-                        <i class="ph-fill ph-x-circle mr-1 text-base align-middle"></i>
+                    <div class="mb-4 p-2.5 bg-red-50 border border-red-200 rounded text-xs font-medium text-red-700">
                         O utilizador recusou a transferência e pediu para aguardar.
                     </div>
                 @endif
 
-                <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-2">
                     @php
                         $transferData = \Illuminate\Support\Facades\Cache::get($this->getTransferKey());
                         $isPending = $transferData && ($transferData['status'] ?? '') === 'pending' && ($transferData['requester_id'] ?? null) === auth()->id();
                     @endphp
 
                     @if($isPending)
-                        <button type="button" class="py-2.5 px-4 rounded-lg font-bold text-sm bg-gray-100 text-gray-500 cursor-not-allowed w-full flex justify-center items-center gap-2 border border-gray-200" disabled>
-                            <i class="ph-bold ph-spinner animate-spin"></i> Aguardando resposta...
+                        <button type="button" class="py-2 px-4 rounded-lg font-medium text-xs bg-gray-100 text-gray-500 cursor-not-allowed w-full border border-gray-200" disabled>
+                            Aguardando resposta...
                         </button>
-                        <button type="button" wire:click="cancelTransferRequest" class="text-xs font-bold text-gray-500 hover:text-red-500 underline mt-2 transition">
+                        <button type="button" wire:click="cancelTransferRequest" class="text-xs text-gray-500 hover:text-red-600 underline mt-1">
                             Cancelar Pedido
                         </button>
                     @else
-                        <button type="button" wire:click="requestControl" class="py-2.5 px-4 rounded-lg font-bold text-sm bg-amber-500 hover:bg-amber-600 text-white border-none shadow-md w-full flex justify-center items-center gap-2 transition">
-                            <i class="ph-bold ph-hand-raising"></i> Solicitar Controle
+                        <button type="button" wire:click="requestControl" class="py-2 px-4 rounded-lg font-medium text-xs bg-gray-900 hover:bg-black text-white w-full transition">
+                            Solicitar Controle
                         </button>
-                        <a href="{{ route('templates.index') }}" class="py-2.5 px-4 rounded-lg font-bold text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 w-full mt-2 block transition">
+                        <a href="{{ route('templates.index') }}" class="py-2 px-4 rounded-lg font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 w-full block transition">
                             Voltar para Templates
                         </a>
                     @endif
@@ -99,123 +94,111 @@
 
     <fieldset @if($templateId && $isLockedByOther) disabled class="pointer-events-none opacity-60 blur-[2px] transition-all duration-300" @endif class="flex flex-col flex-1 h-full w-full overflow-hidden">
         
-        <!-- BARRA SUPERIOR FIXA DO CONSTRUTOR DE TEMPLATES -->
-        <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 z-[60] shrink-0">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('templates.index') }}" onclick="document.body.classList.remove('modo-expandido', 'navbar-oculta')" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition" title="Voltar para a listagem">
-                    <i class="ph-bold ph-arrow-left"></i>
+        <!-- BARRA SUPERIOR DO CONSTRUTOR -->
+        <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-5 py-2.5 flex flex-wrap items-center justify-between gap-4 z-[60] shrink-0">
+            <div class="flex items-center gap-3">
+                <a href="{{ route('templates.index') }}" onclick="document.body.classList.remove('modo-expandido', 'navbar-oculta')" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition" title="Voltar para a listagem">
+                    <i class="ph ph-arrow-left"></i>
                 </a>
-                <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
-                    <div class="flex items-center gap-2.5">
-                        <h1 class="text-base font-black text-gray-900 dark:text-white tracking-tight">
-                            {{ $templateId ? 'Editar Template de Comunicação' : 'Construtor de Template' }}
+                <div class="border-l border-gray-200 dark:border-gray-700 pl-3">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-sm font-bold text-gray-900 dark:text-white">
+                            {{ $templateId ? 'Editar Template' : 'Novo Template' }}
                         </h1>
-                        @if($canal === 'email')
-                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded border border-blue-200 uppercase tracking-wider flex items-center gap-1">
-                                <i class="ph-fill ph-envelope-simple"></i> E-mail
-                            </span>
-                        @elseif($canal === 'whatsapp')
-                            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded border border-emerald-200 uppercase tracking-wider flex items-center gap-1">
-                                <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
-                            </span>
-                        @else
-                            <span class="px-2 py-0.5 bg-purpura-100 text-purpura-700 text-[10px] font-bold rounded border border-purpura-200 uppercase tracking-wider flex items-center gap-1">
-                                <i class="ph-fill ph-Chats-circle"></i> Multicanal (E-mail + WhatsApp)
-                            </span>
-                        @endif
+                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-medium rounded border border-gray-200 dark:border-gray-700 uppercase">
+                            {{ $canal === 'ambos' ? 'Multicanal' : $canal }}
+                        </span>
                     </div>
-                    <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">
-                        Template: <span class="font-bold text-gray-800 dark:text-gray-200">{{ $nome ?: 'Novo Template Sem Título' }}</span>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                        {{ $nome ?: 'Sem título definido' }}
                     </p>
                 </div>
             </div>
 
-            <!-- SELETOR CENTRAL DE CANAL (E-MAIL | WHATSAPP | AMBOS) -->
-            <div class="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
-                <button type="button" wire:click="setCanal('email')" class="px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 {{ $canal === 'email' ? 'bg-white dark:bg-gray-900 text-blue-600 shadow-xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
-                    <i class="ph-fill ph-envelope-simple text-sm"></i> Apenas E-mail
+            <!-- SELETOR CENTRAL DE CANAL -->
+            <div class="inline-flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                <button type="button" wire:click="setCanal('email')" class="px-3 py-1 rounded-md text-xs font-medium transition {{ $canal === 'email' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
+                    Apenas E-mail
                 </button>
-                <button type="button" wire:click="setCanal('whatsapp')" class="px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 {{ $canal === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-emerald-600 shadow-xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
-                    <i class="ph-fill ph-whatsapp-logo text-sm"></i> Apenas WhatsApp
+                <button type="button" wire:click="setCanal('whatsapp')" class="px-3 py-1 rounded-md text-xs font-medium transition {{ $canal === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
+                    Apenas WhatsApp
                 </button>
-                <button type="button" wire:click="setCanal('ambos')" class="px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 {{ $canal === 'ambos' ? 'bg-white dark:bg-gray-900 text-purpura-600 shadow-xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
-                    <i class="ph-fill ph-intersect text-sm"></i> Ambos (E-mail + WhatsApp)
+                <button type="button" wire:click="setCanal('ambos')" class="px-3 py-1 rounded-md text-xs font-medium transition {{ $canal === 'ambos' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
+                    Ambos (E-mail + WhatsApp)
                 </button>
             </div>
 
-            <!-- CONTROLES DE TELA CHEIA E SALVAMENTO -->
-            <div class="flex items-center gap-2.5">
-                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 shadow-sm text-purpura-600' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" title="Expandir Tela">
-                        <i class="ph-bold" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
+            <!-- CONTROLES DE TELA E SALVAMENTO -->
+            <div class="flex items-center gap-2">
+                <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-2 py-1 text-xs rounded transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-500 hover:text-gray-900'" title="Expandir Tela">
+                        <i class="ph" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
                     </button>
-                    <button type="button" x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900" :class="navbarOculta ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''" title="Ocultar Menus">
-                        <i class="ph-bold" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
+                    <button type="button" x-show="modoExpandido" x-cloak @click="navbarOculta = !navbarOculta" class="px-2 py-1 text-xs rounded transition-colors text-gray-500 hover:text-gray-900" :class="navbarOculta ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : ''" title="Ocultar Menus">
+                        <i class="ph" :class="navbarOculta ? 'ph-eye-slash' : 'ph-eye'"></i>
                     </button>
                 </div>
 
                 @if(feature('template.editar') || feature('template.criar'))
-                    <button type="button" wire:click="salvar" wire:loading.attr="disabled" class="px-4 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk text-sm"></i>
-                        <span>{{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}</span>
+                    <button type="button" wire:click="salvar" wire:loading.attr="disabled" class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none">
+                        {{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}
                     </button>
                 @endif
             </div>
         </div>
 
         <!-- ÁREA DE TRABALHO EM 3 COLUNAS -->
-        <div class="flex flex-1 w-full overflow-hidden relative bg-gray-100 dark:bg-gray-950">
+        <div class="flex flex-1 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950">
             
-            <!-- COLUNA 1 (ESQUERDA): DICIONÁRIO DE VARIÁVEIS DINÂMICAS -->
-            <aside class="w-72 xl:w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
-                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                        <i class="ph-fill ph-brackets-curly text-purpura-600 text-base"></i> Variáveis Dinâmicas
+            <!-- COLUNA 1 (ESQUERDA): DICIONÁRIO DE VARIÁVEIS -->
+            <aside class="w-72 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                        Variáveis Dinâmicas
                     </span>
-                    <span class="text-[10px] font-semibold text-gray-400">Clique p/ inserir</span>
+                    <span class="text-[11px] text-gray-400">Clique p/ inserir</span>
                 </div>
 
-                <div class="p-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
+                <div class="p-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
                     <div class="relative">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" wire:model.live.debounce.250ms="buscaVariavel" placeholder="Filtrar variável (ex: nome, curso)..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-purpura-500 focus:border-purpura-500">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input type="text" wire:model.live.debounce.250ms="buscaVariavel" placeholder="Filtrar variável..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-1 focus:ring-purpura-500">
                     </div>
                 </div>
 
-                <div class="p-3 overflow-y-auto flex-1 custom-scrollbar space-y-3">
+                <div class="p-3 overflow-y-auto flex-1 custom-scrollbar space-y-2.5">
                     @forelse($dicionario as $categoria => $variaveis)
-                        <div x-data="{ open: true }" class="border border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900 overflow-hidden shadow-2xs">
+                        <div x-data="{ open: true }" class="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 overflow-hidden">
                             <button type="button" @click="open = !open" class="w-full flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 transition border-b border-gray-100 dark:border-gray-800">
-                                <span class="text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{{ $categoria }}</span>
-                                <i class="ph-bold ph-caret-down text-xs text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-300">{{ $categoria }}</span>
+                                <i class="ph ph-caret-down text-xs text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''"></i>
                             </button>
                             
                             <div x-show="open" x-collapse class="divide-y divide-gray-100 dark:divide-gray-800">
                                 @foreach($variaveis as $chave => $descricao)
-                                    <div class="p-2.5 hover:bg-purpura-50/50 dark:hover:bg-gray-800/50 transition group flex flex-col gap-1">
+                                    <div class="p-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition group flex flex-col gap-1">
                                         <div class="flex items-center justify-between gap-1">
-                                            <code class="text-[11px] font-bold text-purpura-700 dark:text-purpura-300 bg-purpura-50 dark:bg-purpura-900/40 px-1.5 py-0.5 rounded border border-purpura-200/60 dark:border-purpura-800 cursor-pointer"
+                                            <code class="text-[11px] font-mono font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 cursor-pointer"
                                                   @click="window.dispatchEvent(new CustomEvent('inserir-variavel-quill', { detail: '{{ $chave }}' })); navigator.clipboard.writeText('{{ $chave }}'); $dispatch('sucesso', {msg: 'Variável inserida e copiada!'})"
-                                                  title="Clique para inserir no texto">
+                                                  title="Clique para inserir">
                                                 {{ $chave }}
                                             </code>
 
-                                            <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                            <div class="flex items-center gap-1 opacity-75 group-hover:opacity-100">
                                                 <button type="button"
                                                         @click="window.dispatchEvent(new CustomEvent('inserir-variavel-quill', { detail: '{{ $chave }}' }))"
-                                                        class="px-1.5 py-0.5 text-[10px] font-bold bg-purpura-600 text-white rounded hover:bg-purpura-700 transition"
-                                                        title="Inserir no cursor">
-                                                    + Inserir
+                                                        class="px-1.5 py-0.5 text-[10px] font-medium bg-gray-900 dark:bg-gray-700 text-white rounded hover:bg-black transition">
+                                                    Inserir
                                                 </button>
                                                 <button type="button"
                                                         @click="navigator.clipboard.writeText('{{ $chave }}'); $dispatch('sucesso', {msg: 'Variável copiada!'})"
                                                         class="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded"
-                                                        title="Apenas copiar">
-                                                    <i class="ph-bold ph-copy text-xs"></i>
+                                                        title="Copiar">
+                                                    <i class="ph ph-copy text-xs"></i>
                                                 </button>
                                             </div>
                                         </div>
-                                        <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">{{ $descricao }}</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{{ $descricao }}</p>
                                     </div>
                                 @endforeach
                             </div>
@@ -228,43 +211,41 @@
                 </div>
             </aside>
 
-            <!-- COLUNA 2 (CENTRO): EDITOR DE MENSAGEM E CONSTRUTOR DE BOTÕES -->
-            <div class="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar p-5 md:p-7 space-y-6">
+            <!-- COLUNA 2 (CENTRO): EDITOR DE MENSAGEM E CONFIGURAÇÕES -->
+            <div class="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar p-6 space-y-5">
                 
-                <!-- CARD 1: IDENTIFICAÇÃO E ASSUNTO -->
-                <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-4">
+                <!-- BLOCO 1: IDENTIFICAÇÃO E ASSUNTO -->
+                <div class="bg-white dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800">
                     <div class="grid grid-cols-1 {{ in_array($canal, ['email', 'ambos']) ? 'md:grid-cols-2' : '' }} gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Nome Interno do Template <span class="text-red-500">*</span>
                             </label>
-                            <input wire:model.live.debounce.300ms="nome" type="text" placeholder="Ex: 4. Matrícula Finalizada (Com Detalhes)" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2 text-sm font-bold focus:ring-purpura-500 focus:border-purpura-500 shadow-2xs">
-                            @error('nome') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                            <input wire:model.live.debounce.300ms="nome" type="text" placeholder="Ex: Confirmação de Matrícula" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2 text-sm focus:ring-1 focus:ring-purpura-500">
+                            @error('nome') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                         </div>
 
                         @if(in_array($canal, ['email', 'ambos']))
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
-                                    Assunto do E-mail (Destinatário) <span class="text-red-500">*</span>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Assunto do E-mail <span class="text-red-500">*</span>
                                 </label>
-                                <input wire:model.live.debounce.300ms="assunto" type="text" placeholder="Ex: Matrícula Concluída! Bem-vindo(a) ao Instituto Percorre 🎉" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2 text-sm focus:ring-purpura-500 focus:border-purpura-500 shadow-2xs">
-                                @error('assunto') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                <input wire:model.live.debounce.300ms="assunto" type="text" placeholder="Ex: Matrícula Concluída - Instituto Percorre" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white px-3 py-2 text-sm focus:ring-1 focus:ring-purpura-500">
+                                @error('assunto') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                             </div>
                         @endif
                     </div>
                 </div>
 
-                <!-- CARD 2: CORPO DA MENSAGEM (QUILL) -->
-                <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                Conteúdo da Mensagem <span class="text-red-500">*</span>
-                            </label>
-                            <p class="text-[11px] text-gray-500">
-                                Escreva e formate a mensagem. No WhatsApp, negritos, listas e parágrafos são convertidos automaticamente.
-                            </p>
-                        </div>
+                <!-- BLOCO 2: CORPO DA MENSAGEM (QUILL) -->
+                <div class="bg-white dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800 space-y-2.5">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Conteúdo da Mensagem <span class="text-red-500">*</span>
+                        </label>
+                        <p class="text-[11px] text-gray-500">
+                            No WhatsApp, negritos, listas e quebras de linha são convertidos automaticamente.
+                        </p>
                     </div>
 
                     <div class="template-quill"
@@ -313,97 +294,117 @@
                          }">
                         <div x-ref="quillEditor"></div>
                     </div>
-                    @error('corpo') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                    @error('corpo') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- CARD 3: CONFIGURAÇÕES OFICIAIS DA SURI (CATEGORIA, CABEÇALHO, RODAPÉ E EXEMPLOS DE VARIÁVEIS) -->
+                <!-- BLOCO 3: ESTRUTURA SURI (CABEÇALHO, RODAPÉ E MAPEAMENTO DE VARIÁVEIS) -->
                 @if(in_array($canal, ['whatsapp', 'ambos']))
-                    <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-4">
+                    <div class="bg-white dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800 space-y-4">
                         <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
                             <div>
-                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
-                                    <i class="ph-fill ph-whatsapp-logo text-emerald-600 text-base"></i>
-                                    Estrutura do Template na Suri (Cabeçalho, Rodapé e Exemplos)
+                                <h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+                                    Configurações do Template WhatsApp (Suri / Meta)
                                 </h3>
-                                <p class="text-[11px] text-gray-500 mt-0.5">
-                                    Configure categoria da Meta, mídia de cabeçalho (headerType), rodapé (footer) e os valores de exemplo obrigatórios para cada variável.
+                                <p class="text-[11px] text-gray-500">
+                                    Categoria, cabeçalho de mídia, rodapé e mapeamento das variáveis.
                                 </p>
                             </div>
-                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 text-[11px] font-mono font-bold bg-gray-900 text-emerald-400 rounded-lg hover:bg-black transition">
-                                { } Ver JSON Suri
+                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-200 transition">
+                                { } JSON Suri
                             </button>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Categoria na Meta (category)</label>
-                                <select wire:model.live="suriCategory" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                    <option value="MARKETING">MARKETING (Promoções, Avisos, Convites)</option>
-                                    <option value="UTILITY">UTILITY (Faturas, Agendamentos, Status)</option>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Categoria (category)</label>
+                                <select wire:model.live="suriCategory" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    <option value="MARKETING">MARKETING</option>
+                                    <option value="UTILITY">UTILITY</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cabeçalho de Mídia (headerType)</label>
-                                <select wire:model.live="suriHeaderMode" class="w-full text-xs font-bold rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                    <option value="none">Sem Cabeçalho de Mídia</option>
-                                    <option value="image">Imagem (headerType: 0 + URL)</option>
-                                    <option value="document">Documento PDF (headerType: 2 + Base64)</option>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Cabeçalho (headerType)</label>
+                                <select wire:model.live="suriHeaderMode" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                    <option value="none">Sem Cabeçalho</option>
+                                    <option value="image">Imagem (URL)</option>
+                                    <option value="document">Documento PDF (Base64)</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Rodapé Opcional (footer)</label>
-                                <input type="text" wire:model.live.debounce.250ms="suriFooter" maxlength="60" placeholder="Ex: Suri • Mensagem automática" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Rodapé Opcional (footer)</label>
+                                <input type="text" wire:model.live.debounce.250ms="suriFooter" maxlength="60" placeholder="Ex: Instituto Percorre" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                             </div>
                         </div>
 
                         @if($suriHeaderMode === 'image')
-                            <div class="p-3.5 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div class="md:col-span-2">
-                                    <label class="block text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase mb-1">URL da Imagem de Exemplo (sampleFile.url) *</label>
-                                    <input type="url" wire:model.live.debounce.300ms="sampleFileUrl" placeholder="https://cdn.exemplo.com.br/banners/promo.png" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                    @error('sampleFileUrl') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">URL da Imagem (sampleFile.url) *</label>
+                                    <input type="url" wire:model.live.debounce.300ms="sampleFileUrl" placeholder="https://..." class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileUrl') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase mb-1">Nome do Arquivo (fileName) *</label>
-                                    <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="promo.png" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                    @error('sampleFileName') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Arquivo (fileName) *</label>
+                                    <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="imagem.png" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileName') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         @elseif($suriHeaderMode === 'document')
-                            <div class="p-3.5 rounded-xl bg-amber-50/50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 space-y-3">
+                            <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 space-y-3">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Enviar PDF p/ Converter em Base64 *</label>
-                                        <input type="file" wire:model="samplePdfUpload" accept=".pdf" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white">
+                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Upload PDF (Converte em Base64) *</label>
+                                        <input type="file" wire:model="samplePdfUpload" accept=".pdf" class="w-full text-xs text-gray-600">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Nome do Arquivo (sampleFile.fileName) *</label>
-                                        <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="fatura-exemplo.pdf" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                        @error('sampleFileName') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Arquivo (fileName) *</label>
+                                        <input type="text" wire:model.live.debounce.300ms="sampleFileName" placeholder="documento.pdf" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                        @error('sampleFileName') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Base64 do Documento (sampleFile.base64File)</label>
-                                    <input type="text" wire:model.live.debounce.300ms="sampleFileBase64" placeholder="data:application/pdf;base64,JVBERi0xLjQK..." class="w-full text-[11px] font-mono rounded-lg border-gray-300">
-                                    @error('sampleFileBase64') <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Base64 do Documento</label>
+                                    <input type="text" wire:model.live.debounce.300ms="sampleFileBase64" placeholder="data:application/pdf;base64,..." class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                    @error('sampleFileBase64') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         @endif
 
                         @if(count($bodyExamples) > 0)
-                            <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
-                                <span class="block text-[10px] font-extrabold uppercase text-purpura-700 dark:text-purpura-400">
-                                    Exemplos das Variáveis do Corpo (bodyExamples & templateExample)
+                            <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2.5">
+                                <span class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                    Variáveis do Corpo (Mapeamento de Coluna do Banco & Exemplo para Aprovação)
                                 </span>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                <div class="space-y-2">
                                     @foreach($bodyExamples as $varKey => $exemploVal)
-                                        <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                            <span class="px-1.5 py-0.5 bg-purpura-100 text-purpura-800 rounded font-mono text-[10px] font-bold shrink-0">
-                                                &#123;&#123;{{ $loop->iteration }}&#125;&#125; ({{ $varKey }})
-                                            </span>
-                                            <input type="text" wire:model.live.debounce.250ms="bodyExamples.{{ $varKey }}" placeholder="Ex: Maria" class="w-full text-xs rounded border-gray-300 py-1 px-2">
+                                        <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <div class="md:col-span-3">
+                                                <span class="px-2 py-1 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded font-mono text-xs font-medium">
+                                                    #{{ $loop->iteration }} (&#123;&#123;{{ $varKey }}&#125;&#125;)
+                                                </span>
+                                            </div>
+                                            @if(!empty($colunasBanco))
+                                                <div class="md:col-span-5">
+                                                    <select wire:model.live="suriVariableMap.{{ $varKey }}" class="w-full text-xs rounded-lg border-gray-300 dark:bg-gray-900 dark:border-gray-700 dark:text-white py-1.5 px-2">
+                                                        @foreach($colunasBanco as $grupoCol => $listaCols)
+                                                            <optgroup label="{{ $grupoCol }}">
+                                                                @foreach($listaCols as $colKey => $colLabel)
+                                                                    <option value="{{ $colKey }}">{{ $colLabel }}</option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="md:col-span-4">
+                                                    <input type="text" wire:model.live.debounce.250ms="bodyExamples.{{ $varKey }}" placeholder="Exemplo (Ex: Maria)" class="w-full text-xs rounded-lg border-gray-300 dark:bg-gray-900 dark:border-gray-700 dark:text-white py-1.5 px-2">
+                                                </div>
+                                            @else
+                                                <div class="md:col-span-9">
+                                                    <input type="text" wire:model.live.debounce.250ms="bodyExamples.{{ $varKey }}" placeholder="Exemplo (Ex: Maria)" class="w-full text-xs rounded-lg border-gray-300 dark:bg-gray-900 dark:border-gray-700 dark:text-white py-1.5 px-2">
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -411,37 +412,36 @@
                         @endif
                     </div>
 
-                    <!-- CARD 4: CONSTRUTOR DE BOTÕES / OPÇÕES INTERATIVAS (TIPOS 0, 1, 2 e 3 DA SURI) -->
-                    <div class="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-xs border border-gray-200 dark:border-gray-800 space-y-4">
+                    <!-- BLOCO 4: BOTÕES INTERATIVOS -->
+                    <div class="bg-white dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
                             <div>
-                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-2">
-                                    <i class="ph-fill ph-hand-tap text-emerald-600 text-base"></i>
-                                    Botões do Template (Máx. 10 • Ordem automática: Ligar/Copiar/URL → Resposta Rápida)
+                                <h3 class="text-xs font-semibold text-gray-900 dark:text-white">
+                                    Botões Interativos (Máx. 10)
                                 </h3>
-                                <p class="text-[11px] text-gray-500 mt-0.5">
-                                    Suporta <b>Resposta Rápida (type 2)</b>, <b>URL Estática ou Dinâmica (type 0)</b>, <b>Ligar (type 1)</b> e <b>Copiar Código (type 3)</b>.
+                                <p class="text-[11px] text-gray-500">
+                                    Adicione botões de Resposta Rápida, Link/URL, Ligação ou Copiar Código.
                                 </p>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-1.5">
-                                <button type="button" wire:click="adicionarBotao(2)" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold transition">
+                                <button type="button" wire:click="adicionarBotao(2)" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded text-xs font-medium transition">
                                     + Resposta Rápida
                                 </button>
-                                <button type="button" wire:click="adicionarBotao(0)" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition">
-                                    + Botão URL
+                                <button type="button" wire:click="adicionarBotao(0)" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded text-xs font-medium transition">
+                                    + URL
                                 </button>
-                                <button type="button" wire:click="adicionarBotao(1)" class="px-2.5 py-1.5 bg-purpura-50 hover:bg-purpura-100 text-purpura-700 border border-purpura-200 rounded-lg text-[11px] font-bold transition">
-                                    + Botão Ligar
+                                <button type="button" wire:click="adicionarBotao(1)" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded text-xs font-medium transition">
+                                    + Ligar
                                 </button>
-                                <button type="button" wire:click="adicionarBotao(3)" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold transition">
+                                <button type="button" wire:click="adicionarBotao(3)" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded text-xs font-medium transition">
                                     + Copiar Código
                                 </button>
                             </div>
                         </div>
 
                         @error('botoes')
-                            <div class="p-3 rounded-lg bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+                            <div class="p-3 rounded-lg bg-red-50 border border-red-200 text-xs font-medium text-red-700">
                                 {{ $message }}
                             </div>
                         @enderror
@@ -449,66 +449,64 @@
                         <div class="space-y-3">
                             @forelse($botoes as $index => $btn)
                                 @php $tipoSuriBtn = (int) ($btn['suri_type'] ?? 2); @endphp
-                                <div wire:key="tpl-btn-{{ $btn['id'] ?? $index }}" class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 space-y-3">
+                                <div wire:key="tpl-btn-{{ $btn['id'] ?? $index }}" class="p-3.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 space-y-3">
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="flex items-center gap-2">
-                                            <span class="w-6 h-6 rounded-full bg-purpura-600 text-white text-[11px] font-extrabold flex items-center justify-center">
-                                                {{ $index + 1 }}
+                                            <span class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-mono font-semibold">
+                                                #{{ $index + 1 }}
                                             </span>
-                                            <select wire:model.live="botoes.{{ $index }}.suri_type" class="text-xs font-extrabold rounded-lg border-gray-300 py-1 pl-2.5 pr-7 bg-white">
+                                            <select wire:model.live="botoes.{{ $index }}.suri_type" class="text-xs font-medium rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white py-1 pl-2.5 pr-7">
                                                 <option value="2">Tipo 2: Resposta Rápida (Quick Reply)</option>
-                                                <option value="0">Tipo 0: Acessar URL (Estática ou Dinâmica c/ &#123;&#123;1&#125;&#125;)</option>
-                                                <option value="1">Tipo 1: Ligar para Telefone (+DDI+DDD+Número)</option>
-                                                <option value="3">Tipo 3: Copiar Código / Cupom</option>
+                                                <option value="0">Tipo 0: Acessar URL</option>
+                                                <option value="1">Tipo 1: Ligar para Telefone</option>
+                                                <option value="3">Tipo 3: Copiar Código</option>
                                             </select>
                                         </div>
 
-                                        <button type="button" wire:click="removerBotao({{ $index }})" class="text-gray-400 hover:text-red-500 p-1 rounded transition" title="Remover Botão">
-                                            <i class="ph-bold ph-trash text-base"></i>
+                                        <button type="button" wire:click="removerBotao({{ $index }})" class="text-gray-400 hover:text-red-600 p-1 rounded transition" title="Remover Botão">
+                                            <i class="ph ph-trash text-sm"></i>
                                         </button>
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                                         <div class="md:col-span-4">
-                                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Texto do Botão (text) *</label>
-                                            <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.texto" placeholder="Ex: Confirmar / Ver plano" class="w-full text-xs font-bold rounded-lg border-gray-300">
-                                            @error("botoes.{$index}.texto") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                            <label class="block text-[11px] font-medium text-gray-500 mb-1">Texto do Botão *</label>
+                                            <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.texto" placeholder="Ex: Confirmar" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                            @error("botoes.{$index}.texto") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                         </div>
 
                                         @if($tipoSuriBtn === 0)
                                             <div class="md:col-span-5">
-                                                <label class="block text-[10px] font-bold text-blue-700 uppercase mb-1">URL (Para dinâmica, termine com &#123;&#123;1&#125;&#125;) *</label>
-                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.url" placeholder="https://suri.ai/planos/&#123;&#123;1&#125;&#125;" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                                @error("botoes.{$index}.url") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                                <label class="block text-[11px] font-medium text-gray-500 mb-1">URL (Dinâmica termina com &#123;&#123;1&#125;&#125;) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.url" placeholder="https://..." class="w-full text-xs font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                                @error("botoes.{$index}.url") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                             </div>
                                             <div class="md:col-span-3">
-                                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Example (Trecho final)</label>
-                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="Ex: premium-anual" class="w-full text-xs font-mono rounded-lg border-gray-300">
+                                                <label class="block text-[11px] font-medium text-gray-500 mb-1">Exemplo Final</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="detalhe" class="w-full text-xs font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                                             </div>
                                         @elseif($tipoSuriBtn === 1)
                                             <div class="md:col-span-8">
-                                                <label class="block text-[10px] font-bold text-purpura-700 uppercase mb-1">Telefone Fixo (+DDI + DDD + Número) *</label>
-                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.phone" placeholder="+5585991976502" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                                @error("botoes.{$index}.phone") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                                <label class="block text-[11px] font-medium text-gray-500 mb-1">Telefone (+DDI + DDD + Número) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.phone" placeholder="+5511999999999" class="w-full text-xs font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                                @error("botoes.{$index}.phone") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                             </div>
                                         @elseif($tipoSuriBtn === 3)
                                             <div class="md:col-span-8">
-                                                <label class="block text-[10px] font-bold text-amber-700 uppercase mb-1">Código de Exemplo Obrigatório (example) *</label>
-                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="Ex: SURI20" class="w-full text-xs font-mono rounded-lg border-gray-300">
-                                                @error("botoes.{$index}.example") <span class="text-[10px] text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
+                                                <label class="block text-[11px] font-medium text-gray-500 mb-1">Código de Exemplo (example) *</label>
+                                                <input type="text" wire:model.live.debounce.250ms="botoes.{{ $index }}.example" placeholder="CODIGO10" class="w-full text-xs font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                                @error("botoes.{$index}.example") <span class="text-[11px] text-red-600 block mt-1">{{ $message }}</span> @enderror
                                             </div>
                                         @else
-                                            <div class="md:col-span-8 flex items-center pt-5 text-[11px] text-gray-500">
-                                                <i class="ph-fill ph-info text-emerald-600 mr-1.5"></i>
-                                                Botão de Resposta Rápida (<code class="font-mono">type: 2</code>) — sempre posicionado ao final da lista no envio à Suri.
+                                            <div class="md:col-span-8 flex items-center pt-5 text-xs text-gray-400">
+                                                Botão de Resposta Rápida (<code class="font-mono">type: 2</code>).
                                             </div>
                                         @endif
                                     </div>
                                 </div>
                             @empty
-                                <div class="p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-center">
-                                    <p class="text-xs font-bold text-gray-600 dark:text-gray-300">Nenhum botão adicionado.</p>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">Use os botões acima para adicionar Resposta Rápida, URL, Ligar ou Copiar Código.</p>
+                                <div class="p-5 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-center text-xs text-gray-400">
+                                    Nenhum botão interativo configurado.
                                 </div>
                             @endforelse
                         </div>
@@ -517,36 +515,32 @@
 
             </div>
 
-            <!-- COLUNA 3 (DIREITA): SIMULADOR DE PREVIEW EM TEMPO REAL (E-MAIL & WHATSAPP) -->
-            <aside class="w-96 xl:w-[430px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden relative z-20">
+            <!-- COLUNA 3 (DIREITA): PREVIEW EM TEMPO REAL -->
+            <aside class="w-96 xl:w-[420px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 h-full overflow-hidden">
                 
-                <!-- CABEÇALHO DO PREVIEW COM SELETOR DE ABA -->
-                <div class="px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between shrink-0">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                        <i class="ph-fill ph-eye text-purpura-600 text-base"></i> Pré-visualização
+                <div class="px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                        Pré-visualização
                     </span>
 
-                    <div class="flex items-center gap-1 bg-gray-200/70 dark:bg-gray-800 p-0.5 rounded-lg">
+                    <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700">
                         @if(in_array($canal, ['email', 'ambos']))
-                            <button type="button" wire:click="$set('abaPreview', 'email')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 {{ $abaPreview === 'email' ? 'bg-white dark:bg-gray-900 text-blue-600 shadow-2xs' : 'text-gray-600 dark:text-gray-400' }}">
-                                <i class="ph-fill ph-envelope-simple"></i> E-mail
+                            <button type="button" wire:click="$set('abaPreview', 'email')" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition {{ $abaPreview === 'email' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-500' }}">
+                                E-mail
                             </button>
                         @endif
                         @if(in_array($canal, ['whatsapp', 'ambos']))
-                            <button type="button" wire:click="$set('abaPreview', 'whatsapp')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 {{ $abaPreview === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-emerald-600 shadow-2xs' : 'text-gray-600 dark:text-gray-400' }}">
-                                <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                            <button type="button" wire:click="$set('abaPreview', 'whatsapp')" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition {{ $abaPreview === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-500' }}">
+                                WhatsApp
                             </button>
-                        @endif
-                        @if(in_array($canal, ['whatsapp', 'ambos']))
-                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 {{ $abaPreview === 'json_suri' ? 'bg-gray-900 text-emerald-400 shadow-2xs' : 'text-gray-600 dark:text-gray-400' }}">
-                                <i class="ph-bold ph-brackets-curly"></i> JSON Suri
+                            <button type="button" wire:click="$set('abaPreview', 'json_suri')" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition {{ $abaPreview === 'json_suri' ? 'bg-gray-900 text-white' : 'text-gray-500' }}">
+                                JSON
                             </button>
                         @endif
                     </div>
                 </div>
 
                 @php
-                    // Converte HTML do Quill para formato visual de WhatsApp no Preview
                     $converterParaWhatsAppPreview = function (?string $html): string {
                         if (empty($html)) return '';
                         $texto = $html;
@@ -560,69 +554,45 @@
                         $texto = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                         $texto = preg_replace("/\n{3,}/", "\n\n", trim($texto));
 
-                        // Formata negrito/itálico/riscado de volta para tags seguras no balão do WhatsApp
                         $textoSeguro = e($texto);
                         $textoSeguro = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $textoSeguro);
                         $textoSeguro = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $textoSeguro);
                         $textoSeguro = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $textoSeguro);
-                        // Destaca variáveis {{...}}
-                        $textoSeguro = preg_replace('/(\{\{.*?\}\})/', '<span class="px-1 py-0.2 bg-emerald-100 text-emerald-800 rounded font-mono text-[11px] font-bold">$1</span>', $textoSeguro);
+                        $textoSeguro = preg_replace('/(\{\{.*?\}\})/', '<span class="px-1 py-0.2 bg-gray-100 text-gray-800 rounded font-mono text-[11px] font-semibold">$1</span>', $textoSeguro);
                         return nl2br($textoSeguro);
                     };
                 @endphp
 
-                <!-- CORPO DO SIMULADOR -->
-                <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-100/70 dark:bg-gray-950">
+                <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50 dark:bg-gray-950">
                     
                     @if($abaPreview === 'email' && in_array($canal, ['email', 'ambos']))
-                        <!-- SIMULADOR DE CLIENTE DE E-MAIL -->
-                        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden">
-                            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                                    <span class="ml-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Simulador de E-mail</span>
-                                </div>
-                                <div class="pt-1">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase block">Assunto:</span>
-                                    <p class="text-xs font-extrabold text-gray-900 dark:text-white">
-                                        {{ $assunto ?: '(Sem assunto definido)' }}
-                                    </p>
-                                </div>
+                        <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+                            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <span class="text-[11px] text-gray-400 block">Assunto:</span>
+                                <p class="text-xs font-semibold text-gray-900 dark:text-white mt-0.5">
+                                    {{ $assunto ?: '(Sem assunto definido)' }}
+                                </p>
                             </div>
 
-                            <div class="p-5 prose prose-sm max-w-none text-gray-800 dark:text-gray-200 text-xs leading-relaxed">
+                            <div class="p-4 prose prose-sm max-w-none text-gray-800 dark:text-gray-200 text-xs leading-relaxed">
                                 @if(!empty(trim(strip_tags($corpo))))
                                     {!! $corpo !!}
                                 @else
-                                    <p class="text-gray-400 italic">O conteúdo do e-mail aparecerá aqui em tempo real...</p>
+                                    <p class="text-gray-400 italic">O conteúdo do e-mail aparecerá aqui...</p>
                                 @endif
 
-                                {{-- Renderização dos Botões que estão marcados para aparecer no E-mail --}}
                                 @php
                                     $botoesEmail = collect($botoes)->filter(fn($b) => !empty(trim($b['texto'] ?? '')) && filter_var($b['exibir_email'] ?? false, FILTER_VALIDATE_BOOLEAN));
                                 @endphp
 
                                 @if(in_array($canal, ['ambos']) && $botoesEmail->isNotEmpty())
-                                    <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-2.5 not-prose">
+                                    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-2 not-prose">
                                         @foreach($botoesEmail as $bEmail)
-                                            @php
-                                                $corBtnClass = match($bEmail['cor'] ?? 'purpura') {
-                                                    'emerald' => 'bg-emerald-600 text-white',
-                                                    'blue'    => 'bg-blue-600 text-white',
-                                                    'dark'    => 'bg-gray-900 text-white',
-                                                    default   => 'bg-purpura-600 text-white',
-                                                };
-                                            @endphp
                                             <div class="flex flex-col items-start">
-                                                <a href="{{ $bEmail['url'] ?: '#' }}" target="_blank" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold shadow-xs {{ $corBtnClass }}">
+                                                <a href="{{ $bEmail['url'] ?: '#' }}" target="_blank" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium bg-purpura-600 text-white">
                                                     <span>{{ $bEmail['texto'] }}</span>
-                                                    <i class="ph-bold ph-arrow-square-out"></i>
+                                                    <i class="ph ph-arrow-square-out"></i>
                                                 </a>
-                                                <span class="text-[10px] text-gray-400 font-mono mt-0.5">
-                                                    Destino: {{ $bEmail['url'] ?: '(Defina a URL de destino)' }}
-                                                </span>
                                             </div>
                                         @endforeach
                                     </div>
@@ -630,57 +600,43 @@
                             </div>
                         </div>
                     @elseif($abaPreview === 'json_suri')
-                        <div class="bg-gray-950 text-emerald-300 p-4 rounded-xl border border-gray-800 font-mono text-[11px] overflow-x-auto shadow-inner">
-                            <div class="text-[10px] font-bold uppercase text-gray-400 mb-2 border-b border-gray-800 pb-1.5">
+                        <div class="bg-gray-950 text-gray-200 p-4 rounded-lg border border-gray-800 font-mono text-[11px] overflow-x-auto">
+                            <div class="text-[10px] uppercase text-gray-400 mb-2 border-b border-gray-800 pb-1.5">
                                 Payload POST {{ rtrim(env('SURI_API_URL', ''), '/') }}/api/templates
                             </div>
                             <pre class="leading-relaxed">{{ json_encode($this->payloadSuriPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                         </div>
-
                     @else
-                        <!-- SIMULADOR DE WHATSAPP -->
-                        <div class="rounded-2xl overflow-hidden shadow-lg border border-gray-300 dark:border-gray-700 bg-[#efeae2] dark:bg-gray-900 flex flex-col min-h-[480px]">
-                            <!-- Barra de Topo do WhatsApp -->
-                            <div class="bg-[#075e54] text-white px-4 py-3 flex items-center gap-3 shrink-0">
-                                <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-extrabold text-sm">
-                                    IP
+                        <!-- PREVIEW WHATSAPP -->
+                        <div class="rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700 bg-[#efeae2] dark:bg-gray-900 flex flex-col min-h-[460px]">
+                            <div class="bg-[#075e54] text-white px-4 py-2.5 flex items-center justify-between shrink-0">
+                                <div>
+                                    <p class="text-xs font-semibold">Instituto Percorre</p>
+                                    <p class="text-[10px] text-emerald-100">Conta comercial</p>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-xs font-bold truncate">Instituto Percorre</p>
-                                    <p class="text-[10px] text-emerald-100">Conta comercial oficial</p>
-                                </div>
-                                <i class="ph-fill ph-whatsapp-logo text-xl text-emerald-300"></i>
+                                <i class="ph ph-whatsapp-logo text-lg text-white/80"></i>
                             </div>
 
-                            <!-- Área da Conversa -->
                             <div class="p-4 flex-1 flex flex-col justify-start space-y-2">
-                                <!-- Balão da Mensagem -->
-                                <div class="bg-white dark:bg-gray-800 rounded-xl rounded-tl-none p-3.5 shadow-xs max-w-[92%] text-xs text-gray-800 dark:text-gray-100 leading-relaxed relative">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg rounded-tl-none p-3 shadow-2xs max-w-[92%] text-xs text-gray-800 dark:text-gray-100 leading-relaxed">
                                     @if(!empty(trim(strip_tags($corpo))))
                                         <div>{!! $converterParaWhatsAppPreview($corpo) !!}</div>
                                     @else
-                                        <span class="text-gray-400 italic">Digite a mensagem para visualizar no WhatsApp...</span>
+                                        <span class="text-gray-400 italic">Digite a mensagem para pré-visualizar...</span>
                                     @endif
-                                    <div class="text-[9px] text-gray-400 text-right mt-1.5 flex items-center justify-end gap-1">
-                                        <span>{{ now()->format('H:i') }}</span>
-                                        <i class="ph-bold ph-checks text-blue-500 text-xs"></i>
+                                    <div class="text-[9px] text-gray-400 text-right mt-1.5">
+                                        {{ now()->format('H:i') }}
                                     </div>
                                 </div>
 
-                                <!-- Botões Interativos do WhatsApp (Opções) -->
                                 @php
                                     $botoesWpp = collect($botoes)->filter(fn($b) => !empty(trim($b['texto'] ?? '')));
                                 @endphp
 
                                 @if($botoesWpp->isNotEmpty())
-                                    <div class="space-y-1.5 max-w-[92%]">
+                                    <div class="space-y-1 max-w-[92%]">
                                         @foreach($botoesWpp as $bWpp)
-                                            <div class="bg-white dark:bg-gray-800 hover:bg-gray-50 rounded-xl py-2.5 px-3 shadow-xs border border-gray-100 dark:border-gray-700 text-center text-xs font-bold text-[#00a884] flex items-center justify-center gap-1.5 cursor-default">
-                                                @if(!empty($bWpp['url']) && (str_starts_with($bWpp['url'], 'http') || str_starts_with($bWpp['url'], '{{')))
-                                                    <i class="ph-bold ph-arrow-square-out text-sm"></i>
-                                                @else
-                                                    <i class="ph-bold ph-arrow-bend-up-left text-sm"></i>
-                                                @endif
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg py-2 px-3 border border-gray-200 dark:border-gray-700 text-center text-xs font-medium text-[#00a884] flex items-center justify-center gap-1.5">
                                                 <span class="truncate">{{ $bWpp['texto'] }}</span>
                                             </div>
                                         @endforeach
@@ -698,23 +654,16 @@
 
     {{-- POPUP DE SOLICITAÇÃO RECEBIDA (PARA O DONO DO LOCK) --}}
     @if($templateId && !$isLockedByOther && $hasTransferRequest)
-        <div class="fixed bottom-6 right-6 z-[300] max-w-sm w-full bg-white dark:bg-gray-800 border-l-4 border-purpura-500 rounded-lg shadow-2xl p-5 animate-fade-in-up">
-            <div class="flex items-start gap-4">
-                <div class="p-2 bg-purpura-100 text-purpura-600 rounded-full shrink-0">
-                    <i class="ph-fill ph-hand-waving text-xl"></i>
-                </div>
-                <div>
-                    <h4 class="text-sm font-extrabold text-gray-900 dark:text-white">Pedido de Edição</h4>
-                    <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                        O utilizador <strong>{{ $requesterName }}</strong> abriu este template e está a solicitar o controlo para efetuar edições.
-                    </p>
-                </div>
-            </div>
-            <div class="mt-4 flex gap-2 justify-end">
-                <button type="button" wire:click="rejectTransfer" class="px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">
-                    Recusar e Continuar
+        <div class="fixed bottom-6 right-6 z-[300] max-w-sm w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white">Pedido de Edição</h4>
+            <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                O utilizador <strong>{{ $requesterName }}</strong> está a solicitar o controlo para editar este template.
+            </p>
+            <div class="mt-3 flex gap-2 justify-end">
+                <button type="button" wire:click="rejectTransfer" class="btn btn--secondary btn--small">
+                    Recusar
                 </button>
-                <button type="button" wire:click="acceptTransfer" class="px-3 py-1.5 rounded-md bg-purpura-600 hover:bg-purpura-700 text-white border-none text-xs font-bold transition">
+                <button type="button" wire:click="acceptTransfer" class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none">
                     Aceitar e Sair
                 </button>
             </div>
