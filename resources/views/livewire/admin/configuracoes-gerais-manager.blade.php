@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaLateral: $wire.entangle('abaLateral') }">
+<div class="w-full relative" x-data="{ abaLateral: $wire.entangle('abaLateral') }">
     
     <x-page-header title="Configurações Gerais" icon="ph ph-gear" badge="Sistema">
         <x-slot name="actions">

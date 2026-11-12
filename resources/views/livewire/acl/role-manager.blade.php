@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     <x-page-header 
         title="Grupos" 
         icon="ph ph-shield-check"

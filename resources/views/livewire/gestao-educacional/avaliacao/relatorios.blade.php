@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <x-page-header title="Avaliações" icon="ph ph-chart-polar" badge="" :metricas="$metricas">
         @if(feature('relatorio.exportar') && (auth()->user()->hasRole('dev') || auth()->user()->can('relatorio.exportar')))

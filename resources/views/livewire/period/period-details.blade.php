@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
+<div class="w-full relative" x-data="{ abaAtiva: $wire.entangle('abaAtiva') }">
     
     @php
         $urlPublicaCiclo = (($ciclo->tipo_ciclo ?? 'regular') === 'customizado' && !empty($ciclo->slug_projeto))

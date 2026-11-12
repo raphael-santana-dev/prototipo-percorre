@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <x-page-header title="Ciclos de Aprendizagem" icon="ph ph-books" badge="Gestão Educacional">
         <x-slot name="actions">

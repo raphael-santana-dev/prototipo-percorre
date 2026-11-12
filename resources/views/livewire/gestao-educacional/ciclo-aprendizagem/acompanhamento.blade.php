@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <x-page-header title="Acompanhamento: {{ $ciclo->nome }}" icon="ph ph-presentation-chart" badge="Aprendizagem">
         <x-slot name="filters">

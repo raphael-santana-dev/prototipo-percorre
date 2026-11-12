@@ -1,4 +1,4 @@
-2<div class="p-6 max-w-7xl mx-auto font-sans relative">
+2<div class="w-full relative">
     <x-page-header 
         title="Auditoria de Sistema" 
         icon="ph ph-magnifying-glass"

@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <div class="mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">

@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <x-page-header title="Central de Solicitações" icon="ph ph-envelope-open" badge="Helpdesk">
         <x-slot name="filters">

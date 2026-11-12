@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
+<div class="w-full relative" x-data="{ abaAtiva: 'geral' }" wire:poll.5s="pingLock">
 
     <x-editing-lock-overlay
        :isLockedByOther="$isLockedByOther"
