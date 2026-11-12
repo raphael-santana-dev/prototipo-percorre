@@ -113,20 +113,85 @@
   }
 
   /* Estilização nativa de formulários - Padrão Tailwind UI */
-  input[type="text"], input[type="email"], input[type="password"], input[type="time"], input[type="date"], input[type="number"], textarea, select {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="time"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
       @apply px-3 py-2 rounded-lg border border-gray-300 shadow-sm transition-colors duration-200 outline-none text-sm text-gray-900 bg-white;
   }
-  .dark input[type="text"], .dark input[type="email"], .dark input[type="password"], .dark input[type="time"], .dark input[type="date"], .dark input[type="number"], .dark textarea, .dark select {
+
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark input[type="time"],
+  .dark input[type="date"],
+  .dark input[type="datetime-local"],
+  .dark input[type="month"],
+  .dark input[type="week"],
+  .dark input[type="number"],
+  .dark input[type="tel"],
+  .dark input[type="url"],
+  .dark input[type="search"],
+  .dark textarea,
+  .dark select {
       @apply border-gray-700 bg-gray-900 text-gray-100;
   }
-  input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="time"]:focus,
+  input[type="date"]:focus,
+  input[type="datetime-local"]:focus,
+  input[type="month"]:focus,
+  input[type="week"]:focus,
+  input[type="number"]:focus,
+  input[type="tel"]:focus,
+  input[type="url"]:focus,
+  input[type="search"]:focus,
+  textarea:focus,
+  select:focus {
       @apply border-purpura-500 ring-1 ring-purpura-500;
   }
-  .dark input[type="text"]:focus, .dark input[type="email"]:focus, .dark input[type="password"]:focus, .dark input[type="time"]:focus, .dark input[type="date"]:focus, .dark input[type="number"]:focus, .dark textarea:focus, .dark select:focus {
+
+  .dark input[type="text"]:focus,
+  .dark input[type="email"]:focus,
+  .dark input[type="password"]:focus,
+  .dark input[type="time"]:focus,
+  .dark input[type="date"]:focus,
+  .dark input[type="datetime-local"]:focus,
+  .dark input[type="month"]:focus,
+  .dark input[type="week"]:focus,
+  .dark input[type="number"]:focus,
+  .dark input[type="tel"]:focus,
+  .dark input[type="url"]:focus,
+  .dark input[type="search"]:focus,
+  .dark textarea:focus,
+  .dark select:focus {
       @apply border-purpura-500 ring-1 ring-purpura-500;
   }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+      @apply w-4 h-4 border-gray-300 text-purpura-600 focus:ring-purpura-500 focus:ring-offset-2 transition-colors cursor-pointer;
+  }
+
   input[type="checkbox"] {
-      @apply w-4 h-4 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500 focus:ring-offset-2 transition-colors cursor-pointer;
+      @apply rounded;
+  }
+
+  input[type="radio"] {
+      @apply rounded-full;
   }
 }
 
