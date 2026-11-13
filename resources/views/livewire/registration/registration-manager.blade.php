@@ -333,6 +333,35 @@
                             </div>
                         </td>
 
+                        {{-- COLUNA: DISPARO DO GATILHO INSCRICAO.FINALIZADA (E-MAIL / WHATSAPP / AMBOS) --}}
+                        <td class="px-4 py-1.5 text-center whitespace-nowrap">
+                            @php
+                                $statusFin = \App\Modules\Comunicacao\Services\AntiSpamComunicacaoService::obterStatusDisparoFinalizacao($inscricao);
+                            @endphp
+                            @if($statusFin['tipo'] === 'ambos')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purpura-50 text-purpura-700 border border-purpura-200"
+                                      title="Enviado por E-mail e WhatsApp em {{ $statusFin['data'] }}">
+                                    <i class="ph-fill ph-envelope-simple"></i>
+                                    <i class="ph-fill ph-whatsapp-logo"></i>
+                                    <span>Ambos</span>
+                                </span>
+                            @elseif($statusFin['tipo'] === 'whatsapp')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      title="Enviado por WhatsApp em {{ $statusFin['data'] }}">
+                                    <i class="ph-fill ph-whatsapp-logo"></i>
+                                    <span>WhatsApp</span>
+                                </span>
+                            @elseif($statusFin['tipo'] === 'email')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200"
+                                      title="Enviado por E-mail em {{ $statusFin['data'] }}">
+                                    <i class="ph-fill ph-envelope-simple"></i>
+                                    <span>E-mail</span>
+                                </span>
+                            @else
+                                <span class="text-[11px] text-gray-300 dark:text-gray-600" title="Nenhuma comunicação do gatilho inscricao.finalizada disparada">-</span>
+                            @endif
+                        </td>
+
                         <td class="px-4 py-1.5 whitespace-nowrap">
                             @if($inscricao->origem === 'importacao')
                                 <span class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Importação</span>
@@ -384,6 +413,13 @@
                         
                         <td class="px-4 py-1.5 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
+                                <button type="button"
+                                        wire:click="abrirDrawerComunicacoes({{ $inscricao->id }})"
+                                        class="p-1.5 text-indigo-600 transition-colors rounded hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-gray-600"
+                                        title="Ver Comunicações Disparadas (Todas, WhatsApp e E-mail)">
+                                    <i class="text-lg ph-bold ph-chats-circle"></i>
+                                </button>
+
                                 <button type="button" 
                                     x-data 
                                     @click="
@@ -736,20 +772,20 @@
         </div>
     @endif
 
-    {{-- MODAL ANTI-SPAM --}}
+    {{-- MODAL ANTI-SPAM MULTICANAL (E-MAIL & WHATSAPP SURI) --}}
     @if($modalAntiSpamAberto)
         <div class="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
             <div class="card !w-full !max-w-2xl !p-0 shadow-2xl overflow-hidden">
                 <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-red-50 dark:bg-red-900/20 w-full">
                     <h3 class="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
-                        <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta de E-mail Duplicado
+                        <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta Anti-Spam (E-mail / WhatsApp Suri)
                     </h3>
                     <button wire:click="cancelarAntiSpam" class="text-gray-400 hover:text-red-600 transition"><i class="ph-bold ph-x text-xl"></i></button>
                 </div>
                 
-                <div class="p-6 overflow-y-auto custom-scrollbar w-full max-h-[50vh]">
+                <div class="p-6 overflow-y-auto custom-scrollbar w-full max-h-[55vh]">
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 font-medium leading-relaxed">
-                        O sistema detetou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} o e-mail automático configurado para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
+                        O sistema detectou que <strong>{{ count($conflitosAntiSpam) }}</strong> {{ count($conflitosAntiSpam) == 1 ? 'candidato já recebeu' : 'candidatos já receberam' }} a comunicação automática (E-mail e/ou WhatsApp) configurada para a etapa <strong>{{ $acaoPendenteNomeStatus ?? 'selecionada' }}</strong>.
                     </p>
 
                     <div class="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
@@ -758,6 +794,7 @@
                                 <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
                                     <tr>
                                         <th class="px-4 py-3 font-semibold text-xs uppercase">Candidato</th>
+                                        <th class="px-4 py-3 font-semibold text-xs uppercase text-center">Canal Já Disparado</th>
                                         <th class="px-4 py-3 font-semibold text-xs uppercase text-right">Ação</th>
                                     </tr>
                                 </thead>
@@ -766,10 +803,28 @@
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition" wire:key="conflito-{{ $conflito['id'] }}">
                                             <td class="px-4 py-3">
                                                 <span class="block font-medium text-gray-900 dark:text-white">{{ $conflito['nome'] }}</span>
-                                                <span class="text-xs text-gray-500">{{ $conflito['email'] }}</span>
+                                                <span class="text-xs text-gray-500">{{ $conflito['email'] ?: $conflito['celular'] }}</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <div class="inline-flex items-center gap-1.5">
+                                                    @foreach($conflito['canais'] ?? ['E-mail'] as $cSp)
+                                                        @if($cSp === 'WhatsApp')
+                                                            <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                                                                <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                                                            </span>
+                                                        @else
+                                                            <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+                                                                <i class="ph-fill ph-envelope-simple"></i> E-mail
+                                                            </span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                                @if(!empty($conflito['ultimo_envio']))
+                                                    <span class="block text-[10px] text-gray-400 mt-0.5">{{ $conflito['ultimo_envio'] }}</span>
+                                                @endif
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="btn btn--secondary btn--small !text-red-600 !border-red-200 hover:!bg-red-50 dark:!border-red-900/50 dark:hover:!bg-red-900/20">
+                                                <button wire:click="removerConflitoAntiSpam({{ $conflito['id'] }})" class="btn btn--secondary btn--small !text-red-600 !border-red-200 hover:!bg-red-50">
                                                     Remover da Fila
                                                 </button>
                                             </td>
@@ -786,8 +841,162 @@
                         Cancelar
                     </button>
                     <button wire:click="prosseguirComReenvioAntiSpam" class="btn btn--primary btn--medium !bg-red-600 hover:!bg-red-700 focus:!ring-red-500 w-full sm:w-auto border-none">
-                        <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar
+                        <i class="ph-bold ph-paper-plane-tilt"></i> Prosseguir e Reenviar (E-mail / WhatsApp)
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- NAVIGATION DRAWER: COMUNICAÇÕES DISPARADAS PARA O USUÁRIO (3 COLUNAS: TODAS | WHATSAPP | E-MAIL) --}}
+    @if($drawerComunicacoesAberto)
+        <div class="fixed inset-0 z-[180] overflow-hidden" aria-modal="true" role="dialog">
+            <div wire:click="fecharDrawerComunicacoes" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+            <div class="fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <div class="w-screen max-w-6xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col h-full border-l border-gray-200 dark:border-gray-800">
+                    
+                    {{-- Topo do Navigation Drawer --}}
+                    <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 rounded-xl bg-purpura-600 text-white flex items-center justify-center">
+                                <i class="ph-fill ph-chats-circle text-xl"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-sm font-extrabold uppercase tracking-wider">Histórico de Comunicações Disparadas</h3>
+                                <p class="text-xs text-gray-300">
+                                    Candidato: <b>{{ $comunicacoesInscricaoNome }}</b>
+                                    @if($comunicacoesInscricaoEmail) • {{ $comunicacoesInscricaoEmail }} @endif
+                                    @if($comunicacoesInscricaoCelular) • {{ $comunicacoesInscricaoCelular }} @endif
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('inscricoes.show', $comunicacoesInscricaoId) }}" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition flex items-center gap-1.5">
+                                <i class="ph-bold ph-arrow-square-out"></i> Abrir Ficha Completa
+                            </a>
+                            <button type="button" wire:click="fecharDrawerComunicacoes" class="p-1.5 text-gray-400 hover:text-white rounded-lg">
+                                <i class="ph-bold ph-x text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Corpo do Drawer dividido em 3 Colunas (Todas | WhatsApp | E-mail) --}}
+                    <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-800 bg-gray-50/50 dark:bg-gray-950">
+                        
+                        {{-- COLUNA 1: TODAS AS COMUNICAÇÕES --}}
+                        <div class="flex flex-col h-full overflow-hidden">
+                            <div class="px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-1.5">
+                                    <i class="ph-fill ph-stack text-purpura-600 text-base"></i> 1. Todas
+                                </span>
+                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-purpura-100 text-purpura-800">
+                                    {{ count($comunicacoesListaTodas) }}
+                                </span>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
+                                @forelse($comunicacoesListaTodas as $item)
+                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xs space-y-1.5">
+                                        <div class="flex items-center justify-between gap-2">
+                                            @if($item['canal'] === 'whatsapp')
+                                                <span class="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                                    <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
+                                                </span>
+                                            @else
+                                                <span class="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                                    <i class="ph-fill ph-envelope-simple"></i> E-mail
+                                                </span>
+                                            @endif
+                                            <span class="text-[10px] font-mono text-gray-400">{{ $item['data'] }}</span>
+                                        </div>
+                                        <p class="text-xs font-bold text-gray-900 dark:text-white truncate" title="{{ $item['assunto'] }}">{{ $item['assunto'] }}</p>
+                                        <p class="text-[11px] text-gray-500 line-clamp-2">{{ $item['resumo_corpo'] }}</p>
+                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
+                                            <span class="font-mono text-gray-400 truncate max-w-[160px]" title="{{ $item['gatilho'] }}">{{ $item['gatilho'] }}</span>
+                                            <span class="font-extrabold uppercase {{ $item['status'] === 'erro' ? 'text-red-600' : 'text-emerald-600' }}">{{ $item['status'] }}</span>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="py-12 text-center text-xs text-gray-400">Nenhuma comunicação registrada.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        {{-- COLUNA 2: APENAS WHATSAPP (SURI) --}}
+                        <div class="flex flex-col h-full overflow-hidden">
+                            <div class="px-4 py-3 bg-emerald-50/60 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
+                                    <i class="ph-fill ph-whatsapp-logo text-emerald-600 text-base"></i> 2. WhatsApp (Suri)
+                                </span>
+                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-100 text-emerald-800">
+                                    {{ count($comunicacoesListaWhatsapp) }}
+                                </span>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
+                                @forelse($comunicacoesListaWhatsapp as $item)
+                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-emerald-200/80 dark:border-gray-800 shadow-2xs space-y-1.5">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-[10px] font-bold text-emerald-700 truncate">{{ $item['template_nome'] }}</span>
+                                            <span class="text-[10px] font-mono text-gray-400 shrink-0">{{ $item['data'] }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-gray-600 dark:text-gray-300 line-clamp-3">{{ $item['resumo_corpo'] }}</p>
+                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
+                                            <span class="font-mono text-gray-400 truncate max-w-[150px]">{{ $item['gatilho'] }}</span>
+                                            @if($item['status'] === 'lido' || $item['aberturas'] > 0)
+                                                <span class="text-blue-600 font-extrabold flex items-center gap-0.5"><i class="ph-bold ph-checks"></i> Lida</span>
+                                            @elseif($item['status'] === 'entregue')
+                                                <span class="text-emerald-600 font-extrabold flex items-center gap-0.5"><i class="ph-bold ph-checks"></i> Entregue</span>
+                                            @elseif($item['status'] === 'erro')
+                                                <span class="text-red-600 font-extrabold">Erro</span>
+                                            @else
+                                                <span class="text-gray-600 font-bold">Enviada</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="py-12 text-center text-xs text-gray-400">Nenhum disparo de WhatsApp para este candidato.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        {{-- COLUNA 3: APENAS E-MAIL --}}
+                        <div class="flex flex-col h-full overflow-hidden">
+                            <div class="px-4 py-3 bg-blue-50/60 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-blue-800 dark:text-blue-400 flex items-center gap-1.5">
+                                    <i class="ph-fill ph-envelope-simple text-blue-600 text-base"></i> 3. E-mail
+                                </span>
+                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-blue-100 text-blue-800">
+                                    {{ count($comunicacoesListaEmail) }}
+                                </span>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
+                                @forelse($comunicacoesListaEmail as $item)
+                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-blue-200/80 dark:border-gray-800 shadow-2xs space-y-1.5">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs font-bold text-gray-900 dark:text-white truncate" title="{{ $item['assunto'] }}">{{ $item['assunto'] }}</span>
+                                            <span class="text-[10px] font-mono text-gray-400 shrink-0">{{ $item['data'] }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-gray-500 line-clamp-2">{{ $item['resumo_corpo'] }}</p>
+                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
+                                            <span class="font-mono text-gray-400 truncate max-w-[140px]">{{ $item['gatilho'] }}</span>
+                                            @if($item['aberturas'] > 0)
+                                                <span class="text-emerald-600 font-extrabold">Aberto ({{ $item['aberturas'] }}x)</span>
+                                            @else
+                                                <span class="text-gray-400 font-semibold">Não aberto</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="py-12 text-center text-xs text-gray-400">Nenhum disparo de E-mail para este candidato.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>

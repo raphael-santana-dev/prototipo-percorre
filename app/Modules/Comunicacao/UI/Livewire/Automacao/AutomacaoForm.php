@@ -36,7 +36,7 @@ class AutomacaoForm extends Component
         $this->eventosDisponiveis['inscricao.abandono']         = 'Inscrição: Abandono de Formulário (Todas as fases liberadas e não finalizado)';
         $this->eventosDisponiveis['formulario.abandono']        = 'Formulário Público: Abandono de Preenchimento (Não finalizado)';
         $this->eventosDisponiveis['inscricao.fim_proximo']      = 'Inscrição: Quando faltar N dias para o fim do processo de inscrição';
-
+        
         $statusInscricoes = StatusInscricao::orderBy('nome')->get();
         foreach ($statusInscricoes as $st) {
             $slug = Str::slug($st->nome, '_');

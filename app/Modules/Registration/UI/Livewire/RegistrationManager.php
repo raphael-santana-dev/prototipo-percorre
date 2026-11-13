@@ -1248,40 +1248,7 @@ class RegistrationManager extends Component
         $this->verificarAntiSpam($inscricoesProcessar, $statusId, true);
     }
 
-    private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
-    {
-        $statusNovo = StatusInscricao::find($statusId);
-        $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
-        $automacao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', $eventoGatilho)->where('status', true)->first();
-
-        $conflitos = [];
-        if ($automacao) {
-            foreach ($inscricoesValidas as $insc) {
-                $jaRecebeu = \App\Modules\Comunicacao\Domain\Models\Comunicado::where('template_id', $automacao->template_id)
-                    ->where('inscricao_id', $insc->id)
-                    ->exists();
-
-                if ($jaRecebeu) {
-                    $conflitos[] = ['id' => $insc->id, 'nome' => $insc->nome, 'email' => $insc->email];
-                }
-            }
-        }
-
-        $idsValidos = $inscricoesValidas->pluck('id')->toArray();
-
-        if (count($conflitos) > 0) {
-            $this->conflitosAntiSpam = $conflitos;
-            $this->acaoPendenteStatusId = $statusId;
-            $this->acaoPendenteIds = $idsValidos;
-            $this->acaoPendenteNomeStatus = $statusNovo->nome;
-            
-            $this->modalAntiSpamAberto = true;
-            $this->modalLoteAberto = false; 
-            return; 
-        }
-
-        $this->executarMudancaStatusFinal($idsValidos, $statusId);
-    }
+    
 
     public function removerConflitoAntiSpam($idConflito)
     {
@@ -1298,11 +1265,7 @@ class RegistrationManager extends Component
         }
     }
 
-    public function prosseguirComReenvioAntiSpam()
-    {
-        $this->executarMudancaStatusFinal($this->acaoPendenteIds, $this->acaoPendenteStatusId);
-        $this->cancelarAntiSpam();
-    }
+    
 
     public function cancelarAntiSpam()
     {
@@ -1313,39 +1276,7 @@ class RegistrationManager extends Component
         $this->acaoPendenteNomeStatus = '';
     }
 
-    private function executarMudancaStatusFinal($ids, $statusId)
-    {
-        $statusNovo = StatusInscricao::find($statusId);
-        $qtd = count($ids);
-        
-        if ($qtd <= 5) {
-            $inscricoes = Inscricao::whereIn('id', $ids)->get();
-            $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
-
-            foreach ($inscricoes as $insc) {
-                $insc->status_inscricao_id = $statusId;
-                $insc->save();
-                \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $insc);
-            }
-
-            $this->desmarcarTodas();
-            $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
-            
-            if ($qtd === 1) {
-                $this->showQuickView($ids[0]);
-            }
-        } else {
-            $tracking = SystemTask::create([
-                'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
-                'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
-            ]);
-
-            dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
-            $this->desmarcarTodas();
-            
-            $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
-        }
-    }
+    
 
     public function salvarStatusEmLote()
     {
@@ -1450,14 +1381,81 @@ class RegistrationManager extends Component
         $this->resetPage();
     }
 
+    private function verificarAntiSpam($inscricoesValidas, $statusId, $isLote)
+    {
+        $statusNovo = StatusInscricao::find($statusId);
+        $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
+
+        $conflitos = \App\Modules\Comunicacao\Services\AntiSpamComunicacaoService::verificarConflitosPorGatilho(
+            $inscricoesValidas,
+            $eventoGatilho
+        );
+
+        $idsValidos = $inscricoesValidas->pluck('id')->toArray();
+
+        if (count($conflitos) > 0) {
+            $this->conflitosAntiSpam = $conflitos;
+            $this->acaoPendenteStatusId = $statusId;
+            $this->acaoPendenteIds = $idsValidos;
+            $this->acaoPendenteNomeStatus = $statusNovo->nome;
+            
+            $this->modalAntiSpamAberto = true;
+            $this->modalLoteAberto = false; 
+            return; 
+        }
+
+        $this->executarMudancaStatusFinal($idsValidos, $statusId, false);
+    }
+
+    public function prosseguirComReenvioAntiSpam()
+    {
+        $this->executarMudancaStatusFinal($this->acaoPendenteIds, $this->acaoPendenteStatusId, true);
+        $this->cancelarAntiSpam();
+    }
+
+    private function executarMudancaStatusFinal($ids, $statusId, bool $forcarReenvio = false)
+    {
+        $statusNovo = StatusInscricao::find($statusId);
+        $qtd = count($ids);
+        
+        if ($qtd <= 5) {
+            $inscricoes = Inscricao::whereIn('id', $ids)->get();
+            $eventoGatilho = 'inscricao.status.' . Str::slug($statusNovo->nome, '_');
+
+            foreach ($inscricoes as $insc) {
+                $insc->status_inscricao_id = $statusId;
+                $insc->save();
+                \App\Modules\Comunicacao\Services\AutomacaoService::disparar($eventoGatilho, $insc, [], $forcarReenvio);
+            }
+
+            $this->desmarcarTodas();
+            $this->dispatch('sucesso', msg: 'Status atualizado com sucesso!');
+            
+            if ($qtd === 1) {
+                $this->showQuickView($ids[0]);
+            }
+        } else {
+            $tracking = SystemTask::create([
+                'user_id' => auth()->id(), 'tipo' => 'inscricoes', 'operacao' => 'atualizacao_lote', 'formato' => 'system',
+                'arquivo_nome' => "Alteração de Status: {$qtd} registros para '{$statusNovo->nome}'", 'status' => 'na_fila', 'total_linhas' => $qtd, 'linhas_processadas' => 0,
+            ]);
+
+            dispatch(new \App\Jobs\ProcessarStatusEmLoteJob($tracking->id, $ids, $statusId))->afterResponse();
+            $this->desmarcarTodas();
+            
+            $this->dispatch('sucesso', msg: 'Ação autorizada e enviada para a Nuvem!');
+        }
+    }
+
     public function getHeadersProperty()
     {
         return [
             ['key' => 'checkbox', 'label' => '', 'sortable' => false, 'class' => 'w-10 text-center'],
             ['key' => 'nome', 'label' => 'Candidato', 'sortable' => true],
             ['key' => 'legado', 'label' => 'Legado', 'sortable' => true, 'class' => 'text-center w-24'],
-            ['key' => 'possui_deficiencia', 'label' => 'PcD', 'sortable' => true, 'class' => 'text-center w-24'],
+            ['key' => 'possui_deficiencia', 'label' => 'PcD', 'sortable' => true, 'class' => 'text-center w-20'],
             ['key' => 'contatos', 'label' => 'Contatos', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'disparo_finalizada', 'label' => 'Aviso Finalização', 'sortable' => false, 'class' => 'text-center'],
             ['key' => 'origem', 'label' => 'Origem', 'sortable' => true],
             ['key' => 'curso_id', 'label' => 'Curso', 'sortable' => false],
             ['key' => 'etapa_atual', 'label' => 'Etapa', 'sortable' => true],
