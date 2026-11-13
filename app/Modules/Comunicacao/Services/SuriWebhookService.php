@@ -356,6 +356,19 @@ class SuriWebhookService
             );
         }
 
+        $motivoFormatado = $errorCode > 0
+            ? "[Código Suri #{$errorCode}] {$errorReason}"
+            : $errorReason;
+
+        // Sincroniza imediatamente o erro com comunicacao_logs para aparecer no Drawer do candidato
+        $this->sincronizarLogComunicacaoInscricao(
+            inscricaoId: $contato?->inscricao_id,
+            externalMessageId: $messageId !== '' ? $messageId : null,
+            novoStatusWebhook: 'error',
+            timestamp: $timestamp,
+            erroMotivo: $motivoFormatado
+        );
+
         // Registra na Auditoria Geral do sistema para visibilidade da equipe técnica
         AuditoriaLog::create([
             'tabela_alterada'     => 'suri_mensagens',

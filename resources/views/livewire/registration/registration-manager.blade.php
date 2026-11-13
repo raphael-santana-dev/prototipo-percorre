@@ -848,158 +848,230 @@
         </div>
     @endif
 
-    {{-- NAVIGATION DRAWER: COMUNICAÇÕES DISPARADAS PARA O USUÁRIO (3 COLUNAS: TODAS | WHATSAPP | E-MAIL) --}}
+    {{-- NAVIGATION DRAWER MINIMALISTA: HISTÓRICO DE COMUNICAÇÕES E DIAGNÓSTICO DE ERROS --}}
     @if($drawerComunicacoesAberto)
-        <div class="fixed inset-0 z-[180] overflow-hidden" aria-modal="true" role="dialog">
-            <div wire:click="fecharDrawerComunicacoes" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+        <template x-teleport="body">
+            <div x-data="{ abaCom: 'todas', erroExpandidoId: null, msgExpandidaId: null }"
+                 @keydown.escape.window="$wire.fecharDrawerComunicacoes()"
+                 class="fixed inset-0 z-[999] overflow-hidden font-sans"
+                 aria-modal="true"
+                 role="dialog">
+                
+                {{-- Backdrop --}}
+                <div wire:click="fecharDrawerComunicacoes" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs transition-opacity"></div>
 
-            <div class="fixed inset-y-0 right-0 flex max-w-full pl-10">
-                <div class="w-screen max-w-6xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col h-full border-l border-gray-200 dark:border-gray-800">
-                    
-                    {{-- Topo do Navigation Drawer --}}
-                    <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between shrink-0">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 rounded-xl bg-purpura-600 text-white flex items-center justify-center">
-                                <i class="ph-fill ph-chats-circle text-xl"></i>
-                            </span>
-                            <div>
-                                <h3 class="text-sm font-extrabold uppercase tracking-wider">Histórico de Comunicações Disparadas</h3>
-                                <p class="text-xs text-gray-300">
-                                    Candidato: <b>{{ $comunicacoesInscricaoNome }}</b>
+                <div class="fixed inset-y-0 right-0 flex max-w-full pl-10 pointer-events-none">
+                    <div class="w-screen max-w-xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col h-full border-l border-gray-200 dark:border-gray-800 pointer-events-auto">
+                        
+                        {{-- Header Sóbrio --}}
+                        <div class="px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4 shrink-0">
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+                                    Histórico de Comunicações Disparadas
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                    Candidato: <strong class="text-gray-800 dark:text-gray-200">{{ $comunicacoesInscricaoNome }}</strong>
                                     @if($comunicacoesInscricaoEmail) • {{ $comunicacoesInscricaoEmail }} @endif
                                     @if($comunicacoesInscricaoCelular) • {{ $comunicacoesInscricaoCelular }} @endif
                                 </p>
                             </div>
+
+                            <div class="flex items-center gap-2 shrink-0">
+                                <a href="{{ route('inscricoes.show', $comunicacoesInscricaoId) }}" class="btn btn--secondary btn--small !h-8">
+                                    Abrir Ficha Completa ↗
+                                </a>
+                                <button type="button" wire:click="fecharDrawerComunicacoes" class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg transition">
+                                    <i class="ph ph-x text-lg"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <a href="{{ route('inscricoes.show', $comunicacoesInscricaoId) }}" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition flex items-center gap-1.5">
-                                <i class="ph-bold ph-arrow-square-out"></i> Abrir Ficha Completa
+                        {{-- Barra de Filtro por Abas (Todas | WhatsApp | E-mail) --}}
+                        <div class="px-6 py-3 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2 shrink-0">
+                            <div class="inline-flex items-center bg-gray-200/70 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <button type="button"
+                                        @click="abaCom = 'todas'"
+                                        :class="abaCom === 'todas' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs font-semibold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'"
+                                        class="px-3 py-1 rounded-md text-xs transition flex items-center gap-1.5">
+                                    <span>Todas</span>
+                                    <span class="text-[10px] font-mono text-gray-400">({{ count($comunicacoesListaTodas) }})</span>
+                                </button>
+
+                                <button type="button"
+                                        @click="abaCom = 'whatsapp'"
+                                        :class="abaCom === 'whatsapp' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs font-semibold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'"
+                                        class="px-3 py-1 rounded-md text-xs transition flex items-center gap-1.5">
+                                    <span>WhatsApp (Suri)</span>
+                                    <span class="text-[10px] font-mono text-gray-400">({{ count($comunicacoesListaWhatsapp) }})</span>
+                                </button>
+
+                                <button type="button"
+                                        @click="abaCom = 'email'"
+                                        :class="abaCom === 'email' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs font-semibold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'"
+                                        class="px-3 py-1 rounded-md text-xs transition flex items-center gap-1.5">
+                                    <span>E-mail</span>
+                                    <span class="text-[10px] font-mono text-gray-400">({{ count($comunicacoesListaEmail) }})</span>
+                                </button>
+                            </div>
+
+                            @php
+                                $qtdErrosDrawer = collect($comunicacoesListaTodas)->where('status', 'erro')->count();
+                            @endphp
+                            @if($qtdErrosDrawer > 0)
+                                <span class="text-xs font-medium text-red-600 dark:text-red-400">
+                                    {{ $qtdErrosDrawer }} {{ $qtdErrosDrawer === 1 ? 'erro' : 'erros' }}
+                                </span>
+                            @endif
+                        </div>
+
+                        {{-- Lista Unificada de Comunicações --}}
+                        <div class="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-800 custom-scrollbar bg-white dark:bg-gray-900">
+                            @forelse($comunicacoesListaTodas as $item)
+                                <div x-show="abaCom === 'todas' || abaCom === '{{ $item['canal'] }}'"
+                                     class="p-5 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition space-y-2.5">
+                                    
+                                    {{-- Linha 1: Canal + Template + Gatilho + Data e Badges de Status/Leitura --}}
+                                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="px-2 py-0.5 text-[10px] font-semibold uppercase rounded border {{ $item['canal'] === 'whatsapp' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800' }}">
+                                                {{ $item['canal'] === 'whatsapp' ? 'WhatsApp' : 'E-mail' }}
+                                            </span>
+                                            <code class="text-[11px] font-mono text-gray-400 truncate max-w-[190px]" title="Gatilho: {{ $item['gatilho'] }}">
+                                                {{ $item['gatilho'] }}
+                                            </code>
+                                        </div>
+
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <span class="text-[11px] font-mono text-gray-400">{{ $item['data'] }}</span>
+
+                                            @if($item['status'] === 'erro')
+                                                <span class="px-2 py-0.5 text-[11px] font-semibold rounded border bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800">
+                                                    Erro
+                                                </span>
+                                            @elseif($item['canal'] === 'whatsapp')
+                                                @if($item['status'] === 'lido' || $item['aberturas'] > 0)
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                        Lida
+                                                    </span>
+                                                @elseif($item['status'] === 'entregue')
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-gray-100 text-gray-700 border-gray-200">
+                                                        Entregue
+                                                    </span>
+                                                @else
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-gray-100 text-gray-700 border-gray-200">
+                                                        Enviada
+                                                    </span>
+                                                @endif
+                                            @else
+                                                @if($item['aberturas'] > 0)
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                        Aberto ({{ $item['aberturas'] }}x)
+                                                    </span>
+                                                @else
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                                                        Não aberto
+                                                    </span>
+                                                @endif
+
+                                                @if(($item['cliques'] ?? 0) > 0)
+                                                    <span class="px-2 py-0.5 text-[11px] font-medium rounded border bg-purpura-50 text-purpura-700 border-purpura-200">
+                                                        {{ $item['cliques'] }} clique(s)
+                                                    </span>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    {{-- Linha 2: Título / Template, Destinatário e Resumo com opção de expandir --}}
+                                    <div>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs font-semibold text-gray-900 dark:text-white truncate" title="{{ $item['assunto'] }}">
+                                                {{ $item['assunto'] }}
+                                            </p>
+                                            @if(!empty($item['template_nome']) && $item['template_nome'] !== $item['assunto'])
+                                                <span class="text-[11px] text-gray-400 truncate max-w-[160px]" title="Template: {{ $item['template_nome'] }}">
+                                                    {{ $item['template_nome'] }}
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                            {{ $item['resumo_corpo'] }}
+                                        </p>
+
+                                        <div class="flex items-center justify-between mt-1.5 text-[11px] text-gray-400">
+                                            <span>Para: <strong class="font-mono text-gray-600 dark:text-gray-300">{{ $item['destinatario'] ?: '-' }}</strong></span>
+                                            @if(!empty($item['corpo_completo']))
+                                                <button type="button"
+                                                        @click="msgExpandidaId = (msgExpandidaId === {{ $item['id'] }} ? null : {{ $item['id'] }})"
+                                                        class="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white underline">
+                                                    <span x-text="msgExpandidaId === {{ $item['id'] }} ? 'Ocultar mensagem' : 'Ver mensagem completa'"></span>
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        @if(!empty($item['corpo_completo']))
+                                            <div x-show="msgExpandidaId === {{ $item['id'] }}" x-cloak class="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 prose prose-sm max-w-none text-xs text-gray-700 dark:text-gray-200 max-h-60 overflow-y-auto custom-scrollbar">
+                                                {!! $item['corpo_completo'] !!}
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Linha 3: BLOCO DE DIAGNÓSTICO DE ERRO (APARECE QUANDO STATUS === 'erro') --}}
+                                    @if($item['status'] === 'erro')
+                                        <div class="mt-2 p-3 rounded-lg bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-800/80 space-y-2">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <div class="text-xs text-red-800 dark:text-red-300 font-mono break-words leading-relaxed">
+                                                    <strong class="font-sans font-semibold text-red-900 dark:text-red-200 block mb-0.5">Detalhes do erro:</strong>
+                                                    {{ $item['erro_mensagem'] ?? 'Erro reportado no disparo.' }}
+                                                </div>
+
+                                                @if(!empty($item['erro_payload']))
+                                                    <button type="button"
+                                                            @click="erroExpandidoId = (erroExpandidoId === {{ $item['id'] }} ? null : {{ $item['id'] }})"
+                                                            class="shrink-0 px-2 py-1 rounded bg-white dark:bg-gray-900 border border-red-200 dark:border-red-800 text-[11px] font-medium text-red-700 dark:text-red-300 hover:bg-red-100 transition">
+                                                        <span x-text="erroExpandidoId === {{ $item['id'] }} ? 'Ocultar JSON' : 'Ver JSON API'"></span>
+                                                    </button>
+                                                @endif
+                                            </div>
+
+                                            @if(!empty($item['erro_payload']))
+                                                <div x-show="erroExpandidoId === {{ $item['id'] }}" x-cloak class="pt-2 border-t border-red-200/70 dark:border-red-800/70 space-y-2">
+                                                    <div>
+                                                        <span class="text-[10px] font-semibold uppercase text-red-700 dark:text-red-300 block mb-1">Payload Enviado para a Suri:</span>
+                                                        <pre class="p-2.5 rounded bg-gray-950 text-gray-200 font-mono text-[11px] overflow-x-auto">{{ json_encode($item['erro_payload']['payload'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-semibold uppercase text-red-700 dark:text-red-300 block mb-1">Resposta HTTP ({{ $item['erro_payload']['http_status'] }}):</span>
+                                                        <pre class="p-2.5 rounded bg-gray-950 text-red-300 font-mono text-[11px] overflow-x-auto">{{ json_encode($item['erro_payload']['resposta'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                </div>
+                            @empty
+                                <div class="py-16 text-center text-xs text-gray-400">
+                                    Nenhuma comunicação registrada para este candidato.
+                                </div>
+                            @endforelse
+                        </div>
+
+                        {{-- Footer --}}
+                        <div class="px-6 py-3.5 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                            <a href="{{ route('suri.dashboard') }}" target="_blank" class="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline">
+                                Abrir Laboratório de Logs Suri ↗
                             </a>
-                            <button type="button" wire:click="fecharDrawerComunicacoes" class="p-1.5 text-gray-400 hover:text-white rounded-lg">
-                                <i class="ph-bold ph-x text-xl"></i>
+                            <button type="button" wire:click="fecharDrawerComunicacoes" class="btn btn--secondary btn--small">
+                                Fechar
                             </button>
-                        </div>
-                    </div>
-
-                    {{-- Corpo do Drawer dividido em 3 Colunas (Todas | WhatsApp | E-mail) --}}
-                    <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-800 bg-gray-50/50 dark:bg-gray-950">
-                        
-                        {{-- COLUNA 1: TODAS AS COMUNICAÇÕES --}}
-                        <div class="flex flex-col h-full overflow-hidden">
-                            <div class="px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
-                                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-800 dark:text-white flex items-center gap-1.5">
-                                    <i class="ph-fill ph-stack text-purpura-600 text-base"></i> 1. Todas
-                                </span>
-                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-purpura-100 text-purpura-800">
-                                    {{ count($comunicacoesListaTodas) }}
-                                </span>
-                            </div>
-
-                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
-                                @forelse($comunicacoesListaTodas as $item)
-                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xs space-y-1.5">
-                                        <div class="flex items-center justify-between gap-2">
-                                            @if($item['canal'] === 'whatsapp')
-                                                <span class="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                                                    <i class="ph-fill ph-whatsapp-logo"></i> WhatsApp
-                                                </span>
-                                            @else
-                                                <span class="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-                                                    <i class="ph-fill ph-envelope-simple"></i> E-mail
-                                                </span>
-                                            @endif
-                                            <span class="text-[10px] font-mono text-gray-400">{{ $item['data'] }}</span>
-                                        </div>
-                                        <p class="text-xs font-bold text-gray-900 dark:text-white truncate" title="{{ $item['assunto'] }}">{{ $item['assunto'] }}</p>
-                                        <p class="text-[11px] text-gray-500 line-clamp-2">{{ $item['resumo_corpo'] }}</p>
-                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                                            <span class="font-mono text-gray-400 truncate max-w-[160px]" title="{{ $item['gatilho'] }}">{{ $item['gatilho'] }}</span>
-                                            <span class="font-extrabold uppercase {{ $item['status'] === 'erro' ? 'text-red-600' : 'text-emerald-600' }}">{{ $item['status'] }}</span>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="py-12 text-center text-xs text-gray-400">Nenhuma comunicação registrada.</div>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        {{-- COLUNA 2: APENAS WHATSAPP (SURI) --}}
-                        <div class="flex flex-col h-full overflow-hidden">
-                            <div class="px-4 py-3 bg-emerald-50/60 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
-                                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
-                                    <i class="ph-fill ph-whatsapp-logo text-emerald-600 text-base"></i> 2. WhatsApp (Suri)
-                                </span>
-                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-100 text-emerald-800">
-                                    {{ count($comunicacoesListaWhatsapp) }}
-                                </span>
-                            </div>
-
-                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
-                                @forelse($comunicacoesListaWhatsapp as $item)
-                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-emerald-200/80 dark:border-gray-800 shadow-2xs space-y-1.5">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <span class="text-[10px] font-bold text-emerald-700 truncate">{{ $item['template_nome'] }}</span>
-                                            <span class="text-[10px] font-mono text-gray-400 shrink-0">{{ $item['data'] }}</span>
-                                        </div>
-                                        <p class="text-[11px] text-gray-600 dark:text-gray-300 line-clamp-3">{{ $item['resumo_corpo'] }}</p>
-                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                                            <span class="font-mono text-gray-400 truncate max-w-[150px]">{{ $item['gatilho'] }}</span>
-                                            @if($item['status'] === 'lido' || $item['aberturas'] > 0)
-                                                <span class="text-blue-600 font-extrabold flex items-center gap-0.5"><i class="ph-bold ph-checks"></i> Lida</span>
-                                            @elseif($item['status'] === 'entregue')
-                                                <span class="text-emerald-600 font-extrabold flex items-center gap-0.5"><i class="ph-bold ph-checks"></i> Entregue</span>
-                                            @elseif($item['status'] === 'erro')
-                                                <span class="text-red-600 font-extrabold">Erro</span>
-                                            @else
-                                                <span class="text-gray-600 font-bold">Enviada</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="py-12 text-center text-xs text-gray-400">Nenhum disparo de WhatsApp para este candidato.</div>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        {{-- COLUNA 3: APENAS E-MAIL --}}
-                        <div class="flex flex-col h-full overflow-hidden">
-                            <div class="px-4 py-3 bg-blue-50/60 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
-                                <span class="text-xs font-extrabold uppercase tracking-wider text-blue-800 dark:text-blue-400 flex items-center gap-1.5">
-                                    <i class="ph-fill ph-envelope-simple text-blue-600 text-base"></i> 3. E-mail
-                                </span>
-                                <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-blue-100 text-blue-800">
-                                    {{ count($comunicacoesListaEmail) }}
-                                </span>
-                            </div>
-
-                            <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
-                                @forelse($comunicacoesListaEmail as $item)
-                                    <div class="p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-blue-200/80 dark:border-gray-800 shadow-2xs space-y-1.5">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <span class="text-xs font-bold text-gray-900 dark:text-white truncate" title="{{ $item['assunto'] }}">{{ $item['assunto'] }}</span>
-                                            <span class="text-[10px] font-mono text-gray-400 shrink-0">{{ $item['data'] }}</span>
-                                        </div>
-                                        <p class="text-[11px] text-gray-500 line-clamp-2">{{ $item['resumo_corpo'] }}</p>
-                                        <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[10px]">
-                                            <span class="font-mono text-gray-400 truncate max-w-[140px]">{{ $item['gatilho'] }}</span>
-                                            @if($item['aberturas'] > 0)
-                                                <span class="text-emerald-600 font-extrabold">Aberto ({{ $item['aberturas'] }}x)</span>
-                                            @else
-                                                <span class="text-gray-400 font-semibold">Não aberto</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="py-12 text-center text-xs text-gray-400">Nenhum disparo de E-mail para este candidato.</div>
-                                @endforelse
-                            </div>
                         </div>
 
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
     @endif
 
     {{-- MODAL TRANSFERIR DE CICLO --}}

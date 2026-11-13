@@ -119,6 +119,25 @@ class RegistrationManager extends Component
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Carrega eventuais falhas registradas via Webhook (suri_mensagens) ou API HTTP (suri_test_logs) para fallback de logs antigos
+        $errosWebhookSuri = class_exists(\App\Models\SuriMensagem::class)
+            ? \App\Models\SuriMensagem::where('inscricao_id', $insc->id)
+                ->where('status', 'error')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
+
+        $digitosCelular = preg_replace('/\D/', '', (string) $insc->celular);
+        $ultimos8Fone   = strlen($digitosCelular) >= 8 ? substr($digitosCelular, -8) : null;
+
+        $errosHttpSuri = (class_exists(\App\Modules\Teste\Suri\Models\SuriTestLog::class) && $ultimos8Fone)
+            ? \App\Modules\Teste\Suri\Models\SuriTestLog::where('sucesso', false)
+                ->where('payload', 'like', "%{$ultimos8Fone}%")
+                ->orderByDesc('id')
+                ->limit(25)
+                ->get()
+            : collect();
+
         $todas = [];
         $wpp   = [];
         $email = [];
@@ -128,18 +147,70 @@ class RegistrationManager extends Component
                 || str_contains(strtolower((string) $log->template_nome), 'whatsapp')
                 || str_starts_with(strtolower((string) $log->assunto), 'whatsapp:');
 
+            $erroDetalhe = trim((string) ($log->erro_mensagem ?? ''));
+            $erroPayload = null;
+
+            // Fallback inteligente para registros de erro antigos onde erro_mensagem ainda não havia sido preenchido
+            if ($log->status === 'erro' && $isWpp) {
+                if ($erroDetalhe === '' && $errosWebhookSuri->isNotEmpty()) {
+                    $msgErr = $errosWebhookSuri->first(function ($m) use ($log) {
+                        return $m->created_at && $log->created_at && abs($m->created_at->diffInMinutes($log->created_at)) <= 10;
+                    }) ?? $errosWebhookSuri->first();
+
+                    if ($msgErr && ($msgErr->error_reason || $msgErr->error_code)) {
+                        $erroDetalhe = ($msgErr->error_code ? "[Código #{$msgErr->error_code}] " : '') . $msgErr->error_reason;
+                    }
+                }
+
+                // Busca também no log de requisições HTTP da Suri (SuriTestLog) próximo ao horário do disparo
+                $httpErr = $errosHttpSuri->first(function ($h) use ($log) {
+                    return $h->created_at && $log->created_at && abs($h->created_at->diffInMinutes($log->created_at)) <= 5;
+                });
+
+                if ($httpErr) {
+                    $respArr = is_array($httpErr->resposta) ? $httpErr->resposta : (json_decode((string) $httpErr->resposta, true) ?: []);
+                    if ($erroDetalhe === '') {
+                        $msgExtraida = data_get($respArr, 'error')
+                            ?? data_get($respArr, 'message')
+                            ?? data_get($respArr, 'errors.0.message')
+                            ?? data_get($respArr, 'erro')
+                            ?? data_get($respArr, 'exception')
+                            ?? (is_string($httpErr->resposta) ? $httpErr->resposta : json_encode($respArr, JSON_UNESCAPED_UNICODE));
+
+                        $erroDetalhe = "HTTP {$httpErr->http_status}: " . (is_string($msgExtraida) ? $msgExtraida : json_encode($msgExtraida, JSON_UNESCAPED_UNICODE));
+                    }
+                    $erroPayload = [
+                        'http_status' => $httpErr->http_status,
+                        'url'         => $httpErr->url,
+                        'payload'     => $httpErr->payload,
+                        'resposta'    => $httpErr->resposta,
+                    ];
+                }
+
+                if ($erroDetalhe === '') {
+                    $erroDetalhe = 'Falha reportada pela API da Suri / WhatsApp (verifique se o template está aprovado na Meta, se o número possui WhatsApp válido e se as variáveis do corpo não estão vazias).';
+                }
+            } elseif ($log->status === 'erro' && $erroDetalhe === '') {
+                $erroDetalhe = 'Falha no servidor de envio de e-mail (SMTP).';
+            }
+
+            $assuntoLimpo = preg_replace('/^WhatsApp:\s*/i', '', (string) ($log->assunto ?: $log->template_nome ?: 'Comunicação'));
+
             $item = [
                 'id'            => $log->id,
                 'canal'         => $isWpp ? 'whatsapp' : 'email',
                 'template_nome' => $log->template_nome ?: 'Comunicação',
-                'assunto'       => $log->assunto ?: '-',
+                'assunto'       => $assuntoLimpo,
                 'gatilho'       => $log->gatilho ?: 'manual',
                 'destinatario'  => $log->destinatario,
                 'status'        => $log->status ?: 'enviado',
                 'aberturas'     => (int) ($log->aberturas_count ?? 0),
                 'cliques'       => (int) ($log->cliques_count ?? 0),
                 'data'          => ($log->data_envio ?? $log->created_at)?->format('d/m/Y H:i') ?? '-',
-                'resumo_corpo'  => \Illuminate\Support\Str::limit(trim(strip_tags((string) $log->corpo)), 140),
+                'resumo_corpo'  => \Illuminate\Support\Str::limit(trim(strip_tags((string) $log->corpo)), 160),
+                'corpo_completo'=> (string) $log->corpo,
+                'erro_mensagem' => $erroDetalhe,
+                'erro_payload'  => $erroPayload,
             ];
 
             $todas[] = $item;
