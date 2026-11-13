@@ -149,8 +149,19 @@
         </div>
         
         @if($logs->hasPages())
-            <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-center">
-                {{ $logs->links() }}
+            <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-center sm:justify-between items-center flex-col sm:flex-row gap-3">
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                    <span>Exibir</span>
+                    <select wire:model.live="porPagina" class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md text-xs py-1 pl-2 pr-6">
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>registros por página</span>
+                </div>
+                
+                {{ $logs->links('components.paginacao-customizada') }}
             </div>
         @endif
     </div>

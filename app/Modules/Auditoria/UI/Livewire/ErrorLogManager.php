@@ -8,12 +8,13 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\ErrorLog;
 use Illuminate\Support\Facades\Schema;
+use App\Traits\ComPadraoListagem;
 
 #[Layout('components.layouts.app')]
 #[Title('Central de Exceções e Erros')]
 class ErrorLogManager extends Component
 {
-    use WithPagination;
+    use WithPagination, ComPadraoListagem;
 
     public $filtroTipo = '';
     public $filtroCodigo = '';
@@ -148,8 +149,10 @@ class ErrorLogManager extends Component
             $query->orderBy('id', 'desc');
         }
 
+        $porPaginaEfetivo = property_exists($this, 'porPagina') ? $this->porPagina : 15;
+
         return view('livewire.auditoria.error-log-manager', [
-            'logs' => $query->paginate(15),
+            'logs' => $query->paginate($porPaginaEfetivo),
         ]);
     }
 }
