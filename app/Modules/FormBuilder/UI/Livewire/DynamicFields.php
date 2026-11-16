@@ -71,6 +71,7 @@ class DynamicFields extends Component
         'enable_fixed_personal' => true,
         'enable_fixed_address'  => true,
         'enable_fixed_course'   => true,
+        'fixed_fields_etapa'    => 1
     ];
 
     public string $contextoTipo;
@@ -101,6 +102,31 @@ class DynamicFields extends Component
     {
         return $this->contextoTipo === 'ciclo' ? 'ciclo_id' : 'formulario_id';
     }
+
+    public function moverCamposFixosParaEtapa($novaEtapa): void
+ {
+     if ($this->isLockedByOther || $this->contextoTipo !== 'ciclo') return;
+
+     $destino = max(1, (int) $novaEtapa);
+     $this->formSettings['fixed_fields_etapa'] = $destino;
+
+     CampoFormulario::updateOrCreate(
+         [$this->getContextColumn() => $this->contextoId, 'name' => '_form_config'],
+         [
+             'ciclo_id'      => $this->contextoTipo === 'ciclo' ? $this->contextoId : null,
+             'formulario_id' => $this->contextoTipo === 'formulario' ? $this->contextoId : null,
+             'etapa'         => 0,
+             'ordem'         => 0,
+             'label'         => 'Configurações Globais',
+             'tipo'          => 'config',
+             'largura'       => 12,
+             'configuracoes' => $this->formSettings,
+         ]
+     );
+
+     $this->etapa = $destino;
+     $this->dispatch('sucesso', msg: "Bloco de Campos Fixos movido para a Página #{$destino}!");
+ }
 
     public function mount($tipo, $id): void
     {

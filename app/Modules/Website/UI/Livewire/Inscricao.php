@@ -9,6 +9,7 @@ use Livewire\Attributes\Computed;
 use Livewire\WithFileUploads;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use App\Models\Ciclo;
 use App\Models\Inscricao as InscricaoModel;
@@ -43,7 +44,7 @@ class Inscricao extends Component
     public bool $editarCelular = false;
 
     public bool $temVagasDisponiveis = true;
-    public $camposDinamicos = [];
+    public Collection|array $camposDinamicos = [];
     public array $respostas = [];
     public array $uploads = [];
 
@@ -69,6 +70,22 @@ class Inscricao extends Component
 
     public bool $isEmbed = false;
     public bool $isAssistido = false;
+
+    public int $etapaCamposFixos = 1;
+    public $laudo_pcd_upload = null;
+
+    public function hydrate(): void
+    {
+        if ($this->camposDinamicos instanceof Collection) {
+            $this->camposDinamicos = $this->camposDinamicos
+                ->sortBy([
+                    ['etapa', 'asc'],
+                    ['ordem', 'asc'],
+                    ['id', 'asc'],
+                ])
+                ->values();
+        }
+    }
 
     public function mount(?string $slug_projeto = null)
     {
@@ -104,6 +121,7 @@ class Inscricao extends Component
             $query->orderBy('etapa', 'asc')->orderBy('ordem', 'asc')->orderBy('id', 'asc');
         }]);
 
+        $ciclo = null;
         if ($this->isPreview || $this->isTeste || $this->isAssistido) {
             $cicloPreviewId = request()->query('ciclo_id');
             if ($cicloPreviewId) {
@@ -127,6 +145,9 @@ class Inscricao extends Component
                 $ciclo = $queryVigente->where('tipo_ciclo', 'regular')->first();
             }
         }
+
+        // Garante que seja sempre uma Collection para evitar erros de método em array vazio
+        $this->camposDinamicos = collect();
 
         if ($ciclo) {
             $this->cicloAtivoId = $ciclo->id;
@@ -155,47 +176,68 @@ class Inscricao extends Component
                 if (isset($this->formSettings['use_vacancy_limit'])) {
                     $this->use_vacancy_limit = filter_var($this->formSettings['use_vacancy_limit'], FILTER_VALIDATE_BOOLEAN);
                 }
+                if (isset($this->formSettings['fixed_fields_etapa'])) {
+                    $this->etapaCamposFixos = max(1, (int) $this->formSettings['fixed_fields_etapa']);
+                }
             }
             
             $maxEtapaDinamica = $this->camposDinamicos->where('tipo', '!=', 'config')->max('etapa') ?? 1;
-            $this->totalEtapas = max(1, $maxEtapaDinamica);
-
-            foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
-                if (!isset($this->respostas[$campo->name])) {
-                    $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
-                    if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
-                        $this->respostas[$campo->name] = [];
-                    } else {
-                        $this->respostas[$campo->name] = '';
-                    }
+            $maxEtapaTab = \App\Models\Etapa::where('ciclo_id', $ciclo->id)->max('numero') ?? 1;
+            $this->totalEtapas = max(1, (int) $maxEtapaDinamica, (int) $maxEtapaTab, $this->etapaCamposFixos);
+        }
+            
+        foreach ($this->camposDinamicos->whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link']) as $campo) {
+            if (!isset($this->respostas[$campo->name])) {
+                $cfgCampo = is_string($campo->configuracoes) ? json_decode($campo->configuracoes, true) : ($campo->configuracoes ?? []);
+                if (in_array($campo->tipo, ['check', 'matriz', 'social']) || ($campo->tipo === 'file' && !empty($cfgCampo['aceita_multiplos']))) {
+                    $this->respostas[$campo->name] = [];
+                } else {
+                    $this->respostas[$campo->name] = '';
                 }
             }
+        }
 
-            if (!$this->isTeste && session()->has('inscricao_retomada_id')) {
-                $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
-                if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
-                    $this->carregarModeloInscricao($inscricaoRetomada);
-                }
-                session()->forget('inscricao_retomada_id');
+        if (!$this->isTeste && session()->has('inscricao_retomada_id')) {
+            $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
+            if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
+                $this->carregarModeloInscricao($inscricaoRetomada);
             }
+            session()->forget('inscricao_retomada_id');
         }
     }
 
-    /**
-     * Garante que, após a reidratação do Livewire, a coleção de campos
-     * preserve sempre a ordenação por etapa e ordem.
-     */
-    public function hydrate(): void
+    public function updatedPossuiDeficiencia($valor): void
     {
-        if ($this->camposDinamicos instanceof \Illuminate\Support\Collection) {
-            $this->camposDinamicos = $this->camposDinamicos
-                ->sortBy([
-                    ['etapa', 'asc'],
-                    ['ordem', 'asc'],
-                    ['id', 'asc'],
-                ])
-                ->values();
+        if ($valor !== 'sim') {
+            $this->natureza_deficiencia = null;
+            $this->laudo_pcd_upload = null;
+            unset($this->respostas['laudo_pcd']);
         }
+        $this->salvarRascunhoSilencioso();
+    }
+
+    public function updatedLaudoPcdUpload(): void
+    {
+        $this->validate([
+            'laudo_pcd_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ], [
+            'laudo_pcd_upload.mimes' => 'O laudo deve estar em formato PDF ou Imagem (JPG, PNG, WEBP).',
+            'laudo_pcd_upload.max'   => 'O arquivo do laudo não pode ultrapassar 10MB.',
+        ]);
+
+        if ($this->laudo_pcd_upload && !$this->isPreview) {
+            $path = $this->laudo_pcd_upload->store('inscricoes/laudos_pcd', 'public');
+            $this->respostas['laudo_pcd'] = $path;
+            $this->laudo_pcd_upload = null;
+            $this->salvarRascunhoSilencioso();
+        }
+    }
+
+    public function removerLaudoPcd(): void
+    {
+        $this->laudo_pcd_upload = null;
+        unset($this->respostas['laudo_pcd']);
+        $this->salvarRascunhoSilencioso();
     }
 
     private function sincronizarContatoSuriEmBackground(): void
@@ -598,7 +640,7 @@ class Inscricao extends Component
     protected function regrasPorEtapa($etapa)
     {
         $regras = [];
-        if ((int) $etapa === 1 && $this->exibirSelecaoCursoFixo) {
+        if ((int) $etapa === (int) $this->etapaCamposFixos && $this->exibirSelecaoCursoFixo) {
             if ($this->temVagasDisponiveis && $this->estado && ($this->data_nascimento < date('Y-m-d'))) {
                 $regras['unidade'] = 'required';
                 $regras['turno'] = 'required';
@@ -797,7 +839,6 @@ class Inscricao extends Component
                 }
             }
 
-            // Limpa valores de campos condicionais que deixaram de ser visíveis
             $this->limparRespostasCondicionaisInativas();
         }
 
@@ -852,7 +893,12 @@ class Inscricao extends Component
             }
         }
 
-        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo && $this->temVagasDisponiveis && $this->use_vacancy_limit) {            
+        if ($this->laudo_pcd_upload && !$this->isPreview) {
+            $this->respostas['laudo_pcd'] = $this->laudo_pcd_upload->store('inscricoes/laudos_pcd', 'public');
+            $this->laudo_pcd_upload = null;
+        }
+
+        if ((int) $this->etapaAtual === (int) $this->etapaCamposFixos && $this->exibirSelecaoCursoFixo && $this->temVagasDisponiveis && $this->use_vacancy_limit) {            
             $ofertasValidas = $this->getOfertasValidas();
             if ($ofertasValidas !== null && $this->unidade && $this->curso && $this->turno) {
                 $key = "{$this->unidade}-{$this->curso}-{$this->turno}";
@@ -865,11 +911,11 @@ class Inscricao extends Component
             }
         }
 
-        if ($this->etapaAtual === 1 && $this->exibirSelecaoCursoFixo) {
+        if ((int) $this->etapaAtual === (int) $this->etapaCamposFixos && $this->exibirSelecaoCursoFixo) {
             if (!$this->temVagasDisponiveis && ($this->data_nascimento < date('Y-m-d')) && $this->estado) {
                 $this->salvarProgresso('Lead'); 
                 $this->etapaAtual = 100; 
-                
+
                 if (!$this->isTeste) {
                     $inscricaoDB = InscricaoModel::find($this->inscricaoId);
                     if ($inscricaoDB) {
@@ -879,7 +925,7 @@ class Inscricao extends Component
                         ]);
                     }
                 }
-                
+
                 $this->dispatch('limpar-storage-inscricao');
                 $this->dispatch('inscricao-concluida'); 
                 return;
@@ -910,8 +956,7 @@ class Inscricao extends Component
     {
         $regras = [];
 
-        // Os campos fixos pertencem apenas à Etapa 1
-        if ((int) $this->etapaAtual !== 1) {
+        if ((int) $this->etapaAtual !== (int) $this->etapaCamposFixos) {
             return $regras;
         }
 
@@ -939,8 +984,7 @@ class Inscricao extends Component
             $regras['nome_social'] = 'required_if:possui_nome_social,sim';
             $regras['cpf'] = $regrasCpf;
             $regras['data_nascimento'] = 'required|date';
-
-            // Valida Celular / Telefone obrigatório (respeitando máscara LGPD na retomada)
+            
             $regras['celular'] = [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -954,7 +998,6 @@ class Inscricao extends Component
                 },
             ];
 
-            // Valida E-mail obrigatório (respeitando máscara LGPD na retomada)
             $regras['email'] = [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -969,6 +1012,7 @@ class Inscricao extends Component
 
             $regras['possui_deficiencia'] = 'required|in:sim,nao';
             $regras['natureza_deficiencia'] = 'required_if:possui_deficiencia,sim';
+            $regras['laudo_pcd_upload'] = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240';
         }
 
         if ($this->exibirEnderecoFixo) {
@@ -1393,9 +1437,9 @@ class Inscricao extends Component
 
         $obterResposta = function($campo) {
             if ($campo === 'idade' && !empty($this->data_nascimento)) return Carbon::parse($this->data_nascimento)->age . ' anos';
-            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? Curso::find($this->curso)->nome ?? 'Curso não informado';
-            if ($campo === 'turno_id') return $this->turnosDisponiveis[$this->turno] ?? \App\Modules\Turno\Domain\Models\Turno::find($this->turno)->nome ?? 'Turno não informado';
-            if ($campo === 'unidade_id') return $this->unidadesDisponiveis[$this->unidade] ?? \App\Modules\Unidade\Domain\Models\Unidade::find($this->unidade)->nome ?? 'Unidade não informada';
+            if ($campo === 'curso_id') return $this->cursosDisponiveis[$this->curso] ?? Curso::find($this->curso)?->nome ?? 'Curso não informado';
+            if ($campo === 'turno_id') return $this->turnosDisponiveis[$this->turno] ?? \App\Modules\Turno\Domain\Models\Turno::find($this->turno)?->nome ?? 'Turno não informado';
+            if ($campo === 'unidade_id') return $this->unidadesDisponiveis[$this->unidade] ?? \App\Modules\Unidade\Domain\Models\Unidade::find($this->unidade)?->nome ?? 'Unidade não informada';
             if ($campo === 'estado') return $this->estado ?? 'Estado não informado';
             if ($campo === 'cidade') return $this->cidade ?? 'Cidade não informada';
             if ($campo === 'possui_deficiencia') return ucfirst($this->possui_deficiencia) ?? 'Não informada';

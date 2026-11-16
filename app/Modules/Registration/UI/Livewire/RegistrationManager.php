@@ -98,6 +98,43 @@ class RegistrationManager extends Component
     public array $comunicacoesListaTodas = [];
     public array $comunicacoesListaWhatsapp = [];
     public array $comunicacoesListaEmail = [];
+    // Controle do Modal de Visualização Rápida do Laudo PcD
+    public bool $modalLaudoPcdAberto = false;
+    public ?array $laudoPcdDados = null;
+
+    public function abrirModalLaudoPcd(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+        $dinamicos = is_string($insc->dados_dinamicos)
+            ? (json_decode($insc->dados_dinamicos, true) ?: [])
+            : ($insc->dados_dinamicos ?? []);
+
+        $caminho = $dinamicos['laudo_pcd'] ?? null;
+        if (empty($caminho)) {
+            $this->dispatch('erro', msg: 'Este candidato não anexou laudo médico no momento da inscrição.');
+            return;
+        }
+
+        $ext = strtolower(pathinfo((string) $caminho, PATHINFO_EXTENSION));
+
+        $this->laudoPcdDados = [
+            'inscricao_id' => $insc->id,
+            'nome'         => $insc->nome,
+            'cpf'          => $insc->cpf,
+            'natureza'     => ucfirst((string) ($insc->natureza_deficiencia ?: 'Não especificada')),
+            'arquivo_nome' => basename((string) $caminho),
+            'url'          => asset('storage/' . $caminho),
+            'is_pdf'       => $ext === 'pdf',
+        ];
+
+        $this->modalLaudoPcdAberto = true;
+    }
+
+    public function fecharModalLaudoPcd(): void
+    {
+        $this->modalLaudoPcdAberto = false;
+        $this->laudoPcdDados = null;
+    }
 
     public function abrirDrawerComunicacoes(int $inscricaoId): void
     {
@@ -868,6 +905,7 @@ class RegistrationManager extends Component
             foreach ($dadosDinamicosArray as $chave => $valor) {
                 $chaveStr = (string) $chave;
                 if (
+                    $chaveStr === 'laudo_pcd' ||
                     str_starts_with($chaveStr, '_') ||
                     str_starts_with(strtolower($chaveStr), 'ui_') ||
                     str_contains(strtolower($chaveStr), 'form_config') ||
@@ -888,11 +926,38 @@ class RegistrationManager extends Component
             $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registado.</span>';
         }
 
+        $isCandidatoPcd = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+        $caminhoLaudoPcd = $dadosDinamicosArray['laudo_pcd'] ?? null;
+
+        $blocoPcdHtml = '<span class="text-gray-500 text-xs">Não declarou deficiência (PcD).</span>';
+        if ($isCandidatoPcd) {
+            $natLabel = ucfirst((string) ($inscricao->natureza_deficiencia ?: 'Não especificada'));
+            $blocoPcdHtml = '<div class="space-y-2 text-xs">'
+                . '<div><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Sim — Natureza: ' . e($natLabel) . '</span></div>';
+
+            if (!empty($caminhoLaudoPcd)) {
+                $urlLaudo = asset('storage/' . $caminhoLaudoPcd);
+                $nomeLaudo = basename((string) $caminhoLaudoPcd);
+                $blocoPcdHtml .= '<div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
+                    . '<span class="font-medium text-gray-700 dark:text-gray-200 truncate">' . e($nomeLaudo) . '</span>'
+                    . '<div class="flex items-center gap-1.5 shrink-0">'
+                    . '<a href="' . $urlLaudo . '" target="_blank" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 font-bold text-purpura-600 hover:bg-purpura-50">Visualizar ↗</a>'
+                    . '<a href="' . $urlLaudo . '" download="' . e($nomeLaudo) . '" class="px-2.5 py-1 rounded bg-purpura-600 text-white font-bold hover:bg-purpura-700">Baixar</a>'
+                    . '</div></div>';
+            } else {
+                $blocoPcdHtml .= '<div class="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">'
+                    . 'Laudo não enviado na inscrição (será exigido na matrícula).'
+                    . '</div>';
+            }
+            $blocoPcdHtml .= '</div>';
+        }
+
         $this->dispatch('load-quick-view', [
             'title' => $inscricao->nome,
             'subtitle' => 'CPF: ' . $inscricao->cpf . ' • ' . $inscricao->email,
             'icon' => 'ph-user-focus',
             'data' => [
+                'Acessibilidade / PcD e Laudo' => $blocoPcdHtml,
                 'Status do Candidato' => $botoesAcao,
                 'Interesse Acadêmico' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
                 'Informações do Formulário' => $detalhesDinamicos,

@@ -269,12 +269,25 @@
                         <td class="px-4 py-1.5 text-center whitespace-nowrap">
                             @php
                                 $isPcd = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+                                $dinInscRow = is_string($inscricao->dados_dinamicos) ? (json_decode($inscricao->dados_dinamicos, true) ?: []) : ($inscricao->dados_dinamicos ?? []);
+                                $temLaudoPcd = !empty($dinInscRow['laudo_pcd']);
                             @endphp
                             @if($isPcd)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
-                                      title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}">
-                                    <i class="ph-fill ph-wheelchair text-xs"></i> Sim
-                                </span>
+                                @if($temLaudoPcd)
+                                    <button type="button"
+                                            wire:click.stop="abrirModalLaudoPcd({{ $inscricao->id }})"
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700 transition cursor-pointer shadow-2xs"
+                                            title="PcD ({{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }}) — Clique para visualizar ou baixar o Laudo Médico">
+                                        <i class="ph-fill ph-wheelchair text-xs"></i>
+                                        <span>Sim</span>
+                                        <i class="ph-bold ph-file-text text-xs text-purpura-600 dark:text-purpura-400 ml-0.5"></i>
+                                    </button>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800"
+                                          title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Deficiência declarada' }} (Laudo não anexado na inscrição)">
+                                        <i class="ph-fill ph-wheelchair text-xs"></i> Sim
+                                    </span>
+                                @endif
                             @else
                                 <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
                             @endif
@@ -488,6 +501,8 @@
                                     @php
                                         $corHex = $inscricao->statusInscricao->cor ?? '#6B7280';
                                         $isPcdCard = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+                                        $dinCard = is_string($inscricao->dados_dinamicos) ? (json_decode($inscricao->dados_dinamicos, true) ?: []) : ($inscricao->dados_dinamicos ?? []);
+                                        $temLaudoCard = !empty($dinCard['laudo_pcd']);
                                     @endphp
                                     <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border" style="background-color: {{ $corHex }}10; color: {{ $corHex }}; border-color: {{ $corHex }}30;">
                                         <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $corHex }};"></span>
@@ -495,9 +510,18 @@
                                     </span>
 
                                     @if($isPcdCard)
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Sim' }}">
-                                            <i class="ph-fill ph-wheelchair"></i> PcD
-                                        </span>
+                                        @if($temLaudoCard)
+                                            <button type="button"
+                                                    wire:click.stop="abrirModalLaudoPcd({{ $inscricao->id }})"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-300 hover:bg-indigo-100 transition cursor-pointer"
+                                                    title="Clique para visualizar/baixar o Laudo PcD">
+                                                <i class="ph-fill ph-wheelchair"></i> PcD <i class="ph-bold ph-file-text text-purpura-600"></i>
+                                            </button>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="PcD: {{ $inscricao->natureza_deficiencia ?: 'Sim' }} (Sem laudo anexado)">
+                                                <i class="ph-fill ph-wheelchair"></i> PcD
+                                            </span>
+                                        @endif
                                     @endif
                                 </div>
                                 
@@ -1391,5 +1415,50 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- MODAL DE VISUALIZAÇÃO E DOWNLOAD DO LAUDO PCD --}}
+    @if($modalLaudoPcdAberto && $laudoPcdDados)
+        <x-modal
+            title="Laudo Médico PcD — {{ $laudoPcdDados['nome'] }}"
+            subtitle="CPF: {{ $laudoPcdDados['cpf'] }} • Natureza da Deficiência: {{ $laudoPcdDados['natureza'] }}"
+            max-width="4xl"
+            close-method="fecharModalLaudoPcd">
+
+            <div class="space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <i class="ph-fill ph-file-text text-lg text-purpura-600 shrink-0"></i>
+                        <span class="font-mono text-gray-700 dark:text-gray-200 truncate">{{ $laudoPcdDados['arquivo_nome'] }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{{ $laudoPcdDados['url'] }}"
+                           target="_blank"
+                           class="btn btn--secondary btn--small !h-8">
+                            Abrir em nova guia ↗
+                        </a>
+                        <a href="{{ $laudoPcdDados['url'] }}"
+                           download="{{ $laudoPcdDados['arquivo_nome'] }}"
+                           class="btn btn--primary btn--small !h-8 bg-purpura-600 hover:bg-purpura-700 border-none">
+                            <i class="ph ph-download-simple"></i> Baixar Laudo
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-3 flex items-center justify-center min-h-[60vh]">
+                    @if($laudoPcdDados['is_pdf'])
+                        <iframe src="{{ $laudoPcdDados['url'] }}" class="w-full h-[65vh] rounded border border-gray-300 bg-white"></iframe>
+                    @else
+                        <img src="{{ $laudoPcdDados['url'] }}" alt="Laudo Médico PcD" class="max-w-full max-h-[65vh] object-contain rounded shadow-sm bg-white p-2">
+                    @endif
+                </div>
+
+                <div class="flex justify-end pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <button type="button" wire:click="fecharModalLaudoPcd" class="btn btn--secondary btn--small">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </x-modal>
     @endif
 </div>

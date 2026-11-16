@@ -128,18 +128,20 @@
                     $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
 
                     $gruposRender = [];
-                    if ($numEtapa === 1 && $contextoTipo === 'ciclo') {
-                        $camposTopo = $camposDaEtapa->filter(function($c) {
-                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                            return !empty($cfg['exibir_no_topo']);
-                        });
-                        $camposRodape = $camposDaEtapa->filter(function($c) {
-                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                            return empty($cfg['exibir_no_topo']);
-                        });
-                        if ($camposTopo->count() > 0) $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
-                        $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                        if ($camposRodape->count() > 0) $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                    $etapaFixosCanvas = max(1, (int) ($formSettings['fixed_fields_etapa'] ?? 1));
+                 $gruposRender = [];
+                 if ($numEtapa === $etapaFixosCanvas && $contextoTipo === 'ciclo') {
+                     $camposTopo = $camposDaEtapa->filter(function($c) {
+                         $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                         return !empty($cfg['exibir_no_topo']);
+                     });
+                     $camposRodape = $camposDaEtapa->filter(function($c) {
+                         $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                         return empty($cfg['exibir_no_topo']);
+                     });
+                     if ($camposTopo->count() > 0) $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
+                     $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                     if ($camposRodape->count() > 0) $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
                     } else {
                         $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
                     }
@@ -168,27 +170,36 @@
                                 <div class="w-full my-5">
                                     <div class="rounded-xl border border-indigo-200/80 bg-white/90 p-5 shadow-2xs">
                                         <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-4 border-b border-gray-100">
-                                            <div>
-                                                <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
-                                                    Campos Padrões e Fixos da 1ª Página
-                                                </h4>
-                                                <p class="text-[11px] text-gray-500">
-                                                    Estes blocos nativos são carregados automaticamente para o candidato nesta etapa inicial.
-                                                </p>
-                                            </div>
+                                         <div>
+                                             <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                                                 Campos Padrões e Fixos (Página #{{ $etapaFixosCanvas }})
+                                             </h4>
+                                             <p class="text-[11px] text-gray-500">
+                                                 Dados Pessoais (com Laudo PcD), Endereço ViaCEP e Seleção de Curso. Você pode mover este bloco para outra página ao lado.
+                                             </p>
+                                         </div>
 
-                                            @if($isCicloCustomizado)
-                                                <button type="button"
-                                                        @click="$wire.set('drawerFormSettingsAberto', true)"
-                                                        class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition">
-                                                    Personalizar Fixos
-                                                </button>
-                                            @else
-                                                <span class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md uppercase tracking-wider">
-                                                    Bloco Nativo Obrigatório
-                                                </span>
-                                            @endif
-                                        </div>
+                                         <div class="flex items-center gap-2">
+                                             <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                                                 <span class="text-[10px] font-bold text-gray-500 uppercase">Página:</span>
+                                                 <select wire:change="moverCamposFixosParaEtapa($event.target.value)" class="!border-none !bg-transparent !py-0 !pl-1 !pr-6 text-xs font-bold text-purpura-700 focus:!ring-0 cursor-pointer">
+                                                     @foreach($etapasDisponiveis as $etOpt)
+                                                         <option value="{{ $etOpt->numero }}" @selected((int) $etapaFixosCanvas === (int) $etOpt->numero)>
+                                                             #{{ $etOpt->numero }} - {{ $etOpt->nome }}
+                                                         </option>
+                                                     @endforeach
+                                                 </select>
+                                             </div>
+
+                                             @if($isCicloCustomizado)
+                                                 <button type="button"
+                                                         @click="$wire.set('drawerFormSettingsAberto', true)"
+                                                         class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition">
+                                                     Personalizar Fixos
+                                                 </button>
+                                             @endif
+                                         </div>
+                                     </div>
 
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pointer-events-none">
                                             @if($showPersonal)
@@ -493,7 +504,7 @@
                         @endif
                     @endforeach
 
-                    @if($grupo['campos']->isEmpty() && !($numEtapa === 1 && $contextoTipo === 'ciclo'))
+                    @if($grupo['campos']->isEmpty() && !($numEtapa === $etapaFixosCanvas && $contextoTipo === 'ciclo'))
                         <div class="py-8 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 text-xs">
                             Nenhum campo personalizado adicionado nesta página. Clique num tipo de input à esquerda para inserir.
                         </div>

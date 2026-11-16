@@ -44,12 +44,12 @@
                     </div>
                     @error('ordem') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
 
-                    @if($etapa == 1 && $contextoTipo === 'ciclo')
+                    @if((int) $etapa === (int) ($formSettings['fixed_fields_etapa'] ?? 1) && $contextoTipo === 'ciclo')
                         <label class="flex items-center gap-2 p-2.5 mt-2 border border-gray-200 rounded-lg cursor-pointer bg-gray-50">
                             <input type="checkbox" wire:model="configuracoes.exibir_no_topo">
                             <div class="flex flex-col">
-                                <span class="text-xs text-gray-900 font-semibold">Exibir no Topo da Etapa 1</span>
-                                <span class="text-[10px] text-gray-500">Antes dos dados pessoais fixos.</span>
+                                <span class="text-xs text-gray-900 font-semibold">Exibir no Topo da Página #{{ $etapa }}</span>
+                                <span class="text-[10px] text-gray-500">Antes dos campos fixos.</span>
                             </div>
                         </label>
                     @endif
