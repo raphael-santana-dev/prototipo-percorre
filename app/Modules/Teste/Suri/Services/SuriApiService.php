@@ -15,9 +15,9 @@ class SuriApiService
 
     public function __construct()
     {
-        $this->baseUrl   = rtrim((string) config('services.suri.base_url', ''), '/');
-        $this->token     = (string) config('services.suri.token', '');
-        $this->channelId = (string) config('services.suri.channel_id', '');
+        $this->baseUrl   = rtrim((string) (config('services.suri.base_url') ?: env('SURI_API_URL', '')), '/');
+        $this->token     = (string) (config('services.suri.token') ?: env('SURI_API_TOKEN', ''));
+        $this->channelId = (string) (config('services.suri.channel_id') ?: env('SURI_CHANNEL_ID', ''));
     }
 
     public function getConfigResumo(): array
