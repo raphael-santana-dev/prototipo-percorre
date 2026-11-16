@@ -151,6 +151,16 @@ class SuriApiService
             : ($template->botoes ?? []);
 
         $htmlCorpo = (string) $template->corpo;
+        // Preserva o href de links <a href="..."> criados no Quill antes do strip_tags
+        $htmlCorpo = preg_replace_callback('/<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', function ($m) {
+            $href  = trim(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $label = trim(strip_tags(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+            if ($href === '' || $href === '#') {
+                return $label;
+            }
+            return ($label === '' || $label === $href) ? $href : "{$label} ({$href})";
+        }, $htmlCorpo);
+        
         $htmlCorpo = preg_replace('/<\/(p|div|h1|h2|h3|li)>/i', "\n", $htmlCorpo);
         $htmlCorpo = preg_replace('/<br\s*\/?>/i', "\n", $htmlCorpo);
         $cleanBody = trim(strip_tags(html_entity_decode($htmlCorpo, ENT_QUOTES | ENT_HTML5, 'UTF-8')));

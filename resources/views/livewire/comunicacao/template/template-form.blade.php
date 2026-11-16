@@ -544,6 +544,13 @@
                     $converterParaWhatsAppPreview = function (?string $html): string {
                         if (empty($html)) return '';
                         $texto = $html;
+                        // Preserva URLs de tags <a href="...">
+                        $texto = preg_replace_callback('/<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', function ($m) {
+                            $href  = trim(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                            $label = trim(strip_tags(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                            if ($href === '' || $href === '#') return $label;
+                            return ($label === '' || $label === $href) ? $href : "{$label}: {$href}";
+                        }, $texto);
                         $texto = preg_replace('/<(strong|b)[^>]*>(.*?)<\/\1>/is', '*$2*', $texto);
                         $texto = preg_replace('/<(em|i)[^>]*>(.*?)<\/\1>/is', '_$2_', $texto);
                         $texto = preg_replace('/<(s|del|strike)[^>]*>(.*?)<\/\1>/is', '~$2~', $texto);
@@ -558,6 +565,12 @@
                         $textoSeguro = preg_replace('/\*(.*?)\*/s', '<strong>$1</strong>', $textoSeguro);
                         $textoSeguro = preg_replace('/\_(.*?)\_/s', '<em>$1</em>', $textoSeguro);
                         $textoSeguro = preg_replace('/\~(.*?)\~/s', '<del>$1</del>', $textoSeguro);
+                        // Torna URLs http:// e https:// clicáveis no balão do WhatsApp
+                        $textoSeguro = preg_replace(
+                            '/\b(https?:\/\/[^\s<>"\'&]+)/i',
+                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-[#027eb5] underline break-all font-medium">$1</a>',
+                            $textoSeguro
+                        );
                         $textoSeguro = preg_replace('/(\{\{.*?\}\})/', '<span class="px-1 py-0.2 bg-gray-100 text-gray-800 rounded font-mono text-[11px] font-semibold">$1</span>', $textoSeguro);
                         return nl2br($textoSeguro);
                     };
