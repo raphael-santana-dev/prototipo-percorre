@@ -43,7 +43,7 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO 2: EVENTO GATILHO -->
+            <!-- SEÇÃO 2: EVENTO GATILHO E FILTRO AVANÇADO DE RESPOSTAS -->
             <div class="p-6 space-y-4">
                 <div>
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Evento Gatilho</h3>
@@ -81,6 +81,85 @@
                         @error('parametro_dias') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
                     </div>
                 @endif
+
+                {{-- FILTRO AVANÇADO POR RESPOSTAS DO FORMULÁRIO (E / OU) --}}
+                <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="ph-bold ph-funnel text-purpura-600"></i> Filtro Avançado por Respostas do Formulário (Opcional)
+                            </h4>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Restrinja este disparo apenas para usuários que responderam X no campo A (E) ou escolheram Y, Z nos campos B ou C (OU).
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" wire:click="adicionarRegraDinamica('AND')" class="btn btn--secondary btn--small !h-8">
+                                + Condição (E)
+                            </button>
+                            <button type="button" wire:click="adicionarRegraDinamica('OR')" class="btn btn--secondary btn--small !h-8">
+                                + Condição (OU)
+                            </button>
+                        </div>
+                    </div>
+
+                    @if(count($regras_dinamicas) > 0)
+                        <div class="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            @foreach($regras_dinamicas as $rIdx => $regra)
+                                <div wire:key="auto-regra-din-{{ $rIdx }}" class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <div class="md:col-span-2">
+                                        @if($rIdx === 0)
+                                            <span class="inline-flex items-center justify-center w-full py-1.5 px-2 rounded bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                                                Quando
+                                            </span>
+                                        @else
+                                            <select wire:model.live="regras_dinamicas.{{ $rIdx }}.conector" class="w-full text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                                <option value="AND">E (AND)</option>
+                                                <option value="OR">OU (OR)</option>
+                                            </select>
+                                        @endif
+                                    </div>
+
+                                    <div class="md:col-span-4">
+                                        <select wire:model.live="regras_dinamicas.{{ $rIdx }}.campo" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                            <option value="">Selecione o campo do formulário...</option>
+                                            @foreach($this->camposFiltroDisponiveis as $cKey => $cLabel)
+                                                <option value="{{ $cKey }}">{{ $cLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="md:col-span-3">
+                                        <select wire:model.live="regras_dinamicas.{{ $rIdx }}.operador" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                            <option value="=">Respondeu exatamente (=)</option>
+                                            <option value="in">Escolheu uma das opções (sep. vírgula)</option>
+                                            <option value="!=">Diferente de (!=)</option>
+                                            <option value="not_in">Não escolheu (sep. vírgula)</option>
+                                            <option value="contains">Contém o texto</option>
+                                            <option value="not_empty">Está preenchido</option>
+                                            <option value="empty">Está em branco</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="md:col-span-2">
+                                        @if(!in_array($regra['operador'] ?? '=', ['empty', 'not_empty'], true))
+                                            <input type="text"
+                                                   wire:model.live.debounce.300ms="regras_dinamicas.{{ $rIdx }}.valor"
+                                                   placeholder="{{ in_array($regra['operador'] ?? '=', ['in', 'not_in']) ? 'Ex: Opção Y, Opção Z' : 'Valor esperado...' }}"
+                                                   class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-1.5">
+                                        @endif
+                                    </div>
+
+                                    <div class="md:col-span-1 flex justify-end">
+                                        <button type="button" wire:click="removerRegraDinamica({{ $rIdx }})" class="p-1.5 text-gray-400 hover:text-red-600 rounded transition" title="Remover condição">
+                                            <i class="ph ph-trash text-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
 
             <!-- SEÇÃO 3: AÇÃO, CANAL E TEMPLATE -->

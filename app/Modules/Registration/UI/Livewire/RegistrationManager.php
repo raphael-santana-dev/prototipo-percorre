@@ -82,8 +82,9 @@ class RegistrationManager extends Component
 
     public bool $selecionarTudo = false;
 
-    // Controle do Modal de Disparo de 1º Contato (E-mail / WhatsApp Suri)
+    // Controle do Modal de Disparo Manual (1º Contato ou Continuidade de Formulário)
     public bool $modalPrimeiroContatoAberto = false;
+    public string $modoDisparoManual = 'primeiro_contato'; // 'primeiro_contato' ou 'continuidade'
     public ?int $primeiroContatoInscricaoId = null;
     public string $primeiroContatoNome = '';
     public string $primeiroContatoCanal = 'whatsapp'; // 'email', 'whatsapp', 'ambos'
@@ -272,8 +273,9 @@ class RegistrationManager extends Component
     public function abrirModalPrimeiroContato(int $inscricaoId): void
     {
         $insc = Inscricao::findOrFail($inscricaoId);
+        $this->modoDisparoManual = 'primeiro_contato';
         $this->primeiroContatoInscricaoId = $insc->id;
-        $this->primeiroContatoNome = $insc->nome;
+        $this->primeiroContatoNome = (string) $insc->nome;
 
         // Se existir uma automação ativa configurada para 'inscricao.primeiro_contato', já carrega o canal e template dela como padrão
         $autoPadrao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', 'inscricao.primeiro_contato')
@@ -285,6 +287,43 @@ class RegistrationManager extends Component
             $this->primeiroContatoTemplateId = (string) $autoPadrao->template_id;
         } else {
             $this->primeiroContatoCanal = 'whatsapp';
+            $this->primeiroContatoTemplateId = '';
+        }
+
+        $this->modalPrimeiroContatoAberto = true;
+    }
+
+    public function abrirModalContinuidade(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+
+        if (in_array((int) $insc->etapa_atual, [99, 100], true)) {
+            $this->dispatch('erro', msg: 'Este candidato já concluiu o preenchimento do formulário.');
+            return;
+        }
+
+        $this->modoDisparoManual = 'continuidade';
+        $this->primeiroContatoInscricaoId = $insc->id;
+        $this->primeiroContatoNome = (string) $insc->nome;
+
+        // Procura automação ativa de continuidade, abandono ou retomada para pré-selecionar o template ideal
+        $autoContinuidade = \App\Modules\Comunicacao\Domain\Models\Automacao::whereIn('evento_gatilho', [
+                'inscricao.continuidade',
+                'inscricao.abandono',
+                'inscricao.criada',
+            ])
+            ->where('status', true)
+            ->orderByRaw("CASE 
+                WHEN evento_gatilho = 'inscricao.continuidade' THEN 1 
+                WHEN evento_gatilho = 'inscricao.abandono' THEN 2 
+                ELSE 3 END")
+            ->first();
+
+        if ($autoContinuidade) {
+            $this->primeiroContatoCanal = $autoContinuidade->canal_disparo ?: 'whatsapp';
+            $this->primeiroContatoTemplateId = (string) $autoContinuidade->template_id;
+        } else {
+            $this->primeiroContatoCanal = !empty($insc->celular) ? 'whatsapp' : 'email';
             $this->primeiroContatoTemplateId = '';
         }
 
@@ -329,23 +368,36 @@ class RegistrationManager extends Component
             return;
         }
 
+        $isContinuidade = $this->modoDisparoManual === 'continuidade';
+        $gatilhoDisparo = $isContinuidade ? 'inscricao.continuidade' : 'inscricao.primeiro_contato';
+
+        $tokenRetomada = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
+        $urlRetomada   = route('inscricao.retomar', ['token' => $tokenRetomada]);
+
+        $dadosExtras = [
+            'disparado_por_nome' => auth()->user()->name ?? 'Equipe',
+            'link_retomada_url'  => $urlRetomada,
+        ];
+
         \App\Modules\Comunicacao\Jobs\DispararAutomacaoJob::dispatch(
             $template,
             (string) $inscricao->email,
             $inscricao,
-            ['disparado_por_nome' => auth()->user()->name ?? 'Equipe'],
-            'inscricao.primeiro_contato',
-            $this->primeiroContatoCanal
+            $dadosExtras,
+            $gatilhoDisparo,
+            $this->primeiroContatoCanal,
+            true // Força o envio manual mesmo que já tenha recebido lembrete anterior
         );
 
-        // Registra tentativa de contato na tabela inscricao_contatos para acender os ícones da listagem
+        $rotuloHistorico = $isContinuidade ? 'Mensagem de Continuidade (Retomada)' : '1º Contato';
         $canaisRegistrar = $this->primeiroContatoCanal === 'ambos' ? ['email', 'whatsapp'] : [$this->primeiroContatoCanal];
+
         foreach ($canaisRegistrar as $cReg) {
             \App\Models\InscricaoContato::create([
                 'inscricao_id'   => $inscricao->id,
                 'canal'          => $cReg,
                 'data_contato'   => now(),
-                'conteudo'       => "1º Contato disparado usando o template '{$template->nome}'.",
+                'conteudo'       => "{$rotuloHistorico} disparado usando o template '{$template->nome}'.",
                 'houve_resposta' => false,
                 'user_id'        => auth()->id(),
                 'user_nome'      => auth()->user()->name ?? 'Sistema',
@@ -353,7 +405,7 @@ class RegistrationManager extends Component
         }
 
         $this->modalPrimeiroContatoAberto = false;
-        $this->dispatch('sucesso', msg: "1º Contato ({$this->primeiroContatoCanal}) enviado para a fila de disparo!");
+        $this->dispatch('sucesso', msg: "{$rotuloHistorico} ({$this->primeiroContatoCanal}) enviado para a fila de disparo!");
     }
     
     public function mount()
@@ -1706,6 +1758,47 @@ class RegistrationManager extends Component
                      ->toArray();
                      
         $this->selecionadas = array_map('strval', $ids);
+    }
+
+    public function avancarEtapaIndividual(int $id): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+            return;
+        }
+
+        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->findOrFail($id);
+
+        if ($inscricao->legado) {
+            $this->dispatch('erro', msg: 'Inscrições marcadas como Legado são somente leitura e não podem avançar.');
+            return;
+        }
+
+        if ($inscricao->ciclo && $inscricao->ciclo->bloqueado) {
+            $this->dispatch('erro', msg: 'O ciclo desta inscrição está bloqueado. Utilize a opção de Solicitar Alteração.');
+            return;
+        }
+
+        $pipeline = ($inscricao->ciclo && $inscricao->ciclo->statusPipeline->isNotEmpty())
+            ? $inscricao->ciclo->statusPipeline->values()
+            : StatusInscricao::orderBy('id')->get()->values();
+
+        if ($pipeline->isEmpty()) {
+            $this->dispatch('erro', msg: 'Nenhuma etapa configurada no funil deste ciclo.');
+            return;
+        }
+
+        $indiceAtual = $pipeline->search(fn($st) => (int) $st->id === (int) $inscricao->status_inscricao_id);
+
+        if ($indiceAtual === false) {
+            $proximoStatus = $pipeline->first();
+        } elseif (isset($pipeline[$indiceAtual + 1])) {
+            $proximoStatus = $pipeline[$indiceAtual + 1];
+        } else {
+            $this->dispatch('erro', msg: 'O candidato já se encontra na última etapa do funil (' . ($inscricao->statusInscricao->nome ?? 'Final') . ').');
+            return;
+        }
+
+        $this->alterarStatusQuickView($inscricao->id, $proximoStatus->id);
     }
 
     public function avancarSelecionadas()

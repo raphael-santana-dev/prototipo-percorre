@@ -466,6 +466,24 @@
                                     </a>
                                 @endif
 
+                                @if(!$inscricao->legado && feature('inscricao.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('inscricao.editar')))
+                                    <button type="button"
+                                            wire:click="avancarEtapaIndividual({{ $inscricao->id }})"
+                                            class="p-1.5 text-blue-600 transition-colors rounded hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-gray-600"
+                                            title="Avançar Etapa no Funil">
+                                        <i class="text-lg ph-bold ph-arrow-circle-right"></i>
+                                    </button>
+                                @endif
+
+                                @if(!in_array((int) $inscricao->etapa_atual, [99, 100], true))
+                                    <button type="button"
+                                            wire:click="abrirModalContinuidade({{ $inscricao->id }})"
+                                            class="p-1.5 text-amber-600 transition-colors rounded hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-gray-600"
+                                            title="Formulário não concluído (Passo {{ $inscricao->etapa_atual }}) — Disparar Mensagem de Continuidade">
+                                        <i class="text-lg ph-bold ph-clock-clockwise"></i>
+                                    </button>
+                                @endif
+
                                 <button type="button"
                                         wire:click="abrirModalPrimeiroContato({{ $inscricao->id }})"
                                         class="p-1.5 text-emerald-600 transition-colors rounded hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-gray-600"
@@ -1350,11 +1368,13 @@
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
                 <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
-                            <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+                        <span class="w-9 h-9 rounded-xl {{ $modoDisparoManual === 'continuidade' ? 'bg-amber-500' : 'bg-emerald-600' }} text-white flex items-center justify-center">
+                            <i class="ph-bold {{ $modoDisparoManual === 'continuidade' ? 'ph-clock-clockwise' : 'ph-paper-plane-tilt' }} text-lg"></i>
                         </span>
                         <div>
-                            <h3 class="text-sm font-extrabold uppercase tracking-wider">Disparar 1ª Mensagem de Contato</h3>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wider">
+                                {{ $modoDisparoManual === 'continuidade' ? 'Disparar Mensagem de Continuidade (Retomada)' : 'Disparar 1ª Mensagem de Contato' }}
+                            </h3>
                             <p class="text-xs text-gray-300">Candidato: <b>{{ $primeiroContatoNome }}</b></p>
                         </div>
                     </div>

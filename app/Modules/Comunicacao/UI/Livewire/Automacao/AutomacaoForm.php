@@ -25,12 +25,58 @@ class AutomacaoForm extends Component
     public string $abaPreview = 'email';
 
     public array $variaveisTemplateMap = [];
+    public array $regras_dinamicas = [];
     public array $eventosDisponiveis = [];
     public array $breadcrumbs = [];
+
+    public function adicionarRegraDinamica(string $conector = 'AND'): void
+    {
+        $this->regras_dinamicas[] = [
+            'conector' => in_array($conector, ['AND', 'OR'], true) ? $conector : 'AND',
+            'campo'    => '',
+            'operador' => '=',
+            'valor'    => '',
+        ];
+    }
+
+    public function removerRegraDinamica(int $index): void
+    {
+        unset($this->regras_dinamicas[$index]);
+        $this->regras_dinamicas = array_values($this->regras_dinamicas);
+    }
+
+    #[Computed]
+    public function camposFiltroDisponiveis(): array
+    {
+        $campos = [
+            'fixo:possui_deficiencia'   => '[Fixo] Pessoa com Deficiência (sim/nao)',
+            'fixo:natureza_deficiencia' => '[Fixo] Natureza da Deficiência',
+            'fixo:estado'               => '[Fixo] Estado (UF)',
+            'fixo:cidade'               => '[Fixo] Cidade',
+            'fixo:regiao'               => '[Fixo] Região (centro, norte, sul, leste, oeste)',
+            'fixo:unidade_id'           => '[Fixo] ID da Unidade',
+            'fixo:curso_id'             => '[Fixo] ID do Curso',
+            'fixo:turno_id'             => '[Fixo] ID do Turno',
+        ];
+
+        $camposDin = \App\Models\CampoFormulario::whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link'])
+            ->orderBy('etapa')
+            ->orderBy('ordem')
+            ->limit(150)
+            ->get();
+
+        foreach ($camposDin as $c) {
+            $label = trim(strip_tags((string) $c->label)) ?: $c->name;
+            $campos[$c->name] = "Pág. #{$c->etapa} — {$label} ({$c->name})";
+        }
+
+        return $campos;
+    }
 
     public function mount($id = null)
     {
         $this->eventosDisponiveis['inscricao.primeiro_contato'] = 'Inscrição: 1º Contato Manual (Botão na Listagem de Inscrições)';
+        $this->eventosDisponiveis['inscricao.continuidade']     = 'Inscrição: Mensagem de Continuidade / Retomada (Botão na Listagem)';
         $this->eventosDisponiveis['inscricao.criada']           = 'Inscrição: Novo Cadastro Manual (Link de Retomada)';
         $this->eventosDisponiveis['inscricao.finalizada']       = 'Inscrição: Formulário Concluído (Etapa Finalizada)';
         $this->eventosDisponiveis['inscricao.abandono']         = 'Inscrição: Abandono de Formulário (Todas as fases liberadas e não finalizado)';
@@ -121,6 +167,10 @@ class AutomacaoForm extends Component
 
         foreach ($vars as $v) {
             $this->variaveisTemplateMap[$v] = $mapaSalvo[$v] ?? (is_numeric($v) ? 'nome' : strtolower($v));
+        }
+
+        if (empty($this->regras_dinamicas) && !empty($this->evento_gatilho)) {
+            $this->regras_dinamicas = $cfg['regras_dinamicas_gatilho'][$this->evento_gatilho] ?? [];
         }
     }
 
@@ -245,11 +295,17 @@ class AutomacaoForm extends Component
             return;
         }
 
-        if (!empty($this->variaveisTemplateMap) && Schema::hasColumn('email_templates', 'configuracoes_suri')) {
+        $regrasFiltradas = array_values(array_filter($this->regras_dinamicas, fn($r) => !empty($r['campo'])));
+
+        if (Schema::hasColumn('email_templates', 'configuracoes_suri')) {
             $cfgSuri = is_array($template->configuracoes_suri)
                 ? $template->configuracoes_suri
                 : (json_decode($template->configuracoes_suri ?? '{}', true) ?: []);
-            $cfgSuri['variable_map'] = $this->variaveisTemplateMap;
+
+            if (!empty($this->variaveisTemplateMap)) {
+                $cfgSuri['variable_map'] = $this->variaveisTemplateMap;
+            }
+            $cfgSuri['regras_dinamicas_gatilho'][$this->evento_gatilho] = $regrasFiltradas;
             $template->update(['configuracoes_suri' => $cfgSuri]);
         }
 
@@ -264,6 +320,9 @@ class AutomacaoForm extends Component
 
         if (Schema::hasColumn('automacoes', 'parametro_dias')) {
             $dados['parametro_dias'] = $this->exigeParametroDias ? (int) $this->parametro_dias : null;
+        }
+        if (Schema::hasColumn('automacoes', 'condicoes')) {
+            $dados['condicoes'] = $regrasFiltradas;
         }
 
         if ($this->automacaoId) {

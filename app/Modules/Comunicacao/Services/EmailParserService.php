@@ -9,7 +9,7 @@ class EmailParserService
 {
     public static function getDicionarioDisponivel()
     {
-        return [
+        $dicionario = [
             'Dados do Candidato' => [
                 '{{nome}}'          => 'Nome completo do candidato',
                 '{{primeiro_nome}}' => 'Primeiro nome do candidato (Ex: João)',
@@ -35,6 +35,19 @@ class EmailParserService
                 '{{link_painel}}'      => 'Botão/Link de acesso ao painel administrativo',
             ],
         ];
+
+        if (class_exists(\App\Models\Formulario::class)) {
+            $formularios = \App\Models\Formulario::where('status', true)
+                ->whereNotNull('slug')
+                ->orderBy('titulo')
+                ->get(['id', 'titulo', 'slug']);
+
+            foreach ($formularios as $form) {
+                $dicionario['Links de Formulários Cadastrados']['{{link_formulario_' . $form->id . '}}'] = "Link: {$form->titulo} (/f/{$form->slug})";
+            }
+        }
+
+        return $dicionario;
     }
 
     /**
@@ -82,6 +95,31 @@ class EmailParserService
                 'senha_provisoria'   => 'Senha Provisória Gerada (Student)',
             ],
         ];
+
+        if (class_exists(\App\Models\Formulario::class)) {
+            $formularios = \App\Models\Formulario::where('status', true)
+                ->whereNotNull('slug')
+                ->orderBy('titulo')
+                ->get(['id', 'titulo', 'slug', 'tipo']);
+
+            foreach ($formularios as $form) {
+                $tipoFmt = strtoupper((string) ($form->tipo ?: 'GERAL'));
+                $colunas['Links de Formulários Cadastrados']['formulario_url:' . $form->id] = "[{$tipoFmt}] {$form->titulo} (/f/{$form->slug})";
+            }
+        }
+
+        if (class_exists(\App\Models\Ciclo::class)) {
+            $ciclos = \App\Models\Ciclo::where('status', true)
+                ->orderByDesc('id')
+                ->get(['id', 'nome', 'tipo_ciclo', 'slug_projeto', 'slug']);
+
+            foreach ($ciclos as $ciclo) {
+                $isCustom = ($ciclo->tipo_ciclo ?? 'regular') === 'customizado';
+                $slugCiclo = $ciclo->slug_projeto ?: $ciclo->slug;
+                $caminhoPreview = ($isCustom && !empty($slugCiclo)) ? "/inscricao/{$slugCiclo}" : '/inscricao';
+                $colunas['Links de Formulários Cadastrados']['ciclo_url:' . $ciclo->id] = "[INSCRIÇÃO] {$ciclo->nome} ({$caminhoPreview})";
+            }
+        }
 
         if (class_exists(\App\Models\CampoFormulario::class)) {
             $camposDin = \App\Models\CampoFormulario::whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link'])
@@ -137,6 +175,36 @@ class EmailParserService
                 : [];
             $val = $dinamicos[$chaveDin] ?? $dadosExtras[$chaveDin] ?? '';
             return is_array($val) ? implode(', ', $val) : (string) $val;
+        }
+
+        // Resolução de Links de Formulários Cadastrados (selecionados no mapeamento da Automação/Esteira ou via tag {{link_formulario_ID}})
+        if (str_starts_with($coluna, 'formulario_url:') || preg_match('/^link_formulario_(\d+)$/i', $coluna)) {
+            $formId = str_starts_with($coluna, 'formulario_url:')
+                ? (int) substr($coluna, 15)
+                : (int) preg_replace('/\D/', '', $coluna);
+
+            $form = class_exists(\App\Models\Formulario::class) ? \App\Models\Formulario::find($formId) : null;
+            if ($form && !empty($form->slug)) {
+                return url('/f/' . $form->slug);
+            }
+            return url('/');
+        }
+
+        // Resolução de Links de Ciclos de Inscrição Cadastrados (ciclo_url:ID ou {{link_ciclo_ID}})
+        if (str_starts_with($coluna, 'ciclo_url:') || preg_match('/^link_ciclo_(\d+)$/i', $coluna)) {
+            $cicloId = str_starts_with($coluna, 'ciclo_url:')
+                ? (int) substr($coluna, 10)
+                : (int) preg_replace('/\D/', '', $coluna);
+
+            $ciclo = class_exists(\App\Models\Ciclo::class) ? \App\Models\Ciclo::find($cicloId) : null;
+            if ($ciclo) {
+                $isCustom = ($ciclo->tipo_ciclo ?? 'regular') === 'customizado';
+                $slugCiclo = $ciclo->slug_projeto ?: $ciclo->slug;
+                return ($isCustom && !empty($slugCiclo))
+                    ? url('/inscricao/' . $slugCiclo)
+                    : url('/inscricao');
+            }
+            return url('/inscricao');
         }
 
         // Tratamento direto de variáveis de Link para retornar SEMPRE a URL pura (e não o texto do botão HTML)
@@ -372,9 +440,18 @@ class EmailParserService
             return 'href=' . $m[1] . $urlPura . $m[1];
         }, $texto);
 
-        $resultado = preg_replace_callback('/(?:\{\{|\[)\s*([a-zA-Z0-9_]+)\s*(?:\}\}|\])/u', function ($matches) use ($tags) {
+        $resultado = preg_replace_callback('/(?:\{\{|\[)\s*([a-zA-Z0-9_]+)\s*(?:\}\}|\])/u', function ($matches) use ($tags, $inscricao, $dadosExtras, $autoLink) {
             $key = strtolower(trim($matches[1]));
-            return $tags[$key] ?? $matches[0];
+            if (array_key_exists($key, $tags)) {
+                return $tags[$key];
+            }
+            if (preg_match('/^link_(formulario|ciclo)_(\d+)$/i', $key)) {
+                $urlForm = self::resolverValorColuna($key, $inscricao, $dadosExtras);
+                return $autoLink
+                    ? '<a href="' . $urlForm . '" target="_blank" rel="noopener noreferrer" style="color:#7c3aed;font-weight:bold;text-decoration:underline;word-break:break-all;">' . $urlForm . '</a>'
+                    : $urlForm;
+            }
+            return $matches[0];
         }, $texto);
 
         return $autoLink ? self::autoLinkUrlsEmHtml($resultado) : $resultado;

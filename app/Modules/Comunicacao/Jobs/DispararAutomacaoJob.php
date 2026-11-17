@@ -59,6 +59,10 @@ class DispararAutomacaoJob implements ShouldQueue
             $this->inscricao->loadMissing(['curso', 'unidade', 'turno', 'ciclo', 'statusInscricao']);
         }
 
+        if ($this->inscricao && !$this->candidatoAtendeRegrasAvancadas()) {
+            return;
+        }
+
         $canalTemplate = $this->template->canal ?? 'email';
         $canalDesejado = $this->canalForcado ?: $canalTemplate;
 
@@ -375,5 +379,62 @@ class DispararAutomacaoJob implements ShouldQueue
         }
 
         return $httpStatus ? "Falha na comunicação com a API da Suri (HTTP {$httpStatus})." : 'Erro desconhecido ao comunicar com a Suri.';
+    }
+
+    private function candidatoAtendeRegrasAvancadas(): bool
+    {
+        $cfgSuri = is_array($this->template->configuracoes_suri)
+            ? $this->template->configuracoes_suri
+            : (json_decode($this->template->configuracoes_suri ?? '{}', true) ?: []);
+
+        $regras = $this->dadosExtras['regras_dinamicas']
+            ?? ($this->gatilho ? ($cfgSuri['regras_dinamicas_gatilho'][$this->gatilho] ?? []) : []);
+
+        $regrasValidas = array_values(array_filter((array) $regras, fn($r) => !empty($r['campo'])));
+        if (empty($regrasValidas)) {
+            return true;
+        }
+
+        $din = is_array($this->inscricao->dados_dinamicos)
+            ? $this->inscricao->dados_dinamicos
+            : (json_decode($this->inscricao->dados_dinamicos ?? '{}', true) ?: []);
+
+        $resultadoFinal = null;
+
+        foreach ($regrasValidas as $regra) {
+            $campo = trim((string) ($regra['campo'] ?? ''));
+            $op    = (string) ($regra['operador'] ?? '=');
+            $alvo  = mb_strtolower(trim((string) ($regra['valor'] ?? '')), 'UTF-8');
+
+            $valBruto = str_starts_with($campo, 'fixo:')
+                ? ($this->inscricao->{substr($campo, 5)} ?? '')
+                : ($din[$campo] ?? ($this->inscricao->{$campo} ?? ''));
+
+            $respostas = is_array($valBruto)
+                ? array_map(fn($v) => mb_strtolower(trim((string) $v), 'UTF-8'), $valBruto)
+                : [mb_strtolower(trim((string) $valBruto), 'UTF-8')];
+
+            $respostas  = array_values(array_filter($respostas, fn($v) => $v !== ''));
+            $opcoesAlvo = array_values(array_filter(array_map(fn($v) => mb_strtolower(trim($v), 'UTF-8'), explode(',', $alvo)), fn($v) => $v !== ''));
+
+            $passou = match ($op) {
+                'empty'        => empty($respostas),
+                'not_empty'    => !empty($respostas),
+                '='            => in_array($alvo, $respostas, true),
+                '!='           => !in_array($alvo, $respostas, true),
+                'in'           => !empty(array_intersect($respostas, $opcoesAlvo)),
+                'not_in'       => empty(array_intersect($respostas, $opcoesAlvo)),
+                'contains'     => collect($respostas)->contains(fn($r) => $alvo !== '' && str_contains($r, $alvo)),
+                'not_contains' => collect($respostas)->every(fn($r) => $alvo === '' || !str_contains($r, $alvo)),
+                default        => false,
+            };
+
+            $conector = strtoupper((string) ($regra['conector'] ?? 'AND')) === 'OR' ? 'OR' : 'AND';
+            $resultadoFinal = ($resultadoFinal === null)
+                ? $passou
+                : ($conector === 'OR' ? ($resultadoFinal || $passou) : ($resultadoFinal && $passou));
+        }
+
+        return $resultadoFinal ?? true;
     }
 }
