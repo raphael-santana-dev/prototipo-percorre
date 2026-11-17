@@ -144,6 +144,38 @@
             <div class="lg:col-span-2">
                 <div class="card p-6 md:p-8 space-y-10">
 
+                    @php
+                        $regAbandono = $dinamicos['_registro_abandono'] ?? null;
+                    @endphp
+                    @if(!empty($regAbandono) && (int) $inscricao->etapa_atual !== 99)
+                        <div class="p-4 rounded-xl border {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-50/70 border-red-200 text-red-900' : 'bg-amber-50/70 border-amber-200 text-amber-900' }} flex items-start justify-between gap-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
+                                    <i class="ph-fill {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'ph-x-circle' : 'ph-clock-clockwise' }} text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="text-xs font-extrabold uppercase tracking-wider">
+                                            Motivo de Interrupção / Abandono: {{ $regAbandono['opcao_label'] ?? ucfirst($regAbandono['opcao'] ?? '-') }}
+                                        </h4>
+                                        <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-white/80 border border-black/10">
+                                            Passo #{{ $regAbandono['etapa_atual'] ?? $inscricao->etapa_atual }} • {{ $regAbandono['data_hora'] ?? '-' }}
+                                        </span>
+                                    </div>
+                                    @if(!empty($regAbandono['observacao']))
+                                        <p class="text-xs mt-1.5 font-medium leading-relaxed">
+                                            <b>Comentário do candidato:</b> "{{ $regAbandono['observacao'] }}"
+                                        </p>
+                                    @else
+                                        <p class="text-[11px] opacity-80 mt-1">
+                                            Nenhum comentário adicional foi digitado pelo candidato.
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     {{-- BARRA DE ATENDIMENTO ASSISTIDO PELO PARTICIPANTE --}}
                     @if($podeEditarAssistido)
                         <div class="p-4 rounded-xl border {{ $modoEdicaoAssistida ? 'bg-indigo-50/80 border-indigo-300' : 'bg-gray-50 border-gray-200' }} flex flex-col sm:flex-row sm:items-center justify-between gap-3">

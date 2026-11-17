@@ -71,6 +71,69 @@ class Inscricao extends Component
     public bool $isEmbed = false;
     public bool $isAssistido = false;
 
+    public string $abandono_opcao = 'preencher_depois'; // 'preencher_depois' ou 'desisti'
+    public string $abandono_observacao = '';
+    public bool $abandonoRegistradoSucesso = false;
+
+    public function registrarMotivoAbandono(): void
+    {
+        if ($this->isPreview || in_array((int) $this->etapaAtual, [99, 100], true)) {
+            return;
+        }
+
+        $this->validate([
+            'abandono_opcao'      => 'required|in:desisti,preencher_depois',
+            'abandono_observacao' => 'nullable|string|max:1000',
+        ], [
+            'abandono_opcao.required' => 'Selecione uma das opções para continuar.',
+        ]);
+
+        $rotuloOpcao = $this->abandono_opcao === 'desisti'
+            ? 'Desisti de preencher'
+            : 'Irei preencher depois';
+
+        $registroAtual = [
+            'opcao'       => $this->abandono_opcao,
+            'opcao_label' => $rotuloOpcao,
+            'observacao'  => trim($this->abandono_observacao) ?: null,
+            'etapa_atual' => $this->etapaAtual,
+            'data_hora'   => now()->format('d/m/Y H:i:s'),
+        ];
+
+        $historico = is_array($this->respostas['_historico_abandono'] ?? null)
+            ? $this->respostas['_historico_abandono']
+            : [];
+        $historico[] = $registroAtual;
+
+        $this->respostas['_registro_abandono']  = $registroAtual;
+        $this->respostas['_historico_abandono'] = array_slice($historico, -10);
+
+        $this->salvarRascunhoSilencioso();
+
+        if (!$this->isTeste && class_exists(\App\Models\AuditoriaLog::class)) {
+            \App\Models\AuditoriaLog::create([
+                'tabela_alterada'     => 'inscricoes',
+                'registro_id'         => $this->inscricaoId,
+                'acao'                => 'abandono_formulario',
+                'informacao_anterior' => null,
+                'nova_informacao'     => array_merge($registroAtual, [
+                    'candidato_nome'  => $this->nome ?: 'Não informado',
+                    'candidato_email' => $this->emailOriginal ?: ($this->email ?: null),
+                    'candidato_cpf'   => $this->cpf ?: null,
+                    'ciclo_id'        => $this->cicloAtivoId,
+                ]),
+                'usuario_id'          => auth()->id(),
+                'usuario_nome'        => $this->nome ?: 'Candidato (Formulário Público)',
+                'usuario_role'        => 'candidato',
+                'usuario_login'       => $this->emailOriginal ?: ($this->email ?: null),
+                'ip'                  => request()->ip(),
+                'navegador'           => request()->userAgent(),
+            ]);
+        }
+
+        $this->abandonoRegistradoSucesso = true;
+    }
+
     public int $etapaCamposFixos = 1;
     public $laudo_pcd_upload = null;
 

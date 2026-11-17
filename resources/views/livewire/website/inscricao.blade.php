@@ -29,8 +29,22 @@
      x-data="{
         storageKey: 'percorre_inscricao_ciclo_{{ $cicloAtivoId ?? 'default' }}{{ $isTeste ? '_TESTE' : '' }}',
         readyToSave: false,
+        modalAbandonoAberto: false,
+        jaExibiuModalAbandono: false,
         init() {
             if (@js($isPreview) || !@js($inscricoesAbertas)) return;
+
+            document.addEventListener('mouseleave', (e) => {
+                if (
+                    e.clientY <= 12 &&
+                    !this.jaExibiuModalAbandono &&
+                    !this.modalAbandonoAberto &&
+                    ![99, 100].includes(Number($wire.etapaAtual))
+                ) {
+                    this.modalAbandonoAberto = true;
+                    this.jaExibiuModalAbandono = true;
+                }
+            });
 
             const raw = localStorage.getItem(this.storageKey);
             if (raw) {
@@ -366,4 +380,104 @@
             @endif
         </div>
     </div>
+
+    {{-- MODAL EXIT-INTENT: RETENÇÃO E MOTIVO DE ABANDONO DO FORMULÁRIO --}}
+    <template x-teleport="body">
+        <div x-show="modalAbandonoAberto"
+             x-cloak
+             @keydown.escape.window="modalAbandonoAberto = false"
+             class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/70 backdrop-blur-xs p-4 font-sans"
+             role="dialog"
+             aria-modal="true">
+            
+            <div @click.away="modalAbandonoAberto = false"
+                 class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                
+                <div class="px-6 py-4 bg-gray-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-xl bg-purpura-600 text-white flex items-center justify-center shrink-0">
+                            <i class="ph-fill ph-hand-palm text-lg"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Não abandone a sua inscrição!</h3>
+                            <p class="text-[11px] text-gray-300">Falta pouco para concluir o seu preenchimento.</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalAbandonoAberto = false" class="text-gray-400 hover:text-white p-1 rounded-lg transition">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    @if($abandonoRegistradoSucesso)
+                        <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+                            <i class="ph-fill ph-check-circle text-3xl text-emerald-600"></i>
+                            <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                                {{ $abandono_opcao === 'preencher_depois' ? 'O seu progresso foi guardado!' : 'Agradecemos pelo seu feedback!' }}
+                            </h4>
+                            <p class="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                                {{ $abandono_opcao === 'preencher_depois'
+                                    ? 'As informações preenchidas até aqui ficaram salvas no navegador para quando você retomar.'
+                                    : 'A sua resposta foi registada para nos ajudar a melhorar o processo seletivo.' }}
+                            </p>
+                            <div class="pt-2">
+                                <button type="button"
+                                        @click="modalAbandonoAberto = false; $wire.set('abandonoRegistradoSucesso', false)"
+                                        class="px-5 py-2 bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold rounded-lg transition">
+                                    Voltar ao Formulário
+                                </button>
+                            </div>
+                        </div>
+                    @else
+                        <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                            Notámos que está prestes a sair da página. Caso não possa concluir agora, conte-nos rapidamente o motivo:
+                        </p>
+
+                        <div class="space-y-2.5">
+                            <label class="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition {{ $abandono_opcao === 'preencher_depois' ? 'border-purpura-500 bg-purpura-50/40 dark:bg-purpura-900/20 ring-1 ring-purpura-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800' }}">
+                                <input type="radio" wire:model.live="abandono_opcao" value="preencher_depois" class="mt-0.5 text-purpura-600 focus:ring-purpura-500">
+                                <div class="text-xs">
+                                    <span class="font-bold text-gray-900 dark:text-white block">Irei preencher depois</span>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">Quero guardar o meu rascunho atual para retomar em outro momento.</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition {{ $abandono_opcao === 'desisti' ? 'border-red-500 bg-red-50/40 dark:bg-red-900/20 ring-1 ring-red-500' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800' }}">
+                                <input type="radio" wire:model.live="abandono_opcao" value="desisti" class="mt-0.5 text-red-600 focus:ring-red-500">
+                                <div class="text-xs">
+                                    <span class="font-bold text-gray-900 dark:text-white block">Desisti</span>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400">Não pretendo dar continuidade a esta inscrição.</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                Deseja deixar algum comentário ou informar o motivo? (Opcional)
+                            </label>
+                            <textarea wire:model="abandono_observacao"
+                                      rows="3"
+                                      placeholder="Digite aqui se teve alguma dúvida, dificuldade ou motivo específico..."
+                                      class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-xs p-2.5 focus:ring-1 focus:ring-purpura-500 focus:border-purpura-500"></textarea>
+                            @error('abandono_observacao') <span class="text-xs text-red-600 block mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-end gap-2">
+                            <button type="button"
+                                    wire:click="registrarMotivoAbandono"
+                                    wire:loading.attr="disabled"
+                                    class="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 text-xs font-semibold text-gray-700 dark:text-gray-200 transition">
+                                Registar motivo
+                            </button>
+                            <button type="button"
+                                    @click="modalAbandonoAberto = false"
+                                    class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-bold shadow-xs transition">
+                                Continuar preenchendo agora
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
