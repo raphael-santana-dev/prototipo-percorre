@@ -139,9 +139,12 @@ class AutomacaoForm extends Component
     #[Computed]
     public function templatesCompativeis()
     {
-        return EmailTemplate::orderBy('nome')->get()->filter(function (EmailTemplate $tpl) {
-            return $this->templateCompativelComCanal($tpl, $this->canal_disparo);
-        })->values();
+        return EmailTemplate::ativos()
+            ->orderBy('nome')
+            ->get()
+            ->filter(function (EmailTemplate $tpl) {
+                return $this->templateCompativelComCanal($tpl, $this->canal_disparo);
+            })->values();
     }
 
     #[Computed]
@@ -226,6 +229,11 @@ class AutomacaoForm extends Component
         ]);
 
         $template = EmailTemplate::findOrFail($this->template_id);
+
+        if (!($template->status ?? true)) {
+            $this->addError('template_id', "O template '{$template->nome}' está desativado e não pode ser utilizado.");
+            return;
+        }
 
         if (!$this->templateCompativelComCanal($template, $this->canal_disparo)) {
             $this->addError('template_id', "O template '{$template->nome}' é do tipo [" . strtoupper($template->canal ?? 'email') . "] e não pode ser usado para disparo [" . strtoupper($this->canal_disparo) . "].");

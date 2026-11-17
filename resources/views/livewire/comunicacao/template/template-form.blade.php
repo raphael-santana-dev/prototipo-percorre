@@ -128,8 +128,15 @@
                 </button>
             </div>
 
-            <!-- CONTROLES DE TELA E SALVAMENTO -->
-            <div class="flex items-center gap-2">
+            <!-- CONTROLES DE STATUS, TELA E SALVAMENTO -->
+            <div class="flex items-center gap-3">
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-pointer select-none">
+                    <input type="checkbox" wire:model.live="status" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
+                    <span class="text-xs font-medium {{ $status ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-400' }}">
+                        {{ $status ? 'Template Ativo' : 'Template Inativo' }}
+                    </span>
+                </label>
+
                 <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button type="button" @click="modoExpandido = !modoExpandido; navbarOculta = modoExpandido;" class="px-2 py-1 text-xs rounded transition-colors" :class="modoExpandido ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xs' : 'text-gray-500 hover:text-gray-900'" title="Expandir Tela">
                         <i class="ph" :class="modoExpandido ? 'ph-corners-in' : 'ph-arrows-out'"></i>
@@ -140,8 +147,10 @@
                 </div>
 
                 @if(feature('template.editar') || feature('template.criar'))
-                    <button type="button" wire:click="salvar" wire:loading.attr="disabled" class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none">
-                        {{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}
+                    <button type="button" wire:click="salvar" wire:loading.attr="disabled" wire:target="salvar" class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none flex items-center gap-1.5">
+                        <i class="ph ph-spinner animate-spin text-sm" wire:loading wire:target="salvar"></i>
+                        <span wire:loading.remove wire:target="salvar">{{ $templateId ? 'Atualizar Template' : 'Salvar Template' }}</span>
+                        <span wire:loading wire:target="salvar">{{ in_array($canal, ['whatsapp', 'ambos']) ? 'Integrando com Suri...' : 'Salvando...' }}</span>
                     </button>
                 @endif
             </div>

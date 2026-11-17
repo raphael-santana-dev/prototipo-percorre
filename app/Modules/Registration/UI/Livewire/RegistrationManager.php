@@ -293,7 +293,7 @@ class RegistrationManager extends Component
 
     public function getTemplatesPrimeiroContatoProperty()
     {
-        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')
+        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::ativos()->orderBy('nome')
             ->get()
             ->filter(function ($tpl) {
                 $c = $tpl->canal ?? 'email';

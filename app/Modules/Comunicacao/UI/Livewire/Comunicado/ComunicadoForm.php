@@ -177,7 +177,7 @@ class ComunicadoForm extends Component
         $cursosDisponiveis = DB::table('cursos')->orderBy('nome')->get();
 
         return view('livewire.comunicacao.comunicado.comunicado-form', [
-            'templates'           => EmailTemplate::orderBy('nome')->get(),
+            'templates'           => EmailTemplate::ativos()->orderBy('nome')->get(),
             'rolesDisponiveis'    => $rolesDisponiveis,
             'unidadesDisponiveis' => $unidadesDisponiveis,
             'cursosDisponiveis'   => $cursosDisponiveis,
