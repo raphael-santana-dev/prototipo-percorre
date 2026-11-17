@@ -403,6 +403,30 @@
                             </div>
 
                             <div class="flex items-center gap-3 sm:gap-4 text-white dark:text-gray-200 ml-auto">
+                                @if(strtolower(trim(auth()->user()?->email ?? '')) === 'dev@percorre.com')
+                                    @php
+                                        $envRaw = strtolower((string) app()->environment());
+                                        if (in_array($envRaw, ['production', 'prod', 'producao', 'produção'], true)) {
+                                            $envNome = 'Produção';
+                                            $envClasses = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40';
+                                            $envDot = 'bg-emerald-400 animate-pulse';
+                                        } elseif (in_array($envRaw, ['staging', 'homolog', 'homologacao', 'homologação', 'hml', 'testing'], true)) {
+                                            $envNome = 'Homologação';
+                                            $envClasses = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
+                                            $envDot = 'bg-amber-400';
+                                        } else {
+                                            $envNome = 'Local';
+                                            $envClasses = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
+                                            $envDot = 'bg-sky-400';
+                                        }
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border {{ $envClasses }} shrink-0 select-none"
+                                          title="Ambiente atual do sistema (APP_ENV: {{ app()->environment() }}) — Visível apenas para dev@percorre.com">
+                                        <span class="w-2 h-2 rounded-full {{ $envDot }}"></span>
+                                        <span>{{ $envNome }}</span>
+                                    </span>
+                                @endif
+
                                 @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
                                     <a href="{{ route('portal.index') }}" target="_blank" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors shadow-sm whitespace-nowrap shrink-0" title="Abrir Portal Público">
                                         <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
