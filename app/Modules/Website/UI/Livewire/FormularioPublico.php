@@ -44,6 +44,30 @@ class FormularioPublico extends Component
     public bool $isAssistido = false;
 
     public array $formSettings = [];
+    public string $resumeToken = '';
+    public bool $veioPorLinkRetomada = false;
+
+    protected function gerarResumeTokenSeguro(?int $id = null): string
+    {
+        $alvoId = $id ?: $this->respostaId;
+        if (!$alvoId || !isset($this->formulario->id)) {
+            return '';
+        }
+        return \Illuminate\Support\Facades\Crypt::encryptString($alvoId . '|' . $this->formulario->id);
+    }
+
+    protected function extrairIdDeResumeToken(?string $token): ?int
+    {
+        if (empty($token)) return null;
+        try {
+            $decriptado = \Illuminate\Support\Facades\Crypt::decryptString($token);
+            $partes = explode('|', $decriptado);
+            if (count($partes) === 2 && (int) $partes[1] === (int) $this->formulario->id) {
+                return (int) $partes[0];
+            }
+        } catch (\Throwable $e) {}
+        return null;
+    }
 
     public function mount($slug)
     {
@@ -186,6 +210,27 @@ class FormularioPublico extends Component
                 }
             }
         }
+
+        if (!$this->isTeste && request()->filled('retomar_token')) {
+            $idRetomado = $this->extrairIdDeResumeToken(request()->query('retomar_token'));
+            if ($idRetomado) {
+                $respBanco = RespostaFormulario::where('id', $idRetomado)
+                    ->where('formulario_id', $this->formulario->id)
+                    ->first();
+                if ($respBanco) {
+                    $this->veioPorLinkRetomada = true;
+                    $this->respostaId = $respBanco->id;
+                    $this->resumeToken = $this->gerarResumeTokenSeguro($respBanco->id);
+                    $this->etapaAtual = min($this->totalEtapas, max(1, (int) ($respBanco->etapa_parada ?? 1)));
+                    $salvas = is_string($respBanco->respostas) ? json_decode($respBanco->respostas, true) : ($respBanco->respostas ?? []);
+                    if (is_array($salvas)) {
+                        foreach ($salvas as $k => $v) {
+                            if ($v !== '' && $v !== null) $this->respostas[$k] = $v;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public function restaurarRascunhoLocal(array $dados)
@@ -194,13 +239,19 @@ class FormularioPublico extends Component
             return;
         }
 
-        if (!empty($dados['respostaId'])) {
-            $respBanco = RespostaFormulario::where('id', $dados['respostaId'])
+        if ($this->veioPorLinkRetomada && $this->respostaId) {
+            return;
+        }
+
+        $idValidado = $this->extrairIdDeResumeToken($dados['resumeToken'] ?? null);
+        if ($idValidado) {
+            $respBanco = RespostaFormulario::where('id', $idValidado)
                 ->where('formulario_id', $this->formulario->id)
                 ->first();
 
             if ($respBanco) {
                 $this->respostaId = $respBanco->id;
+                $this->resumeToken = $this->gerarResumeTokenSeguro($respBanco->id);
             }
         }
 
@@ -263,6 +314,7 @@ class FormularioPublico extends Component
         );
 
         $this->respostaId = $registro->id;
+        $this->resumeToken = $this->gerarResumeTokenSeguro($registro->id);
     }
 
     private function bloquearAcesso(string $mensagem, string $icone, bool $exibeBotaoLogin = false)

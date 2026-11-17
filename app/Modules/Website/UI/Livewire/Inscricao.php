@@ -137,6 +137,36 @@ class Inscricao extends Component
     public int $etapaCamposFixos = 1;
     public $laudo_pcd_upload = null;
 
+    public string $resumeToken = '';
+    public bool $veioPorLinkRetomada = false;
+    public bool $faseAtualConcluidaAguardando = false;
+
+
+    protected function gerarResumeTokenSeguro(?int $id = null): string
+    {
+        $alvoId = $id ?: $this->inscricaoId;
+        if (!$alvoId || !$this->cicloAtivoId) {
+            return '';
+        }
+        return \Illuminate\Support\Facades\Crypt::encryptString($alvoId . '|' . $this->cicloAtivoId);
+    }
+
+    protected function extrairIdDeResumeToken(?string $token): ?int
+    {
+        if (empty($token)) {
+            return null;
+        }
+        try {
+            $decriptado = \Illuminate\Support\Facades\Crypt::decryptString($token);
+            $partes = explode('|', $decriptado);
+            if (count($partes) === 2 && (int) $partes[1] === (int) $this->cicloAtivoId) {
+                return (int) $partes[0];
+            }
+        } catch (\Throwable $e) {}
+
+        return null;
+    }
+
     public function hydrate(): void
     {
         if ($this->camposDinamicos instanceof Collection) {
@@ -263,6 +293,7 @@ class Inscricao extends Component
         if (!$this->isTeste && session()->has('inscricao_retomada_id')) {
             $inscricaoRetomada = InscricaoModel::find(session('inscricao_retomada_id'));
             if ($inscricaoRetomada && $inscricaoRetomada->ciclo_id == $this->cicloAtivoId) {
+                $this->veioPorLinkRetomada = true;
                 $this->carregarModeloInscricao($inscricaoRetomada);
             }
             session()->forget('inscricao_retomada_id');
@@ -381,17 +412,27 @@ class Inscricao extends Component
             return;
         }
 
-        if (!$this->isTeste && !empty($dados['inscricaoId'])) {
-            $inscBanco = InscricaoModel::where('id', $dados['inscricaoId'])
+        // Se o candidato acabou de abrir via Link de Retomada oficial (E-mail/WhatsApp),
+        // os dados do banco têm prioridade absoluta e não podem ser sobrescritos pelo localStorage antigo.
+        if ($this->veioPorLinkRetomada && $this->inscricaoId) {
+            return;
+        }
+
+        // Validação criptográfica contra adulteração de ID no localStorage (Anti-IDOR)
+        $idValidadoToken = $this->extrairIdDeResumeToken($dados['resumeToken'] ?? null);
+
+        if (!$this->isTeste && $idValidadoToken) {
+            $inscBanco = InscricaoModel::where('id', $idValidadoToken)
                 ->where('ciclo_id', $this->cicloAtivoId)
                 ->first();
 
-            if ($inscBanco && in_array((int)$inscBanco->etapa_atual, [99, 100])) {
+            if ($inscBanco && in_array((int) $inscBanco->etapa_atual, [99, 100])) {
                 $this->dispatch('limpar-storage-inscricao');
                 return;
             }
             if ($inscBanco) {
-                $this->inscricaoId = $inscBanco->id;
+                // Carrega primeiro a base oficial do banco e mescla o progresso local
+                $this->carregarModeloInscricao($inscBanco);
             }
         }
 
@@ -405,8 +446,8 @@ class Inscricao extends Component
 
         foreach ($camposFixos as $campo) {
             if (isset($dados[$campo]) && $dados[$campo] !== '' && $dados[$campo] !== null) {
-                if ($campo === 'email' && !empty($this->emailOriginal) && str_contains($dados[$campo], '*')) continue;
-                if ($campo === 'celular' && !empty($this->celularOriginal) && str_contains($dados[$campo], '*')) continue;
+                if ($campo === 'email' && !empty($this->emailOriginal) && str_contains((string) $dados[$campo], '*')) continue;
+                if ($campo === 'celular' && !empty($this->celularOriginal) && str_contains((string) $dados[$campo], '*')) continue;
                 $this->{$campo} = $dados[$campo];
             }
         }
@@ -420,7 +461,10 @@ class Inscricao extends Component
         }
 
         if (!empty($dados['etapaAtual']) && is_numeric($dados['etapaAtual']) && $dados['etapaAtual'] <= $this->totalEtapas) {
-            $this->etapaAtual = (int) $dados['etapaAtual'];
+            $etapaAlvo = max((int) $this->etapaAtual, (int) $dados['etapaAtual']);
+            if (!$this->etapaEstaBloqueadaPorFase($etapaAlvo)) {
+                $this->etapaAtual = $etapaAlvo;
+            }
         }
 
         if ($this->estado && $this->data_nascimento) {
@@ -446,6 +490,26 @@ class Inscricao extends Component
         $this->salvarRascunhoSilencioso();
     }
 
+    protected function etapaEstaBloqueadaPorFase(int $numeroEtapa): bool
+    {
+        if ($this->isPreview || !$this->cicloAtivoId || $numeroEtapa <= 1) {
+            return false;
+        }
+
+        $fasesFuturas = \App\Models\FormularioFase::where('ciclo_id', $this->cicloAtivoId)
+            ->where('data_liberacao', '>', now())
+            ->get();
+
+        foreach ($fasesFuturas as $fase) {
+            $paginas = is_string($fase->paginas) ? json_decode($fase->paginas, true) : $fase->paginas;
+            if (is_array($paginas) && in_array($numeroEtapa, array_map('intval', $paginas), true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function salvarRascunhoSilencioso()
     {
         if ($this->isPreview || $this->isTeste || !$this->cicloAtivoId || in_array($this->etapaAtual, [99, 100])) {
@@ -457,8 +521,24 @@ class Inscricao extends Component
             return;
         }
 
-        $emailParaSalvar = (!$this->editarEmail && $this->emailOriginal && str_contains($this->email, '*')) ? $this->emailOriginal : $this->email;
-        $celularParaSalvar = (!$this->editarCelular && $this->celularOriginal && str_contains($this->celular, '*')) ? $this->celularOriginal : $this->celular;
+        // Proteção extra: impede criar um rascunho duplicado se o CPF já pertence a outra inscrição no ciclo
+        $cpfLimpo = preg_replace('/[^0-9]/', '', (string) $this->cpf);
+        if (!$this->inscricaoId && strlen($cpfLimpo) === 11) {
+            $existentePorCpf = InscricaoModel::where('ciclo_id', $this->cicloAtivoId)
+                ->where(fn($q) => $q->where('cpf', $this->cpf)->orWhere('cpf', $cpfLimpo))
+                ->first();
+
+            if ($existentePorCpf) {
+                if (!empty($this->data_nascimento) && $existentePorCpf->data_nascimento && $existentePorCpf->data_nascimento->format('Y-m-d') === $this->data_nascimento) {
+                    $this->carregarModeloInscricao($existentePorCpf);
+                } else {
+                    return; // Aguarda a confirmação da data de nascimento para não sobrescrever outro candidato
+                }
+            }
+        }
+
+        $emailParaSalvar = (!$this->editarEmail && $this->emailOriginal && str_contains((string) $this->email, '*')) ? $this->emailOriginal : $this->email;
+        $celularParaSalvar = (!$this->editarCelular && $this->celularOriginal && str_contains((string) $this->celular, '*')) ? $this->celularOriginal : $this->celular;
 
         $statusIncompleto = \App\Models\StatusInscricao::where('nome', 'Inscrição Incompleta')->first();
 
@@ -501,6 +581,7 @@ class Inscricao extends Component
 
         $inscricao = InscricaoModel::updateOrCreate(['id' => $this->inscricaoId], $dados);
         $this->inscricaoId = $inscricao->id;
+        $this->resumeToken = $this->gerarResumeTokenSeguro($inscricao->id);
         $this->sincronizarContatoSuriEmBackground();
     }
 
@@ -522,13 +603,13 @@ class Inscricao extends Component
                 ->first();
 
             if ($inscricaoRetomada) {
-                if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
+                if (in_array((int) $inscricaoRetomada->etapa_atual, [99, 100])) {
                     $this->addError('cpf', 'Esta inscrição já está finalizada ou em lista de espera.');
                     return;
                 }
                 
                 $this->carregarModeloInscricao($inscricaoRetomada);
-                $this->dispatch('sucesso', msg: 'Rascunho recuperado com sucesso! Seus dados foram carregados.');
+                $this->dispatch('sucesso', msg: 'Inscrição recuperada com sucesso! Você foi direcionado para onde parou.');
             }
         }
     }
@@ -536,7 +617,15 @@ class Inscricao extends Component
     private function carregarModeloInscricao(InscricaoModel $inscricaoRetomada)
     {
         $this->inscricaoId = $inscricaoRetomada->id;
-        $this->etapaAtual = $inscricaoRetomada->etapa_atual ?? 1;
+        $this->resumeToken = $this->gerarResumeTokenSeguro($inscricaoRetomada->id);
+
+        $etapaBanco = (int) ($inscricaoRetomada->etapa_atual ?? 1);
+        if (!in_array($etapaBanco, [99, 100], true)) {
+            while ($etapaBanco > 1 && $this->etapaEstaBloqueadaPorFase($etapaBanco)) {
+                $etapaBanco--;
+            }
+        }
+        $this->etapaAtual = max(1, $etapaBanco);
         
         if (in_array((int)$inscricaoRetomada->etapa_atual, [99, 100])) {
             $this->etapaAtual = $inscricaoRetomada->etapa_atual; 
@@ -995,10 +1084,14 @@ class Inscricao extends Component
             }
         }
 
+        $this->faseAtualConcluidaAguardando = false;
         $this->salvarProgresso();
 
         if ($this->etapaAtual < $this->totalEtapas) {
             $this->etapaAtual++;
+            if (!$this->isTeste && $this->inscricaoId) {
+                InscricaoModel::where('id', $this->inscricaoId)->update(['etapa_atual' => $this->etapaAtual]);
+            }
         } else {
             if (!$this->isTeste) {
                 $inscricaoDB = InscricaoModel::find($this->inscricaoId);
@@ -1015,15 +1108,58 @@ class Inscricao extends Component
         }
     }
 
+    public function concluirFaseAtualEAguardar(): void
+    {
+        if ($this->isPreview) return;
+
+        $this->limparRespostasCondicionaisInativas();
+        $regrasFinais = array_merge($this->rules(), $this->regrasPorEtapa($this->etapaAtual));
+        $this->validate($regrasFinais, $this->mensagensValidacao());
+
+        foreach ($this->camposDinamicos->where('etapa', $this->etapaAtual)->where('tipo', 'file') as $campoFile) {
+            if (isset($this->uploads[$campoFile->name]) && !empty($this->uploads[$campoFile->name])) {
+                $cfg = is_string($campoFile->configuracoes) ? json_decode($campoFile->configuracoes, true) : ($campoFile->configuracoes ?? []);
+                $aceitaMultiplos = !empty($cfg['aceita_multiplos']);
+
+                if ($aceitaMultiplos && is_array($this->uploads[$campoFile->name])) {
+                    $caminhos = is_array($this->respostas[$campoFile->name] ?? null) ? $this->respostas[$campoFile->name] : [];
+                    foreach ($this->uploads[$campoFile->name] as $arquivo) {
+                        if ($arquivo) {
+                            $caminhos[] = $arquivo->store('inscricoes/documentos', 'public');
+                        }
+                    }
+                    $this->respostas[$campoFile->name] = $caminhos;
+                } else {
+                    $this->respostas[$campoFile->name] = $this->uploads[$campoFile->name]->store('inscricoes/documentos', 'public');
+                }
+                unset($this->uploads[$campoFile->name]);
+            }
+        }
+
+        if ($this->laudo_pcd_upload && !$this->isPreview) {
+            $this->respostas['laudo_pcd'] = $this->laudo_pcd_upload->store('inscricoes/laudos_pcd', 'public');
+            $this->laudo_pcd_upload = null;
+        }
+
+        $this->salvarProgresso();
+
+        // Grava no banco que o candidato já está pronto para a próxima etapa assim que a fase abrir
+        if (!$this->isTeste && $this->inscricaoId) {
+            $proximaEtapa = min($this->totalEtapas, $this->etapaAtual + 1);
+            InscricaoModel::where('id', $this->inscricaoId)->update(['etapa_atual' => $proximaEtapa]);
+            $this->resumeToken = $this->gerarResumeTokenSeguro($this->inscricaoId);
+        }
+
+        $this->faseAtualConcluidaAguardando = true;
+        $this->dispatch('sucesso', msg: 'Etapa validada e salva com sucesso! Quando a próxima fase abrir, você continuará exatamente daqui.');
+    }
+
     protected function rules()
     {
         $regras = [];
 
-        if ((int) $this->etapaAtual !== (int) $this->etapaCamposFixos) {
-            return $regras;
-        }
-
-        if ($this->exibirDadosPessoaisFixos) {
+        // 1. Nome Completo, CPF e Data de Nascimento são SEMPRE fixos e validados na Página 1
+        if ((int) $this->etapaAtual === 1 && $this->exibirDadosPessoaisFixos) {
             $regrasCpf = [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -1043,43 +1179,49 @@ class Inscricao extends Component
             }
 
             $regras['nome'] = 'required|min:3';
-            $regras['possui_nome_social'] = 'required|in:sim,nao';
-            $regras['nome_social'] = 'required_if:possui_nome_social,sim';
             $regras['cpf'] = $regrasCpf;
             $regras['data_nascimento'] = 'required|date';
-            
-            $regras['celular'] = [
-                'required',
-                function ($attribute, $value, $fail) {
-                    if (!$this->editarCelular && !empty($this->celularOriginal) && str_contains((string) $value, '*')) {
-                        return;
-                    }
-                    $digitos = preg_replace('/\D/', '', (string) $value);
-                    if (strlen($digitos) < 10) {
-                        $fail('Informe um número de telefone válido com DDD.');
-                    }
-                },
-            ];
-
-            $regras['email'] = [
-                'required',
-                function ($attribute, $value, $fail) {
-                    if (!$this->editarEmail && !empty($this->emailOriginal) && str_contains((string) $value, '*')) {
-                        return;
-                    }
-                    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        $fail('Informe um endereço de e-mail válido.');
-                    }
-                },
-            ];
-
-            $regras['possui_deficiencia'] = 'required|in:sim,nao';
-            $regras['natureza_deficiencia'] = 'required_if:possui_deficiencia,sim';
-            $regras['laudo_pcd_upload'] = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240';
         }
 
-        if ($this->exibirEnderecoFixo) {
-            $regras['cep'] = 'required|min:8';
+        // 2. Os demais conjuntos de campos fixos são validados na página configurada em $this->etapaCamposFixos
+        if ((int) $this->etapaAtual === (int) $this->etapaCamposFixos) {
+            if ($this->exibirDadosPessoaisFixos) {
+                $regras['possui_nome_social'] = 'required|in:sim,nao';
+                $regras['nome_social'] = 'required_if:possui_nome_social,sim';
+
+                $regras['celular'] = [
+                    'required',
+                    function ($attribute, $value, $fail) {
+                        if (!$this->editarCelular && !empty($this->celularOriginal) && str_contains((string) $value, '*')) {
+                            return;
+                        }
+                        $digitos = preg_replace('/\D/', '', (string) $value);
+                        if (strlen($digitos) < 10) {
+                            $fail('Informe um número de telefone válido com DDD.');
+                        }
+                    },
+                ];
+
+                $regras['email'] = [
+                    'required',
+                    function ($attribute, $value, $fail) {
+                        if (!$this->editarEmail && !empty($this->emailOriginal) && str_contains((string) $value, '*')) {
+                            return;
+                        }
+                        if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                            $fail('Informe um endereço de e-mail válido.');
+                        }
+                    },
+                ];
+
+                $regras['possui_deficiencia'] = 'required|in:sim,nao';
+                $regras['natureza_deficiencia'] = 'required_if:possui_deficiencia,sim';
+                $regras['laudo_pcd_upload'] = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240';
+            }
+
+            if ($this->exibirEnderecoFixo) {
+                $regras['cep'] = 'required|min:8';
+            }
         }
 
         return $regras;

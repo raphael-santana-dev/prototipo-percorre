@@ -127,21 +127,32 @@
                     $camposDaEtapa = $camposPorEtapa->get($numEtapa, collect());
                     $nomeEtapaPreview = $etapaObj->nome ?: "Etapa {$numEtapa}";
 
-                    $gruposRender = [];
                     $etapaFixosCanvas = max(1, (int) ($formSettings['fixed_fields_etapa'] ?? 1));
-                 $gruposRender = [];
-                 if ($numEtapa === $etapaFixosCanvas && $contextoTipo === 'ciclo') {
-                     $camposTopo = $camposDaEtapa->filter(function($c) {
-                         $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                         return !empty($cfg['exibir_no_topo']);
-                     });
-                     $camposRodape = $camposDaEtapa->filter(function($c) {
-                         $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                         return empty($cfg['exibir_no_topo']);
-                     });
-                     if ($camposTopo->count() > 0) $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
-                     $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
-                     if ($camposRodape->count() > 0) $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                    $gruposRender = [];
+
+                    if ($contextoTipo === 'ciclo' && ($numEtapa === 1 || $numEtapa === $etapaFixosCanvas)) {
+                        $camposTopo = $camposDaEtapa->filter(function($c) {
+                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                            return !empty($cfg['exibir_no_topo']);
+                        });
+                        $camposRodape = $camposDaEtapa->filter(function($c) {
+                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                            return empty($cfg['exibir_no_topo']);
+                        });
+
+                        if ($camposTopo->count() > 0) {
+                            $gruposRender[] = ['titulo' => 'Informações Preliminares', 'campos' => $camposTopo];
+                        }
+
+                        if ($numEtapa === 1 && $etapaFixosCanvas > 1) {
+                            $gruposRender[] = ['titulo' => 'placeholder_identificacao_etapa1', 'campos' => collect()];
+                        } else {
+                            $gruposRender[] = ['titulo' => 'placeholder_dados_pessoais', 'campos' => collect()];
+                        }
+
+                        if ($camposRodape->count() > 0) {
+                            $gruposRender[] = ['titulo' => 'Informações Adicionais', 'campos' => $camposRodape];
+                        }
                     } else {
                         $gruposRender[] = ['titulo' => null, 'campos' => $camposDaEtapa];
                     }
@@ -160,7 +171,49 @@
                     </div>
 
                     @foreach($gruposRender as $grupo)
-                        @if($grupo['titulo'] === 'placeholder_dados_pessoais')
+                        @if($grupo['titulo'] === 'placeholder_identificacao_etapa1')
+                            @php
+                                $showPersonalEtapa1 = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
+                            @endphp
+                            @if($showPersonalEtapa1)
+                                <div class="w-full my-5">
+                                    <div class="rounded-xl border border-purpura-200/80 bg-white/90 p-5 shadow-2xs">
+                                        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100">
+                                            <div class="flex items-center gap-2">
+                                                <i class="ph-fill ph-identification-card text-purpura-600 text-lg"></i>
+                                                <div>
+                                                    <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                                                        Identificação Obrigatória (Fixo na Página #1)
+                                                    </h4>
+                                                    <p class="text-[11px] text-gray-500">
+                                                        Nome Completo, CPF e Data de Nascimento permanecem sempre na 1.ª página para identificar o candidato e recuperar o preenchimento entre dispositivos.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span class="px-2.5 py-1 text-[10px] font-bold bg-purpura-50 text-purpura-700 border border-purpura-200 rounded-md uppercase">
+                                                Demais blocos fixos na Página #{{ $etapaFixosCanvas }}
+                                            </span>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pointer-events-none">
+                                            <div class="p-3 rounded-lg bg-gray-50/80 border border-gray-200/90">
+                                                <span class="text-xs font-bold text-gray-800 block">Nome Completo *</span>
+                                                <span class="text-[10px] font-mono text-gray-400">nome</span>
+                                            </div>
+                                            <div class="p-3 rounded-lg bg-gray-50/80 border border-gray-200/90">
+                                                <span class="text-xs font-bold text-gray-800 block">CPF *</span>
+                                                <span class="text-[10px] font-mono text-gray-400">cpf (000.000.000-00)</span>
+                                            </div>
+                                            <div class="p-3 rounded-lg bg-gray-50/80 border border-gray-200/90">
+                                                <span class="text-xs font-bold text-gray-800 block">Data de Nascimento *</span>
+                                                <span class="text-[10px] font-mono text-gray-400">data_nascimento</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                        @elseif($grupo['titulo'] === 'placeholder_dados_pessoais')
                             @php
                                 $showPersonal = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_personal'] ?? true, FILTER_VALIDATE_BOOLEAN);
                                 $showAddress  = !$isCicloCustomizado || filter_var($formSettings['enable_fixed_address'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -170,46 +223,54 @@
                                 <div class="w-full my-5">
                                     <div class="rounded-xl border border-indigo-200/80 bg-white/90 p-5 shadow-2xs">
                                         <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-4 border-b border-gray-100">
-                                         <div>
-                                             <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
-                                                 Campos Padrões e Fixos (Página #{{ $etapaFixosCanvas }})
-                                             </h4>
-                                             <p class="text-[11px] text-gray-500">
-                                                 Dados Pessoais (com Laudo PcD), Endereço ViaCEP e Seleção de Curso. Você pode mover este bloco para outra página ao lado.
-                                             </p>
-                                         </div>
+                                            <div>
+                                                <h4 class="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                                                    Campos Padrões e Fixos (Página #{{ $etapaFixosCanvas }})
+                                                </h4>
+                                                <p class="text-[11px] text-gray-500">
+                                                    @if($etapaFixosCanvas > 1)
+                                                        Nome, CPF e Nascimento ficam fixos na Página #1. Os demais dados pessoais (com Laudo PcD), Endereço ViaCEP e Seleção de Curso são exibidos nesta página.
+                                                    @else
+                                                        Dados Pessoais (com Laudo PcD), Endereço ViaCEP e Seleção de Curso. Você pode mover os blocos complementares para outra página ao lado.
+                                                    @endif
+                                                </p>
+                                            </div>
 
-                                         <div class="flex items-center gap-2">
-                                             <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
-                                                 <span class="text-[10px] font-bold text-gray-500 uppercase">Página:</span>
-                                                 <select wire:change="moverCamposFixosParaEtapa($event.target.value)" class="!border-none !bg-transparent !py-0 !pl-1 !pr-6 text-xs font-bold text-purpura-700 focus:!ring-0 cursor-pointer">
-                                                     @foreach($etapasDisponiveis as $etOpt)
-                                                         <option value="{{ $etOpt->numero }}" @selected((int) $etapaFixosCanvas === (int) $etOpt->numero)>
-                                                             #{{ $etOpt->numero }} - {{ $etOpt->nome }}
-                                                         </option>
-                                                     @endforeach
-                                                 </select>
-                                             </div>
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                                                    <span class="text-[10px] font-bold text-gray-500 uppercase">Página:</span>
+                                                    <select wire:change="moverCamposFixosParaEtapa($event.target.value)" class="!border-none !bg-transparent !py-0 !pl-1 !pr-6 text-xs font-bold text-purpura-700 focus:!ring-0 cursor-pointer">
+                                                        @foreach($etapasDisponiveis as $etOpt)
+                                                            <option value="{{ $etOpt->numero }}" @selected((int) $etapaFixosCanvas === (int) $etOpt->numero)>
+                                                                #{{ $etOpt->numero }} - {{ $etOpt->nome }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
 
-                                             @if($isCicloCustomizado)
-                                                 <button type="button"
-                                                         @click="$wire.set('drawerFormSettingsAberto', true)"
-                                                         class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition">
-                                                     Personalizar Fixos
-                                                 </button>
-                                             @endif
-                                         </div>
-                                     </div>
+                                                @if($isCicloCustomizado)
+                                                    <button type="button"
+                                                            @click="$wire.set('drawerFormSettingsAberto', true)"
+                                                            class="px-2.5 py-1 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg transition">
+                                                        Personalizar Fixos
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
 
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pointer-events-none">
                                             @if($showPersonal)
                                                 <div class="p-3.5 rounded-lg bg-gray-50/80 border border-gray-200/90 flex flex-col justify-between">
                                                     <div>
                                                         <div class="flex items-center justify-between mb-1.5">
-                                                            <span class="text-xs font-bold text-gray-800">1. Dados Pessoais</span>
+                                                            <span class="text-xs font-bold text-gray-800">
+                                                                {{ $etapaFixosCanvas > 1 ? '1. Dados Pessoais Complementares' : '1. Dados Pessoais' }}
+                                                            </span>
                                                             <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">Ativo</span>
                                                         </div>
-                                                        <p class="text-[11px] text-gray-500 leading-relaxed">Nome Completo, Nome Social, CPF, Data de Nascimento, E-mail, Celular e PcD.</p>
+                                                        <p class="text-[11px] text-gray-500 leading-relaxed">
+                                                            {{ $etapaFixosCanvas > 1 ? 'Nome Social, E-mail, Celular, Declaração PcD e Upload de Laudo Médico.' : 'Nome Completo, Nome Social, CPF, Data de Nascimento, E-mail, Celular, PcD e Laudo.' }}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             @endif
@@ -504,7 +565,7 @@
                         @endif
                     @endforeach
 
-                    @if($grupo['campos']->isEmpty() && !($numEtapa === $etapaFixosCanvas && $contextoTipo === 'ciclo'))
+                    @if($grupo['campos']->isEmpty() && !($contextoTipo === 'ciclo' && ($numEtapa === 1 || $numEtapa === $etapaFixosCanvas)))
                         <div class="py-8 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 text-gray-400 text-xs">
                             Nenhum campo personalizado adicionado nesta página. Clique num tipo de input à esquerda para inserir.
                         </div>

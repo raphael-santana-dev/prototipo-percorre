@@ -46,6 +46,12 @@
                 }
             });
 
+            if (@js($veioPorLinkRetomada)) {
+                this.readyToSave = true;
+                this.salvarNoLocalStorage();
+                return;
+            }
+
             const raw = localStorage.getItem(this.storageKey);
             if (raw) {
                 try {
@@ -53,6 +59,7 @@
                     if (parsed && typeof parsed === 'object') {
                         $wire.restaurarRascunhoLocal(parsed).then(() => {
                             this.readyToSave = true;
+                            this.salvarNoLocalStorage();
                         });
                         return;
                     }
@@ -70,7 +77,7 @@
             }
 
             const payload = {
-                inscricaoId: $wire.inscricaoId,
+                resumeToken: $wire.resumeToken,
                 etapaAtual: $wire.etapaAtual,
                 nome: $wire.nome,
                 possui_nome_social: $wire.possui_nome_social,
@@ -215,20 +222,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                                 @php
                                     $paginaFixos = (int) ($etapaCamposFixos ?? ($formSettings['fixed_fields_etapa'] ?? 1));
+                                    $camposDaPaginaAtual = $camposDinamicos ? $camposDinamicos->where('etapa', $etapaAtual) : collect();
+                                    $camposTopo = $camposDaPaginaAtual->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return !empty($cfg['exibir_no_topo']);
+                                    });
+                                    $camposRodape = $camposDaPaginaAtual->filter(function($c) {
+                                        $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
+                                        return empty($cfg['exibir_no_topo']);
+                                    });
                                 @endphp
 
-                                @if((int) $etapaAtual === $paginaFixos)
-                                    @php
-                                        $camposTopo = $camposDinamicos->where('etapa', $etapaAtual)->filter(function($c) {
-                                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                            return !empty($cfg['exibir_no_topo']);
-                                        });
-                                        $camposRodape = $camposDinamicos->where('etapa', $etapaAtual)->filter(function($c) {
-                                            $cfg = is_string($c->configuracoes) ? json_decode($c->configuracoes, true) : ($c->configuracoes ?? []);
-                                            return empty($cfg['exibir_no_topo']);
-                                        });
-                                    @endphp
-
+                                @if((int) $etapaAtual === 1 && $paginaFixos === 1)
+                                    {{-- Caso 1: Todos os campos fixos estão na Página 1 --}}
                                     @if($camposTopo->count() > 0)
                                         <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
                                             <h4 class="text-xl font-bold {{ $textoForm }}">Informações Preliminares</h4>
@@ -236,8 +242,7 @@
                                         @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposTopo])
                                     @endif
 
-                                    {{-- PARTIAL DOS CAMPOS FIXOS (PODE ESTAR EM QUALQUER PÁGINA ESCOLHIDA) --}}
-                                    @include('livewire.website.partials.campos-fixos-inscricao')
+                                    @include('livewire.website.partials.campos-fixos-inscricao', ['modoRenderizacaoFixos' => 'completo'])
 
                                     @if($camposRodape->count() > 0)
                                         <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
@@ -246,11 +251,47 @@
                                         @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposRodape])
                                     @endif
 
-                                @elseif($camposDinamicos && $camposDinamicos->where('etapa', $etapaAtual)->count() > 0)
+                                @elseif((int) $etapaAtual === 1 && $paginaFixos > 1)
+                                    {{-- Caso 2: Página 1 exibe SEMPRE Nome, CPF e Nascimento; conjuntos móveis estão em outra página --}}
+                                    @if($camposTopo->count() > 0)
+                                        <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+                                            <h4 class="text-xl font-bold {{ $textoForm }}">Informações Preliminares</h4>
+                                        </div>
+                                        @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposTopo])
+                                    @endif
+
+                                    @include('livewire.website.partials.campos-fixos-inscricao', ['modoRenderizacaoFixos' => 'identificacao_etapa_1'])
+
+                                    @if($camposRodape->count() > 0)
+                                        <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
+                                            <h4 class="text-xl font-bold {{ $textoForm }}">Informações Adicionais</h4>
+                                        </div>
+                                        @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposRodape])
+                                    @endif
+
+                                @elseif((int) $etapaAtual === $paginaFixos && $paginaFixos > 1)
+                                    {{-- Caso 3: Página escolhida para receber os conjuntos de campos fixos móveis --}}
+                                    @if($camposTopo->count() > 0)
+                                        <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+                                            <h4 class="text-xl font-bold {{ $textoForm }}">Informações Preliminares</h4>
+                                        </div>
+                                        @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposTopo])
+                                    @endif
+
+                                    @include('livewire.website.partials.campos-fixos-inscricao', ['modoRenderizacaoFixos' => 'complementares_moveis'])
+
+                                    @if($camposRodape->count() > 0)
+                                        <div class="col-span-12 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 mb-2 border-b pb-2">
+                                            <h4 class="text-xl font-bold {{ $textoForm }}">Informações Adicionais</h4>
+                                        </div>
+                                        @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposRodape])
+                                    @endif
+
+                                @elseif($camposDaPaginaAtual->count() > 0)
                                     <div class="col-span-12 mb-2 border-b border-gray-200 dark:border-gray-800 pb-2">
                                         <h4 class="text-xl font-bold {{ $textoForm }}">Informações Complementares</h4>
                                     </div>
-                                    @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDinamicos->where('etapa', $etapaAtual)])
+                                    @include('livewire.website.partials.render-dinamico', ['camposVigentes' => $camposDaPaginaAtual])
                                 @endif
                                 
                                 @if($etapaAtual === $totalEtapas)
@@ -274,9 +315,9 @@
                             </div>
                         </fieldset>
                         
-                        <div class="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+                        <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
                             @if($etapaAtual > 1)
-                                <button type="button" wire:click="voltarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, voltarEtapa, uploads" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-bold py-2 px-6 rounded-md transition duration-200 disabled:opacity-50">Voltar</button>
+                                <button type="button" wire:click="voltarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, voltarEtapa, concluirFaseAtualEAguardar, uploads" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-bold py-2 px-6 rounded-md transition duration-200 disabled:opacity-50">Voltar</button>
                             @else
                                 <div></div>
                             @endif
@@ -284,12 +325,32 @@
                             @if($this->bloqueioFaseAtual)
                                 <div></div>
                             @elseif($this->bloqueioFaseSeguinte)
-                                <div class="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold flex items-center gap-2 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 w-full sm:w-auto">
-                                    <i class="ph-fill ph-lock-key text-lg text-amber-500 shrink-0"></i>
-                                    <span>
-                                        O seu progresso está salvo! A fase seguinte <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
-                                        será liberada em {{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}. O botão de avançar reaparecerá no horário estipulado.
-                                    </span>
+                                <div class="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
+                                    <button type="button"
+                                            wire:click="concluirFaseAtualEAguardar"
+                                            wire:loading.attr="disabled"
+                                            wire:target="concluirFaseAtualEAguardar, uploads"
+                                            class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50">
+                                        <i class="ph-bold ph-floppy-disk text-base"></i>
+                                        <span wire:loading.remove wire:target="concluirFaseAtualEAguardar, uploads">
+                                            {{ $faseAtualConcluidaAguardando ? 'Atualizar Dados desta Fase' : 'Salvar e Concluir Fase Atual' }}
+                                        </span>
+                                        <span wire:loading wire:target="concluirFaseAtualEAguardar, uploads">Salvando...</span>
+                                    </button>
+
+                                    <div class="px-4 py-3 {{ $faseAtualConcluidaAguardando ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200' : 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300' }} border rounded-lg text-xs font-bold flex items-start gap-2.5 shadow-sm max-w-xl">
+                                        <i class="ph-fill {{ $faseAtualConcluidaAguardando ? 'ph-check-circle text-emerald-600' : 'ph-lock-key text-amber-500' }} text-lg shrink-0 mt-0.5"></i>
+                                        <div class="leading-relaxed">
+                                            @if($faseAtualConcluidaAguardando)
+                                                <span class="block font-extrabold">Etapa validada e guardada com segurança!</span>
+                                            @endif
+                                            <span>
+                                                A fase seguinte <strong>({{ $this->bloqueioFaseSeguinte->nome }})</strong> 
+                                                será liberada em <strong>{{ \Carbon\Carbon::parse($this->bloqueioFaseSeguinte->data_liberacao)->format('d/m/Y \à\s H:i') }}</strong>. 
+                                                Você poderá continuar de qualquer dispositivo (computador ou celular) informando seu CPF e Data de Nascimento ou através do link que enviaremos no seu e-mail/WhatsApp.
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             @else
                                 <button type="button" wire:click="avancarEtapa" wire:loading.attr="disabled" wire:target="avancarEtapa, uploads" class="text-white transition-colors rounded-lg shadow-sm bg-purpura-600 hover:bg-purpura-700 font-bold py-2.5 px-6 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">

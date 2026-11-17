@@ -31,6 +31,12 @@
         init() {
             if (@js((bool) request()->query('preview')) || @js($bloqueado)) return;
 
+            if (@js($veioPorLinkRetomada)) {
+                this.readyToSave = true;
+                this.salvarNoLocalStorage();
+                return;
+            }
+
             const raw = localStorage.getItem(this.storageKey);
             if (raw) {
                 try {
@@ -38,6 +44,7 @@
                     if (parsed && typeof parsed === 'object') {
                         $wire.restaurarRascunhoLocal(parsed).then(() => {
                             this.readyToSave = true;
+                            this.salvarNoLocalStorage();
                         });
                         return;
                     }
@@ -55,7 +62,7 @@
             }
 
             const payload = {
-                respostaId: $wire.respostaId,
+                resumeToken: $wire.resumeToken,
                 etapaAtual: $wire.etapaAtual,
                 respostas: $wire.respostas
             };
