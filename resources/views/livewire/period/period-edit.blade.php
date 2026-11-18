@@ -425,7 +425,7 @@
                             <i class="ph-fill ph-files text-purpura-500"></i> Documentos exigidos no Portal de Matrícula
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            Defina quais documentos serão solicitados aos candidatos aprovados deste ciclo.
+                            Defina em qual status o envio será liberado e quais documentos serão solicitados aos candidatos deste ciclo.
                         </p>
                     </div>
 
@@ -434,6 +434,30 @@
                             <i class="ph-bold ph-plus text-sm"></i> Novo Documento
                         </button>
                     @endif
+                </div>
+
+                <div class="px-6 pt-5 pb-2">
+                    <div class="p-4 rounded-xl bg-purpura-50/50 dark:bg-purpura-900/15 border border-purpura-200 dark:border-purpura-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-extrabold uppercase tracking-wider text-purpura-900 dark:text-purpura-300 flex items-center gap-1.5">
+                                <i class="ph-fill ph-lock-key-open text-purpura-600 text-base"></i>
+                                Status da Inscrição que Habilita o Upload de Documentos
+                            </label>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                Quando a inscrição for movida para este status, o botão de envio da documentação exigida será liberado na Listagem de Inscrições e na Ficha de Detalhes.
+                            </p>
+                        </div>
+                        <div class="w-full md:w-72 shrink-0">
+                            <select wire:model="status_documentacao_id" class="w-full text-xs font-bold rounded-lg border-purpura-300 dark:border-purpura-700 dark:bg-gray-800 dark:text-white py-2 focus:ring-purpura-500">
+                                <option value="">Selecione o status gatilho...</option>
+                                @foreach($statusDisponiveis as $stDoc)
+                                    @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
+                                        <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="space-y-3 p-6">

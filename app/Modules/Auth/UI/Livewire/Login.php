@@ -17,11 +17,26 @@ class Login extends Component
     public string $password = '';
     public bool $remember = false;
 
+    public function mount()
+    {
+        if (Auth::guard('web')->check()) {
+            return redirect()->route('dashboard');
+        }
+        if (Auth::guard('student')->check()) {
+            return redirect()->route('student.dashboard');
+        }
+        if (Auth::guard('company')->check()) {
+            return redirect()->route('company.dashboard');
+        }
+    }
+
     public function authenticate()
     {
+        $this->email = trim($this->email);
+
         $this->validate([
-            'email' => 'required',
-            'password' => 'required'
+            'email'    => 'required|email',
+            'password' => 'required',
         ]);
 
         $throttleKey = Str::lower($this->email) . '|' . request()->ip();
@@ -34,23 +49,27 @@ class Login extends Component
         }
 
         $credenciais = ['email' => $this->email, 'password' => $this->password];
+        $manterConectado = (bool) $this->remember;
 
-        if (Auth::guard('web')->attempt($credenciais, $this->remember)) {
+        if (Auth::guard('web')->attempt($credenciais, $manterConectado)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
-            return redirect()->route('dashboard');
+            session(['manter_conectado' => $manterConectado]);
+            return redirect()->intended(route('dashboard'));
         }
 
-        if (Auth::guard('student')->attempt($credenciais, $this->remember)) {
+        if (Auth::guard('student')->attempt($credenciais, $manterConectado)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
-            return redirect()->route('student.dashboard');
+            session(['manter_conectado' => $manterConectado]);
+            return redirect()->intended(route('student.dashboard'));
         }
 
-        if (Auth::guard('company')->attempt($credenciais, $this->remember)) {
+        if (Auth::guard('company')->attempt($credenciais, $manterConectado)) {
             RateLimiter::clear($throttleKey);
             session()->regenerate();
-            return redirect()->route('company.dashboard'); 
+            session(['manter_conectado' => $manterConectado]);
+            return redirect()->intended(route('company.dashboard'));
         }
 
         RateLimiter::hit($throttleKey);

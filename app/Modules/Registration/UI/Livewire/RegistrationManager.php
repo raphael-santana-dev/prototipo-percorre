@@ -23,12 +23,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
 use App\Traits\ComFiltroAvancado;
 use App\Traits\ValidaAcesso;
+use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Gerenciar Inscrições - Administrativo')]
 class RegistrationManager extends Component
 {
-    use WithPagination, ComPadraoListagem, ComFiltroAvancado, ValidaAcesso;
+    use WithPagination, WithFileUploads, ComPadraoListagem, ComFiltroAvancado, ValidaAcesso;
 
     public $filtroNome = '';
     public $filtroStatus = '';
@@ -268,6 +269,192 @@ class RegistrationManager extends Component
     public function fecharDrawerComunicacoes(): void
     {
         $this->drawerComunicacoesAberto = false;
+    }
+
+    // =========================================================================
+    // MODAL DE UPLOAD DE DOCUMENTAÇÃO EXIGIDA DIRETO NA LISTAGEM
+    // =========================================================================
+    public bool $modalDocumentacaoAberto = false;
+    public ?int $docModalInscricaoId = null;
+    public string $docModalInscricaoNome = '';
+    public string $docModalInscricaoCpf = '';
+    public bool $docModalValidarComIa = true;
+    public array $docModalExigidos = [];
+    public array $docModalArquivosEnviados = [];
+    public array $uploadsDocModal = [];
+
+    public function inscricaoPodeEnviarDocumentos(Inscricao $inscricao): bool
+    {
+        if ($inscricao->legado || !$inscricao->ciclo) {
+            return false;
+        }
+
+        $statusAlvoId = $inscricao->ciclo->status_documentacao_id ?? null;
+        if (empty($statusAlvoId)) {
+            return false;
+        }
+
+        return (int) $inscricao->status_inscricao_id === (int) $statusAlvoId;
+    }
+
+    public function abrirModalDocumentacao(int $inscricaoId): void
+    {
+        $insc = Inscricao::with('ciclo')->findOrFail($inscricaoId);
+
+        if (!$this->inscricaoPodeEnviarDocumentos($insc)) {
+            $this->dispatch('erro', msg: 'Esta inscrição ainda não está no status que habilita o envio de documentação exigida.');
+            return;
+        }
+
+        $this->docModalInscricaoId   = $insc->id;
+        $this->docModalInscricaoNome = (string) $insc->nome;
+        $this->docModalInscricaoCpf  = (string) $insc->cpf;
+        $this->uploadsDocModal       = [];
+
+        $this->carregarStatusArquivosModal();
+        $this->modalDocumentacaoAberto = true;
+    }
+
+    public function fecharModalDocumentacao(): void
+    {
+        $this->modalDocumentacaoAberto  = false;
+        $this->docModalInscricaoId      = null;
+        $this->docModalExigidos         = [];
+        $this->docModalArquivosEnviados = [];
+        $this->uploadsDocModal          = [];
+    }
+
+    public function carregarStatusArquivosModal(): void
+    {
+        if (!$this->docModalInscricaoId) return;
+
+        $insc = Inscricao::findOrFail($this->docModalInscricaoId);
+        $exigidos = \App\Modules\Matricula\Domain\Models\DocumentoExigido::where('ciclo_id', $insc->ciclo_id)->get();
+        $salvos = \App\Modules\Matricula\Domain\Models\DocumentoMatricula::where('inscricao_id', $insc->id)
+            ->get()
+            ->keyBy('documento_exigido_id');
+
+        $this->docModalExigidos = $exigidos->map(fn($d) => [
+            'id'             => $d->id,
+            'nome'           => $d->nome,
+            'descricao'      => $d->descricao,
+            'is_obrigatorio' => (bool) $d->is_obrigatorio,
+        ])->toArray();
+
+        $this->docModalArquivosEnviados = [];
+        foreach ($exigidos as $doc) {
+            if ($salvos->has($doc->id)) {
+                $s = $salvos->get($doc->id);
+                $logIa = is_array($s->log_ia) ? $s->log_ia : (json_decode($s->log_ia ?? '{}', true) ?: []);
+                $this->docModalArquivosEnviados[$doc->id] = [
+                    'id'              => $s->id,
+                    'status'          => $s->status_analise,
+                    'arquivo_caminho' => $s->arquivo_caminho,
+                    'motivo_rejeicao' => $logIa['motivo_rejeicao'] ?? '',
+                ];
+            } else {
+                $this->docModalArquivosEnviados[$doc->id] = [
+                    'id'              => null,
+                    'status'          => 'pendente',
+                    'arquivo_caminho' => null,
+                    'motivo_rejeicao' => '',
+                ];
+            }
+        }
+    }
+
+    public function updatedUploadsDocModal($value, $documentoExigidoId): void
+    {
+        if (!$this->docModalInscricaoId) return;
+
+        $insc = Inscricao::with('ciclo')->findOrFail($this->docModalInscricaoId);
+        if (!$this->inscricaoPodeEnviarDocumentos($insc)) {
+            $this->dispatch('erro', msg: 'Status da inscrição não permite o envio de documentação.');
+            return;
+        }
+
+        $this->validate([
+            "uploadsDocModal.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+        ], [
+            "uploadsDocModal.{$documentoExigidoId}.mimes" => 'Formatos aceitos: JPEG, PNG, WebP ou PDF.',
+            "uploadsDocModal.{$documentoExigidoId}.max"   => 'O tamanho máximo do documento é de 10MB.',
+        ]);
+
+        $file = $this->uploadsDocModal[$documentoExigidoId];
+        $documentoModel = \App\Modules\Matricula\Domain\Models\DocumentoExigido::findOrFail($documentoExigidoId);
+        $participante = auth()->user();
+
+        $docMatricula = \App\Modules\Matricula\Domain\Models\DocumentoMatricula::firstOrNew([
+            'inscricao_id'         => $insc->id,
+            'documento_exigido_id' => $documentoExigidoId,
+        ]);
+
+        $caminho = $file->store("matriculas/{$insc->id}");
+        try {
+            \Illuminate\Support\Facades\Storage::disk('public')->put($caminho, file_get_contents($file->getRealPath()));
+        } catch (\Throwable $e) {}
+
+        $docMatricula->arquivo_caminho  = $caminho;
+        $docMatricula->arquivo_extensao = $file->getClientOriginalExtension();
+
+        $metaParticipante = [
+            'enviado_por_participante' => true,
+            'participante_id'          => $participante->id,
+            'participante_nome'        => $participante->name,
+            'data_envio_participante'  => now()->format('d/m/Y H:i'),
+            'validacao_ia_ativa'       => $this->docModalValidarComIa,
+        ];
+
+        if ($this->docModalValidarComIa) {
+            $docMatricula->tentativas_ia = ((int) $docMatricula->tentativas_ia) + 1;
+            $docMatricula->save();
+
+            $resultadoIa = \App\Modules\Matricula\Services\AiValidationService::validarDocumento($insc, $documentoModel, $caminho);
+
+            if ($resultadoIa['valido']) {
+                $docMatricula->status_analise = 'valido_ia';
+                $docMatricula->log_ia = array_merge($resultadoIa['raw'] ?? [], $metaParticipante);
+            } else {
+                $docMatricula->status_analise = ($docMatricula->tentativas_ia >= 3) ? 'analise_manual' : 'invalido_ia';
+                $docMatricula->log_ia = array_merge([
+                    'motivo_rejeicao' => $resultadoIa['motivo_rejeicao'] ?? 'Rejeitado na validação por IA.',
+                    'raw'             => $resultadoIa['raw'] ?? [],
+                ], $metaParticipante);
+            }
+        } else {
+            $docMatricula->status_analise = 'aprovado_manual';
+            $docMatricula->log_ia = array_merge([
+                'observacao' => 'Documento enviado pela Listagem de Inscrições com validação por IA desativada.',
+            ], $metaParticipante);
+        }
+
+        $docMatricula->save();
+
+        unset($this->uploadsDocModal[$documentoExigidoId]);
+        $this->carregarStatusArquivosModal();
+
+        $this->dispatch('sucesso', msg: "Documento '{$documentoModel->nome}' enviado com sucesso!");
+    }
+
+    public function aprovarDocumentoModalManualmente(int $documentoExigidoId): void
+    {
+        if (!$this->docModalInscricaoId) return;
+
+        $docMatricula = \App\Modules\Matricula\Domain\Models\DocumentoMatricula::where('inscricao_id', $this->docModalInscricaoId)
+            ->where('documento_exigido_id', $documentoExigidoId)
+            ->firstOrFail();
+
+        $logAtual = is_array($docMatricula->log_ia) ? $docMatricula->log_ia : [];
+        $logAtual['aprovado_por_participante'] = auth()->user()->name;
+        $logAtual['data_aprovacao_manual'] = now()->format('d/m/Y H:i');
+
+        $docMatricula->update([
+            'status_analise' => 'aprovado_manual',
+            'log_ia'         => $logAtual,
+        ]);
+
+        $this->carregarStatusArquivosModal();
+        $this->dispatch('sucesso', msg: 'Documento aprovado manualmente!');
     }
 
     public function abrirModalPrimeiroContato(int $inscricaoId): void

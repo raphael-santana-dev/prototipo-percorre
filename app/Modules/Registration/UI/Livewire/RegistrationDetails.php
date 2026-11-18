@@ -313,6 +313,32 @@ class RegistrationDetails extends Component
         return DocumentoExigido::where('ciclo_id', $this->inscricao->ciclo_id)->get();
     }
 
+    #[Computed]
+    public function uploadDocumentacaoHabilitado(): bool
+    {
+        $ciclo = $this->inscricao->ciclo;
+        if (!$ciclo) {
+            return false;
+        }
+
+        $statusExigidoId = $ciclo->status_documentacao_id ?? null;
+        if (empty($statusExigidoId)) {
+            return true;
+        }
+
+        return (int) $this->inscricao->status_inscricao_id === (int) $statusExigidoId;
+    }
+
+    #[Computed]
+    public function nomeStatusDocumentacaoExigido(): ?string
+    {
+        $statusExigidoId = $this->inscricao->ciclo?->status_documentacao_id;
+        if (empty($statusExigidoId)) {
+            return null;
+        }
+        return StatusInscricao::find($statusExigidoId)?->nome;
+    }
+
     public function carregarStatusArquivos(): void
     {
         $documentosSalvos = DocumentoMatricula::where('inscricao_id', $this->inscricao->id)
@@ -358,6 +384,13 @@ class RegistrationDetails extends Component
     public function updatedUploads($value, $documentoExigidoId): void
     {
         abort_unless($this->usuarioPodeEditarAssistido(), 403, 'Sem permissão.');
+
+        if (!$this->uploadDocumentacaoHabilitado) {
+            unset($this->uploads[$documentoExigidoId]);
+            $nomeSt = $this->nomeStatusDocumentacaoExigido ?: 'configurado no ciclo';
+            $this->dispatch('erro', msg: "O envio de documentos só é habilitado quando a inscrição está no status '{$nomeSt}'.");
+            return;
+        }
 
         $this->validate([
             "uploads.{$documentoExigidoId}" => 'required|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',

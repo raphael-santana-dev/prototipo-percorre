@@ -169,6 +169,8 @@
     <livewire:components.quick-view-drawer />
     @livewireScripts
     <x-toast />
-    <x-session-timeout />
+    @if(!session('manter_conectado') && !auth('company')->viaRemember())
+        <x-session-timeout />
+    @endif
 </body>
 </html>

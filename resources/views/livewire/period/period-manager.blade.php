@@ -721,11 +721,30 @@
                                     <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
                                         <div>
                                             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Passo 5: Documentos Exigidos</h3>
-                                            <p class="text-xs text-gray-500 mt-0.5">Especifique as exigências documentais para a efetivação da matrícula digital.</p>
+                                            <p class="text-xs text-gray-500 mt-0.5">Defina em qual status o envio será habilitado e as exigências documentais para a matrícula.</p>
                                         </div>
                                         <button type="button" wire:click="addDocumento" class="btn btn--secondary btn--small">
                                             + Novo Documento
                                         </button>
+                                    </div>
+
+                                    <div class="p-3.5 rounded-lg bg-purpura-50/50 dark:bg-purpura-900/20 border border-purpura-200 dark:border-purpura-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div>
+                                            <label class="block text-xs font-bold text-purpura-900 dark:text-purpura-200">
+                                                Status da Inscrição que Habilita o Upload
+                                            </label>
+                                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                                O envio dos documentos será liberado quando o candidato atingir este status.
+                                            </p>
+                                        </div>
+                                        <select wire:model="status_documentacao_id" class="w-full sm:w-64 text-xs font-semibold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white py-2">
+                                            <option value="">Selecione o status...</option>
+                                            @foreach($statusDisponiveis as $stDoc)
+                                                @if(empty($statusSelecionados) || in_array((string) $stDoc->id, $statusSelecionados, true))
+                                                    <option value="{{ $stDoc->id }}">{{ $stDoc->nome }}</option>
+                                                @endif
+                                            @endforeach
+                                        </select>
                                     </div>
 
                                     <div class="space-y-2.5">

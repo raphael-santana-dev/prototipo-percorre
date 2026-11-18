@@ -24,6 +24,7 @@ class PeriodEdit extends Component
     use WithEditingLock;
 
     public $cicloId, $nome, $ano, $semestre, $data_inicio, $data_fim, $status;
+    public $status_documentacao_id = '';
     public $data_inicio_matricula = '';
     public $data_fim_matricula = '';
 
@@ -60,6 +61,7 @@ class PeriodEdit extends Component
         $this->data_inicio = $ciclo->data_inicio->format('Y-m-d\TH:i');
         $this->data_fim = $ciclo->data_fim->format('Y-m-d\TH:i');
         $this->status = (bool) $ciclo->status;
+        $this->status_documentacao_id = $ciclo->status_documentacao_id ? (string) $ciclo->status_documentacao_id : '';
         $this->data_inicio_matricula = $ciclo->data_inicio_matricula ? \Carbon\Carbon::parse($ciclo->data_inicio_matricula)->format('Y-m-d\TH:i') : '';
         $this->data_fim_matricula = $ciclo->data_fim_matricula ? \Carbon\Carbon::parse($ciclo->data_fim_matricula)->format('Y-m-d\TH:i') : '';
         
@@ -396,7 +398,7 @@ class PeriodEdit extends Component
         }
 
         $cicloSalvo = Ciclo::findOrFail($this->cicloId);
-        $cicloSalvo->update([
+        $dadosUpdateCiclo = [
             'nome'                  => empty(trim($this->nome)) ? "{$this->ano} - {$this->semestre}º Semestre" : $this->nome,
             'tipo_ciclo'            => $this->tipo_ciclo,
             'slug_projeto'          => $this->tipo_ciclo === 'customizado' ? $this->slug_projeto : null,
@@ -407,7 +409,13 @@ class PeriodEdit extends Component
             'status'                => $this->status,
             'data_inicio_matricula' => !empty($this->data_inicio_matricula) ? $this->data_inicio_matricula : null,
             'data_fim_matricula'    => !empty($this->data_fim_matricula) ? $this->data_fim_matricula : null,
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_documentacao_id')) {
+            $dadosUpdateCiclo['status_documentacao_id'] = !empty($this->status_documentacao_id) ? (int) $this->status_documentacao_id : null;
+        }
+
+        $cicloSalvo->update($dadosUpdateCiclo);
 
         // Extrai IDs inteiros únicos das chaves compostas ("{uId}-{cId}" e "{uId}-{cId}-{tId}")
         $unidadesUnicas = collect($this->unidadesSelecionadas)->map(fn($v) => (int) $v)->unique()->filter()->values()->toArray();

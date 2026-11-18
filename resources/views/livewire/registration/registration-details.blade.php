@@ -790,19 +790,33 @@
                     </div>
 
                     {{-- INTERRUPTOR: ATIVAR / DESATIVAR VALIDAÇÃO POR IA --}}
-                    <label class="flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition shrink-0 {{ $validarComIa ? 'bg-purpura-50/70 border-purpura-300 text-purpura-900' : 'bg-amber-50/70 border-amber-300 text-amber-900' }}">
-                        <input type="checkbox" wire:model.live="validarComIa" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
-                        <div class="text-xs">
-                            <span class="font-extrabold block flex items-center gap-1.5">
-                                <i class="ph-fill {{ $validarComIa ? 'ph-sparkle text-purpura-600' : 'ph-shield-check text-amber-600' }}"></i>
-                                {{ $validarComIa ? 'Validação por IA: ATIVADA' : 'Validação por IA: DESATIVADA (Aprovação Direta)' }}
-                            </span>
-                            <span class="text-[10px] opacity-80 block">
-                                {{ $validarComIa ? 'O documento será analisado pela IA antes de aprovar.' : 'O documento enviado pelo participante será aprovado automaticamente.' }}
-                            </span>
-                        </div>
-                    </label>
+                    @if($this->uploadDocumentacaoHabilitado)
+                        <label class="flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition shrink-0 {{ $validarComIa ? 'bg-purpura-50/70 border-purpura-300 text-purpura-900' : 'bg-amber-50/70 border-amber-300 text-amber-900' }}">
+                            <input type="checkbox" wire:model.live="validarComIa" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
+                            <div class="text-xs">
+                                <span class="font-extrabold block flex items-center gap-1.5">
+                                    <i class="ph-fill {{ $validarComIa ? 'ph-sparkle text-purpura-600' : 'ph-shield-check text-amber-600' }}"></i>
+                                    {{ $validarComIa ? 'Validação por IA: ATIVADA' : 'Validação por IA: DESATIVADA (Aprovação Direta)' }}
+                                </span>
+                                <span class="text-[10px] opacity-80 block">
+                                    {{ $validarComIa ? 'O documento será analisado pela IA antes de aprovar.' : 'O documento enviado pelo participante será aprovado automaticamente.' }}
+                                </span>
+                            </div>
+                        </label>
+                    @endif
                 </div>
+
+                @if(!$this->uploadDocumentacaoHabilitado)
+                    <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
+                        <i class="ph-fill ph-lock-key text-xl text-amber-600 shrink-0 mt-0.5"></i>
+                        <div class="text-xs leading-relaxed">
+                            <span class="font-extrabold block text-sm">Upload de Documentação Aguardando Status</span>
+                            Para este ciclo, o envio dos documentos exigidos só é habilitado quando a inscrição estiver no status
+                            <strong class="underline">{{ $this->nomeStatusDocumentacaoExigido }}</strong>.
+                            Altere o status da inscrição no topo da ficha para liberar o envio.
+                        </div>
+                    </div>
+                @endif
 
                 @if(count($this->documentosExigidos) > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -878,7 +892,7 @@
                                         @endif
                                     </div>
 
-                                    @if($podeEditarAssistido)
+                                    @if($podeEditarAssistido && $this->uploadDocumentacaoHabilitado)
                                         <label class="px-3.5 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg cursor-pointer transition inline-flex items-center gap-1.5 shadow-2xs">
                                             <i class="ph-bold ph-upload-simple"></i>
                                             <span wire:loading.remove wire:target="uploads.{{ $doc->id }}">
@@ -887,6 +901,10 @@
                                             <span wire:loading wire:target="uploads.{{ $doc->id }}">Enviando...</span>
                                             <input type="file" wire:model="uploads.{{ $doc->id }}" accept=".jpg,.jpeg,.png,.webp,.pdf" class="hidden">
                                         </label>
+                                    @elseif(!$this->uploadDocumentacaoHabilitado)
+                                        <span class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 text-[11px] font-bold flex items-center gap-1 cursor-not-allowed" title="Mova a inscrição para o status '{{ $this->nomeStatusDocumentacaoExigido }}' para liberar o envio">
+                                            <i class="ph-fill ph-lock-key"></i> Bloqueado pelo Status
+                                        </span>
                                     @endif
                                 </div>
                             </div>

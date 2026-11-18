@@ -45,6 +45,7 @@ class PeriodManager extends Component
 
     public array $statusSelecionados = [];
     public $novoStatusSelecionado = ''; 
+    public $status_documentacao_id = '';
 
     public array $documentosExigidos = []; 
 
@@ -194,7 +195,7 @@ class PeriodManager extends Component
 
         $this->resetValidation();
         $this->reset([
-            'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status',
+            'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 'status', 'status_documentacao_id',
             'data_inicio_matricula', 'data_fim_matricula', 'tipo_ciclo', 'slug_projeto',
             'unidadesSelecionadas', 'cursosSelecionados', 'turnosSelecionados',
             'ofertasVagas', 'statusSelecionados', 'documentosExigidos',
@@ -411,6 +412,13 @@ class PeriodManager extends Component
     private function salvarPasso5Final()
     {
         if (!$this->cicloIdEmEdicao) return;
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('ciclos', 'status_documentacao_id')) {
+            Ciclo::where('id', $this->cicloIdEmEdicao)->update([
+                'status_documentacao_id' => !empty($this->status_documentacao_id) ? (int) $this->status_documentacao_id : null,
+            ]);
+        }
+
         foreach ($this->documentosExigidos as $docData) {
             if (!empty(trim($docData['nome']))) {
                 DocumentoExigido::updateOrCreate(
