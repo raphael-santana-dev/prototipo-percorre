@@ -160,14 +160,18 @@ class ProcessarLiberacaoFasesCommand extends Command
                 continue;
             }
 
+            $tokenForm = Crypt::encryptString($reg->id . '|' . $formulario->id);
+            $urlRetomadaIndividual = url('/f/' . $formulario->slug) . '?retomar_token=' . urlencode($tokenForm);
+
             $dadosExtras = [
                 'nome_fase'         => $fase->nome,
                 'titulo_formulario' => $formulario->titulo,
                 'paginas_fase'      => implode(', ', $paginasFase),
                 'data_liberacao'    => $fase->data_liberacao ? $fase->data_liberacao->format('d/m/Y H:i') : '',
                 'data_encerramento' => $fase->data_encerramento ? $fase->data_encerramento->format('d/m/Y H:i') : 'Sem data limite',
-                'url_formulario'    => $urlFormulario,
-                'link_retomada'     => $urlFormulario,
+                'url_formulario'    => $urlRetomadaIndividual,
+                'link_retomada'     => $urlRetomadaIndividual,
+                'link_retomada_url' => $urlRetomadaIndividual,
                 'email_template_id' => $fase->email_template_id,
             ];
 

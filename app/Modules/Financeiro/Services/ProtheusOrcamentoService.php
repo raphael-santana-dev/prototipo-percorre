@@ -183,11 +183,19 @@ class ProtheusOrcamentoService
         return ['sucesso' => false, 'mensagem' => $resCC['mensagem'] . ' / ' . $resNat['mensagem']];
     }
 
-    public static function sincronizar(): array
+    public static function sincronizar(?string $anoFiltro = null): array
     {
-        $url = rtrim((string) env('PROTHEUS_API_URL'), '/');
-        if (!$url) {
+        $baseUrl = rtrim((string) env('PROTHEUS_API_URL'), '/');
+        if (!$baseUrl) {
             return ['sucesso' => false, 'mensagem' => 'URL da API Protheus (PROTHEUS_API_URL) ausente no .env.'];
+        }
+
+        // Monta a URL conforme especificação do endpoint: /rest/WSTABINT?ano=&status=2
+        $url = $baseUrl;
+        if (!str_contains($url, 'status=')) {
+            $separador = str_contains($url, '?') ? '&' : '?';
+            $anoParam  = $anoFiltro !== null ? urlencode(trim($anoFiltro)) : '';
+            $url      .= $separador . "ano={$anoParam}&status=2";
         }
 
         try {
@@ -213,8 +221,20 @@ class ProtheusOrcamentoService
                 : (is_array($dados) && !isset($dados['ano']) ? $dados : [$dados]);
             
             $processados = 0;
+            $ignoradosPorStatus = 0;
 
             foreach ($orcamentosApi as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                // Garante que apenas orçamentos com status = 2 (Liberados pelo Abrir Revisão) sejam importados
+                $statusOrcamentoApi = trim((string) ($item['status'] ?? '2'));
+                if ($statusOrcamentoApi !== '2') {
+                    $ignoradosPorStatus++;
+                    continue;
+                }
+
                 $ano = trim((string) ($item['ano'] ?? ''));
                 $ccusto = trim((string) ($item['ccusto'] ?? ''));
                 $descricaoCC = trim((string) ($item['descricao'] ?? ''));
@@ -242,7 +262,7 @@ class ProtheusOrcamentoService
                             'ano'             => $ano,
                             'ccusto'          => $ccusto,
                             'descricao'       => $descricaoCC,
-                            'status'          => (string) ($item['status'] ?? '2'),
+                            'status'          => '2',
                             'statusDescricao' => (string) ($item['statusDescricao'] ?? 'Em revisão/atualização'),
                             'total'           => $totalApi,
                         ],
@@ -251,6 +271,7 @@ class ProtheusOrcamentoService
 
                 if ($orcamento->status === 'Importado' && $orcamento->itens()->count() === 0 && $totalApi > 0) {
                     $metaAtual = is_array($orcamento->dados_consolidados) ? $orcamento->dados_consolidados : [];
+                    $metaAtual['status'] = '2';
                     $metaAtual['total'] = $totalApi;
                     $metaAtual['descricao'] = $descricaoCC ?: ($metaAtual['descricao'] ?? '');
                     $orcamento->updateQuietly(['dados_consolidados' => $metaAtual]);
@@ -263,8 +284,10 @@ class ProtheusOrcamentoService
                 $processados++;
             }
 
-            self::registrarLogIntegracao('integracao_sucesso_orcamentos', 'orcamentos', null, ['url' => $url], "{$processados} processados.");
-            return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$processados} orçamento(s) listado(s)."];
+            $resumoLog = "{$processados} orçamento(s) com status=2 importado(s)" . ($ignoradosPorStatus > 0 ? " ({$ignoradosPorStatus} ignorado(s) com status diferente de 2)." : ".");
+            self::registrarLogIntegracao('integracao_sucesso_orcamentos', 'orcamentos', null, ['url' => $url], $resumoLog);
+
+            return ['sucesso' => true, 'mensagem' => "Sincronização concluída! {$resumoLog}"];
         } catch (\Throwable $e) {
             self::registrarLogIntegracao('integracao_excecao_orcamentos', 'orcamentos', null, ['url' => $url], $e->getMessage());
             return ['sucesso' => false, 'mensagem' => "Erro de ligação à API do Protheus: " . $e->getMessage()];

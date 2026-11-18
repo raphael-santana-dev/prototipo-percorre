@@ -44,6 +44,43 @@ class KanbanBoard extends Component
 
     public array $limitesPorColuna = [];
 
+    public bool $modalLaudoPcdAberto = false;
+    public ?array $laudoPcdDados = null;
+
+    public function abrirModalLaudoPcd(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+        $dinamicos = is_string($insc->dados_dinamicos)
+            ? (json_decode($insc->dados_dinamicos, true) ?: [])
+            : ($insc->dados_dinamicos ?? []);
+
+        $caminho = $dinamicos['laudo_pcd'] ?? null;
+        if (empty($caminho)) {
+            $this->dispatch('erro', msg: 'Este candidato não anexou laudo médico no momento da inscrição.');
+            return;
+        }
+
+        $ext = strtolower(pathinfo((string) $caminho, PATHINFO_EXTENSION));
+
+        $this->laudoPcdDados = [
+            'inscricao_id' => $insc->id,
+            'nome'         => $insc->nome,
+            'cpf'          => $insc->cpf,
+            'natureza'     => ucfirst((string) ($insc->natureza_deficiencia ?: 'Não especificada')),
+            'arquivo_nome' => basename((string) $caminho),
+            'url'          => asset('storage/' . $caminho),
+            'is_pdf'       => $ext === 'pdf',
+        ];
+
+        $this->modalLaudoPcdAberto = true;
+    }
+
+    public function fecharModalLaudoPcd(): void
+    {
+        $this->modalLaudoPcdAberto = false;
+        $this->laudoPcdDados = null;
+    }
+
     public function mount($id = null)
     {
         //abort_if(!feature('crm.acessar'), 403, 'CRM Desativado.');

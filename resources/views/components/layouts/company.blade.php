@@ -54,8 +54,40 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4 sm:gap-6 text-white dark:text-gray-200">
-                        <div class="hidden sm:flex items-center gap-1.5 hover:text-purpura-300 transition-colors">
+                    <div class="hidden items-center gap-4 md:flex">
+                        @php
+                            $emailDevPublic = strtolower(trim(
+                                Auth::guard('web')->user()?->email
+                                ?? Auth::guard('student')->user()?->email
+                                ?? Auth::guard('company')->user()?->email
+                                ?? ''
+                            ));
+                        @endphp
+                        @if($emailDevPublic === 'dev@percorre.com')
+                            @php
+                                $envRawPub = strtolower((string) app()->environment());
+                                if (in_array($envRawPub, ['production', 'prod', 'producao', 'produção'], true)) {
+                                    $envNomePub = 'Produção';
+                                    $envClassesPub = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40';
+                                    $envDotPub = 'bg-emerald-400 animate-pulse';
+                                } elseif (in_array($envRawPub, ['staging', 'homolog', 'homologacao', 'homologação', 'hml', 'testing'], true)) {
+                                    $envNomePub = 'Homologação';
+                                    $envClassesPub = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
+                                    $envDotPub = 'bg-amber-400';
+                                } else {
+                                    $envNomePub = 'Local';
+                                    $envClassesPub = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
+                                    $envDotPub = 'bg-sky-400';
+                                }
+                            @endphp
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border {{ $envClassesPub }} shrink-0 select-none"
+                                  title="Ambiente atual do sistema (APP_ENV: {{ app()->environment() }})">
+                                <span class="w-2 h-2 rounded-full {{ $envDotPub }}"></span>
+                                <span>{{ $envNomePub }}</span>
+                            </span>
+                        @endif
+
+                        @if(!app()->environment('production'))
                             <span class="text-sm font-medium opacity-90">Olá,</span>
                             <span class="text-sm font-bold">{{ explode(' ', auth('company')->user()->name)[0] }}</span>
                         </div>
@@ -137,6 +169,8 @@
     <livewire:components.quick-view-drawer />
     @livewireScripts
     <x-toast />
-    <x-session-timeout />
+    @if(!session('manter_conectado') && !auth('company')->viaRemember())
+        <x-session-timeout />
+    @endif
 </body>
 </html>

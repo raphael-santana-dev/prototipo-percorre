@@ -42,8 +42,8 @@
                 </div>
 
                 <div class="flex items-center">
-                    <input id="remember" type="checkbox" wire:model="remember" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:border-gray-600 dark:bg-gray-900">
-                    <label for="remember" class="block ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Manter conectado</label>
+                    <input id="remember" type="checkbox" wire:model.boolean="remember" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:border-gray-600 dark:bg-gray-900 cursor-pointer">
+                    <label for="remember" class="block ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">Manter conectado</label>
                 </div>
 
                 <div class="pt-4">

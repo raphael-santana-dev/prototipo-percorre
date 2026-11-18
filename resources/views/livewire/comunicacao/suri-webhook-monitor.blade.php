@@ -1,4 +1,4 @@
-<div class="p-6 max-w-[1400px] mx-auto font-sans relative" wire:poll.10s>
+<div class="w-full relative" wire:poll.10s>
     <x-page-header 
         title="Monitor do Webhook Suri" 
         subtitle="Acompanhamento em tempo real dos eventos disparados pelo chatbot"

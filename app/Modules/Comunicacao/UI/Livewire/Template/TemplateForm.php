@@ -19,6 +19,7 @@ class TemplateForm extends Component
     public $templateId = null;
     public string $nome = '';
     public string $canal = 'email'; // 'email', 'whatsapp', 'ambos'
+    public bool $status = true;
     public string $assunto = '';
     public string $corpo = '';
 
@@ -31,20 +32,11 @@ class TemplateForm extends Component
     public string $sampleFileBase64 = '';
     public $samplePdfUpload = null;
     public array $bodyExamples = [];
+    public array $suriVariableMap = [];
 
-    /**
-     * Estrutura de cada botão:
-     * [
-     *   'id'           => 'btn_...',
-     *   'suri_type'    => 2, // 0 = URL, 1 = Ligar, 2 = Resposta Rápida, 3 = Copiar Código
-     *   'texto'        => 'Confirmar',
-     *   'url'          => 'https://suri.ai/planos/{{1}}',
-     *   'phone'        => '+5585991976502',
-     *   'example'      => 'premium-anual',
-     *   'exibir_email' => true,
-     *   'cor'          => 'purpura'
-     * ]
-     */
+    // Estado do Indicador Visual de Integração Suri (Canto Inferior Direito)
+    public ?array $feedbackSuri = null;
+
     public array $botoes = [];
 
     public string $abaPreview = 'email'; // 'email', 'whatsapp' ou 'json_suri'
@@ -59,6 +51,7 @@ class TemplateForm extends Component
             $this->templateId = $template->id;
             $this->nome = (string) $template->nome;
             $this->canal = $template->canal ?? 'email';
+            $this->status = (bool) ($template->status ?? true);
             $this->assunto = (string) ($template->assunto ?? '');
             $this->corpo = (string) ($template->corpo ?? '');
             $this->botoes = is_array($template->botoes)
@@ -76,6 +69,7 @@ class TemplateForm extends Component
             $this->sampleFileName   = (string) ($cfgSuri['sample_file_name'] ?? '');
             $this->sampleFileBase64 = (string) ($cfgSuri['sample_file_base64'] ?? '');
             $this->bodyExamples     = is_array($cfgSuri['body_examples'] ?? null) ? $cfgSuri['body_examples'] : [];
+            $this->suriVariableMap  = is_array($cfgSuri['variable_map'] ?? null) ? $cfgSuri['variable_map'] : [];
 
             $this->resourceLockType = 'template_comunicacao';
             $this->resourceLockId = (int) $this->templateId;
@@ -85,6 +79,11 @@ class TemplateForm extends Component
         $this->sincronizarVariaveisCorpo();
         $this->abaPreview = ($this->canal === 'whatsapp') ? 'whatsapp' : 'email';
         $this->breadcrumbs = BreadcrumbHelper::generate();
+    }
+
+    public function fecharFeedbackSuri(): void
+    {
+        $this->feedbackSuri = null;
     }
 
     public function updatedCorpo(): void
@@ -123,6 +122,9 @@ class TemplateForm extends Component
                 str_contains(strtolower($v), 'data')  => '10/08/2026',
                 default                               => strtoupper($v),
             };
+            if (!isset($this->suriVariableMap[$v])) {
+                $this->suriVariableMap[$v] = is_numeric($v) ? 'nome' : strtolower($v);
+            }
         }
         $this->bodyExamples = $novosExemplos;
     }
@@ -151,7 +153,7 @@ class TemplateForm extends Component
 
         $this->botoes[] = [
             'id'           => 'btn_' . uniqid(),
-            'suri_type'    => $tipoSuri, // 0=URL, 1=Ligar, 2=Resposta Rápida, 3=Copiar Código
+            'suri_type'    => $tipoSuri,
             'texto'        => '',
             'url'          => '',
             'phone'        => '',
@@ -185,6 +187,7 @@ class TemplateForm extends Component
                     ? substr($this->sampleFileBase64, 0, 48) . '...'
                     : '',
                 'body_examples'      => $this->bodyExamples,
+                'variable_map'       => $this->suriVariableMap,
             ],
         ]);
 
@@ -197,6 +200,8 @@ class TemplateForm extends Component
             $this->dispatch('erro', msg: 'Este template está sendo editado por outro usuário.');
             return;
         }
+
+        $this->feedbackSuri = null;
 
         $regras = [
             'nome'  => 'required|min:3|max:255',
@@ -247,7 +252,6 @@ class TemplateForm extends Component
                             'required',
                             'string',
                             function ($attr, $val, $fail) use ($btn, $num) {
-                                // Se tiver variável na URL, só pode ficar no final ({{1}}) e example é obrigatório
                                 if (str_contains($val, '{{')) {
                                     if (!preg_match('/\{\{1\}\}$/', trim($val))) {
                                         $fail("No botão #{$num}, a variável dinâmica só é permitida no final da URL (ex: https://site.com/rota/{{1}}).");
@@ -295,6 +299,7 @@ class TemplateForm extends Component
             'sample_file_name'   => trim($this->sampleFileName),
             'sample_file_base64' => $this->sampleFileBase64,
             'body_examples'      => $this->bodyExamples,
+            'variable_map'       => $this->suriVariableMap,
         ];
 
         $dados = [
@@ -305,6 +310,9 @@ class TemplateForm extends Component
 
         if (Schema::hasColumn('email_templates', 'canal')) {
             $dados['canal'] = $this->canal;
+        }
+        if (Schema::hasColumn('email_templates', 'status')) {
+            $dados['status'] = (bool) $this->status;
         }
         if (Schema::hasColumn('email_templates', 'botoes')) {
             $dados['botoes'] = in_array($this->canal, ['whatsapp', 'ambos']) ? array_values($this->botoes) : [];
@@ -318,6 +326,7 @@ class TemplateForm extends Component
             $template->update($dados);
         } else {
             $template = EmailTemplate::create($dados);
+            $this->templateId = $template->id;
         }
 
         if (in_array($this->canal, ['whatsapp', 'ambos']) && empty($template->suri_template_id)) {
@@ -326,14 +335,35 @@ class TemplateForm extends Component
 
             if (!empty($resSync['suri_template_id'])) {
                 $template->update(['suri_template_id' => $resSync['suri_template_id']]);
+                $this->feedbackSuri = [
+                    'sucesso' => true,
+                    'titulo'  => 'Sincronizado com a Suri!',
+                    'detalhe' => "Template registrado na Suri com ID: {$resSync['suri_template_id']}",
+                    'http'    => $resSync['http_status'] ?? 200,
+                ];
+                $this->dispatch('sucesso', msg: "Template salvo e sincronizado com a Suri (ID: {$resSync['suri_template_id']})!");
             } else {
-                $erroDetalhe = data_get($resSync, 'resposta.error') ?? 'Verifique os logs do sistema.';
-                $this->dispatch('erro', msg: "Template salvo localmente, mas falhou ao sincronizar com a Suri: {$erroDetalhe}");
+                $erroDetalhe = data_get($resSync, 'resposta.error.message')
+                    ?? data_get($resSync, 'resposta.error')
+                    ?? data_get($resSync, 'resposta.message')
+                    ?? data_get($resSync, 'resposta.erro')
+                    ?? 'Verifique o console HTTP da Suri.';
+                if (is_array($erroDetalhe)) {
+                    $erroDetalhe = json_encode($erroDetalhe, JSON_UNESCAPED_UNICODE);
+                }
+                $this->feedbackSuri = [
+                    'sucesso' => false,
+                    'titulo'  => 'Falha na Integração com a Suri',
+                    'detalhe' => (string) $erroDetalhe,
+                    'http'    => $resSync['http_status'] ?? 500,
+                ];
+                $this->dispatch('erro', msg: "Template salvo no sistema, mas a Suri retornou erro: {$erroDetalhe}");
                 return;
             }
+        } else {
+            $this->dispatch('sucesso', msg: 'Template salvo com sucesso!');
         }
 
-        $this->dispatch('sucesso', msg: 'Template salvo e sincronizado com sucesso!');
         return redirect()->route('templates.index');
     }
 
@@ -355,7 +385,8 @@ class TemplateForm extends Component
         }
 
         return view('livewire.comunicacao.template.template-form', [
-            'dicionario' => $dicionarioCompleto,
+            'dicionario'   => $dicionarioCompleto,
+            'colunasBanco' => EmailParserService::getColunasBancoDisponiveis(),
         ])->layout('components.layouts.app', ['title' => $this->templateId ? 'Editar Template' : 'Novo Template']);
     }
 }

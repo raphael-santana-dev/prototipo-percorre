@@ -1,4 +1,4 @@
-<div class="p-6 max-w-[1400px] mx-auto font-sans relative" x-data="cropperModal()">
+<div class="w-full relative" x-data="cropperModal()">
     
     <!-- Quill CSS & JS -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">

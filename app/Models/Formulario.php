@@ -35,6 +35,7 @@ class Formulario extends Model
         'turnos_permitidas',
         'data_inicio',
         'data_fim',
+        'encerrado'
     ];
 
     protected $casts = [

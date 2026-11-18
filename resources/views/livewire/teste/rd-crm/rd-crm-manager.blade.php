@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: @entangle('abaAtiva') }">
+<div class="w-full relative" x-data="{ abaAtiva: @entangle('abaAtiva') }">
     
     <x-page-header 
         title="Integração RD Station CRM"
