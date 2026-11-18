@@ -91,6 +91,7 @@ class FormManager extends Component
         $novoForm->titulo = $formOriginal->titulo . ' (Cópia)';
         $novoForm->slug = Str::slug($novoForm->titulo) . '-' . Str::random(5);
         $novoForm->status = false;
+        $novoForm->encerrado = false;
         $novoForm->save();
 
         // Clona os campos dinâmicos vinculados ao formulário
@@ -167,9 +168,26 @@ class FormManager extends Component
         $this->dispatch('sucesso', msg: 'Formulário salvo com sucesso!');
     }
 
+    public function toggleEncerrado(int $id): void
+    {
+        $form = Formulario::findOrFail($id);
+        $form->encerrado = !($form->encerrado ?? false);
+        $form->save();
+
+        $this->dispatch('sucesso', msg: $form->encerrado
+            ? 'Formulário encerrado! A edição das configurações e dos campos foi bloqueada (somente leitura).'
+            : 'Formulário reaberto para edições!');
+    }
+
     public function excluir($id)
     {
-        Formulario::findOrFail($id)->delete();
+        $form = Formulario::findOrFail($id);
+        if ($form->encerrado) {
+            $this->dispatch('erro', msg: 'Ação Bloqueada: Este formulário está marcado como Encerrado e permite apenas visualização.');
+            return;
+        }
+
+        $form->delete();
         $this->dispatch('sucesso', msg: 'Formulário excluído!');
     }
 
@@ -180,6 +198,7 @@ class FormManager extends Component
             ['key' => 'titulo', 'label' => 'Formulário', 'sortable' => true],
             ['key' => 'acesso', 'label' => 'Regras de Acesso', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'encerrado', 'label' => 'Trava de Edição', 'sortable' => true, 'class' => 'text-center'],
             ['key' => 'tipo', 'label' => 'Tipo', 'sortable' => true],
             ['key' => 'total_respostas', 'label' => 'Respostas', 'sortable' => true],
             ['key' => 'data_inicio', 'label' => 'Início', 'sortable' => true],

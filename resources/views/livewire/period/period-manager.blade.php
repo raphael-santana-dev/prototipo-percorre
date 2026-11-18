@@ -263,12 +263,19 @@
                 
                 <td class="px-4 py-2 whitespace-nowrap text-center">
                     @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
-                        <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Ciclo Bloqueado (Clique para desbloquear)' : 'Ciclo Desbloqueado (Clique para bloquear)' }}">
-                            <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
-                        </button>
+                        <div class="inline-flex items-center justify-center gap-1.5">
+                            <button type="button" wire:click="toggleBloqueio({{ $ciclo->id }})" class="p-1.5 rounded border transition-colors {{ $ciclo->bloqueado ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->bloqueado ? 'Inscrições Congeladas (Clique para desbloquear inscrições)' : 'Inscrições Liberadas (Clique para congelar inscrições)' }}">
+                                <i class="text-base ph {{ $ciclo->bloqueado ? 'ph-lock-key' : 'ph-lock-key-open' }}"></i>
+                            </button>
+
+                            <button type="button" wire:click="toggleEncerrado({{ $ciclo->id }})" class="px-2 py-1 rounded border text-[10px] font-bold uppercase transition-colors flex items-center gap-1 {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700' }}" title="{{ $ciclo->encerrado ? 'Ciclo Encerrado: Edição do Ciclo/Formulário bloqueada (Inscrições liberadas). Clique para reabrir.' : 'Clique para Encerrar a edição do Ciclo/Formulário (mantendo inscrições editáveis)' }}">
+                                <i class="text-xs ph-fill {{ $ciclo->encerrado ? 'ph-archive' : 'ph-pencil-slash' }}"></i>
+                                <span>{{ $ciclo->encerrado ? 'Encerrado' : 'Aberto' }}</span>
+                            </button>
+                        </div>
                     @else
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase {{ $ciclo->bloqueado ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-500' }}">
-                            {{ $ciclo->bloqueado ? 'Bloqueado' : 'Aberto' }}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase {{ $ciclo->encerrado ? 'bg-amber-50 text-amber-800 border border-amber-200' : ($ciclo->bloqueado ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-500') }}">
+                            {{ $ciclo->encerrado ? 'Encerrado' : ($ciclo->bloqueado ? 'Bloqueado' : 'Aberto') }}
                         </span>
                     @endif
                 </td>

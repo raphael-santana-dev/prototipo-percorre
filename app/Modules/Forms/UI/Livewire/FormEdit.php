@@ -20,6 +20,7 @@ class FormEdit extends Component
     public $formId = null;
     
     public $titulo, $descricao, $status = false;
+    public bool $encerrado = false;
     public $data_inicio = null, $data_fim = null;
     
     public $acesso_livre = true;
@@ -46,6 +47,7 @@ class FormEdit extends Component
             $this->titulo = $form->titulo;
             $this->descricao = $form->descricao;
             $this->status = $form->status;
+            $this->encerrado = (bool) ($form->encerrado ?? false);
             $this->data_inicio = $form->data_inicio ? $form->data_inicio->format('Y-m-d\TH:i') : null;
             $this->data_fim = $form->data_fim ? $form->data_fim->format('Y-m-d\TH:i') : null;
             $this->acesso_livre = $form->acesso_livre;
@@ -72,8 +74,26 @@ class FormEdit extends Component
         $this->activeCursoId = $id;
     }
 
+    public function toggleEncerrado(): void
+    {
+        if (!$this->formId) return;
+
+        $form = Formulario::findOrFail($this->formId);
+        $this->encerrado = !($form->encerrado ?? false);
+        $form->update(['encerrado' => $this->encerrado]);
+
+        $this->dispatch('sucesso', msg: $this->encerrado
+            ? 'Formulário marcado como Encerrado (modo somente visualização ativado).'
+            : 'Formulário reaberto para edições!');
+    }
+
     public function salvar()
     {
+        if ($this->encerrado) {
+            $this->dispatch('erro', msg: 'Este formulário está marcado como Encerrado e permite apenas visualização.');
+            return;
+        }
+
         $this->validate([
             'titulo' => 'required|string|max:255',
             'data_inicio' => 'nullable|date',

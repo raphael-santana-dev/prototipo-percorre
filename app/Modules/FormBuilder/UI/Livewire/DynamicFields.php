@@ -59,6 +59,25 @@ class DynamicFields extends Component
     public $bg_image_upload;
     public $link_file_upload;
     public bool $isCicloCustomizado = false;
+    public bool $isEncerrado = false;
+
+    public function toggleEncerradoContexto(): void
+    {
+        $model = $this->contextoTipo === 'ciclo'
+            ? Ciclo::findOrFail($this->contextoId)
+            : Formulario::findOrFail($this->contextoId);
+
+        $this->isEncerrado = !($model->encerrado ?? false);
+        $model->update(['encerrado' => $this->isEncerrado]);
+
+        if ($this->isEncerrado) {
+            $this->cancelarEdicao();
+        }
+
+        $this->dispatch('sucesso', msg: $this->isEncerrado
+            ? 'Formulário/Ciclo marcado como Encerrado (somente visualização)!'
+            : 'Edição do Formulário/Ciclo reaberta!');
+    }
 
     public array $formSettings = [
         'bg_image'              => null,
@@ -141,6 +160,7 @@ class DynamicFields extends Component
         $this->isCicloCustomizado = $ctx['isCicloCustomizado'];
         $this->badgeContexto      = $ctx['badge'];
         $this->slug               = $ctx['slug'];
+        $this->isEncerrado        = (bool) ($ctx['encerrado'] ?? false);
 
         $this->carregarEtapas();
         if ($this->etapasDisponiveis->count() > 0) {
@@ -745,6 +765,11 @@ class DynamicFields extends Component
 
     public function salvar(): void
     {
+        if ($this->isEncerrado) {
+            $this->dispatch('erro', msg: 'Este formulário/ciclo está marcado como Encerrado e permite apenas visualização.');
+            return;
+        }
+
         $srv = $this->service();
         $this->label = $srv->limparHtmlQuill($this->label);
 

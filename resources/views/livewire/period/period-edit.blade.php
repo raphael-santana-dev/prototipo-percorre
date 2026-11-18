@@ -11,14 +11,42 @@
        backLabel="Voltar para Ciclos"
        contextoDescricao="as configurações deste ciclo" />
     
+    @if($encerrado)
+        <div class="mb-5 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-archive text-2xl text-amber-600 shrink-0 mt-0.5"></i>
+                <div>
+                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                        Ciclo Encerrado — Somente Visualização
+                    </h4>
+                    <p class="text-xs text-amber-800 dark:text-amber-400 mt-0.5">
+                        A edição das configurações e do formulário deste ciclo está bloqueada. As inscrições vinculadas a este ciclo continuam liberadas para gestão e movimentação normalmente.
+                    </p>
+                </div>
+            </div>
+            @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                <button type="button" wire:click="toggleEncerrado" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shrink-0 transition shadow-2xs flex items-center gap-1.5">
+                    <i class="ph-bold ph-lock-key-open"></i> Reabrir Edição do Ciclo
+                </button>
+            @endif
+        </div>
+    @endif
+
     <fieldset @if($isLockedByOther) disabled class="pointer-events-none opacity-60 blur-[2px] transition-all duration-300" @endif>
         <x-page-header 
         title="Edição do Ciclo" 
         icon="ph ph-calendar-check"
-        badge="Administrativo">
+        badge="{{ $encerrado ? 'Encerrado (Somente Leitura)' : 'Administrativo' }}">
         
             <x-slot name="actions">
                 <div class="flex items-center gap-2 flex-wrap justify-end">
+                    @if(feature('ciclo.editar') && (auth()->user()->hasRole('dev') || auth()->user()->can('ciclo.editar')))
+                        <button type="button" wire:click="toggleEncerrado" class="btn btn--secondary btn--small {{ $encerrado ? '!bg-amber-50 !border-amber-300 !text-amber-800' : '' }}">
+                            <i class="ph-fill {{ $encerrado ? 'ph-lock-key-open' : 'ph-archive' }} text-sm"></i>
+                            {{ $encerrado ? 'Reabrir Ciclo' : 'Encerrar Edição do Ciclo' }}
+                        </button>
+                    @endif
+
                     <a href="{{ route('ciclos.show', $cicloId) }}" class="btn btn--secondary btn--small !bg-purpura-50 !border-purpura-200 !text-purpura-700">
                         <i class="ph-bold ph-eye text-sm"></i> Ver Detalhes
                     </a>
@@ -62,7 +90,8 @@
             </nav>
         </div>
 
-        <form id="formCicloPrincipal" wire:submit.prevent="salvar">
+        <form id="formCicloPrincipal" wire:submit.prevent="salvar" @if($encerrado) class="opacity-80" @endif>
+            <fieldset @if($encerrado) disabled @endif class="contents">
             <div x-show="abaAtiva === 'geral'" x-cloak class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 relative z-0 -mt-px flex flex-col p-6 space-y-6">
                 <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
                     <h3 class="t-body-16-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-calendar text-purpura-600"></i> Informações Gerais</h3>
@@ -497,12 +526,15 @@
                 </div>
             </div>
 
-            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
-                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
-                <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">
-                    <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
-                </button>
-            </div>
+            @if(!$encerrado)
+                <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium"></span>
+                    <button type="submit" class="btn btn--primary btn--large uppercase tracking-wider">
+                        <i class="ph-bold ph-floppy-disk text-base"></i> Salvar Ciclo
+                    </button>
+                </div>
+            @endif
+            </fieldset>
         </form>
     </fieldset>
     

@@ -885,6 +885,40 @@ class RegistrationManager extends Component
         $this->fecharModal();
     }
 
+    public function toggleLegado(int $id): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'alterar status de legado da inscrição')) {
+            return;
+        }
+
+        $insc = Inscricao::findOrFail($id);
+        $insc->legado = !$insc->legado;
+        $insc->save();
+
+        $this->dispatch('sucesso', msg: $insc->legado
+            ? "Inscrição #{$insc->id} marcada como Legado (somente leitura)!"
+            : "Inscrição #{$insc->id} desmarcada como Legado (edição liberada)!");
+    }
+
+    public function definirLegadoEmLote(bool $statusLegado): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'definir inscrições como legado em lote')) {
+            return;
+        }
+
+        if (empty($this->selecionadas)) {
+            $this->dispatch('erro', msg: 'Selecione pelo menos uma inscrição.');
+            return;
+        }
+
+        $qtd = Inscricao::whereIn('id', $this->selecionadas)->update(['legado' => $statusLegado]);
+
+        $this->desmarcarTodas();
+        $this->dispatch('sucesso', msg: $statusLegado
+            ? "{$qtd} inscrição(ões) marcada(s) como Legado (somente visualização)!"
+            : "{$qtd} inscrição(ões) desmarcada(s) como Legado (edição reativada)!");
+    }
+
     public function excluirInscricao($id)
     {
         if (!$this->autorizarAcao('inscricao.excluir', 'excluir inscrições')) {
@@ -1491,7 +1525,6 @@ class RegistrationManager extends Component
             $idsPagina = $this->obterQueryFiltrada()
                 ->apenasVinculosPermitidos()
                 ->paginate($this->porPagina)
-                ->where('legado', false)
                 ->pluck('id')
                 ->map(fn($id) => (string) $id)
                 ->toArray();
