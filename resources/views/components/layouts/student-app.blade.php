@@ -182,6 +182,29 @@
                         </div>
 
                         <div class="flex items-center gap-4 sm:gap-5 text-white dark:text-gray-200 ml-auto">
+                            @if(strtolower(trim(auth('student')->user()?->email ?? auth('web')->user()?->email ?? '')) === 'dev@percorre.com')
+                                @php
+                                    $envRawStu = strtolower((string) app()->environment());
+                                    if (in_array($envRawStu, ['production', 'prod', 'producao', 'produção'], true)) {
+                                        $envNomeStu = 'Produção';
+                                        $envClassesStu = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40';
+                                        $envDotStu = 'bg-emerald-400 animate-pulse';
+                                    } elseif (in_array($envRawStu, ['staging', 'homolog', 'homologacao', 'homologação', 'hml', 'testing'], true)) {
+                                        $envNomeStu = 'Homologação';
+                                        $envClassesStu = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
+                                        $envDotStu = 'bg-amber-400';
+                                    } else {
+                                        $envNomeStu = 'Local';
+                                        $envClassesStu = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
+                                        $envDotStu = 'bg-sky-400';
+                                    }
+                                @endphp
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border {{ $envClassesStu }} shrink-0 select-none">
+                                    <span class="w-2 h-2 rounded-full {{ $envDotStu }}"></span>
+                                    <span>{{ $envNomeStu }}</span>
+                                </span>
+                            @endif
+
                             @feature('sistema.tema')
                                 <button @click="tema = tema === 'light' ? 'dark' : 'light'" class="flex items-center justify-center p-2 text-white/90 transition-colors rounded-full hover:bg-white/10 dark:text-gray-400 dark:hover:bg-gray-800" title="Alternar Tema">
                                     <i class="text-lg ph ph-moon" x-show="tema === 'light'"></i>

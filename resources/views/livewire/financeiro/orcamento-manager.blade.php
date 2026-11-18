@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative text-gray-800">
+<div class="w-full relative">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">

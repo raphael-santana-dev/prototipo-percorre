@@ -26,6 +26,96 @@ class TemplateManager extends Component
     public bool $modalDetalheSuriAberto = false;
     public ?string $erroApiSuri = null;
 
+    public ?array $feedbackSuri = null;
+
+    public function fecharFeedbackSuri(): void
+    {
+        $this->feedbackSuri = null;
+    }
+
+    public function toggleStatus(int $id): void
+    {
+        $tpl = EmailTemplate::findOrFail($id);
+        $tpl->status = !($tpl->status ?? true);
+        $tpl->save();
+
+        $this->dispatch('sucesso', msg: $tpl->status
+            ? "Template '{$tpl->nome}' ativado e liberado para uso!"
+            : "Template '{$tpl->nome}' desativado (oculto em novas automações e esteiras).");
+    }
+
+    public function toggleStatusPorSuriId(string $suriId): void
+    {
+        $tpl = EmailTemplate::where('suri_template_id', $suriId)->first();
+        if (!$tpl) {
+            $this->dispatch('erro', msg: 'Importe o template para o sistema primeiro antes de alterar o status.');
+            return;
+        }
+        $this->toggleStatus($tpl->id);
+    }
+
+    public function verUsoAutomacoes(int $templateId): void
+    {
+        $tpl = EmailTemplate::with(['automacoes', 'esteiraEtapas.esteira'])->findOrFail($templateId);
+
+        $htmlAuto = '';
+        if ($tpl->automacoes->isNotEmpty()) {
+            $htmlAuto .= '<div class="space-y-2">';
+            foreach ($tpl->automacoes as $auto) {
+                $badgeSt = $auto->status
+                    ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Ativa</span>'
+                    : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-gray-100 text-gray-500 border border-gray-200">Pausada</span>';
+                $urlEdit = route('automacoes.edit', $auto->id);
+                $htmlAuto .= '<div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
+                    . '<div class="min-w-0">'
+                    . '<div class="text-xs font-semibold text-gray-900 dark:text-white truncate">' . e($auto->nome) . '</div>'
+                    . '<div class="text-[11px] font-mono text-gray-500 mt-0.5">Gatilho: ' . e($auto->evento_gatilho) . '</div>'
+                    . '</div>'
+                    . '<div class="flex items-center gap-2 shrink-0">' . $badgeSt
+                    . '<a href="' . $urlEdit . '" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-medium text-purpura-600 hover:underline">Abrir ↗</a>'
+                    . '</div></div>';
+            }
+            $htmlAuto .= '</div>';
+        } else {
+            $htmlAuto = '<span class="text-xs text-gray-400">Nenhuma regra de automação simples vinculada a este template.</span>';
+        }
+
+        $htmlEsteiras = '';
+        if ($tpl->esteiraEtapas->isNotEmpty()) {
+            $htmlEsteiras .= '<div class="space-y-2">';
+            foreach ($tpl->esteiraEtapas as $etapa) {
+                $esteira = $etapa->esteira;
+                if (!$esteira) continue;
+                $badgeSt = $esteira->status
+                    ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Ativa</span>'
+                    : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-gray-100 text-gray-500 border border-gray-200">Pausada</span>';
+                $urlEsteira = route('esteiras.edit', $esteira->id);
+                $htmlEsteiras .= '<div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
+                    . '<div class="min-w-0">'
+                    . '<div class="text-xs font-semibold text-gray-900 dark:text-white truncate">' . e($esteira->nome) . '</div>'
+                    . '<div class="text-[11px] text-gray-500 mt-0.5">Etapa #' . $etapa->ordem . ': ' . e($etapa->nome) . '</div>'
+                    . '</div>'
+                    . '<div class="flex items-center gap-2 shrink-0">' . $badgeSt
+                    . '<a href="' . $urlEsteira . '" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-medium text-purpura-600 hover:underline">Abrir ↗</a>'
+                    . '</div></div>';
+            }
+            $htmlEsteiras .= '</div>';
+        } else {
+            $htmlEsteiras = '<span class="text-xs text-gray-400">Nenhuma etapa de esteira vinculada a este template.</span>';
+        }
+
+        $this->dispatch('load-quick-view', [
+            'title'    => 'Onde este Template é utilizado',
+            'subtitle' => $tpl->nome,
+            'icon'     => 'ph-git-branch',
+            'maxWidth' => 'xl',
+            'data'     => [
+                'Automações por Gatilho (' . $tpl->automacoes->count() . ')' => $htmlAuto,
+                'Esteiras de Disparo (' . $tpl->esteiraEtapas->count() . ')' => $htmlEsteiras,
+            ],
+        ]);
+    }
+
     public function updating($nomePropriedade)
     {
         if ($nomePropriedade === 'filtro_busca') {
@@ -118,22 +208,33 @@ class TemplateManager extends Component
         $this->dispatch('sucesso', msg: "Template '{$titulo}' importado da Suri para o sistema local!");
     }
 
-    public function sincronizarSuri($id)
+    public function sincronizarSuri($id): void
     {
         $template = EmailTemplate::findOrFail($id);
-
-        if (!empty($template->suri_template_id)) {
-            $this->dispatch('erro', msg: 'Este template já está sincronizado.');
-            return;
-        }
-
-        $res = app(SuriApiService::class)->syncTemplateComDetalhes($template);
+        $res = app(\App\Modules\Teste\Suri\Services\SuriApiService::class)->syncTemplateComDetalhes($template);
 
         if (!empty($res['suri_template_id'])) {
             $template->update(['suri_template_id' => $res['suri_template_id']]);
+            $this->feedbackSuri = [
+                'sucesso' => true,
+                'titulo'  => 'Sincronizado com a Suri!',
+                'detalhe' => "Template '{$template->nome}' vinculado ao ID: {$res['suri_template_id']}",
+                'http'    => $res['http_status'] ?? 200,
+            ];
             $this->dispatch('sucesso', msg: 'Template sincronizado com a Suri com sucesso!');
         } else {
-            $erroMsg = data_get($res, 'resposta.error') ?? 'Verifique os logs do sistema.';
+            $erroMsg = data_get($res, 'resposta.error.message')
+                ?? data_get($res, 'resposta.error')
+                ?? data_get($res, 'resposta.message')
+                ?? 'Falha ao sincronizar com a Suri.';
+            if (is_array($erroMsg)) $erroMsg = json_encode($erroMsg, JSON_UNESCAPED_UNICODE);
+
+            $this->feedbackSuri = [
+                'sucesso' => false,
+                'titulo'  => 'Erro na Sincronização Suri',
+                'detalhe' => (string) $erroMsg,
+                'http'    => $res['http_status'] ?? 500,
+            ];
             $this->dispatch('erro', msg: "Falha ao sincronizar: {$erroMsg}");
         }
     }
@@ -145,6 +246,8 @@ class TemplateManager extends Component
             ['key' => 'nome', 'label' => 'Nome do Template', 'sortable' => true],
             ['key' => 'canal', 'label' => 'Canal', 'sortable' => true, 'class' => 'w-36 text-center'],
             ['key' => 'assunto', 'label' => 'Assunto / ID Suri', 'sortable' => true],
+            ['key' => 'uso', 'label' => 'Em Uso (Automações)', 'sortable' => false, 'class' => 'text-center'],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'class' => 'text-center w-28'],
             ['key' => 'acoes', 'label' => '', 'sortable' => false, 'class' => 'text-right w-32'],
         ];
     }
@@ -198,7 +301,9 @@ class TemplateManager extends Component
 
     public function render()
     {
-        $query = EmailTemplate::query();
+        // Alterado aqui: Adicionado o withCount para carregar a contagem de relacionamentos eficientemente
+        $query = EmailTemplate::withCount(['automacoes', 'esteiraEtapas']);
+        
         $query->when($this->filtro_busca, function ($q) {
             $q->where('nome', 'ilike', '%' . $this->filtro_busca . '%')
               ->orWhere('assunto', 'ilike', '%' . $this->filtro_busca . '%')

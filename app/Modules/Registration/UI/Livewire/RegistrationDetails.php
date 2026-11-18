@@ -70,6 +70,8 @@ class RegistrationDetails extends Component
     public array $historicoFormularioSelecionado = [];
     public string $tituloHistoricoFormulario = '';
 
+    public $laudoPcdAssistidoUpload = null;
+
     public function mount($id)
     {
         $this->inscricao = Inscricao::with(['unidade', 'curso', 'turno', 'ciclo'])->findOrFail($id);
@@ -187,6 +189,14 @@ class RegistrationDetails extends Component
             'formFixo.cpf.required'   => 'O CPF é obrigatório.',
             'formFixo.email.required' => 'O e-mail é obrigatório.',
         ]);
+
+        if ($this->laudoPcdAssistidoUpload) {
+            $this->validate([
+                'laudoPcdAssistidoUpload' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            ]);
+            $this->formDinamico['laudo_pcd'] = $this->laudoPcdAssistidoUpload->store('inscricoes/laudos_pcd', 'public');
+            $this->laudoPcdAssistidoUpload = null;
+        }
 
         $participante = auth()->user();
         $agoraStr = now()->format('d/m/Y H:i');

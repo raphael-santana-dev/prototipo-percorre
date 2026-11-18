@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative" x-data="{ abaAtiva: @entangle('abaAtiva') }">
+<div class="w-full relative" x-data="{ abaAtiva: @entangle('abaAtiva') }">
     <div class="mb-6">
         <h2 class="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
             <i class="ph-fill ph-robot text-purpura-500"></i> Motor de IA e Matrículas

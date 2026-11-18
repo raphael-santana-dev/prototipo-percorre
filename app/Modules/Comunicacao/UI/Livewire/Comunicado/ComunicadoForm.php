@@ -17,12 +17,6 @@ class ComunicadoForm extends Component
     use WithFileUploads;
 
     public $template_id = '';
-    
-    public string $modo_selecao = 'manual'; 
-    public string $filtro_publico = ''; 
-    public string $filtro_role = '';
-    public string $filtro_unidade = '';
-    public string $filtro_curso = '';
 
     public array $destinatarios = [];
     public array $cc = [];
@@ -33,6 +27,137 @@ class ComunicadoForm extends Component
     public string $data_agendamento = '';
 
     public array $breadcrumbs = [];
+
+    public string $modo_selecao = 'manual'; 
+    public string $filtro_publico = ''; 
+    public string $filtro_role = '';
+    public string $filtro_unidade = '';
+    public string $filtro_curso = '';
+    public string $filtro_ciclo = '';
+    public array $regras_dinamicas = [];
+
+    public function adicionarRegraDinamica(string $conector = 'AND'): void
+    {
+        $this->regras_dinamicas[] = [
+            'conector' => in_array($conector, ['AND', 'OR'], true) ? $conector : 'AND',
+            'campo'    => '',
+            'operador' => '=',
+            'valor'    => '',
+        ];
+    }
+
+    public function removerRegraDinamica(int $index): void
+    {
+        unset($this->regras_dinamicas[$index]);
+        $this->regras_dinamicas = array_values($this->regras_dinamicas);
+    }
+
+    #[Computed]
+    public function camposFiltroDisponiveis(): array
+    {
+        $campos = [
+            'fixo:possui_deficiencia'   => '[Fixo] Pessoa com Deficiência (sim/nao)',
+            'fixo:natureza_deficiencia' => '[Fixo] Natureza da Deficiência',
+            'fixo:estado'               => '[Fixo] Estado (UF)',
+            'fixo:cidade'               => '[Fixo] Cidade',
+            'fixo:bairro'               => '[Fixo] Bairro',
+            'fixo:regiao'               => '[Fixo] Região (centro, norte, sul, leste, oeste)',
+            'fixo:etapa_atual'          => '[Fixo] Etapa / Passo Atual (99 = Finalizado)',
+        ];
+
+        $queryDin = \App\Models\CampoFormulario::whereNotIn('tipo', ['config', 'html', 'divider', 'media', 'spacer', 'link'])
+            ->orderBy('etapa')
+            ->orderBy('ordem');
+
+        if (!empty($this->filtro_ciclo)) {
+            $queryDin->where('ciclo_id', $this->filtro_ciclo);
+        }
+
+        foreach ($queryDin->limit(150)->get() as $c) {
+            $label = trim(strip_tags((string) $c->label)) ?: $c->name;
+            $campos[$c->name] = "Pág. #{$c->etapa} — {$label} ({$c->name})";
+        }
+
+        return $campos;
+    }
+
+    protected function avaliarRegraEmInscricao(Inscricao $insc, array $regra): bool
+    {
+        $campo = trim((string) ($regra['campo'] ?? ''));
+        if ($campo === '') return true;
+
+        $op   = (string) ($regra['operador'] ?? '=');
+        $alvo = mb_strtolower(trim((string) ($regra['valor'] ?? '')), 'UTF-8');
+
+        if (str_starts_with($campo, 'fixo:')) {
+            $col = substr($campo, 5);
+            $valBruto = $insc->{$col} ?? '';
+        } else {
+            $din = is_array($insc->dados_dinamicos)
+                ? $insc->dados_dinamicos
+                : (json_decode($insc->dados_dinamicos ?? '{}', true) ?: []);
+            $valBruto = $din[$campo] ?? '';
+        }
+
+        $respostasCandidato = is_array($valBruto)
+            ? array_map(fn($v) => mb_strtolower(trim((string) $v), 'UTF-8'), $valBruto)
+            : [mb_strtolower(trim((string) $valBruto), 'UTF-8')];
+
+        $respostasCandidato = array_values(array_filter($respostasCandidato, fn($v) => $v !== ''));
+        $opcoesAlvo = array_values(array_filter(array_map(fn($v) => mb_strtolower(trim($v), 'UTF-8'), explode(',', $alvo)), fn($v) => $v !== ''));
+
+        return match ($op) {
+            'empty'        => empty($respostasCandidato),
+            'not_empty'    => !empty($respostasCandidato),
+            '='            => in_array($alvo, $respostasCandidato, true),
+            '!='           => !in_array($alvo, $respostasCandidato, true),
+            'in'           => !empty(array_intersect($respostasCandidato, $opcoesAlvo)),
+            'not_in'       => empty(array_intersect($respostasCandidato, $opcoesAlvo)),
+            'contains'     => collect($respostasCandidato)->contains(fn($r) => $alvo !== '' && str_contains($r, $alvo)),
+            'not_contains' => collect($respostasCandidato)->every(fn($r) => $alvo === '' || !str_contains($r, $alvo)),
+            default        => false,
+        };
+    }
+
+    protected function obterEmailsInscricoesFiltradas(): array
+    {
+        $query = Inscricao::query()->whereNotNull('email');
+
+        if (!empty($this->filtro_ciclo)) {
+            $query->where('ciclo_id', $this->filtro_ciclo);
+        }
+        if ($this->filtro_publico === 'unidade' && !empty($this->filtro_unidade)) {
+            $query->where('unidade_id', $this->filtro_unidade);
+        }
+        if ($this->filtro_publico === 'curso' && !empty($this->filtro_curso)) {
+            $query->where('curso_id', $this->filtro_curso);
+        }
+
+        $regrasValidas = array_values(array_filter($this->regras_dinamicas, fn($r) => !empty($r['campo'])));
+
+        if (empty($regrasValidas)) {
+            return $query->distinct('email')->pluck('email')->toArray();
+        }
+
+        $emails = [];
+        foreach ($query->get(['id', 'email', 'possui_deficiencia', 'natureza_deficiencia', 'estado', 'cidade', 'bairro', 'regiao', 'etapa_atual', 'dados_dinamicos']) as $insc) {
+            $resultadoFinal = null;
+            foreach ($regrasValidas as $regra) {
+                $passou = $this->avaliarRegraEmInscricao($insc, $regra);
+                $conector = strtoupper((string) ($regra['conector'] ?? 'AND')) === 'OR' ? 'OR' : 'AND';
+
+                $resultadoFinal = ($resultadoFinal === null)
+                    ? $passou
+                    : ($conector === 'OR' ? ($resultadoFinal || $passou) : ($resultadoFinal && $passou));
+            }
+
+            if ($resultadoFinal) {
+                $emails[] = trim((string) $insc->email);
+            }
+        }
+
+        return array_values(array_unique(array_filter($emails)));
+    }
 
     public function mount()
     {
@@ -72,11 +197,8 @@ class ComunicadoForm extends Component
         if ($this->filtro_publico === 'grupo' && !empty($this->filtro_role)) {
             return User::role($this->filtro_role)->whereNotNull('email')->count();
         }
-        if ($this->filtro_publico === 'unidade' && !empty($this->filtro_unidade)) {
-            return Inscricao::where('unidade_id', $this->filtro_unidade)->whereNotNull('email')->distinct('email')->count('email');
-        }
-        if ($this->filtro_publico === 'curso' && !empty($this->filtro_curso)) {
-            return Inscricao::where('curso_id', $this->filtro_curso)->whereNotNull('email')->distinct('email')->count('email');
+        if (in_array($this->filtro_publico, ['unidade', 'curso', 'respostas_formulario'], true)) {
+            return count($this->obterEmailsInscricoesFiltradas());
         }
 
         return 0;
@@ -97,10 +219,8 @@ class ComunicadoForm extends Component
                 $emailsBuscados = User::whereNotNull('email')->pluck('email')->toArray();
             } elseif ($this->filtro_publico === 'grupo' && !empty($this->filtro_role)) {
                 $emailsBuscados = User::role($this->filtro_role)->whereNotNull('email')->pluck('email')->toArray();
-            } elseif ($this->filtro_publico === 'unidade' && !empty($this->filtro_unidade)) {
-                $emailsBuscados = Inscricao::where('unidade_id', $this->filtro_unidade)->whereNotNull('email')->pluck('email')->toArray();
-            } elseif ($this->filtro_publico === 'curso' && !empty($this->filtro_curso)) {
-                $emailsBuscados = Inscricao::where('curso_id', $this->filtro_curso)->whereNotNull('email')->pluck('email')->toArray();
+            } elseif (in_array($this->filtro_publico, ['unidade', 'curso', 'respostas_formulario'], true)) {
+                $emailsBuscados = $this->obterEmailsInscricoesFiltradas();
             }
             $this->destinatarios = array_values(array_unique(array_merge($this->destinatarios, $emailsBuscados)));
         }
@@ -177,7 +297,7 @@ class ComunicadoForm extends Component
         $cursosDisponiveis = DB::table('cursos')->orderBy('nome')->get();
 
         return view('livewire.comunicacao.comunicado.comunicado-form', [
-            'templates'           => EmailTemplate::orderBy('nome')->get(),
+            'templates'           => EmailTemplate::ativos()->orderBy('nome')->get(),
             'rolesDisponiveis'    => $rolesDisponiveis,
             'unidadesDisponiveis' => $unidadesDisponiveis,
             'cursosDisponiveis'   => $cursosDisponiveis,

@@ -1,4 +1,4 @@
-<div class="p-6 max-w-[1400px] mx-auto font-sans relative">
+<div class="w-full relative">
     
     <x-page-header title="Matriz de Avaliação" icon="ph ph-exam" badge="Formulário">
         <x-slot name="actions">

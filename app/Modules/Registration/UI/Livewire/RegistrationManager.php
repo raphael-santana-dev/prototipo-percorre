@@ -82,8 +82,9 @@ class RegistrationManager extends Component
 
     public bool $selecionarTudo = false;
 
-    // Controle do Modal de Disparo de 1º Contato (E-mail / WhatsApp Suri)
+    // Controle do Modal de Disparo Manual (1º Contato ou Continuidade de Formulário)
     public bool $modalPrimeiroContatoAberto = false;
+    public string $modoDisparoManual = 'primeiro_contato'; // 'primeiro_contato' ou 'continuidade'
     public ?int $primeiroContatoInscricaoId = null;
     public string $primeiroContatoNome = '';
     public string $primeiroContatoCanal = 'whatsapp'; // 'email', 'whatsapp', 'ambos'
@@ -98,6 +99,43 @@ class RegistrationManager extends Component
     public array $comunicacoesListaTodas = [];
     public array $comunicacoesListaWhatsapp = [];
     public array $comunicacoesListaEmail = [];
+    // Controle do Modal de Visualização Rápida do Laudo PcD
+    public bool $modalLaudoPcdAberto = false;
+    public ?array $laudoPcdDados = null;
+
+    public function abrirModalLaudoPcd(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+        $dinamicos = is_string($insc->dados_dinamicos)
+            ? (json_decode($insc->dados_dinamicos, true) ?: [])
+            : ($insc->dados_dinamicos ?? []);
+
+        $caminho = $dinamicos['laudo_pcd'] ?? null;
+        if (empty($caminho)) {
+            $this->dispatch('erro', msg: 'Este candidato não anexou laudo médico no momento da inscrição.');
+            return;
+        }
+
+        $ext = strtolower(pathinfo((string) $caminho, PATHINFO_EXTENSION));
+
+        $this->laudoPcdDados = [
+            'inscricao_id' => $insc->id,
+            'nome'         => $insc->nome,
+            'cpf'          => $insc->cpf,
+            'natureza'     => ucfirst((string) ($insc->natureza_deficiencia ?: 'Não especificada')),
+            'arquivo_nome' => basename((string) $caminho),
+            'url'          => asset('storage/' . $caminho),
+            'is_pdf'       => $ext === 'pdf',
+        ];
+
+        $this->modalLaudoPcdAberto = true;
+    }
+
+    public function fecharModalLaudoPcd(): void
+    {
+        $this->modalLaudoPcdAberto = false;
+        $this->laudoPcdDados = null;
+    }
 
     public function abrirDrawerComunicacoes(int $inscricaoId): void
     {
@@ -119,6 +157,25 @@ class RegistrationManager extends Component
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Carrega eventuais falhas registradas via Webhook (suri_mensagens) ou API HTTP (suri_test_logs) para fallback de logs antigos
+        $errosWebhookSuri = class_exists(\App\Models\SuriMensagem::class)
+            ? \App\Models\SuriMensagem::where('inscricao_id', $insc->id)
+                ->where('status', 'error')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
+
+        $digitosCelular = preg_replace('/\D/', '', (string) $insc->celular);
+        $ultimos8Fone   = strlen($digitosCelular) >= 8 ? substr($digitosCelular, -8) : null;
+
+        $errosHttpSuri = (class_exists(\App\Modules\Teste\Suri\Models\SuriTestLog::class) && $ultimos8Fone)
+            ? \App\Modules\Teste\Suri\Models\SuriTestLog::where('sucesso', false)
+                ->where('payload', 'like', "%{$ultimos8Fone}%")
+                ->orderByDesc('id')
+                ->limit(25)
+                ->get()
+            : collect();
+
         $todas = [];
         $wpp   = [];
         $email = [];
@@ -128,18 +185,70 @@ class RegistrationManager extends Component
                 || str_contains(strtolower((string) $log->template_nome), 'whatsapp')
                 || str_starts_with(strtolower((string) $log->assunto), 'whatsapp:');
 
+            $erroDetalhe = trim((string) ($log->erro_mensagem ?? ''));
+            $erroPayload = null;
+
+            // Fallback inteligente para registros de erro antigos onde erro_mensagem ainda não havia sido preenchido
+            if ($log->status === 'erro' && $isWpp) {
+                if ($erroDetalhe === '' && $errosWebhookSuri->isNotEmpty()) {
+                    $msgErr = $errosWebhookSuri->first(function ($m) use ($log) {
+                        return $m->created_at && $log->created_at && abs($m->created_at->diffInMinutes($log->created_at)) <= 10;
+                    }) ?? $errosWebhookSuri->first();
+
+                    if ($msgErr && ($msgErr->error_reason || $msgErr->error_code)) {
+                        $erroDetalhe = ($msgErr->error_code ? "[Código #{$msgErr->error_code}] " : '') . $msgErr->error_reason;
+                    }
+                }
+
+                // Busca também no log de requisições HTTP da Suri (SuriTestLog) próximo ao horário do disparo
+                $httpErr = $errosHttpSuri->first(function ($h) use ($log) {
+                    return $h->created_at && $log->created_at && abs($h->created_at->diffInMinutes($log->created_at)) <= 5;
+                });
+
+                if ($httpErr) {
+                    $respArr = is_array($httpErr->resposta) ? $httpErr->resposta : (json_decode((string) $httpErr->resposta, true) ?: []);
+                    if ($erroDetalhe === '') {
+                        $msgExtraida = data_get($respArr, 'error')
+                            ?? data_get($respArr, 'message')
+                            ?? data_get($respArr, 'errors.0.message')
+                            ?? data_get($respArr, 'erro')
+                            ?? data_get($respArr, 'exception')
+                            ?? (is_string($httpErr->resposta) ? $httpErr->resposta : json_encode($respArr, JSON_UNESCAPED_UNICODE));
+
+                        $erroDetalhe = "HTTP {$httpErr->http_status}: " . (is_string($msgExtraida) ? $msgExtraida : json_encode($msgExtraida, JSON_UNESCAPED_UNICODE));
+                    }
+                    $erroPayload = [
+                        'http_status' => $httpErr->http_status,
+                        'url'         => $httpErr->url,
+                        'payload'     => $httpErr->payload,
+                        'resposta'    => $httpErr->resposta,
+                    ];
+                }
+
+                if ($erroDetalhe === '') {
+                    $erroDetalhe = 'Falha reportada pela API da Suri / WhatsApp (verifique se o template está aprovado na Meta, se o número possui WhatsApp válido e se as variáveis do corpo não estão vazias).';
+                }
+            } elseif ($log->status === 'erro' && $erroDetalhe === '') {
+                $erroDetalhe = 'Falha no servidor de envio de e-mail (SMTP).';
+            }
+
+            $assuntoLimpo = preg_replace('/^WhatsApp:\s*/i', '', (string) ($log->assunto ?: $log->template_nome ?: 'Comunicação'));
+
             $item = [
                 'id'            => $log->id,
                 'canal'         => $isWpp ? 'whatsapp' : 'email',
                 'template_nome' => $log->template_nome ?: 'Comunicação',
-                'assunto'       => $log->assunto ?: '-',
+                'assunto'       => $assuntoLimpo,
                 'gatilho'       => $log->gatilho ?: 'manual',
                 'destinatario'  => $log->destinatario,
                 'status'        => $log->status ?: 'enviado',
                 'aberturas'     => (int) ($log->aberturas_count ?? 0),
                 'cliques'       => (int) ($log->cliques_count ?? 0),
                 'data'          => ($log->data_envio ?? $log->created_at)?->format('d/m/Y H:i') ?? '-',
-                'resumo_corpo'  => \Illuminate\Support\Str::limit(trim(strip_tags((string) $log->corpo)), 140),
+                'resumo_corpo'  => \Illuminate\Support\Str::limit(trim(strip_tags((string) $log->corpo)), 160),
+                'corpo_completo'=> (string) $log->corpo,
+                'erro_mensagem' => $erroDetalhe,
+                'erro_payload'  => $erroPayload,
             ];
 
             $todas[] = $item;
@@ -164,8 +273,9 @@ class RegistrationManager extends Component
     public function abrirModalPrimeiroContato(int $inscricaoId): void
     {
         $insc = Inscricao::findOrFail($inscricaoId);
+        $this->modoDisparoManual = 'primeiro_contato';
         $this->primeiroContatoInscricaoId = $insc->id;
-        $this->primeiroContatoNome = $insc->nome;
+        $this->primeiroContatoNome = (string) $insc->nome;
 
         // Se existir uma automação ativa configurada para 'inscricao.primeiro_contato', já carrega o canal e template dela como padrão
         $autoPadrao = \App\Modules\Comunicacao\Domain\Models\Automacao::where('evento_gatilho', 'inscricao.primeiro_contato')
@@ -183,9 +293,46 @@ class RegistrationManager extends Component
         $this->modalPrimeiroContatoAberto = true;
     }
 
+    public function abrirModalContinuidade(int $inscricaoId): void
+    {
+        $insc = Inscricao::findOrFail($inscricaoId);
+
+        if (in_array((int) $insc->etapa_atual, [99, 100], true)) {
+            $this->dispatch('erro', msg: 'Este candidato já concluiu o preenchimento do formulário.');
+            return;
+        }
+
+        $this->modoDisparoManual = 'continuidade';
+        $this->primeiroContatoInscricaoId = $insc->id;
+        $this->primeiroContatoNome = (string) $insc->nome;
+
+        // Procura automação ativa de continuidade, abandono ou retomada para pré-selecionar o template ideal
+        $autoContinuidade = \App\Modules\Comunicacao\Domain\Models\Automacao::whereIn('evento_gatilho', [
+                'inscricao.continuidade',
+                'inscricao.abandono',
+                'inscricao.criada',
+            ])
+            ->where('status', true)
+            ->orderByRaw("CASE 
+                WHEN evento_gatilho = 'inscricao.continuidade' THEN 1 
+                WHEN evento_gatilho = 'inscricao.abandono' THEN 2 
+                ELSE 3 END")
+            ->first();
+
+        if ($autoContinuidade) {
+            $this->primeiroContatoCanal = $autoContinuidade->canal_disparo ?: 'whatsapp';
+            $this->primeiroContatoTemplateId = (string) $autoContinuidade->template_id;
+        } else {
+            $this->primeiroContatoCanal = !empty($insc->celular) ? 'whatsapp' : 'email';
+            $this->primeiroContatoTemplateId = '';
+        }
+
+        $this->modalPrimeiroContatoAberto = true;
+    }
+
     public function getTemplatesPrimeiroContatoProperty()
     {
-        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::orderBy('nome')
+        return \App\Modules\Comunicacao\Domain\Models\EmailTemplate::ativos()->orderBy('nome')
             ->get()
             ->filter(function ($tpl) {
                 $c = $tpl->canal ?? 'email';
@@ -221,23 +368,36 @@ class RegistrationManager extends Component
             return;
         }
 
+        $isContinuidade = $this->modoDisparoManual === 'continuidade';
+        $gatilhoDisparo = $isContinuidade ? 'inscricao.continuidade' : 'inscricao.primeiro_contato';
+
+        $tokenRetomada = \Illuminate\Support\Facades\Crypt::encrypt($inscricao->id);
+        $urlRetomada   = route('inscricao.retomar', ['token' => $tokenRetomada]);
+
+        $dadosExtras = [
+            'disparado_por_nome' => auth()->user()->name ?? 'Equipe',
+            'link_retomada_url'  => $urlRetomada,
+        ];
+
         \App\Modules\Comunicacao\Jobs\DispararAutomacaoJob::dispatch(
             $template,
             (string) $inscricao->email,
             $inscricao,
-            ['disparado_por_nome' => auth()->user()->name ?? 'Equipe'],
-            'inscricao.primeiro_contato',
-            $this->primeiroContatoCanal
+            $dadosExtras,
+            $gatilhoDisparo,
+            $this->primeiroContatoCanal,
+            true // Força o envio manual mesmo que já tenha recebido lembrete anterior
         );
 
-        // Registra tentativa de contato na tabela inscricao_contatos para acender os ícones da listagem
+        $rotuloHistorico = $isContinuidade ? 'Mensagem de Continuidade (Retomada)' : '1º Contato';
         $canaisRegistrar = $this->primeiroContatoCanal === 'ambos' ? ['email', 'whatsapp'] : [$this->primeiroContatoCanal];
+
         foreach ($canaisRegistrar as $cReg) {
             \App\Models\InscricaoContato::create([
                 'inscricao_id'   => $inscricao->id,
                 'canal'          => $cReg,
                 'data_contato'   => now(),
-                'conteudo'       => "1º Contato disparado usando o template '{$template->nome}'.",
+                'conteudo'       => "{$rotuloHistorico} disparado usando o template '{$template->nome}'.",
                 'houve_resposta' => false,
                 'user_id'        => auth()->id(),
                 'user_nome'      => auth()->user()->name ?? 'Sistema',
@@ -245,7 +405,7 @@ class RegistrationManager extends Component
         }
 
         $this->modalPrimeiroContatoAberto = false;
-        $this->dispatch('sucesso', msg: "1º Contato ({$this->primeiroContatoCanal}) enviado para a fila de disparo!");
+        $this->dispatch('sucesso', msg: "{$rotuloHistorico} ({$this->primeiroContatoCanal}) enviado para a fila de disparo!");
     }
     
     public function mount()
@@ -797,6 +957,7 @@ class RegistrationManager extends Component
             foreach ($dadosDinamicosArray as $chave => $valor) {
                 $chaveStr = (string) $chave;
                 if (
+                    $chaveStr === 'laudo_pcd' ||
                     str_starts_with($chaveStr, '_') ||
                     str_starts_with(strtolower($chaveStr), 'ui_') ||
                     str_contains(strtolower($chaveStr), 'form_config') ||
@@ -817,11 +978,38 @@ class RegistrationManager extends Component
             $detalhesDinamicos = '<span class="text-gray-500 text-sm italic">Nenhum dado complementar registado.</span>';
         }
 
+        $isCandidatoPcd = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+        $caminhoLaudoPcd = $dadosDinamicosArray['laudo_pcd'] ?? null;
+
+        $blocoPcdHtml = '<span class="text-gray-500 text-xs">Não declarou deficiência (PcD).</span>';
+        if ($isCandidatoPcd) {
+            $natLabel = ucfirst((string) ($inscricao->natureza_deficiencia ?: 'Não especificada'));
+            $blocoPcdHtml = '<div class="space-y-2 text-xs">'
+                . '<div><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">Sim — Natureza: ' . e($natLabel) . '</span></div>';
+
+            if (!empty($caminhoLaudoPcd)) {
+                $urlLaudo = asset('storage/' . $caminhoLaudoPcd);
+                $nomeLaudo = basename((string) $caminhoLaudoPcd);
+                $blocoPcdHtml .= '<div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">'
+                    . '<span class="font-medium text-gray-700 dark:text-gray-200 truncate">' . e($nomeLaudo) . '</span>'
+                    . '<div class="flex items-center gap-1.5 shrink-0">'
+                    . '<a href="' . $urlLaudo . '" target="_blank" class="px-2.5 py-1 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 font-bold text-purpura-600 hover:bg-purpura-50">Visualizar ↗</a>'
+                    . '<a href="' . $urlLaudo . '" download="' . e($nomeLaudo) . '" class="px-2.5 py-1 rounded bg-purpura-600 text-white font-bold hover:bg-purpura-700">Baixar</a>'
+                    . '</div></div>';
+            } else {
+                $blocoPcdHtml .= '<div class="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">'
+                    . 'Laudo não enviado na inscrição (será exigido na matrícula).'
+                    . '</div>';
+            }
+            $blocoPcdHtml .= '</div>';
+        }
+
         $this->dispatch('load-quick-view', [
             'title' => $inscricao->nome,
             'subtitle' => 'CPF: ' . $inscricao->cpf . ' • ' . $inscricao->email,
             'icon' => 'ph-user-focus',
             'data' => [
+                'Acessibilidade / PcD e Laudo' => $blocoPcdHtml,
                 'Status do Candidato' => $botoesAcao,
                 'Interesse Acadêmico' => '<div class="text-sm"><b>Unidade:</b> '.($inscricao->unidade->nome ?? '-').'<br><b>Curso:</b> '.($inscricao->curso->nome ?? '-').'<br><b>Turno:</b> '.($inscricao->turno->nome ?? '-').'</div>',
                 'Informações do Formulário' => $detalhesDinamicos,
@@ -1570,6 +1758,47 @@ class RegistrationManager extends Component
                      ->toArray();
                      
         $this->selecionadas = array_map('strval', $ids);
+    }
+
+    public function avancarEtapaIndividual(int $id): void
+    {
+        if (!$this->autorizarAcao('inscricao.editar', 'editar ou processar inscrições')) {
+            return;
+        }
+
+        $inscricao = Inscricao::with(['curso', 'ciclo.statusPipeline'])->findOrFail($id);
+
+        if ($inscricao->legado) {
+            $this->dispatch('erro', msg: 'Inscrições marcadas como Legado são somente leitura e não podem avançar.');
+            return;
+        }
+
+        if ($inscricao->ciclo && $inscricao->ciclo->bloqueado) {
+            $this->dispatch('erro', msg: 'O ciclo desta inscrição está bloqueado. Utilize a opção de Solicitar Alteração.');
+            return;
+        }
+
+        $pipeline = ($inscricao->ciclo && $inscricao->ciclo->statusPipeline->isNotEmpty())
+            ? $inscricao->ciclo->statusPipeline->values()
+            : StatusInscricao::orderBy('id')->get()->values();
+
+        if ($pipeline->isEmpty()) {
+            $this->dispatch('erro', msg: 'Nenhuma etapa configurada no funil deste ciclo.');
+            return;
+        }
+
+        $indiceAtual = $pipeline->search(fn($st) => (int) $st->id === (int) $inscricao->status_inscricao_id);
+
+        if ($indiceAtual === false) {
+            $proximoStatus = $pipeline->first();
+        } elseif (isset($pipeline[$indiceAtual + 1])) {
+            $proximoStatus = $pipeline[$indiceAtual + 1];
+        } else {
+            $this->dispatch('erro', msg: 'O candidato já se encontra na última etapa do funil (' . ($inscricao->statusInscricao->nome ?? 'Final') . ').');
+            return;
+        }
+
+        $this->alterarStatusQuickView($inscricao->id, $proximoStatus->id);
     }
 
     public function avancarSelecionadas()

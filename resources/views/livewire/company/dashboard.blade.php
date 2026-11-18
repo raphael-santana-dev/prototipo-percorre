@@ -1,4 +1,4 @@
-<div class="p-6 max-w-7xl mx-auto font-sans relative">
+<div class="w-full relative">
     
     <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

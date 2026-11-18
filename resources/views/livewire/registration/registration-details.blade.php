@@ -144,6 +144,38 @@
             <div class="lg:col-span-2">
                 <div class="card p-6 md:p-8 space-y-10">
 
+                    @php
+                        $regAbandono = $dinamicos['_registro_abandono'] ?? null;
+                    @endphp
+                    @if(!empty($regAbandono) && (int) $inscricao->etapa_atual !== 99)
+                        <div class="p-4 rounded-xl border {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-50/70 border-red-200 text-red-900' : 'bg-amber-50/70 border-amber-200 text-amber-900' }} flex items-start justify-between gap-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
+                                    <i class="ph-fill {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'ph-x-circle' : 'ph-clock-clockwise' }} text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="text-xs font-extrabold uppercase tracking-wider">
+                                            Motivo de Interrupção / Abandono: {{ $regAbandono['opcao_label'] ?? ucfirst($regAbandono['opcao'] ?? '-') }}
+                                        </h4>
+                                        <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-white/80 border border-black/10">
+                                            Passo #{{ $regAbandono['etapa_atual'] ?? $inscricao->etapa_atual }} • {{ $regAbandono['data_hora'] ?? '-' }}
+                                        </span>
+                                    </div>
+                                    @if(!empty($regAbandono['observacao']))
+                                        <p class="text-xs mt-1.5 font-medium leading-relaxed">
+                                            <b>Comentário do candidato:</b> "{{ $regAbandono['observacao'] }}"
+                                        </p>
+                                    @else
+                                        <p class="text-[11px] opacity-80 mt-1">
+                                            Nenhum comentário adicional foi digitado pelo candidato.
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     {{-- BARRA DE ATENDIMENTO ASSISTIDO PELO PARTICIPANTE --}}
                     @if($podeEditarAssistido)
                         <div class="p-4 rounded-xl border {{ $modoEdicaoAssistida ? 'bg-indigo-50/80 border-indigo-300' : 'bg-gray-50 border-gray-200' }} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -244,9 +276,21 @@
                                         </select>
                                     </div>
                                     @if(($formFixo['possui_deficiencia'] ?? 'nao') === 'sim')
-                                        <div class="md:col-span-2">
+                                        <div>
                                             <label class="block text-xs font-bold text-gray-700 mb-1">Natureza da Deficiência</label>
-                                            <input type="text" wire:model="formFixo.natureza_deficiencia" class="w-full rounded-lg border-gray-300 text-sm">
+                                            <select wire:model="formFixo.natureza_deficiencia" class="w-full rounded-lg border-gray-300 text-sm">
+                                                <option value="">Selecione...</option>
+                                                <option value="fisica">Física</option>
+                                                <option value="auditiva">Auditiva</option>
+                                                <option value="visual">Visual</option>
+                                                <option value="intelectual">Intelectual</option>
+                                                <option value="multipla">Múltipla</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">Anexar / Substituir Laudo PcD (PDF ou Imagem)</label>
+                                            <input type="file" wire:model="laudoPcdAssistidoUpload" accept=".pdf,.jpg,.jpeg,.png,.webp" class="block w-full text-xs text-gray-600 border border-gray-300 rounded-lg p-1.5 bg-white">
+                                            @error('laudoPcdAssistidoUpload') <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span> @enderror
                                         </div>
                                     @endif
                                 </div>
@@ -425,11 +469,16 @@
                             </dl>
                         </section>
 
-                        <section>
+                        <section x-data="{ previewLaudoOpen: false }">
                             <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                                 <i class="ph-fill ph-identification-card text-lg text-purpura-500"></i> Informações Adicionais
                             </h3>
                             
+                            @php
+                                $laudoPcdPath = $dinamicos['laudo_pcd'] ?? null;
+                                $isCandidatoPcd = in_array(strtolower((string) ($inscricao->possui_deficiencia ?? 'nao')), ['sim', '1', 'true', 's'], true);
+                            @endphp
+
                             <dl class="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
                                 <div>
                                     <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Nome Social</dt>
@@ -438,8 +487,8 @@
                                 <div>
                                     <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">PcD (Deficiência)</dt>
                                     <dd class="text-sm font-bold text-gray-900">
-                                        @if(strtolower($inscricao->possui_deficiencia ?? 'nao') === 'sim')
-                                            <span class="tag tag--small tag--filled tag--pitaya mt-1">Sim - {{ $inscricao->natureza_deficiencia }}</span>
+                                        @if($isCandidatoPcd)
+                                            <span class="tag tag--small tag--filled tag--pitaya mt-1">Sim - {{ ucfirst($inscricao->natureza_deficiencia ?: 'Declarada') }}</span>
                                         @else
                                             Não declarada
                                         @endif
@@ -449,6 +498,87 @@
                                     <dt class="t-label-12-semibold text-gray-400 uppercase tracking-wider mb-1">Autoriza Uso de Imagem/Dados</dt>
                                     <dd class="text-sm font-bold text-gray-900">{{ $inscricao->autorizacao_uso_infos ? 'Sim' : 'Não' }}</dd>
                                 </div>
+
+                                @if($isCandidatoPcd || !empty($laudoPcdPath))
+                                    <div class="md:col-span-3 pt-2">
+                                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div class="flex items-start gap-3">
+                                                <div class="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <i class="ph-fill ph-wheelchair text-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2">
+                                                        <span>Laudo Médico PcD</span>
+                                                        @if(!empty($mapaParticipante['din_laudo_pcd']))
+                                                            <span class="px-1.5 py-0.5 text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded">Enviado por Participante</span>
+                                                        @endif
+                                                    </h4>
+                                                    @if(!empty($laudoPcdPath))
+                                                        <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 font-mono">
+                                                            {{ basename($laudoPcdPath) }}
+                                                        </p>
+                                                    @else
+                                                        <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                                                            Laudo não anexado no formulário de inscrição (será exigido na etapa de matrícula).
+                                                        </p>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            @if(!empty($laudoPcdPath))
+                                                @php
+                                                    $urlLaudoCompleta = asset('storage/' . $laudoPcdPath);
+                                                    $nomeArquivoLaudo = basename($laudoPcdPath);
+                                                    $isLaudoPdf       = str_ends_with(strtolower($laudoPcdPath), '.pdf');
+                                                @endphp
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    <button type="button"
+                                                            @click="previewLaudoOpen = true"
+                                                            class="btn btn--secondary btn--small">
+                                                        <i class="ph-bold ph-eye"></i> Visualizar Laudo
+                                                    </button>
+                                                    <a href="{{ $urlLaudoCompleta }}"
+                                                       download="{{ $nomeArquivoLaudo }}"
+                                                       target="_blank"
+                                                       class="btn btn--primary btn--small bg-purpura-600 hover:bg-purpura-700 border-none">
+                                                        <i class="ph-bold ph-download-simple"></i> Baixar Laudo
+                                                    </a>
+                                                </div>
+
+                                                <template x-teleport="body">
+                                                    <div x-show="previewLaudoOpen"
+                                                         x-cloak
+                                                         @keydown.escape.window="previewLaudoOpen = false"
+                                                         class="fixed inset-0 z-[999] flex items-center justify-center bg-gray-900/70 backdrop-blur-xs p-4 font-sans">
+                                                        <div @click.away="previewLaudoOpen = false"
+                                                             class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                                                            <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                                                                <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                                                    Laudo Médico PcD — {{ $inscricao->nome }} ({{ $nomeArquivoLaudo }})
+                                                                </span>
+                                                                <div class="flex items-center gap-2">
+                                                                    <a href="{{ $urlLaudoCompleta }}" download="{{ $nomeArquivoLaudo }}" class="btn btn--secondary btn--small !h-8">
+                                                                        <i class="ph ph-download-simple"></i> Baixar
+                                                                    </a>
+                                                                    <button type="button" @click="previewLaudoOpen = false" class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg">
+                                                                        <i class="ph ph-x text-lg"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-950 flex items-center justify-center min-h-[65vh]">
+                                                                @if($isLaudoPdf)
+                                                                    <iframe :src="previewLaudoOpen ? '{{ $urlLaudoCompleta }}' : ''" class="w-full h-[70vh] rounded border border-gray-300 bg-white"></iframe>
+                                                                @else
+                                                                    <img src="{{ $urlLaudoCompleta }}" alt="Laudo Médico" class="max-w-full max-h-[70vh] object-contain rounded shadow-sm bg-white p-2">
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
                             </dl>
                         </section>
                         
@@ -460,6 +590,7 @@
                             @if(is_array($dinamicos) && count($dinamicos) > 0)
                                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
                                     @foreach($dinamicos as $chave => $valor)
+                                        @continue($chave === 'laudo_pcd')
                                         @continue(str_contains(strtolower($chave), 'form_config'))
                                         @continue(str_starts_with(strtolower($chave), 'ui_'))
                                         @continue(str_starts_with(strtolower($chave), '_'))

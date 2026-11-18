@@ -385,6 +385,11 @@ class EsteiraForm extends Component
             $tpl = EmailTemplate::find($et['template_id']);
 
             if ($tpl) {
+                if (!($tpl->status ?? true)) {
+                    $this->addError("etapas.{$idx}.template_id", "Etapa #{$numEtapa}: O template '{$tpl->nome}' está inativo.");
+                    return;
+                }
+
                 $canalTpl = $tpl->canal ?? 'email';
                 $compativel = match ($canalEtapa) {
                     'email'    => in_array($canalTpl, ['email', 'ambos'], true),
@@ -473,7 +478,7 @@ class EsteiraForm extends Component
     public function render()
     {
         return view('livewire.comunicacao.automacao.esteira-form', [
-            'templates'        => EmailTemplate::orderBy('nome')->get(),
+            'templates' => EmailTemplate::ativos()->orderBy('nome')->get(),
             'colunasBanco'     => EmailParserService::getColunasBancoDisponiveis(),
             'ciclos'           => Ciclo::orderBy('id', 'desc')->get(),
             'formularios'      => Formulario::orderBy('id', 'desc')->get(),

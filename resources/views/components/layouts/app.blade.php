@@ -386,7 +386,7 @@
                 
                 {{-- TOP HEADER (Z-INDEX 110) --}}
                 <header class="bg-petunia-900 border-b border-white/10 relative z-[110] dark:bg-petunia-1000 transition-colors duration-300 shrink-0 h-16 w-full">
-                    <div class="h-full w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="h-full w-full mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center justify-between h-full w-full">
                             
                             <div class="flex items-center gap-5">
@@ -403,6 +403,30 @@
                             </div>
 
                             <div class="flex items-center gap-3 sm:gap-4 text-white dark:text-gray-200 ml-auto">
+                                @if(strtolower(trim(auth()->user()?->email ?? '')) === 'dev@percorre.com')
+                                    @php
+                                        $envRaw = strtolower((string) app()->environment());
+                                        if (in_array($envRaw, ['production', 'prod', 'producao', 'produção'], true)) {
+                                            $envNome = 'Produção';
+                                            $envClasses = 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40';
+                                            $envDot = 'bg-emerald-400 animate-pulse';
+                                        } elseif (in_array($envRaw, ['staging', 'homolog', 'homologacao', 'homologação', 'hml', 'testing'], true)) {
+                                            $envNome = 'Homologação';
+                                            $envClasses = 'bg-amber-500/20 text-amber-300 border-amber-400/40';
+                                            $envDot = 'bg-amber-400';
+                                        } else {
+                                            $envNome = 'Local';
+                                            $envClasses = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
+                                            $envDot = 'bg-sky-400';
+                                        }
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border {{ $envClasses }} shrink-0 select-none"
+                                          title="Ambiente atual do sistema (APP_ENV: {{ app()->environment() }}) — Visível apenas para dev@percorre.com">
+                                        <span class="w-2 h-2 rounded-full {{ $envDot }}"></span>
+                                        <span>{{ $envNome }}</span>
+                                    </span>
+                                @endif
+
                                 @if(feature('portal.noticias') && auth()->user()->can('portal.noticias'))
                                     <a href="{{ route('portal.index') }}" target="_blank" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors shadow-sm whitespace-nowrap shrink-0" title="Abrir Portal Público">
                                         <i class="ph ph-newspaper text-sm"></i> <span>Ver Portal</span> <i class="ph ph-arrow-up-right text-[10px] opacity-70"></i>
@@ -439,7 +463,7 @@
                 
                 <nav class="js-topnav hidden md:block bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800 relative z-[100] shrink-0 origin-top"
                      :class="loaded ? 'transition-all duration-300 ease-in-out' : ''">
-                    <div class="w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="sm:px-6 px-8 mx-auto w-full max-w-8xl">
                         <div class="flex flex-wrap items-center min-h-[3rem] py-1 gap-x-2 gap-y-1">
                             <a href="{{ route('dashboard') }}" class="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-gray-600 transition-colors rounded-md hover:text-purpura-600 hover:bg-purpura-50 dark:text-gray-300">
                                 <i class="text-base ph ph-squares-four"></i> Dashboard
@@ -589,7 +613,7 @@
 
                 <main class="flex-1 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 custom-scrollbar">
                     <div class="w-full min-h-full pt-6">
-                        <div class="px-4 mx-auto w-full max-w-7xl sm:px-6 lg:px-8">
+                        <div class="sm:px-6 px-8 mx-auto w-full max-w-8xl">
                             {{ $slot }}
                         </div>
                     </div>
