@@ -11,7 +11,7 @@ class Ciclo extends Model
     protected $fillable = [
         'nome', 'ano', 'semestre', 'data_inicio', 'data_fim', 
         'data_inicio_matricula', 'data_fim_matricula',
-        'status', 'regras_pontuacao', 'slug', 'bloqueado', 'tipo_ciclo', 'slug_projeto', 'status_documentacao_id'
+        'status', 'regras_pontuacao', 'slug', 'bloqueado', 'tipo_ciclo', 'slug_projeto', 'status_documentacao_id','encerrado'
     ];
 
     protected $casts = [
