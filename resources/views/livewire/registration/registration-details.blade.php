@@ -161,18 +161,18 @@
                         $regAbandono = $dinamicos['_registro_abandono'] ?? null;
                     @endphp
                     @if(!empty($regAbandono) && (int) $inscricao->etapa_atual !== 99)
-                        <div class="p-4 rounded-xl border {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-50/70 border-red-200 text-red-900' : 'bg-amber-50/70 border-amber-200 text-amber-900' }} flex items-start justify-between gap-4">
+                        <div class="p-4 rounded-lg border {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-50 border-red-200 text-red-900' : 'bg-amber-50 border-amber-200 text-amber-900' }} flex items-start justify-between gap-4">
                             <div class="flex items-start gap-3">
-                                <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
+                                <div class="w-9 h-9 rounded-md flex items-center justify-center shrink-0 mt-0.5 {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
                                     <i class="ph-fill {{ ($regAbandono['opcao'] ?? '') === 'desisti' ? 'ph-x-circle' : 'ph-clock-clockwise' }} text-lg"></i>
                                 </div>
                                 <div>
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <h4 class="text-xs font-extrabold uppercase tracking-wider">
+                                        <h4 class="text-xs font-bold uppercase tracking-wider">
                                             Motivo de Interrupção / Abandono: {{ $regAbandono['opcao_label'] ?? ucfirst($regAbandono['opcao'] ?? '-') }}
                                         </h4>
-                                        <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-white/80 border border-black/10">
-                                            Passo #{{ $regAbandono['etapa_atual'] ?? $inscricao->etapa_atual }} • {{ $regAbandono['data_hora'] ?? '-' }}
+                                        <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-white border border-gray-200 text-gray-700">
+                                            Passo #{{ $regAbandono['etapa_atual'] ?? $inscricao->etapa_atual }} · {{ $regAbandono['data_hora'] ?? '-' }}
                                         </span>
                                     </div>
                                     @if(!empty($regAbandono['observacao']))
@@ -180,7 +180,7 @@
                                             <b>Comentário do candidato:</b> "{{ $regAbandono['observacao'] }}"
                                         </p>
                                     @else
-                                        <p class="text-[11px] opacity-80 mt-1">
+                                        <p class="text-xs text-gray-600 mt-1">
                                             Nenhum comentário adicional foi digitado pelo candidato.
                                         </p>
                                     @endif
@@ -191,7 +191,7 @@
 
                     {{-- BARRA DE ATENDIMENTO ASSISTIDO PELO PARTICIPANTE --}}
                     @if($podeEditarAssistido)
-                        <div class="p-4 rounded-xl border {{ $modoEdicaoAssistida ? 'bg-indigo-50/80 border-indigo-300' : 'bg-gray-50 border-gray-200' }} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="p-4 rounded-lg border {{ $modoEdicaoAssistida ? 'bg-indigo-50 border-indigo-300' : 'bg-gray-50 border-gray-200' }} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="flex items-start gap-3">
                                 <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
                                     <i class="ph-fill ph-user-switch text-lg"></i>
@@ -577,9 +577,9 @@
                                                     <div x-show="previewLaudoOpen"
                                                          x-cloak
                                                          @keydown.escape.window="previewLaudoOpen = false"
-                                                         class="fixed inset-0 z-[999] flex items-center justify-center bg-gray-900/70 backdrop-blur-xs p-4 font-sans">
+                                                         class="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4 font-sans">
                                                         <div @click.away="previewLaudoOpen = false"
-                                                             class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
+                                                             class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
                                                             <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                                                                 <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
                                                                     Laudo Médico PcD — {{ $inscricao->nome }} ({{ $nomeArquivoLaudo }})
@@ -701,9 +701,7 @@
 
             <div class="lg:col-span-1 space-y-6">
                 <div class="card !p-0 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-ponkan-400 rounded-bl-full -z-0 opacity-10"></div>
-                    
-                    <div class="p-6 relative z-10 w-full">
+                    <div class="p-6 w-full">
                         <div class="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
                             <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
                                 <i class="ph-fill ph-calculator text-lg text-ponkan-500"></i> Pontuação
@@ -793,9 +791,9 @@
                     </div>
                 </div>
                 
-                <div class="card !p-5 bg-purpura-50/50 border-purpura-100 text-center">
-                    <span class="block t-label-12-semibold text-purpura-400 uppercase tracking-wider mb-1 w-full">Ciclo Operacional</span>
-                    <span class="block text-sm font-bold text-purpura-900 w-full">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center">
+                    <span class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1 w-full">Ciclo Operacional</span>
+                    <span class="block text-sm font-bold text-gray-900 dark:text-white w-full">{{ $inscricao->ciclo->nome ?? 'Formulário Legado' }}</span>
                 </div>
 
             </div>
@@ -819,14 +817,14 @@
 
                     {{-- INTERRUPTOR: ATIVAR / DESATIVAR VALIDAÇÃO POR IA --}}
                     @if($this->uploadDocumentacaoHabilitado)
-                        <label class="flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition shrink-0 {{ $validarComIa ? 'bg-purpura-50/70 border-purpura-300 text-purpura-900' : 'bg-amber-50/70 border-amber-300 text-amber-900' }}">
+                        <label class="flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition shrink-0 {{ $validarComIa ? 'bg-purpura-50 border-purpura-300 text-purpura-900' : 'bg-amber-50 border-amber-300 text-amber-900' }}">
                             <input type="checkbox" wire:model.live="validarComIa" class="w-4 h-4 rounded text-purpura-600 focus:ring-purpura-500 border-gray-300">
                             <div class="text-xs">
-                                <span class="font-extrabold block flex items-center gap-1.5">
+                                <span class="font-bold block flex items-center gap-1.5">
                                     <i class="ph-fill {{ $validarComIa ? 'ph-sparkle text-purpura-600' : 'ph-shield-check text-amber-600' }}"></i>
                                     {{ $validarComIa ? 'Validação por IA: ATIVADA' : 'Validação por IA: DESATIVADA (Aprovação Direta)' }}
                                 </span>
-                                <span class="text-[10px] opacity-80 block">
+                                <span class="text-[11px] text-gray-600 block">
                                     {{ $validarComIa ? 'O documento será analisado pela IA antes de aprovar.' : 'O documento enviado pelo participante será aprovado automaticamente.' }}
                                 </span>
                             </div>
@@ -853,7 +851,7 @@
                                 $infoDoc = $arquivosEnviados[$doc->id] ?? ['status' => 'pendente'];
                                 $statusDoc = $infoDoc['status'] ?? 'pendente';
                             @endphp
-                            <div class="p-5 rounded-xl border bg-white shadow-2xs flex flex-col justify-between gap-4 {{ in_array($statusDoc, ['valido_ia', 'aprovado_manual']) ? 'border-emerald-200 bg-emerald-50/10' : 'border-gray-200' }}">
+                            <div class="p-5 rounded-lg border bg-white flex flex-col justify-between gap-4 {{ in_array($statusDoc, ['valido_ia', 'aprovado_manual']) ? 'border-emerald-300' : 'border-gray-200' }}">
                                 <div>
                                     <div class="flex items-start justify-between gap-2">
                                         <h4 class="text-sm font-bold text-gray-900 flex items-center gap-2 flex-wrap">
@@ -886,7 +884,7 @@
 
                                     {{-- BADGE INDICANDO QUE FOI ENVIADO POR UM PARTICIPANTE --}}
                                     @if(!empty($infoDoc['enviado_por_participante']))
-                                        <div class="mt-3 p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-2 text-[11px] text-indigo-800">
+                                        <div class="mt-3 p-2.5 rounded-md bg-indigo-50 border border-indigo-200 flex items-center justify-between gap-2 text-[11px] text-indigo-800">
                                             <span class="font-bold flex items-center gap-1.5">
                                                 <i class="ph-fill ph-user-switch text-indigo-600 text-sm"></i>
                                                 Enviado por Participante: {{ $infoDoc['participante_nome'] ?? 'Equipe' }}
@@ -1101,7 +1099,7 @@
                 @if(count($this->contatosRegistrados) > 0)
                     <div class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach($this->contatosRegistrados as $contato)
-                            <div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50/60 transition">
+                            <div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50 transition">
                                 <div class="flex items-start gap-3.5">
                                     <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border
                                         {{ $contato->canal === 'whatsapp' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ($contato->canal === 'email' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-600 border-amber-200') }}">
@@ -1134,16 +1132,16 @@
             {{-- HISTÓRICO DE MENSAGENS DO WHATSAPP (SURI WEBHOOK: ENVIADAS, ENTREGUES, LIDAS E RECEBIDAS) --}}
             @if(count($this->mensagensWhatsappSuri) > 0)
                 <div class="card !p-0 overflow-hidden w-full block">
-                    <div class="p-6 border-b border-gray-100 flex items-center justify-between w-full bg-emerald-50/40">
-                        <h3 class="t-label-12-semibold tracking-wider text-emerald-800 uppercase flex items-center gap-2">
+                    <div class="p-5 border-b border-gray-200 flex items-center justify-between w-full bg-gray-50">
+                        <h3 class="t-label-12-semibold tracking-wider text-gray-700 uppercase flex items-center gap-2">
                             <i class="ph-fill ph-whatsapp-logo text-lg text-emerald-600"></i> Mensagens WhatsApp Sincronizadas (Webhook Suri)
                         </h3>
-                        <span class="text-xs font-bold text-emerald-700">{{ count($this->mensagensWhatsappSuri) }} mensagem(ns)</span>
+                        <span class="text-xs font-semibold text-gray-500">{{ count($this->mensagensWhatsappSuri) }} mensagem(ns)</span>
                     </div>
 
                     <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto custom-scrollbar">
                         @foreach($this->mensagensWhatsappSuri as $msgSuri)
-                            <div class="p-4 flex items-start justify-between gap-4 hover:bg-gray-50/60">
+                            <div class="p-4 flex items-start justify-between gap-4 hover:bg-gray-50">
                                 <div class="flex items-start gap-3">
                                     <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase {{ $msgSuri->direcao === 'in' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800' }}">
                                         {{ $msgSuri->direcao === 'in' ? 'Recebida do Candidato' : 'Enviada p/ Candidato' }}
@@ -1293,22 +1291,22 @@
 
     {{-- MODAL DE SPAM --}}
     @if($modalAntiSpamAberto)
-        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="card !w-full !max-w-md !p-0 shadow-2xl">
-                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-pitaya-50 w-full">
-                    <h3 class="text-lg font-bold text-pitaya-700 flex items-center gap-2">
-                        <i class="ph-fill ph-warning-circle text-2xl"></i> Alerta Anti-Spam
+        <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="ph-fill ph-warning-circle text-lg text-pitaya-600"></i> Alerta Anti-Spam
                     </h3>
                 </div>
-                <div class="p-6 w-full">
-                    <p class="text-sm text-gray-700 font-medium text-center">
-                        Este candidato <strong>já recebeu</strong> o e-mail automático configurado para esta etapa anteriormente.
+                <div class="p-5">
+                    <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        Este candidato <strong>já recebeu</strong> o e-mail automático configurado para esta etapa anteriormente. Deseja reenviar mesmo assim?
                     </p>
                 </div>
-                <div class="p-5 border-t border-gray-100 bg-gray-50 flex justify-center gap-3 w-full">
-                    <button wire:click="cancelarAntiSpam" class="btn btn--secondary btn--medium">Cancelar</button>
-                    <button wire:click="executarMudancaStatusFinal" class="btn btn--primary btn--medium !bg-pitaya-600 !text-white border-none">
-                        Sim, Reenviar E-mail
+                <div class="px-5 py-3.5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 flex justify-end gap-2">
+                    <button type="button" wire:click="cancelarAntiSpam" class="btn btn--secondary btn--small">Cancelar</button>
+                    <button type="button" wire:click="executarMudancaStatusFinal" class="btn btn--primary btn--small !bg-pitaya-600 !text-white border-none">
+                        Sim, reenviar e-mail
                     </button>
                 </div>
             </div>
@@ -1317,16 +1315,16 @@
 
     {{-- MODAL DE VISUALIZAÇÃO DE E-MAIL --}}
     @if($emailVisualizacao)
-        <div class="fixed inset-0 z-[130] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="ph-fill ph-envelope-open text-purpura-600"></i> {{ $emailVisualizacao->assunto }}
+        <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white truncate pr-4">
+                        {{ $emailVisualizacao->assunto }}
                     </h3>
-                    <button wire:click="fecharModalEmail" class="text-gray-400 hover:text-red-500 transition"><i class="ph-bold ph-x text-xl"></i></button>
+                    <button type="button" wire:click="fecharModalEmail" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 transition"><i class="ph ph-x text-lg"></i></button>
                 </div>
-                <div class="p-6 overflow-y-auto bg-gray-50 flex-1">
-                    <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm min-h-[300px]">
+                <div class="p-5 overflow-y-auto bg-gray-50 dark:bg-gray-950 flex-1">
+                    <div class="bg-white border border-gray-200 rounded-md p-6 min-h-[300px]">
                         {!! $emailVisualizacao->corpo !!}
                     </div>
                 </div>
@@ -1336,30 +1334,28 @@
 
     {{-- MODAL EM TELA CHEIA PARA PREENCHIMENTO DE FORMULÁRIO (EMBED) --}}
     @if($urlEmbedAtiva)
-        <div class="fixed inset-0 z-[200] flex flex-col bg-white dark:bg-gray-900 animate-fade-in-up">
-            <!-- Cabeçalho do Modal -->
-            <div class="px-6 py-4 bg-indigo-600 dark:bg-indigo-700 text-white flex justify-between items-center shrink-0 shadow-md z-10">
+        <div class="fixed inset-0 z-[200] flex flex-col bg-white dark:bg-gray-900">
+            <div class="px-5 py-3.5 bg-gray-900 text-white border-b border-gray-800 flex justify-between items-center shrink-0 z-10">
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-base font-extrabold flex items-center gap-2 truncate">
-                        <i class="ph-fill ph-user-switch text-xl"></i>
-                        Atendimento Assistido Ativo: {{ $tituloEmbedAtivo }}
+                    <h3 class="text-sm font-semibold flex items-center gap-2 truncate">
+                        <i class="ph ph-user-switch text-base"></i>
+                        Atendimento Assistido: {{ $tituloEmbedAtivo }}
                     </h3>
-                    <p class="text-[11px] text-indigo-200 mt-0.5 font-medium">
-                        Preenchendo em nome de <b class="text-white">{{ $inscricao->nome }}</b> (Participante Logado: {{ auth()->user()->name }})
+                    <p class="text-[11px] text-gray-400 mt-0.5">
+                        Candidato: <strong class="text-white">{{ $inscricao->nome }}</strong> · Participante: {{ auth()->user()->name }}
                     </p>
                 </div>
                 
-                <div class="flex items-center gap-4 shrink-0 pl-4">
-                    <a href="{{ $urlEmbedAtiva }}" target="_blank" class="hidden sm:flex text-xs text-indigo-100 hover:text-white transition items-center gap-1.5 font-bold bg-indigo-800/50 hover:bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-500/30">
-                        Abrir em nova guia <i class="ph-bold ph-arrow-square-out text-sm"></i>
+                <div class="flex items-center gap-2 shrink-0 pl-4">
+                    <a href="{{ $urlEmbedAtiva }}" target="_blank" class="hidden sm:inline-flex text-xs text-gray-200 hover:text-white transition items-center gap-1.5 font-medium bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-md border border-gray-700">
+                        Abrir em nova guia <i class="ph ph-arrow-square-out text-sm"></i>
                     </a>
-                    <button type="button" wire:click="fecharFormularioEmbed" class="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition shadow-sm border border-red-400/50">
-                        <i class="ph-bold ph-x text-sm"></i> Fechar e Sincronizar Ficha
+                    <button type="button" wire:click="fecharFormularioEmbed" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md transition">
+                        <i class="ph ph-x text-sm"></i> Fechar e sincronizar
                     </button>
                 </div>
             </div>
             
-            <!-- Corpo do Modal (Iframe) -->
             <div class="flex-1 w-full bg-gray-50 dark:bg-gray-950 relative">
                 <iframe src="{{ $urlEmbedAtiva }}" class="absolute inset-0 w-full h-full border-0"></iframe>
             </div>
@@ -1368,8 +1364,8 @@
 
     {{-- MODAL DE HISTÓRICO DE PREENCHIMENTOS DO FORMULÁRIO --}}
     @if($modalHistoricoFormularioAberto)
-        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-            <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col my-8 border border-gray-200">
+        <div class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-900 rounded-lg max-w-xl w-full overflow-hidden flex flex-col my-8 border border-gray-200 dark:border-gray-700">
                 <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
                         <i class="ph-fill ph-clock-counter-clockwise text-purpura-600 text-xl"></i> 
