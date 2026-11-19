@@ -303,13 +303,13 @@
                                                 </span>
                                                 
                                                 <div class="flex items-center gap-0.5">
-                                                    <button type="button" wire:click="showContactInfo({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Contatos e Endereço">
+                                                    <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showContactInfo({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Contatos e Endereço">
                                                         <i class="ph-bold ph-address-book text-[16px]"></i>
                                                     </button>
                                                     <button type="button" @click="$dispatch('open-regras-crm', { id: {{ $inscricao->id }} })" class="p-1.5 text-gray-400 hover:text-ponkan-500 hover:bg-ponkan-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ver Acertos e Pontos">
                                                         <i class="ph-bold ph-list-numbers text-[16px]"></i>
                                                     </button>
-                                                    <button type="button" wire:click="showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ações Rápidas">
+                                                    <button type="button" @click="$dispatch('open-quick-view-drawer'); $wire.showQuickView({{ $inscricao->id }})" class="p-1.5 text-gray-400 hover:text-purpura-600 hover:bg-purpura-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ações Rápidas">
                                                         <i class="ph-bold ph-eye text-[16px]"></i>
                                                     </button>
                                                     <a href="{{ route('inscricoes.show', $inscricao->id) }}" target="_blank" class="p-1.5 text-gray-400 hover:text-pistache-600 hover:bg-pistache-50 dark:hover:bg-gray-700 rounded-lg transition" title="Ficha Completa da Inscrição">

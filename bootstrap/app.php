@@ -27,9 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
 
+
+
         $middleware->web(append: [
             \App\Http\Middleware\CheckSessionInactivity::class,
             \App\Http\Middleware\ForcePasswordChange::class,
+            \App\Http\Middleware\ContadorDeQueries::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
