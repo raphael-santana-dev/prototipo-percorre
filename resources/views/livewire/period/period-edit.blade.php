@@ -162,11 +162,21 @@
                     </div>
                 </div>
                 
-                <div class="flex items-center pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <input type="checkbox" wire:model="status" id="status" class="w-5 h-5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
-                    <label for="status" class="block ml-2 text-sm font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
-                        Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
-                    </label>
+                <div class="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center">
+                        <input type="checkbox" wire:model="status" id="status" class="w-4 h-4 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                        <label for="status" class="block ml-2 text-xs font-bold text-gray-900 dark:text-gray-300 cursor-pointer">
+                            Ativar este ciclo imediatamente {{ $tipo_ciclo === 'regular' ? '(desativará outros ciclos regulares ativos)' : '(projetos customizados não desativam o ciclo regular)' }}
+                        </label>
+                    </div>
+
+                    <div class="flex items-start">
+                        <input type="checkbox" wire:model="liberar_acesso_estudante" id="liberar_acesso_estudante" class="w-4 h-4 mt-0.5 border-gray-300 rounded text-purpura-600 focus:ring-purpura-500 dark:bg-gray-700 dark:border-gray-600">
+                        <label for="liberar_acesso_estudante" class="block ml-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <span class="font-bold text-gray-900 dark:text-white">Liberar acesso ao Portal do Estudante ao finalizar a inscrição:</span>
+                            Cria/ativa automaticamente a conta do candidato (guard <code class="font-mono">student</code>) assim que ele concluir a última etapa do formulário.
+                        </label>
+                    </div>
                 </div>
             </div>
 

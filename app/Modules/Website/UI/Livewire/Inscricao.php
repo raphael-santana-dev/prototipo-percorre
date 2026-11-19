@@ -1094,10 +1094,43 @@ class Inscricao extends Component
             }
         } else {
             if (!$this->isTeste) {
-                $inscricaoDB = InscricaoModel::find($this->inscricaoId);
+                $inscricaoDB = InscricaoModel::with('ciclo')->find($this->inscricaoId);
                 if ($inscricaoDB) {
-                    $inscricaoDB->update(['etapa_atual' => 99]);
-                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB);
+                    $dadosExtrasFinalizacao = [];
+                    $deveLiberarAcesso = (bool) ($inscricaoDB->ciclo?->liberar_acesso_estudante ?? true);
+
+                    if ($deveLiberarAcesso && !empty($inscricaoDB->email)) {
+                        $emailLimpo = strtolower(trim((string) $inscricaoDB->email));
+                        $cpfLimpo   = preg_replace('/\D/', '', (string) $inscricaoDB->cpf);
+                        $senhaProvisoria = $cpfLimpo ? substr($cpfLimpo, 0, 6) : \Illuminate\Support\Str::random(8);
+
+                        $student = \App\Modules\Student\Domain\Models\Student::whereRaw('LOWER(email) = ?', [$emailLimpo])->first();
+                        if (!$student) {
+                            $student = \App\Modules\Student\Domain\Models\Student::create([
+                                'name'       => $inscricaoDB->nome,
+                                'email'      => $emailLimpo,
+                                'cpf'        => $inscricaoDB->cpf,
+                                'unidade_id' => $inscricaoDB->unidade_id,
+                                'password'   => $senhaProvisoria,
+                                'is_active'  => true,
+                                'slug'       => \Illuminate\Support\Str::slug($inscricaoDB->nome) . '-' . rand(100, 999),
+                            ]);
+                            $dadosExtrasFinalizacao['senha_provisoria'] = $senhaProvisoria;
+                        } else {
+                            if (!$student->is_active) {
+                                $student->update(['is_active' => true]);
+                            }
+                            $dadosExtrasFinalizacao['senha_provisoria'] = 'Utilize sua senha já cadastrada (ou os 6 primeiros dígitos do CPF)';
+                        }
+
+                        $dadosExtrasFinalizacao['link_login'] = route('login');
+                        $inscricaoDB->student_id = $student->id;
+                    }
+
+                    $inscricaoDB->etapa_atual = 99;
+                    $inscricaoDB->save();
+
+                    \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.finalizada', $inscricaoDB, $dadosExtrasFinalizacao);
                 }
             }
 

@@ -7,7 +7,11 @@ use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\Solicitacao;
-use App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao;
+use App\Models\Inscricao;
+use App\Models\OfertaVaga;
+use App\Models\Curso;
+use App\Modules\Unidade\Domain\Models\Unidade;
+use App\Modules\Turno\Domain\Models\Turno;
 
 #[Layout('components.layouts.app')]
 #[Title('Central de Solicitações')]
@@ -16,134 +20,183 @@ class SolicitacoesManager extends Component
     use WithPagination;
 
     public $filtroStatus = 'pendente';
-    public $modalResposta = false;
+    public bool $modalResposta = false;
     public $solicitacaoAtiva = null;
-    public $textoResposta = '';
-    public $acaoResposta = '';
+    public string $textoResposta = '';
+    public string $acaoResposta = '';
 
-    public $detalhesEstudante = [];
-    public $detalhesVaga = '';
-    public $alertaUF = false;
-    public $alertaVagas = false;
+    public array $detalhesEstudante = [];
+    public string $detalhesVaga = '';
+    public bool $alertaUF = false;
+    public bool $alertaVagas = false;
 
-    public function mount()
+    public function usuarioPodeAvaliar(?Solicitacao $req = null): bool
     {
-        //abort_if(!auth()->user()->hasRole('dev|admin|professor'), 403, 'Acesso restrito.');
+        $user = auth()->user();
+        if (!$user) return false;
+
+        if ($user->hasAnyRole(['dev', 'admin'])) {
+            return true;
+        }
+
+        if ($req && $req->tema === 'alteracao_academica') {
+            return $user->can('inscricao.edicao.solicitacao_troca');
+        }
+
+        return $user->hasRole('professor') || $user->can('inscricao.edicao.solicitacao_troca');
     }
 
-    public function abrirResposta($id, $acao = 'visualizar')
+    public function abrirResposta($id, $acao = 'visualizar'): void
     {
         $this->reset(['textoResposta', 'alertaUF', 'alertaVagas', 'detalhesEstudante', 'detalhesVaga']);
         $this->solicitacaoAtiva = Solicitacao::with(['solicitante', 'responsavel'])->findOrFail($id);
-        $this->acaoResposta = $acao; 
+
+        if ($acao !== 'visualizar' && !$this->usuarioPodeAvaliar($this->solicitacaoAtiva)) {
+            $this->dispatch('erro', msg: 'Você não possui a permissão "inscricao.edicao.solicitacao_troca" para aprovar ou reprovar esta solicitação.');
+            return;
+        }
+
+        $this->acaoResposta = $acao;
         $this->modalResposta = true;
 
         if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
             $estudante = $this->solicitacaoAtiva->solicitante;
-            $inscricao = \App\Models\Inscricao::where('student_id', $estudante->id ?? 0)->latest()->first();
-            $payload = $this->solicitacaoAtiva->payload ?? [];
+            $payload   = is_array($this->solicitacaoAtiva->payload) ? $this->solicitacaoAtiva->payload : [];
+
+            $inscricao = !empty($payload['inscricao_id'])
+                ? Inscricao::with(['unidade', 'curso', 'turno'])->find($payload['inscricao_id'])
+                : Inscricao::with(['unidade', 'curso', 'turno'])->where('student_id', $estudante->id ?? 0)->latest('id')->first();
 
             if ($inscricao && isset($payload['nova_unidade_id'])) {
-                $novaUnidade = \App\Modules\Unidade\Domain\Models\Unidade::find($payload['nova_unidade_id']);
-                $novoCurso = \App\Models\Curso::find($payload['novo_curso_id']);
-                $novoTurno = \App\Modules\Turno\Domain\Models\Turno::find($payload['novo_turno_id']);
+                $novaUnidade = Unidade::find($payload['nova_unidade_id']);
+                $novoCurso   = Curso::find($payload['novo_curso_id']);
+                $novoTurno   = Turno::find($payload['novo_turno_id']);
+
+                $ufInscricao = strtoupper(trim((string) ($inscricao->estado ?? '')));
+                $ufUnidade   = strtoupper(trim((string) ($novaUnidade?->estado ?: explode('-', $novaUnidade?->nome ?? '')[0])));
 
                 $this->detalhesEstudante = [
-                    'nome' => $estudante->name ?? $estudante->nome ?? 'Candidato',
-                    'email' => $estudante->email ?? 'N/A',
-                    'estado_atual' => $inscricao->estado ?? 'Não Informado',
-                    'nova_unidade' => $novaUnidade->nome ?? '-',
-                    'estado_unidade' => $novaUnidade->estado ?? 'Não Informado',
-                    'novo_curso' => $novoCurso->nome ?? '-',
-                    'novo_turno' => $novoTurno->nome ?? '-',
+                    'inscricao_id'       => $inscricao->id,
+                    'nome'               => $estudante->name ?? $inscricao->nome ?? 'Candidato',
+                    'email'              => $estudante->email ?? $inscricao->email ?? 'N/A',
+                    'estado_atual'       => $ufInscricao ?: 'Não informado',
+                    'quero_outro_estado' => !empty($payload['quero_outro_estado']),
+                    'unidade_atual'      => $payload['unidade_anterior_nome'] ?? ($inscricao->unidade->nome ?? '-'),
+                    'curso_atual'        => $payload['curso_anterior_nome'] ?? ($inscricao->curso->nome ?? '-'),
+                    'turno_atual'        => $payload['turno_anterior_nome'] ?? ($inscricao->turno->nome ?? '-'),
+                    'nova_unidade'       => $novaUnidade->nome ?? '-',
+                    'estado_unidade'     => $ufUnidade ?: 'Não informado',
+                    'novo_curso'         => $novoCurso->nome ?? '-',
+                    'novo_turno'         => $novoTurno->nome ?? '-',
                 ];
 
-                // ALERTA 1: Divergência de Estado (UF)
-                if (!empty($inscricao->estado) && !empty($novaUnidade->estado) && strtolower($inscricao->estado) !== strtolower($novaUnidade->estado)) {
+                if ($ufInscricao !== '' && $ufUnidade !== '' && $ufInscricao !== $ufUnidade) {
                     $this->alertaUF = true;
                 }
 
-                // ALERTA 2: Verificação de Vagas
-                $oferta = \App\Models\OfertaVaga::where('ciclo_id', $inscricao->ciclo_id)
+                $oferta = OfertaVaga::where('ciclo_id', $inscricao->ciclo_id)
                     ->where('unidade_id', $payload['nova_unidade_id'])
                     ->where('curso_id', $payload['novo_curso_id'])
                     ->where('turno_id', $payload['novo_turno_id'])
                     ->first();
 
                 if ($oferta) {
-                    $ocupadas = \App\Models\Inscricao::where('ciclo_id', $inscricao->ciclo_id)
+                    $ocupadas = Inscricao::where('ciclo_id', $inscricao->ciclo_id)
                         ->where('unidade_id', $payload['nova_unidade_id'])
                         ->where('curso_id', $payload['novo_curso_id'])
                         ->where('turno_id', $payload['novo_turno_id'])
-                        ->whereIn('status_inscricao_id', [2, 3, 4]) // Aprovados / Matriculados
+                        ->whereIn('status_inscricao_id', [2, 3, 4])
                         ->count();
 
                     $vagasRestantes = $oferta->vagas - $ocupadas;
                     if ($vagasRestantes <= 0) {
                         $this->alertaVagas = true;
-                        $this->detalhesVaga = "Vagas Esgotadas (0 disponíveis).";
+                        $this->detalhesVaga = 'Vagas esgotadas para esta combinação (0 disponíveis).';
                     } else {
-                        $this->detalhesVaga = "{$vagasRestantes} vaga(s) disponível(eis).";
+                        $this->detalhesVaga = "{$vagasRestantes} vaga(s) disponível(is) na turma solicitada.";
                     }
                 } else {
                     $this->alertaVagas = true;
-                    $this->detalhesVaga = "Não há oferta configurada para esta turma.";
+                    $this->detalhesVaga = 'Não há oferta configurada para esta combinação no ciclo.';
                 }
             }
         }
     }
 
-    public function confirmarResposta()
+    public function confirmarResposta(): void
     {
-        $this->validate(['textoResposta' => 'required|string|min:5'], ['textoResposta.required' => 'Insira um feedback ou justificativa para esta decisão.']);
+        if (!$this->solicitacaoAtiva || !$this->usuarioPodeAvaliar($this->solicitacaoAtiva)) {
+            $this->dispatch('erro', msg: 'Sem permissão para processar esta solicitação.');
+            return;
+        }
+
+        $this->validate([
+            'textoResposta' => 'required|string|min:5',
+        ], [
+            'textoResposta.required' => 'Informe um parecer ou justificativa para o estudante.',
+            'textoResposta.min'      => 'O parecer deve ter pelo menos 5 caracteres.',
+        ]);
 
         $statusFinal = $this->acaoResposta === 'aprovar' ? 'aprovada' : 'rejeitada';
-        $payload = $this->solicitacaoAtiva->payload;
-        
+        $payload     = is_array($this->solicitacaoAtiva->payload) ? $this->solicitacaoAtiva->payload : [];
+
         $this->solicitacaoAtiva->update([
-            'status' => $statusFinal,
-            'resposta_admin' => $this->textoResposta,
-            'responsavel_id' => auth()->id()
+            'status'         => $statusFinal,
+            'resposta_admin' => trim($this->textoResposta),
+            'responsavel_id' => auth()->id(),
         ]);
 
         if ($statusFinal === 'aprovada') {
             if ($this->solicitacaoAtiva->tema === 'cadastro_nova_inscricao') {
-                $inscricao = \App\Models\Inscricao::create($payload);
+                $inscricao = Inscricao::create($payload);
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar('inscricao.criada', $inscricao);
             }
-            if ($this->solicitacaoAtiva->tema === 'avaliacao_aluno_fase') {
-                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])->update(['status' => '1', 'data_resposta' => null]);
+
+            if ($this->solicitacaoAtiva->tema === 'avaliacao_aluno_fase' && !empty($payload['aluno_avaliacao_id'])) {
+                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::where('id', $payload['aluno_avaliacao_id'])
+                    ->update(['status' => '1', 'data_resposta' => null]);
             }
-            if ($this->solicitacaoAtiva->tema === 'avaliacao_prof_total') {
-                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])->update(['status' => '1', 'data_resposta' => null]);
+
+            if ($this->solicitacaoAtiva->tema === 'avaliacao_prof_total' && !empty($payload['fases_para_desbloquear'])) {
+                \App\Modules\GestaoEducacional\Domain\Models\AlunoAvaliacao::whereIn('id', $payload['fases_para_desbloquear'])
+                    ->update(['status' => '1', 'data_resposta' => null]);
             }
 
             if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
-                $inscricao = \App\Models\Inscricao::where('student_id', $this->solicitacaoAtiva->solicitante_id)->latest()->first();
+                $inscricao = !empty($payload['inscricao_id'])
+                    ? Inscricao::find($payload['inscricao_id'])
+                    : Inscricao::where('student_id', $this->solicitacaoAtiva->solicitante_id)->latest('id')->first();
+
                 if ($inscricao) {
                     $inscricao->update([
                         'unidade_id' => $payload['nova_unidade_id'] ?? $inscricao->unidade_id,
-                        'curso_id' => $payload['novo_curso_id'] ?? $inscricao->curso_id,
-                        'turno_id' => $payload['novo_turno_id'] ?? $inscricao->turno_id,
+                        'curso_id'   => $payload['novo_curso_id'] ?? $inscricao->curso_id,
+                        'turno_id'   => $payload['novo_turno_id'] ?? $inscricao->turno_id,
                     ]);
+                }
+
+                $estudante = $this->solicitacaoAtiva->solicitante;
+                if ($estudante && !empty($payload['nova_unidade_id']) && isset($estudante->unidade_id)) {
+                    $estudante->update(['unidade_id' => (int) $payload['nova_unidade_id']]);
                 }
             }
         }
 
-        // GATILHO: Dispara o e-mail de Aprovação ou Reprovação
         if ($this->solicitacaoAtiva->tema === 'alteracao_academica') {
             $estudante = $this->solicitacaoAtiva->solicitante;
             if ($estudante && $estudante->email) {
                 $gatilho = $statusFinal === 'aprovada' ? 'solicitacao.aprovada' : 'solicitacao.rejeitada';
                 \App\Modules\Comunicacao\Services\AutomacaoService::disparar($gatilho, $estudante->email, [
-                    'aluno_nome' => $estudante->name ?? $estudante->nome ?? 'Estudante',
-                    'resposta_admin' => $this->textoResposta
+                    'aluno_nome'     => $estudante->name ?? $estudante->nome ?? 'Estudante',
+                    'resposta_admin' => $this->textoResposta,
                 ]);
             }
         }
 
         $this->modalResposta = false;
-        $this->dispatch('sucesso', msg: 'Solicitação processada com sucesso!');
+        $this->dispatch('sucesso', msg: $statusFinal === 'aprovada'
+            ? 'Solicitação aprovada e vínculo da inscrição atualizado com sucesso!'
+            : 'Solicitação reprovada e parecer enviado ao estudante.');
     }
 
     public function render()
@@ -154,13 +207,16 @@ class SolicitacoesManager extends Component
             $query->where('status', $this->filtroStatus);
         }
 
-        if (auth()->user()->hasRole('professor') && !auth()->user()->hasRole('dev|admin')) {
-            $query->where('responsavel_id', auth()->id())
-                  ->orWhereNull('responsavel_id'); 
+        $user = auth()->user();
+        if ($user && $user->hasRole('professor') && !$user->hasAnyRole(['dev', 'admin']) && !$user->can('inscricao.edicao.solicitacao_troca')) {
+            $query->where(function ($q) use ($user) {
+                $q->where('responsavel_id', $user->id)
+                  ->orWhereNull('responsavel_id');
+            });
         }
 
         return view('livewire.admin.solicitacoes-manager', [
-            'solicitacoes' => $query->paginate(15)
+            'solicitacoes' => $query->paginate(15),
         ]);
     }
 }
