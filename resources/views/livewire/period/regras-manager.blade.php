@@ -95,9 +95,9 @@
 
                         <div class="w-full md:w-40 shrink-0">
                             <select wire:model.live="regras.{{ $index }}.tipo_regra" class="w-full border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-xs focus:ring-purpura-500 focus:border-purpura-500 py-1.5 shadow-sm {{ $isEspecial ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-gray-50' }} @error("regras.$index.tipo_regra") border-red-500 bg-red-50 text-red-700 @enderror">
-                                <option value="padrao">Padrão (+ Pts)</option>
-                                <option value="bonus_por_acerto">Bônus Acerto</option>
-                                <option value="multiplicador_percentual">Multiplicador (%)</option>
+                                <option select value="padrao">Padrão (+ Pts)</option>
+                                <!--<option value="bonus_por_acerto">Bônus Acerto</option>
+                                <option value="multiplicador_percentual">Multiplicador (%)</option>-->
                             </select>
                             @error("regras.$index.tipo_regra") <span class="text-[9px] text-red-500 font-bold mt-1 block leading-tight">{{ $message }}</span> @enderror
                         </div>

@@ -1,7 +1,7 @@
 <div class="p-6 max-w-[1400px] mx-auto font-sans"
      wire:poll.5s="verificarLockInscricao"
      x-data="{ emailModal: @entangle('modalEmailAberto') }" 
-     x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva') || @entangle('modalHistoricoFormularioAberto'))">
+     x-effect="document.body.classList.toggle('overflow-hidden', emailModal || @entangle('urlEmbedAtiva') || @entangle('modalHistoricoFormularioAberto') || @entangle('modalTrocaVinculoAberto'))">
 
     @php
         $dinamicos = is_string($inscricao->dados_dinamicos) ? json_decode($inscricao->dados_dinamicos, true) : ($inscricao->dados_dinamicos ?? []);
@@ -10,6 +10,7 @@
         $ultimoAtendimentoParticipante = $mapaParticipante['_ultimo_atendimento'] ?? null;
         $formulariosAssistidos = $dinamicos['_formularios_assistidos'] ?? [];
         $podeEditarAssistido = $this->usuarioPodeEditarAssistido();
+        $podeAlterarVinculo = $this->usuarioPodeAlterarVinculoAcademico();
     @endphp
 
     <x-breadcrumb :items="[
@@ -260,7 +261,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-gray-700 mb-1">Unidade</label>
-                                        <select wire:model="formFixo.unidade_id" class="w-full rounded-lg border-gray-300 text-sm">
+                                        <select wire:model="formFixo.unidade_id" @disabled(!$podeAlterarVinculo) class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed">
                                             <option value="">Selecione...</option>
                                             @foreach($unidadesDb as $u)
                                                 <option value="{{ $u->id }}">{{ $u->nome }}</option>
@@ -269,7 +270,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-gray-700 mb-1">Curso</label>
-                                        <select wire:model="formFixo.curso_id" class="w-full rounded-lg border-gray-300 text-sm">
+                                        <select wire:model="formFixo.curso_id" @disabled(!$podeAlterarVinculo) class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed">
                                             <option value="">Selecione...</option>
                                             @foreach($cursosDb as $c)
                                                 <option value="{{ $c->id }}">{{ $c->nome }}</option>
@@ -278,7 +279,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-gray-700 mb-1">Turno</label>
-                                        <select wire:model="formFixo.turno_id" class="w-full rounded-lg border-gray-300 text-sm">
+                                        <select wire:model="formFixo.turno_id" @disabled(!$podeAlterarVinculo) class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed">
                                             <option value="">Selecione...</option>
                                             @foreach($turnosDb as $t)
                                                 <option value="{{ $t->id }}">{{ $t->nome }}</option>
@@ -392,11 +393,21 @@
                     @else
                         {{-- VISUALIZAÇÃO PADRÃO DOS DADOS COM BADGES DE PARTICIPANTE --}}
                         <section>
-                            <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-2">
+                            <div class="flex flex-wrap justify-between items-center gap-2 mb-5 border-b border-gray-100 pb-2">
                                 <h3 class="t-label-12-semibold tracking-wider text-gray-500 uppercase flex items-center gap-2">
                                     <i class="ph-fill ph-student text-lg text-purpura-500"></i> Dados da Inscrição
                                 </h3>
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    @if($podeAlterarVinculo)
+                                        <button type="button"
+                                                wire:click="abrirModalTrocaVinculo"
+                                                @disabled($isLockedByOther)
+                                                @if($isLockedByOther) title="Em edição por {{ $lockOwnerName }}" @endif
+                                                class="px-3 py-1.5 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 transition {{ $isLockedByOther ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-gray-800 border-gray-300' }}">
+                                            <i class="ph {{ $isLockedByOther ? 'ph-lock-key' : 'ph-arrows-left-right' }}"></i>
+                                            <span>Alterar Unidade / Curso / Turno</span>
+                                        </button>
+                                    @endif
                                     <span class="tag tag--small tag--outline tag--neutral">Origem: {{ ucfirst($inscricao->origem ?? 'Não informada') }}</span>
                                 </div>
                             </div>
@@ -1406,5 +1417,118 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- MODAL MINIMALISTA: ALTERAÇÃO DIRETA DE UNIDADE / CURSO / TURNO --}}
+    @if($modalTrocaVinculoAberto)
+        @php
+            $compatTroca = $this->resumoCompatibilidadeTrocaDireta;
+        @endphp
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4 font-sans"
+                 @keydown.escape.window="$wire.fecharModalTrocaVinculo()"
+                 role="dialog"
+                 aria-modal="true">
+                <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                Alterar Unidade, Curso e Turno
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Inscrição #{{ $inscricao->id }} — {{ $inscricao->nome }}
+                            </p>
+                        </div>
+                        <button type="button" wire:click="fecharModalTrocaVinculo" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1" aria-label="Fechar">
+                            <i class="ph ph-x text-base"></i>
+                        </button>
+                    </div>
+
+                    <form wire:submit.prevent="salvarTrocaVinculoDireta" class="p-5 space-y-4 overflow-y-auto">
+                        <div class="p-3 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
+                            <span class="text-gray-500 dark:text-gray-400 block mb-0.5">Vínculo atual:</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">
+                                {{ $inscricao->unidade->nome ?? 'Não informada' }} · {{ $inscricao->curso->nome ?? 'Não informado' }} · {{ $inscricao->turno->nome ?? 'Não informado' }}
+                            </span>
+                        </div>
+
+                        @if($inscricao->ciclo_id)
+                            <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                                <input type="checkbox" wire:model.live="trocaIgnorarOfertasCiclo" class="w-4 h-4 rounded border-gray-300 text-purpura-600 focus:ring-purpura-500">
+                                <span>Listar todas as unidades/cursos ativos (incluindo combinações fora da oferta do ciclo)</span>
+                            </label>
+                        @endif
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Nova unidade <span class="text-red-500">*</span>
+                            </label>
+                            <select wire:model.live="trocaUnidadeId" class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-xs py-2">
+                                <option value="">Selecione a unidade...</option>
+                                @foreach($this->unidadesDisponiveisTrocaDireta as $uOpt)
+                                    <option value="{{ $uOpt->id }}">{{ $uOpt->nome }}</option>
+                                @endforeach
+                            </select>
+                            @error('trocaUnidadeId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Novo curso <span class="text-red-500">*</span>
+                            </label>
+                            <select wire:model.live="trocaCursoId" @disabled(empty($trocaUnidadeId)) class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-xs py-2 disabled:opacity-50">
+                                <option value="">{{ empty($trocaUnidadeId) ? 'Selecione a unidade primeiro...' : 'Selecione o curso...' }}</option>
+                                @foreach($this->cursosDisponiveisTrocaDireta as $cOpt)
+                                    <option value="{{ $cOpt->id }}">{{ $cOpt->nome }}</option>
+                                @endforeach
+                            </select>
+                            @error('trocaCursoId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Novo turno <span class="text-red-500">*</span>
+                            </label>
+                            <select wire:model.live="trocaTurnoId" @disabled(empty($trocaCursoId)) class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-xs py-2 disabled:opacity-50">
+                                <option value="">{{ empty($trocaCursoId) ? 'Selecione o curso primeiro...' : 'Selecione o turno...' }}</option>
+                                @foreach($this->turnosDisponiveisTrocaDireta as $tOpt)
+                                    <option value="{{ $tOpt->id }}">{{ $tOpt->nome }}</option>
+                                @endforeach
+                            </select>
+                            @error('trocaTurnoId') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        @if($compatTroca['alerta_uf'])
+                            <div class="p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
+                                <strong>Atenção (UF diferente):</strong> o candidato reside em <strong>{{ $compatTroca['uf_candidato'] }}</strong> e a unidade selecionada pertence a <strong>{{ $compatTroca['uf_unidade'] }}</strong>.
+                            </div>
+                        @endif
+
+                        @if($compatTroca['vagas_texto'])
+                            <div class="p-3 rounded-md border text-xs {{ $compatTroca['sem_vagas'] ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300' : 'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300' }}">
+                                {{ $compatTroca['vagas_texto'] }}
+                            </div>
+                        @endif
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Motivo da alteração <span class="text-red-500">*</span>
+                            </label>
+                            <textarea wire:model="trocaMotivo" rows="3" placeholder="Descreva o motivo da transferência de unidade, curso ou turno..." class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-xs p-2.5"></textarea>
+                            @error('trocaMotivo') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-200 dark:border-gray-800 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                            <button type="button" wire:click="fecharModalTrocaVinculo" class="px-3.5 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition">
+                                Cancelar
+                            </button>
+                            <button type="submit" wire:loading.attr="disabled" class="px-4 py-2 rounded-md bg-purpura-600 hover:bg-purpura-700 text-white text-xs font-semibold transition">
+                                Confirmar alteração
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </template>
     @endif
 </div>
